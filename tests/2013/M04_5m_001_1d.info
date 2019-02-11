@@ -1,0 +1,10 @@
+Format Version == 1
+Units == METRIC
+Simulation ID == M04_5m_001
+Number Channels == 54
+Number Nodes == 55
+Channel Info == M04_5m_001_1d_Chan.csv
+Node Info == M04_5m_001_1d_Node.csv
+Water Levels == M04_5m_001_1d_H.csv
+Flows == M04_5m_001_1d_Q.csv
+Velocities == M04_5m_001_1d_V.csv
