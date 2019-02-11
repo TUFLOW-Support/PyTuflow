@@ -5,13 +5,13 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="pytuflow",
-    version="0.0.4",
+    version="0.0.5",
     author="tuflowsupport",
     author_email="support@tuflow.com",
     description="Package for scripting TUFLOW time series results.",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/tuflowsupport",
+    url="https://github.com/TUFLOW-Support/PyTuflow",
     packages=setuptools.find_packages(),
     classifiers=[
         "Programming Language :: Python :: 2.7",
