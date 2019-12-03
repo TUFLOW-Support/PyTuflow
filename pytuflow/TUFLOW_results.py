@@ -1,8 +1,59 @@
 import os
 import numpy
 import csv
-import sys
+import ctypes
 from pytuflow.helper import getOSIndependentFilePath
+
+
+class NC_Error:
+    NC_NOERR = 0
+    NC_EBADID = -33
+    NC_ENOTVAR = -49
+    NC_EBADDIM = -46
+    NC_EPERM = -37
+    NC_ENFILE = -34
+    NC_ENOMEM = -61
+    NC_EHDFERR = -101
+    NC_EDIMMETA = -106
+
+    @staticmethod
+    def message(error):
+        error2message = {
+            NC_Error.NC_NOERR: "No error",
+            NC_Error.NC_EBADID: "Invalid ncid",
+            NC_Error.NC_ENOTVAR: "Invalid Variable ID",
+            NC_Error.NC_EBADDIM: "Invalid Dimension ID",
+            NC_Error.NC_EPERM: "Attempting to create a netCDF file in a directory where you do not have permission to open files",
+            NC_Error.NC_ENFILE: "Too many files open",
+            NC_Error.NC_ENOMEM: "Out of memory",
+            NC_Error.NC_EHDFERR: "HDF5 error. (NetCDF-4 files only.)",
+            NC_Error.NC_EDIMMETA: "Error in netCDF-4 dimension metadata. (NetCDF-4 files only.)"
+        }
+
+        if error in error2message:
+            return error2message[error]
+        else:
+            return "code {0}".format(error)
+
+
+class NcDim():
+
+    def __init__(self):
+        self.id = -1
+        self.name = ""
+        self.len = 0
+
+
+class NcVar():
+
+    def __init__(self):
+        self.id = -1
+        self.name = ""
+        self.type = -1
+        self.nDims = 0
+        self.dimIds = ()
+        self.dimNames = ()
+        self.dimLens = ()
 
 
 class LP():
@@ -56,6 +107,12 @@ class Data1D():
         self.Node_Max = NodeMax()
         self.Chan_Max = ChanMax()
 
+        # 2019 release updates
+        self.MB = Timeseries()  # 1D mass balance error
+        self.NF = Timeseries()  # 1D node flow regime
+        self.CF = Timeseries()  # 1D channel flow regime
+        self.CL = Timeseries()  # 1D channel losses
+
 class Data2D():
     def __init__(self): #initialise the 2D data
         self.types = []
@@ -67,6 +124,11 @@ class Data2D():
         self.QI = Timeseries()
         self.Vx = Timeseries()
         self.Vy = Timeseries()
+        self.Vu = Timeseries()
+        self.Vv = Timeseries()
+        self.VA = Timeseries()
+        self.Qx = Timeseries()
+        self.Qy = Timeseries()
         self.QS = Timeseries() #structure flow
         self.HUS = Timeseries() #structure U/S level
         self.HDS = Timeseries() #structure D/S level
@@ -76,6 +138,7 @@ class Data2D():
         self.QOut = Timeseries() #2017-09-AA flow out of a region
         self.SS = Timeseries() #2017-09-AA Sink / Source within a region
         self.Vol = Timeseries() #2017-09-AA Volume within a region
+
 
 class DataRL():
     def __init__(self): #initialise the Reporting Locations
@@ -216,6 +279,132 @@ class Timeseries():
             message = 'ERROR - Error reading data from file. Check file, there may not be any data: {0}'.format(fullpath)
             error = True
             return error, message
+        return error, message
+
+    def loadFromNetCDF(self, fullpath, resName, resType, nclib, ncopen, ncid, ncdll, ncDims, ncVars):
+        error = False
+        message = ""
+        if nclib == "python":
+            error, message = self.loadFromNetCDFPython(fullpath, resName, resType, ncopen, ncDims, ncVars)
+        elif nclib == "c_netcdf.dll":
+            error, message = self.loadFromNetCDFCDLL(fullpath, resName, resType, ncid, ncdll, ncDims, ncVars)
+
+        return error, message
+
+    def loadFromNetCDFPython(self, fullpath, resName, resType, ncopen, ncDims, ncVars):
+        error = False
+        message = ""
+        var = None
+        for v in ncVars:
+            if v.name == resName:
+                var = v
+                break
+        if var is None:
+            return False, ""
+
+        values = []
+        # ids
+        if resType in [x.name for x in ncVars]:
+            dims = ncVars[[x.name for x in ncVars].index(resType)].dimLens
+            self.nLocs = dims[0]
+            self.ID.clear()
+            for i in range(self.nLocs):
+                self.ID.append("".join([x.decode("utf-8") for x in ncopen[resType][i, :].tolist()]).strip())
+        else:
+            return False, ""
+        self.Header = ['Timestep', 'Time'] + self.ID[:]
+
+        # times
+        if "time" in [x.name for x in ncVars]:
+            dims = ncVars[[x.name for x in ncVars].index("time")].dimLens
+            self.nVals = dims[0]
+            v = [x + 1 for x in range(self.nVals)]
+            values.append(v)
+            v = ncopen["time"][:].tolist()
+            values.append(v)
+            values = numpy.array(values)
+            values = numpy.ma.masked_array(values, False)
+        else:
+            return False, ""
+
+        # values
+        if resName in [x.name for x in ncVars]:
+            a = ncopen[resName][:, :]
+            self.Values = numpy.insert(a, 0, values, axis=0)
+            self.Values = numpy.transpose(self.Values)
+        else:
+            return False, ""
+
+        self.loaded = True
+
+        return error, message
+
+    def loadFromNetCDFCDLL(self, fullpath, resName, resType, ncid, ncdll, ncDims, ncVars):
+        error = False
+        message = ""
+        var = None
+        for v in ncVars:
+            if v.name == resName:
+                var = v
+                break
+        if var is None:
+            return False, ""
+
+        values = []
+        # ids
+        if resType in [x.name for x in ncVars]:
+            id = ncVars[[x.name for x in ncVars].index(resType)].id
+            dims = ncVars[[x.name for x in ncVars].index(resType)].dimLens
+            cstr_array = ((ctypes.c_char * dims[1]) * dims[0])()
+            err = ncdll.nc_get_var(ncid, id, ctypes.byref(cstr_array))
+            if err:
+                if ncid.value > 0:
+                    ncdll.nc_close(ncid)
+                return True, "ERROR: error data from netcdf. Error: {0}".format(NC_Error.message(err))
+            self.ID = [x.value.strip().decode('utf-8') for x in cstr_array]
+        else:
+            return False, ""
+        self.Header = ['Timestep', 'Time'] + self.ID[:]
+        self.nLocs = dims[0]
+
+        # times
+        if "time" in [x.name for x in ncVars]:
+            id = ncVars[[x.name for x in ncVars].index("time")].id
+            dims = ncVars[[x.name for x in ncVars].index("time")].dimLens
+            cdouble_array = (ctypes.c_double * dims[0])()
+            err = ncdll.nc_get_var(ncid, id, ctypes.byref(cdouble_array))
+            if err:
+                if ncid.value > 0:
+                    ncdll.nc_close(ncid)
+                return True, "ERROR: error data from netcdf. Error: {0}".format(NC_Error.message(err))
+            self.nVals = dims[0]
+            v = [x + 1 for x in range(self.nVals)]
+            values.append(v)
+            v = [x for x in cdouble_array]
+            values.append(v)
+        else:
+            return False, ""
+
+        # values
+        if resName in [x.name for x in ncVars]:
+            id = ncVars[[x.name for x in ncVars].index(resName)].id
+            dims = ncVars[[x.name for x in ncVars].index(resName)].dimLens
+            cfloat_array = ((ctypes.c_float * dims[1]) * dims[0])()
+            err = ncdll.nc_get_var(ncid, id, ctypes.byref(cfloat_array))
+            if err:
+                if ncid.value > 0:
+                    ncdll.nc_close(ncid)
+                return True, "ERROR: error data from netcdf. Error: {0}".format(NC_Error.message(err))
+            v = [x[:] for x in cfloat_array]
+            values += v
+            values = numpy.transpose(numpy.array(values))
+            null_array = values == self.null_data
+            self.Values = numpy.ma.masked_array(values, null_array)
+        else:
+            return False, ""
+
+        self.loaded = True
+
         return error, message
 
 class NodeMax():
@@ -691,6 +880,17 @@ class ResData():
         self.nodes = None #contains 1D node information if it
         self.Channels = None #contains 1D channel information if it
 
+        # 2019 release additions for netcdf output format
+        self.resFileFormat = "CSV"
+        self.netcdf_fpath = ""
+        self.netCDFLibPath = None
+        self.netCDFLib = None
+        self.ncdll = None
+        self.ncid = ctypes.c_int(0)
+        self.ncopen = None
+        self.ncDims = []
+        self.ncVars = []
+
     def getTSData(self, id, res, dom):
         message = ''
         if (dom.upper() == "1D"):
@@ -765,7 +965,7 @@ class ResData():
                 try:
                     ind = self.Data_1D.H.Header.index(a)
                 except:
-                    message = 'Unable to find US node: ',+a+' for channel '+ id
+                    message = 'Unable to find US node: '+a+' for channel '+ id
                     return False, [0.0], message
                 try:
                     data = self.Data_1D.H.Values[:,ind]
@@ -781,7 +981,7 @@ class ResData():
                 try:
                     ind = self.Data_1D.H.Header.index(a)
                 except:
-                    message = 'Unable to find DS node: ',+a+' for channel '+ id
+                    message = 'Unable to find DS node: '+a+' for channel '+ id
                     return False, [0.0], message
                 try:
                     data = self.Data_1D.H.Values[:,ind]
@@ -789,6 +989,56 @@ class ResData():
                     return True, data, message
                 except:
                     message = 'Data not found for 1D H with ID: '+a
+                    return False, [0.0], message
+            elif (res.upper() in ("MB")):
+                if self.Data_1D.MB.loaded:
+                    try:
+                        ind = self.Data_1D.MB.Header.index(id)
+                        data = self.Data_1D.MB.Values[:, ind]
+                        return True, data, message
+                    except:
+                        message = 'Data not found for 1D MB with ID: ' + id
+                        return False, [0.0], message
+                else:
+                    message = 'No 1D Velocity Data loaded for: ' + self.displayname
+                    return False, [0.0], message
+            elif (res.upper() in ("FLOW REGIME", "NF", "CF")):
+                if self.Data_1D.NF.loaded or self.Data_1D.CF.loaded:
+                    try:
+                        if id in self.Data_1D.NF.Header:
+                            ind = self.Data_1D.NF.Header.index(id)
+                            data = self.Data_1D.NF.Values[:, ind]
+                            return True, data, message
+                        elif id in self.Data_1D.CF.Header:
+                            ind = self.Data_1D.CF.Header.index(id)
+                            data = self.Data_1D.CF.Values[:, ind]
+                            return True, data, message
+                        else:
+                            return True, [0.0], message
+                    except:
+                        message = 'Data not found for 1D MB with ID: ' + id
+                        return False, [0.0], message
+                else:
+                    message = 'No 1D Velocity Data loaded for: ' + self.displayname
+                    return False, [0.0], message
+            elif (res.upper() in ("LOSSES", "CL")):
+                if self.Data_1D.NF.loaded or self.Data_1D.CF.loaded:
+                    try:
+                        if id in self.Data_1D.NF.Header:
+                            ind = self.Data_1D.NF.Header.index(id)
+                            data = self.Data_1D.NF.Values[:, ind]
+                            return True, data, message
+                        elif id in self.Data_1D.CF.Header:
+                            ind = self.Data_1D.CF.Header.index(id)
+                            data = self.Data_1D.CF.Values[:, ind]
+                            return True, data, message
+                        else:
+                            return True, [0.0], message
+                    except:
+                        message = 'Data not found for 1D MB with ID: ' + id
+                        return False, [0.0], message
+                else:
+                    message = 'No 1D Velocity Data loaded for: ' + self.displayname
                     return False, [0.0], message
             else:
                 message = 'Warning - Expecting unexpected data type for 1D: '+res
@@ -820,6 +1070,32 @@ class ResData():
                         return False, [0.0], message
                 else:
                     message = 'No 2D Flow Data loaded for: '+self.displayname
+                    return False, [0.0], message
+            elif (res.upper() in ("X FLOW")):
+                if self.Data_2D.Qx.loaded:
+                    try:
+                        ind = self.Data_2D.Qx.Header.index(id)
+                        data = self.Data_2D.Qx.Values[:, ind]
+                        self.times = self.Data_2D.Qx.Values[:, 1]
+                        return True, data, message
+                    except:
+                        message = 'Data not found for 2D Qx with ID: ' + id
+                        return False, [0.0], message
+                else:
+                    message = 'No 2D X-Flow Data loaded for: ' + self.displayname
+                    return False, [0.0], message
+            elif (res.upper() in ("Y FLOW")):
+                if self.Data_2D.Qy.loaded:
+                    try:
+                        ind = self.Data_2D.Qy.Header.index(id)
+                        data = self.Data_2D.Qy.Values[:, ind]
+                        self.times = self.Data_2D.Qy.Values[:, 1]
+                        return True, data, message
+                    except:
+                        message = 'Data not found for 2D Qy with ID: ' + id
+                        return False, [0.0], message
+                else:
+                    message = 'No 2D Y-Flow Data loaded for: ' + self.displayname
                     return False, [0.0], message
             elif(res.upper() in ("V","V_","VELOCITY","VELOCITIES")):
                 if self.Data_2D.V.loaded:
@@ -924,6 +1200,45 @@ class ResData():
                         return False, [0.0], message
                 else:
                     message = 'No 2D V-Y Data loaded for: '+self.displayname
+                    return False, [0.0], message
+            elif (res.upper() in ("VU")):
+                if self.Data_2D.Vu.loaded:
+                    try:
+                        ind = self.Data_2D.Vu.Header.index(id)
+                        data = self.Data_2D.Vu.Values[:, ind]
+                        self.times = self.Data_2D.Vu.Values[:, 1]
+                        return True, data, message
+                    except:
+                        message = 'Data not found for 2D Vu with ID: ' + id
+                        return False, [0.0], message
+                else:
+                    message = 'No 2D Vu Data loaded for: ' + self.displayname
+                    return False, [0.0], message
+            elif (res.upper() in ("VV")):
+                if self.Data_2D.Vv.loaded:
+                    try:
+                        ind = self.Data_2D.Vv.Header.index(id)
+                        data = self.Data_2D.Vv.Values[:, ind]
+                        self.times = self.Data_2D.Vv.Values[:, 1]
+                        return True, data, message
+                    except:
+                        message = 'Data not found for 2D Vv with ID: ' + id
+                        return False, [0.0], message
+                else:
+                    message = 'No 2D Vv Data loaded for: ' + self.displayname
+                    return False, [0.0], message
+            elif (res.upper() in ("VA")):
+                if self.Data_2D.VA.loaded:
+                    try:
+                        ind = self.Data_2D.VA.Header.index(id)
+                        data = self.Data_2D.VA.Values[:, ind]
+                        self.times = self.Data_2D.VA.Values[:, 1]
+                        return True, data, message
+                    except:
+                        message = 'Data not found for 2D VA with ID: ' + id
+                        return False, [0.0], message
+                else:
+                    message = 'No 2D Vv Data loaded for: ' + self.displayname
                     return False, [0.0], message
             elif(res.upper() in ("QI", "INTEGRAL FLOW","FLOW INTEGRAL")):
                 if self.Data_2D.QI.loaded:
@@ -1434,25 +1749,245 @@ class ResData():
 
         return error, message
 
+    def getResFileFormat(self):
+        try:
+            data = numpy.genfromtxt(self.filename, dtype=str, delimiter="==")
+        except:
+            error = True
+            message = 'ERROR - Unexpected error, Unable to load data.'
+            return error, message
+
+        for i in range(0, len(data)):
+            tmp = data[i, 0]
+            dat_type = tmp.strip()
+            tmp = data[i, 1]
+            rdata = tmp.strip()
+
+            if dat_type == "Time Series Output Format":
+                rtypes = rdata.split(" ")
+                if "CSV" in rtypes:
+                    return "CSV"
+                if "NC" in rtypes:
+                    return "NC"
+                return None
+
+        return "CSV"
+
+    def getNetCDFLibrary(self):
+        try:
+            from netCDF4 import Dataset
+            return "python", None
+        except ImportError:
+            pass
+
+        try:
+            from qgis.core import QgsApplication
+            netcdf_dll_path = os.path.dirname(
+                os.path.join(os.path.dirname(os.path.dirname(QgsApplication.pkgDataPath()))))
+            netcdf_dll_path = os.path.join(netcdf_dll_path, "bin", "netcdf.dll")
+            if os.path.exists(netcdf_dll_path):
+                return "c_netcdf.dll", netcdf_dll_path
+        except ImportError:
+            pass
+
+        return None, None
+
+    def loadNetCDFHeader(self):
+        error = False
+        message = None
+        if self.netCDFLibPath is None:
+            self.netCDFLib, self.netCDFLibPath = self.getNetCDFLibrary()
+        else:
+            if os.path.exists(self.netCDFLibPath):
+                self.netCDFLib = "c_netcdf.dll"
+        if self.netCDFLib is None:
+            return True, "ERROR: Could not find a valid netcdf library"
+
+        # find netcdf filepath
+        try:
+            data = numpy.genfromtxt(self.filename, dtype=str, delimiter="==")
+        except:
+            error = True
+            message = 'ERROR - Unexpected error, Unable to load data.'
+            return error, message
+        for i in range(0, len(data)):
+            tmp = data[i, 0]
+            dat_type = tmp.strip()
+            tmp = data[i, 1]
+            rdata = tmp.strip()
+            if dat_type == "NetCDF Time Series":
+                self.netcdf_fpath = os.path.abspath(os.path.join(self.fpath, rdata))
+                break
+        if self.netcdf_fpath is None:
+            return True, "ERROR: could not find netcdf file path reference"
+
+        if self.netCDFLib == "python":
+            self.loadNetCDFHeaderPython()
+        elif self.netCDFLib == "c_netcdf.dll":
+            self.loadNetCDFHeaderCDLL()
+
+    def loadNetCDFHeaderPython(self):
+        from netCDF4 import Dataset
+        # open .nc file
+        self.ncopen = Dataset(self.netcdf_fpath)
+
+        # get dimension data
+        for i, d in enumerate(self.ncopen.dimensions):
+            dim = NcDim()
+            self.ncDims.append(dim)
+
+            dim.id = i
+            dim.name = self.ncopen.dimensions[d].name
+            dim.len = self.ncopen.dimensions[d].size
+
+        # get variable data
+        for i, v in enumerate(self.ncopen.variables):
+            var = NcVar()
+            self.ncVars.append(var)
+
+            var.id = i
+            var.name = self.ncopen.variables[v].name
+            var.type = self.ncopen.variables[v].dtype
+            var.nDims = self.ncopen.variables[v].ndim
+            var.dimLens = self.ncopen.variables[v].shape
+            var.dimNames = self.ncopen.variables[v].dimensions
+            dimIds = []
+            for dimName in var.dimNames:
+                for dim in self.ncDims:
+                    if dim.name == dimName:
+                        dimIds.append(dim.id)
+            var.dimIds = tuple(dimIds)
+
+    def loadNetCDFHeaderCDLL(self):
+        # open .nc file
+        self.ncdll = ctypes.cdll.LoadLibrary(self.netCDFLibPath)
+        file = ctypes.c_char_p(str.encode(self.netcdf_fpath))
+        NC_NOWRITE = ctypes.c_int(0)
+        ncidp = ctypes.pointer(ctypes.c_int())
+        err = self.ncdll.nc_open(file, NC_NOWRITE, ncidp)
+        if err:
+            return True, "ERROR: error reading netcdf file. Error: {0}".format(NC_Error.message(err))
+
+        # query netcdf to get number of dimensions and variables
+        self.ncid = ncidp.contents
+        ndimsp = ctypes.pointer(ctypes.c_int())
+        nvarsp = ctypes.pointer(ctypes.c_int())
+        nattsp = ctypes.pointer(ctypes.c_int())
+        unlimdimidp = ctypes.pointer(ctypes.c_int())
+        err = self.ncdll.nc_inq(self.ncid, ndimsp, nvarsp, nattsp, unlimdimidp)
+        if err:
+            if self.ncid.value > 0:
+                self.ncdll.nc_close(self.ncid)
+            return True, "ERROR: error reading netcdf file. Error: {0}".format(NC_Error.message(err))
+
+        # get info on dimensions
+        cstr_array = (ctypes.c_char * 256)()
+        cint_p = ctypes.pointer(ctypes.c_int())
+        for i in range(ndimsp.contents.value):
+            dim = NcDim()
+            self.ncDims.append(dim)
+
+            # gets dimension name and length
+            err = self.ncdll.nc_inq_dim(self.ncid, ctypes.c_int(i), ctypes.byref(cstr_array), cint_p)
+            if err:
+                if self.ncid.value > 0:
+                    self.ncdll.nc_close(self.ncid)
+                return True, "ERROR: error getting netcdf dimensions. Error: {0}".format(NC_Error.message(err))
+
+            dim.id = i
+            dim.name = cstr_array.value.decode('utf-8')
+            dim.len = cint_p.contents.value
+
+        # get info on variables
+        for i in range(nvarsp.contents.value):
+            var = NcVar()
+            self.ncVars.append(var)
+
+            # id
+            var.id = i
+
+            # variable name
+            err = self.ncdll.nc_inq_varname(self.ncid, ctypes.c_int(i), ctypes.byref(cstr_array))
+            if err:
+                if self.ncid.value > 0:
+                    self.ncdll.nc_close(self.ncid)
+                return True, "ERROR: error getting netcdf variable names. Error: {0}".format(NC_Error.message(err))
+            var.name = cstr_array.value.decode('utf-8')
+
+            # variable data type
+            err = self.ncdll.nc_inq_vartype(self.ncid, ctypes.c_int(i), cint_p)
+            if err:
+                if self.ncid.value > 0:
+                    self.ncdll.nc_close(self.ncid)
+                return True, "ERROR: error getting netcdf variable types. Error: {0}".format(NC_Error.message(err))
+            var.type = cint_p.contents.value
+
+            # number of dimensions
+            err = self.ncdll.nc_inq_varndims(self.ncid, ctypes.c_int(i), cint_p)
+            if err:
+                if self.ncid.value > 0:
+                    self.ncdll.nc_close(self.ncid)
+                return True, "ERROR: error getting netcdf variable dimensions. Error: {0}".format(NC_Error.message(err))
+            var.nDims = cint_p.contents.value
+
+            # dimension information
+            cint_array = (ctypes.c_int * var.nDims)()
+            err = self.ncdll.nc_inq_vardimid(self.ncid, ctypes.c_int(i), ctypes.byref(cint_array))
+            if err:
+                if self.ncid.value > 0:
+                    self.ncdll.nc_close(self.ncid)
+                return True, "ERROR: error getting netcdf variable dimensions. Error: {0}".format(NC_Error.message(err))
+            var.dimIds = tuple(cint_array[x] for x in range(var.nDims))
+            var.dimNames = tuple(self.ncDims[x].name for x in var.dimIds)
+            var.dimLens = tuple(self.ncDims[x].len for x in var.dimIds)
+
     def load(self, fname):
         error = False
-        message = []
+        message = None
         self.filename = fname
         self.fpath = os.path.dirname(fname)
+
+        if not os.path.exists(fname):
+            error = True
+            message = "ERROR - TPC file does not exist: {0}".format(fname)
+            return error, message
+
+        self.resFileFormat = self.getResFileFormat()
+        if self.resFileFormat == "CSV":  # use CSV if available
+            pass
+        elif self.resFileFormat == "NC":
+            self.loadNetCDFHeader()
+        else:
+            return True, "ERROR: Unrecognised TS file format."
+
+        error, message = self.loadTPC()
+        return error, message
+
+    def loadTPC(self):
+        error = False
+        message = ""
         try:
-            data = numpy.genfromtxt(fname, dtype=str, delimiter="==")
+            data = numpy.genfromtxt(self.filename, dtype=str, delimiter="==")
+        except IOError:
+            message = 'Cannot find the following file: \n{0}'.format(self.fpath)
+            error = True
+            return error, message
         except:
             error = True
             message = 'ERROR - Unable to load data, check file exists.'
             return error, message
 
-        for i in range (0,len(data)):
-            tmp = data[i,0]
+        for i in range(0, len(data)):
+            tmp = data[i, 0]
             dat_type = tmp.strip()
-            tmp = data[i,1]
+            tmp = data[i, 1]
             rdata = tmp.strip()
-            
-            if dat_type == 'Format Version':
+
+            if dat_type == "Time Series Output Format":
+                continue
+            elif dat_type == "NetCDF Time Series":
+                continue
+            elif dat_type == 'Format Version':
                 self.formatVersion = int(rdata)
             elif dat_type == 'Units':
                 self.units = rdata
@@ -1467,8 +2002,6 @@ class ResData():
             elif dat_type == 'GIS Plot Objects':
                 fullpath = getOSIndependentFilePath(self.fpath, rdata)
                 self.Index = PlotObjects(fullpath)
-                if self.Index.message:
-                    message.append(self.Index.message)
             elif dat_type == 'GIS Reporting Location Points':
                 self.GIS.RL_P = rdata[2:]
             elif dat_type == 'GIS Reporting Location Lines':
@@ -1476,16 +2009,16 @@ class ResData():
             elif dat_type == 'GIS Reporting Location Regions':
                 self.GIS.RL_R = rdata[2:]
             elif dat_type == 'Number 1D Channels':
-                #self.nChannels = int(rdata)
+                # self.nChannels = int(rdata)
                 self.Data_1D.nChan = int(rdata)
             elif dat_type == 'Number 1D Nodes':
                 self.Data_1D.nNode = int(rdata)
             elif dat_type == 'Number Reporting Location Points':
-                self.Data_RL.nPoint= int(rdata)
+                self.Data_RL.nPoint = int(rdata)
             elif dat_type == 'Number Reporting Location Lines':
-                self.Data_RL.nLine= int(rdata)
+                self.Data_RL.nLine = int(rdata)
             elif dat_type == 'Number Reporting Location Regions':
-                self.Data_RL.nRegion= int(rdata)
+                self.Data_RL.nRegion = int(rdata)
             elif dat_type == '1D Channel Info':
                 if rdata != 'NONE':
                     fullpath = getOSIndependentFilePath(self.fpath, rdata)
@@ -1498,59 +2031,139 @@ class ResData():
                 if rdata != 'NONE':
                     fullpath = getOSIndependentFilePath(self.fpath, rdata)
                     self.nodes = NodeInfo(fullpath)
-                    if self.nodes.message:
-                        return True, '; '.join(self.nodes.message)
             elif dat_type == '1D Water Levels':
-                if rdata != 'NONE':
-                    fullpath = getOSIndependentFilePath(self.fpath, rdata)
-                    error, message = self.Data_1D.H.load(fullpath, 'H', self.displayname)
-                    if error:
-                        return error, message
-                    self.nTypes = self.nTypes + 1
-                    self.Types.append('1D Water Levels')
-                    if self.nTypes == 1:
-                        self.times = self.Data_1D.H.Values[:,1]
-            elif dat_type == '1D Energy Levels':
-                if rdata != 'NONE':
-                    fullpath = getOSIndependentFilePath(self.fpath, rdata)
-                    error, message = self.Data_1D.E.load(fullpath, 'H', self.displayname)
-                    if error:
-                        return error, message
-                    self.nTypes = self.nTypes + 1
-                    self.Types.append('1D Energy Levels')
-                    if self.nTypes == 1:
-                        self.times = self.Data_1D.H.Values[:,1]
-            elif dat_type == 'Reporting Location Points Water Levels':
-                if rdata != 'NONE':
-                    fullpath = getOSIndependentFilePath(self.fpath, rdata)
-                    error, message = self.Data_RL.H_P.load(fullpath, 'H', self.displayname)
-                    self.Data_RL.types.append('H')
-                    if error:
-                        return error, message
-            elif dat_type == 'Reporting Location Lines Flows':
-                if rdata != 'NONE':
-                    fullpath = getOSIndependentFilePath(self.fpath, rdata)
-                    error, message = self.Data_RL.Q_L.load(fullpath, 'Q', self.displayname)
-                    self.Data_RL.types.append('Q')
-                    if error:
-                        return error, message
-            elif dat_type == 'Reporting Location Regions Volumes':
-                if rdata != 'NONE':
-                    fullpath = getOSIndependentFilePath(self.fpath, rdata)
-                    error, message = self.Data_RL.Vol_R.load(fullpath, 'Vol', self.displayname)
-                    if error:
-                        return error, message
-                    self.nTypes = self.nTypes + 1
-                    self.Types.append('2D Region Volume')
-                    self.Data_RL.types.append('Vol')
-                    try:
-                        chk_nLocs = self.Data_RL.nRegion
-                        if (chk_nLocs != self.Data_RL.Vol_R.nLocs):
-                            message = 'ERROR - number of locations in .csv doesn''t match value in .tpc'
-                            error = True
+                if self.resFileFormat == "CSV":
+                    if rdata != 'NONE':
+                        fullpath = getOSIndependentFilePath(self.fpath, rdata)
+                        error, message = self.Data_1D.H.load(fullpath, 'H', self.displayname)
+                        if error:
                             return error, message
-                    except:
-                        message.append('WARNING - Unable to extact number of values in .tpc file entry')
+                        self.nTypes = self.nTypes + 1
+                        self.Types.append('1D Water Levels')
+                        if self.nTypes == 1:
+                            self.times = self.Data_1D.H.Values[:, 1]
+                elif self.resFileFormat == "NC":
+                    if self.netcdf_fpath:
+                        error, message = self.Data_1D.H.loadFromNetCDF(self.netcdf_fpath, "water_levels_1d",
+                                                                       "node_names",
+                                                                       self.netCDFLib, self.ncopen, self.ncid,
+                                                                       self.ncdll,
+                                                                       self.ncDims, self.ncVars)
+                        if error:
+                            return error, message
+                        self.nTypes = self.nTypes + 1
+                        self.Types.append('1D Water Levels')
+                        if self.nTypes == 1:
+                            self.times = self.Data_1D.H.Values[:, 1]
+            elif dat_type == '1D Energy Levels':
+                if self.resFileFormat == "CSV":
+                    if rdata != 'NONE':
+                        fullpath = getOSIndependentFilePath(self.fpath, rdata)
+                        error, message = self.Data_1D.E.load(fullpath, 'H', self.displayname)
+                        if error:
+                            return error, message
+                        self.nTypes = self.nTypes + 1
+                        self.Types.append('1D Energy Levels')
+                        if self.nTypes == 1:
+                            self.times = self.Data_1D.H.Values[:, 1]
+                elif self.resFileFormat == "NC":
+                    if self.netcdf_fpath:
+                        error, message = self.Data_1D.E.loadFromNetCDF(self.netcdf_fpath, "energy_levels_1d",
+                                                                       "node_names",
+                                                                       self.netCDFLib, self.ncopen, self.ncid,
+                                                                       self.ncdll,
+                                                                       self.ncDims, self.ncVars)
+                        if error:
+                            return error, message
+                        self.nTypes = self.nTypes + 1
+                        self.Types.append('1D Energy Levels')
+                        if self.nTypes == 1:
+                            self.times = self.Data_1D.E.Values[:, 1]
+            elif dat_type == 'Reporting Location Points Water Levels':
+                if self.resFileFormat == "CSV":
+                    if rdata != 'NONE':
+                        fullpath = getOSIndependentFilePath(self.fpath, rdata)
+                        error, message = self.Data_RL.H_P.load(fullpath, 'H', self.displayname)
+                        if error:
+                            return error, message
+                        self.nTypes = self.nTypes + 1
+                        self.Types.append('RL Water Levels')
+                        self.Data_RL.types.append('H')
+                        if self.nTypes == 1:
+                            self.times = self.Data_RL.H_P.Values[:, 1]
+                elif self.resFileFormat == "NC":
+                    if self.netcdf_fpath:
+                        error, message = self.Data_RL.H_P.loadFromNetCDF(self.netcdf_fpath, "water_levels_rl",
+                                                                         "name_water_levels_rl",
+                                                                         self.netCDFLib, self.ncopen, self.ncid,
+                                                                         self.ncdll,
+                                                                         self.ncDims, self.ncVars)
+                        if error:
+                            return error, message
+                        self.nTypes = self.nTypes + 1
+                        self.Types.append('RL Water Levels')
+                        self.Data_RL.types.append('H')
+                        if self.nTypes == 1:
+                            self.times = self.Data_RL.H_P.Values[:, 1]
+            elif dat_type == 'Reporting Location Lines Flows':
+                if self.resFileFormat == "CSV":
+                    if rdata != 'NONE':
+                        fullpath = getOSIndependentFilePath(self.fpath, rdata)
+                        error, message = self.Data_RL.Q_L.load(fullpath, 'Q', self.displayname)
+                        if error:
+                            return error, message
+                        self.nTypes = self.nTypes + 1
+                        self.Types.append('RL Flows')
+                        self.Data_RL.types.append('Q')
+                        if self.nTypes == 1:
+                            self.times = self.Data_RL.Q_L.Values[:, 1]
+                elif self.resFileFormat == "NC":
+                    if self.netcdf_fpath:
+                        error, message = self.Data_RL.Q_L.loadFromNetCDF(self.netcdf_fpath, "flows_rl", "name_flows_rl",
+                                                                         self.netCDFLib, self.ncopen, self.ncid,
+                                                                         self.ncdll,
+                                                                         self.ncDims, self.ncVars)
+                        if error:
+                            return error, message
+                        self.nTypes = self.nTypes + 1
+                        self.Types.append('RL Flows')
+                        self.Data_RL.types.append('Q')
+                        if self.nTypes == 1:
+                            self.times = self.Data_RL.Q_L.Values[:, 1]
+            elif dat_type == 'Reporting Location Regions Volumes':
+                if self.resFileFormat == "CSV":
+                    if rdata != 'NONE':
+                        fullpath = getOSIndependentFilePath(self.fpath, rdata)
+                        error, message = self.Data_RL.Vol_R.load(fullpath, 'Vol', self.displayname)
+                        if error:
+                            return error, message
+                        self.nTypes = self.nTypes + 1
+                        self.Types.append('RL Region Volume')
+                        self.Data_RL.types.append('Vol')
+                        if self.nTypes == 1:
+                            self.times = self.Data_RL.Vol_R.Values[:, 1]
+                        try:
+                            chk_nLocs = self.Data_RL.nRegion
+                            if (chk_nLocs != self.Data_RL.Vol_R.nLocs):
+                                message = 'ERROR - number of locations in .csv doesn\'t match value in .tpc'
+                                error = True
+                                return error, message
+                        except:
+                            print('WARNING - Unable to extact number of values in .tpc file entry')
+                elif self.resFileFormat == "NC":
+                    if self.netcdf_fpath:
+                        error, message = self.Data_RL.Vol_R.loadFromNetCDF(self.netcdf_fpath, "volumes_rl",
+                                                                           "name_volumes_rl",
+                                                                           self.netCDFLib, self.ncopen, self.ncid,
+                                                                           self.ncdll,
+                                                                           self.ncDims, self.ncVars)
+                        if error:
+                            return error, message
+                        self.nTypes = self.nTypes + 1
+                        self.Types.append('RL Region Volume')
+                        self.Data_RL.types.append('Vol')
+                        if self.nTypes == 1:
+                            self.times = self.Data_RL.Vol_R.Values[:, 1]
             elif dat_type == '1D Node Maximums':
                 if rdata != 'NONE':
                     fullpath = getOSIndependentFilePath(self.fpath, rdata)
@@ -1564,371 +2177,824 @@ class ResData():
                     if error:
                         return error, message
             elif dat_type == '1D Flows':
-                if rdata != 'NONE':
-                    fullpath = getOSIndependentFilePath(self.fpath, rdata)
-                    error, message = self.Data_1D.Q.load(fullpath, 'Q', self.displayname)
-                    if error:
-                        return error, message
-                    self.nTypes = self.nTypes + 1
-                    self.Types.append('1D Flows')
-                    if self.nTypes == 1:
-                        self.times = self.Data_1D.Q.Values[:,1]
+                if self.resFileFormat == "CSV":
+                    if rdata != 'NONE':
+                        fullpath = getOSIndependentFilePath(self.fpath, rdata)
+                        error, message = self.Data_1D.Q.load(fullpath, 'Q', self.displayname)
+                        if error:
+                            return error, message
+                        self.nTypes = self.nTypes + 1
+                        self.Types.append('1D Flows')
+                        if self.nTypes == 1:
+                            self.times = self.Data_1D.Q.Values[:, 1]
+                elif self.resFileFormat == "NC":
+                    if self.netcdf_fpath:
+                        error, message = self.Data_1D.Q.loadFromNetCDF(self.netcdf_fpath, "flow_1d",
+                                                                       "channel_names",
+                                                                       self.netCDFLib, self.ncopen, self.ncid,
+                                                                       self.ncdll,
+                                                                       self.ncDims, self.ncVars)
+                        if error:
+                            return error, message
+                        self.nTypes = self.nTypes + 1
+                        self.Types.append('1D Flows')
+                        if self.nTypes == 1:
+                            self.times = self.Data_1D.Q.Values[:, 1]
             elif dat_type == '1D Flow Areas':
-                if rdata != 'NONE':
-                    fullpath = getOSIndependentFilePath(self.fpath, rdata)
-                    error, message = self.Data_1D.A.load(fullpath, 'A', self.displayname)
-                    if error:
-                        return error, message
-                    self.nTypes = self.nTypes + 1
-                    self.Types.append('1D Flow Area')
-                    if self.nTypes == 1:
-                        self.times = self.Data_1D.Q.Values[:,1]
+                if self.resFileFormat == "CSV":
+                    if rdata != 'NONE':
+                        fullpath = getOSIndependentFilePath(self.fpath, rdata)
+                        error, message = self.Data_1D.A.load(fullpath, 'A', self.displayname)
+                        if error:
+                            return error, message
+                        self.nTypes = self.nTypes + 1
+                        self.Types.append('1D Flow Area')
+                        if self.nTypes == 1:
+                            self.times = self.Data_1D.A.Values[:, 1]
+                elif self.resFileFormat == "NC":
+                    if self.netcdf_fpath:
+                        error, message = self.Data_1D.A.loadFromNetCDF(self.netcdf_fpath, "flow_areas_1d",
+                                                                       "channel_names",
+                                                                       self.netCDFLib, self.ncopen, self.ncid,
+                                                                       self.ncdll,
+                                                                       self.ncDims, self.ncVars)
+                        if error:
+                            return error, message
+                        self.nTypes = self.nTypes + 1
+                        self.Types.append('1D Flow Area')
+                        if self.nTypes == 1:
+                            self.times = self.Data_1D.A.Values[:, 1]
             elif dat_type == '1D Velocities':
-                if rdata != 'NONE':
-                    fullpath = getOSIndependentFilePath(self.fpath, rdata)
-                    error, message = self.Data_1D.V.load(fullpath, 'V', self.displayname)
-                    if error:
-                        return error, message
-                    self.nTypes = self.nTypes + 1
-                    self.Types.append('1D Velocities')
-                    if self.nTypes == 1:
-                        self.times = self.Data_1D.V.Values[:,1]
+                if self.resFileFormat == "CSV":
+                    if rdata != 'NONE':
+                        fullpath = getOSIndependentFilePath(self.fpath, rdata)
+                        error, message = self.Data_1D.V.load(fullpath, 'V', self.displayname)
+                        if error:
+                            return error, message
+                        self.nTypes = self.nTypes + 1
+                        self.Types.append('1D Velocities')
+                        if self.nTypes == 1:
+                            self.times = self.Data_1D.V.Values[:, 1]
+                elif self.resFileFormat == "NC":
+                    if self.netcdf_fpath:
+                        error, message = self.Data_1D.V.loadFromNetCDF(self.netcdf_fpath, "velocities_1d",
+                                                                       "channel_names",
+                                                                       self.netCDFLib, self.ncopen, self.ncid,
+                                                                       self.ncdll,
+                                                                       self.ncDims, self.ncVars)
+                        if error:
+                            return error, message
+                        self.nTypes = self.nTypes + 1
+                        self.Types.append('1D Velocities')
+                        if self.nTypes == 1:
+                            self.times = self.Data_1D.V.Values[:, 1]
             elif dat_type.find('2D Line Flow Area') >= 0:
-                if rdata != 'NONE':
-                    fullpath = getOSIndependentFilePath(self.fpath, rdata)
-                    indA = dat_type.index('[')
-                    indB = dat_type.index(']')
-                    #self.Data_2D.QA = Timeseries(fullpath,'QA',self.displayname)
-                    error, message = self.Data_2D.QA.load(fullpath, 'QA', self.displayname)
-                    if error:
-                        return error, message
-                    self.nTypes = self.nTypes + 1
-                    self.Types.append('2D Line Flow Area')
-                    self.Data_2D.types.append('QA')
-                    try:
-                        chk_nLocs = int(dat_type[indA+1:indB])
-                        if (chk_nLocs != self.Data_2D.QA.nLocs):
-                            return True, 'ERROR - number of locations in .csv doesn''t match value in .tpc'
-                    except:
-                        message.append('WARNING - Unable to extact number of values in .tpc file entry')
+                if self.resFileFormat == "CSV":
+                    if rdata != 'NONE':
+                        fullpath = getOSIndependentFilePath(self.fpath, rdata)
+                        indA = dat_type.index('[')
+                        indB = dat_type.index(']')
+                        # self.Data_2D.QA = Timeseries(fullpath,'QA',self.displayname)
+                        error, message = self.Data_2D.QA.load(fullpath, 'QA', self.displayname)
+                        if error:
+                            return error, message
+                        self.nTypes = self.nTypes + 1
+                        self.Types.append('2D Line Flow Area')
+                        self.Data_2D.types.append('QA')
+                        try:
+                            chk_nLocs = int(dat_type[indA + 1:indB])
+                            if (chk_nLocs != self.Data_2D.QA.nLocs):
+                                print('ERROR - number of locations in .csv doesn''t match value in .tpc')
+                                exit()
+                        except:
+                            print('WARNING - Unable to extact number of values in .tpc file entry')
+                elif self.resFileFormat == "NC":
+                    if self.netcdf_fpath:
+                        error, message = self.Data_2D.QA.loadFromNetCDF(self.netcdf_fpath, "flow_areas_2d",
+                                                                        "name_flow_areas_2d",
+                                                                        self.netCDFLib, self.ncopen, self.ncid,
+                                                                        self.ncdll,
+                                                                        self.ncDims, self.ncVars)
+                        if error:
+                            return error, message
+                        self.nTypes = self.nTypes + 1
+                        self.Types.append('2D Line Flow Area')
+                        self.Data_2D.types.append('QA')
+                        if self.nTypes == 1:
+                            self.times = self.Data_2D.QA.Values[:, 1]
             elif dat_type.find('2D Line Flow') >= 0:
-                if rdata != 'NONE':
-                    fullpath = getOSIndependentFilePath(self.fpath, rdata)
-                    indA = dat_type.index('[')
-                    indB = dat_type.index(']')
-                    #self.Data_2D.Q = Timeseries(fullpath,'Q',self.displayname)
-                    error, message = self.Data_2D.Q.load(fullpath, 'Q', self.displayname)
-                    if error:
-                        return error, message
-                    self.nTypes = self.nTypes + 1
-                    if self.nTypes == 1:
-                        self.times = self.Data_2D.Q.Values[:,1]
-                    self.Types.append('2D Line Flow')
-                    self.Data_2D.types.append('Q')
-                    try:
-                        chk_nLocs = int(dat_type[indA+1:indB])
-                        if (chk_nLocs != self.Data_2D.Q.nLocs):
-                            message = 'ERROR - number of locations in .csv doesn''t match value in .tpc'
-                            error = True
+                if self.resFileFormat == "CSV":
+                    if rdata != 'NONE':
+                        fullpath = getOSIndependentFilePath(self.fpath, rdata)
+                        indA = dat_type.index('[')
+                        indB = dat_type.index(']')
+                        # self.Data_2D.Q = Timeseries(fullpath,'Q',self.displayname)
+                        error, message = self.Data_2D.Q.load(fullpath, 'Q', self.displayname)
+                        if error:
                             return error, message
-                    except:
-                        message.append('WARNING - Unable to extact number of values in .tpc file entry')
+                        self.nTypes = self.nTypes + 1
+                        if self.nTypes == 1:
+                            self.times = self.Data_2D.Q.Values[:, 1]
+                        self.Types.append('2D Line Flow')
+                        self.Data_2D.types.append('Q')
+                        try:
+                            chk_nLocs = int(dat_type[indA + 1:indB])
+                            if (chk_nLocs != self.Data_2D.Q.nLocs):
+                                message = 'ERROR - number of locations in .csv doesn''t match value in .tpc'
+                                error = True
+                                return error, message
+                        except:
+                            print('WARNING - Unable to extact number of values in .tpc file entry')
+                elif self.resFileFormat == "NC":
+                    if self.netcdf_fpath:
+                        error, message = self.Data_2D.Q.loadFromNetCDF(self.netcdf_fpath, "flows_2d",
+                                                                       "name_flows_2d",
+                                                                       self.netCDFLib, self.ncopen, self.ncid,
+                                                                       self.ncdll,
+                                                                       self.ncDims, self.ncVars)
+                        if error:
+                            return error, message
+                        self.nTypes = self.nTypes + 1
+                        self.Types.append('2D Line Flow')
+                        self.Data_2D.types.append('Q')
+                        if self.nTypes == 1:
+                            self.times = self.Data_2D.Q.Values[:, 1]
+            elif dat_type.find('2D Line X-Flow') >= 0:
+                if self.resFileFormat == "CSV":
+                    if rdata != 'NONE':
+                        fullpath = getOSIndependentFilePath(self.fpath, rdata)
+                        indA = dat_type.index('[')
+                        indB = dat_type.index(']')
+                        # self.Data_2D.Vx = Timeseries(fullpath,'VX',self.displayname)
+                        error, message = self.Data_2D.Qx.load(fullpath, 'QX', self.displayname)
+                        if error:
+                            return error, message
+                        self.nTypes = self.nTypes + 1
+                        self.Types.append('2D Line X-Flow')
+                        self.Data_2D.types.append('Qx')
+                        if self.nTypes == 1:
+                            self.times = self.Data_2D.Qx.Values[:, 1]
+                elif self.resFileFormat == "NC":
+                    if self.netcdf_fpath:
+                        pass  # for now not written to netcdf
+                        error, message = self.Data_2D.Qx.loadFromNetCDF(self.netcdf_fpath, "x_direction_flows_2d",
+                                                                        "name_x_direction_flows_2d",
+                                                                        self.netCDFLib, self.ncopen, self.ncid,
+                                                                        self.ncdll,
+                                                                        self.ncDims, self.ncVars)
+                        if error:
+                            return error, message
+                        self.nTypes = self.nTypes + 1
+                        self.Types.append('2D Line X-Flow')
+                        self.Data_2D.types.append('Qx')
+                        if self.nTypes == 1:
+                            self.times = self.Data_2D.Qx.Values[:, 1]
+            elif dat_type.find('2D Line Y-Flow') >= 0:
+                if self.resFileFormat == "CSV":
+                    if rdata != 'NONE':
+                        fullpath = getOSIndependentFilePath(self.fpath, rdata)
+                        indA = dat_type.index('[')
+                        indB = dat_type.index(']')
+                        # self.Data_2D.Vx = Timeseries(fullpath,'VX',self.displayname)
+                        error, message = self.Data_2D.Qy.load(fullpath, 'QY', self.displayname)
+                        if error:
+                            return error, message
+                        self.nTypes = self.nTypes + 1
+                        self.Types.append('2D Line Y-Flow')
+                        self.Data_2D.types.append('Qy')
+                        if self.nTypes == 1:
+                            self.times = self.Data_2D.Qy.Values[:, 1]
+                elif self.resFileFormat == "NC":
+                    if self.netcdf_fpath:
+                        pass  # for now not written to netcdf
+                        error, message = self.Data_2D.Qy.loadFromNetCDF(self.netcdf_fpath, "y_direction_flows_2d",
+                                                                        "name_y_direction_flows_2d",
+                                                                        self.netCDFLib, self.ncopen, self.ncid,
+                                                                        self.ncdll,
+                                                                        self.ncDims, self.ncVars)
+                        if error:
+                            return error, message
+                        self.nTypes = self.nTypes + 1
+                        self.Types.append('2D Line Y-Flow')
+                        self.Data_2D.types.append('Qy')
+                        if self.nTypes == 1:
+                            self.times = self.Data_2D.Qy.Values[:, 1]
             elif dat_type.find('2D Point Gauge Level') >= 0:
-                if rdata != 'NONE':
-                    fullpath = getOSIndependentFilePath(self.fpath, rdata)
-                    indA = dat_type.index('[')
-                    indB = dat_type.index(']')
-                    #self.Data_2D.GL = Timeseries(fullpath,'G',self.displayname)
-                    error, message = self.Data_2D.GL.load(fullpath, 'G', self.displayname)
-                    if error:
-                        return error, message
-                    self.nTypes = self.nTypes + 1
-                    self.Types.append('2D Point Gauge Level')
-                    self.Data_2D.types.append('G')
-                    try:
-                        chk_nLocs = int(dat_type[indA+1:indB])
-                        if (chk_nLocs != self.Data_2D.GL.nLocs):
-                            message = 'ERROR - number of locations in .csv doesn''t match value in .tpc'
-                            error = True
+                if self.resFileFormat == "CSV":
+                    if rdata != 'NONE':
+                        fullpath = getOSIndependentFilePath(self.fpath, rdata)
+                        indA = dat_type.index('[')
+                        indB = dat_type.index(']')
+                        # self.Data_2D.GL = Timeseries(fullpath,'G',self.displayname)
+                        error, message = self.Data_2D.GL.load(fullpath, 'G', self.displayname)
+                        if error:
                             return error, message
-                    except:
-                        message.append('WARNING - Unable to extact number of values in .tpc file entry')
+                        self.nTypes = self.nTypes + 1
+                        self.Types.append('2D Point Gauge Level')
+                        self.Data_2D.types.append('G')
+                        try:
+                            chk_nLocs = int(dat_type[indA + 1:indB])
+                            if (chk_nLocs != self.Data_2D.GL.nLocs):
+                                message = 'ERROR - number of locations in .csv doesn''t match value in .tpc'
+                                error = True
+                                return error, message
+                        except:
+                            print('WARNING - Unable to extact number of values in .tpc file entry')
+                elif self.resFileFormat == "NC":
+                    if self.netcdf_fpath:
+                        pass  # for now not written to netcdf
+                        error, message = self.Data_2D.GL.loadFromNetCDF(self.netcdf_fpath, "gauge_levels_2d",
+                                                                        "name_gauge_levels_2d",
+                                                                        self.netCDFLib, self.ncopen, self.ncid,
+                                                                        self.ncdll,
+                                                                        self.ncDims, self.ncVars)
+                        if error:
+                            return error, message
+                        self.nTypes = self.nTypes + 1
+                        self.Types.append('2D Point Gauge Level')
+                        self.Data_2D.types.append('G')
+                        if self.nTypes == 1:
+                            self.times = self.Data_2D.GL.Values[:, 1]
             elif dat_type.find('2D Point Water Level') >= 0:
-                if rdata != 'NONE':
-                    fullpath = getOSIndependentFilePath(self.fpath, rdata)
-                    indA = dat_type.index('[')
-                    indB = dat_type.index(']')
-                    #self.Data_2D.H = Timeseries(fullpath,'H',self.displayname)
-                    error, message = self.Data_2D.H.load(fullpath, 'H', self.displayname)
-                    if error:
-                        return error, message
-                    self.nTypes = self.nTypes + 1
-                    self.Types.append('2D Point Water Level')
-                    self.Data_2D.types.append('H')
-                    if self.nTypes == 1:
-                        self.times = self.Data_2D.H.Values[:,1]
-                    try:
-                        chk_nLocs = int(dat_type[indA+1:indB])
-                        if (chk_nLocs != self.Data_2D.H.nLocs):
-                            message = 'ERROR - number of locations in .csv doesn''t match value in .tpc'
-                            error = True
+                if self.resFileFormat == "CSV":
+                    if rdata != 'NONE':
+                        fullpath = getOSIndependentFilePath(self.fpath, rdata)
+                        indA = dat_type.index('[')
+                        indB = dat_type.index(']')
+                        # self.Data_2D.H = Timeseries(fullpath,'H',self.displayname)
+                        error, message = self.Data_2D.H.load(fullpath, 'H', self.displayname)
+                        if error:
                             return error, message
-                    except:
-                        message.append('WARNING - Unable to extact number of values in .tpc file entry')
+                        self.nTypes = self.nTypes + 1
+                        self.Types.append('2D Point Water Level')
+                        self.Data_2D.types.append('H')
+                        if self.nTypes == 1:
+                            self.times = self.Data_2D.H.Values[:, 1]
+                        try:
+                            chk_nLocs = int(dat_type[indA + 1:indB])
+                            if (chk_nLocs != self.Data_2D.H.nLocs):
+                                message = 'ERROR - number of locations in .csv doesn''t match value in .tpc'
+                                error = True
+                                return error, message
+                        except:
+                            print('WARNING - Unable to extact number of values in .tpc file entry')
+                elif self.resFileFormat == "NC":
+                    if self.netcdf_fpath:
+                        error, message = self.Data_2D.H.loadFromNetCDF(self.netcdf_fpath, "water_levels_2d",
+                                                                       "name_water_levels_2d",
+                                                                       self.netCDFLib, self.ncopen, self.ncid,
+                                                                       self.ncdll,
+                                                                       self.ncDims, self.ncVars)
+                        if error:
+                            return error, message
+                        self.nTypes = self.nTypes + 1
+                        self.Types.append('2D Point Water Level')
+                        self.Data_2D.types.append('H')
+                        if self.nTypes == 1:
+                            self.times = self.Data_2D.H.Values[:, 1]
             elif dat_type.find('2D Point X-Vel') >= 0:
-                if rdata != 'NONE':
-                    fullpath = getOSIndependentFilePath(self.fpath, rdata)
-                    indA = dat_type.index('[')
-                    indB = dat_type.index(']')
-                    #self.Data_2D.Vx = Timeseries(fullpath,'VX',self.displayname)
-                    error, message = self.Data_2D.Vx.load(fullpath, 'VX', self.displayname)
-                    if error:
-                        return error, message
-                    self.nTypes = self.nTypes + 1
-                    self.Types.append('2D Point X-Vel')
-                    self.Data_2D.types.append('VX')
-                    try:
-                        chk_nLocs = int(dat_type[indA+1:indB])
-                        if (chk_nLocs != self.Data_2D.Vx.nLocs):
-                            message = 'ERROR - number of locations in .csv doesn''t match value in .tpc'
-                            error = True
+                if self.resFileFormat == "CSV":
+                    if rdata != 'NONE':
+                        fullpath = getOSIndependentFilePath(self.fpath, rdata)
+                        indA = dat_type.index('[')
+                        indB = dat_type.index(']')
+                        # self.Data_2D.Vx = Timeseries(fullpath,'VX',self.displayname)
+                        error, message = self.Data_2D.Vx.load(fullpath, 'VX', self.displayname)
+                        if error:
                             return error, message
-                    except:
-                        message.append('WARNING - Unable to extact number of values in .tpc file entry')
+                        self.nTypes = self.nTypes + 1
+                        self.Types.append('2D Point X-Vel')
+                        self.Data_2D.types.append('Vx')
+                        try:
+                            chk_nLocs = int(dat_type[indA + 1:indB])
+                            if (chk_nLocs != self.Data_2D.Vx.nLocs):
+                                message = 'ERROR - number of locations in .csv doesn''t match value in .tpc'
+                                error = True
+                                return error, message
+                        except:
+                            print('WARNING - Unable to extact number of values in .tpc file entry')
+                elif self.resFileFormat == "NC":
+                    if self.netcdf_fpath:
+                        pass  # for now not written to netcdf
+                        error, message = self.Data_2D.Vx.loadFromNetCDF(self.netcdf_fpath, "x_direction_velocities_2d",
+                                                                        "name_x_direction_velocities_2d",
+                                                                        self.netCDFLib, self.ncopen, self.ncid,
+                                                                        self.ncdll,
+                                                                        self.ncDims, self.ncVars)
+                        if error:
+                            return error, message
+                        self.nTypes = self.nTypes + 1
+                        self.Types.append('2D Point X-Vel')
+                        self.Data_2D.types.append('Vx')
+                        if self.nTypes == 1:
+                            self.times = self.Data_2D.Vx.Values[:, 1]
             elif dat_type.find('2D Point Y-Vel') >= 0:
-                if rdata != 'NONE':
-                    fullpath = getOSIndependentFilePath(self.fpath, rdata)
-                    indA = dat_type.index('[')
-                    indB = dat_type.index(']')
-                    #self.Data_2D.Vy = Timeseries(fullpath,'VY',self.displayname)
-                    error, message = self.Data_2D.Vy.load(fullpath, 'VY', self.displayname)
-                    if error:
-                        return error, message
-                    self.nTypes = self.nTypes + 1
-                    self.Types.append('2D Point Y-Vel')
-                    self.Data_2D.types.append('VY')
-                    try:
-                        chk_nLocs = int(dat_type[indA+1:indB])
-                        if (chk_nLocs != self.Data_2D.Vy.nLocs):
-                            message = 'ERROR - number of locations in .csv doesn''t match value in .tpc'
-                            error = True
+                if self.resFileFormat == "CSV":
+                    if rdata != 'NONE':
+                        fullpath = getOSIndependentFilePath(self.fpath, rdata)
+                        indA = dat_type.index('[')
+                        indB = dat_type.index(']')
+                        # self.Data_2D.Vy = Timeseries(fullpath,'VY',self.displayname)
+                        error, message = self.Data_2D.Vy.load(fullpath, 'VY', self.displayname)
+                        if error:
                             return error, message
-                    except:
-                        message.append('WARNING - Unable to extact number of values in .tpc file entry')
+                        self.nTypes = self.nTypes + 1
+                        self.Types.append('2D Point Y-Vel')
+                        self.Data_2D.types.append('Vy')
+                        try:
+                            chk_nLocs = int(dat_type[indA + 1:indB])
+                            if (chk_nLocs != self.Data_2D.Vy.nLocs):
+                                message = 'ERROR - number of locations in .csv doesn''t match value in .tpc'
+                                error = True
+                                return error, message
+                        except:
+                            print('WARNING - Unable to extact number of values in .tpc file entry')
+                elif self.resFileFormat == "NC":
+                    if self.netcdf_fpath:
+                        pass  # for now not written to netcdf
+                        error, message = self.Data_2D.Vy.loadFromNetCDF(self.netcdf_fpath, "y_direction_velocities_2d",
+                                                                        "name_y_direction_velocities_2d",
+                                                                        self.netCDFLib, self.ncopen, self.ncid,
+                                                                        self.ncdll,
+                                                                        self.ncDims, self.ncVars)
+                        if error:
+                            return error, message
+                        self.nTypes = self.nTypes + 1
+                        self.Types.append('2D Point Y-Vel')
+                        self.Data_2D.types.append('Vy')
+                        if self.nTypes == 1:
+                            self.times = self.Data_2D.Vy.Values[:, 1]
+            elif dat_type.find('2D Point u-Vel') >= 0:
+                if self.resFileFormat == "CSV":
+                    if rdata != 'NONE':
+                        fullpath = getOSIndependentFilePath(self.fpath, rdata)
+                        indA = dat_type.index('[')
+                        indB = dat_type.index(']')
+                        # self.Data_2D.Vx = Timeseries(fullpath,'VX',self.displayname)
+                        error, message = self.Data_2D.Vu.load(fullpath, 'Vu', self.displayname)
+                        if error:
+                            return error, message
+                        self.nTypes = self.nTypes + 1
+                        self.Types.append('2D Point u-Vel')
+                        self.Data_2D.types.append('Vu')
+                        if self.nTypes == 1:
+                            self.times = self.Data_2D.Vu.Values[:, 1]
+                elif self.resFileFormat == "NC":
+                    if self.netcdf_fpath:
+                        pass  # for now not written to netcdf
+                        error, message = self.Data_2D.Vu.loadFromNetCDF(self.netcdf_fpath, "u_velocities_2d",
+                                                                        "name_u_velocities_2d",
+                                                                        self.netCDFLib, self.ncopen, self.ncid,
+                                                                        self.ncdll,
+                                                                        self.ncDims, self.ncVars)
+                        if error:
+                            return error, message
+                        self.nTypes = self.nTypes + 1
+                        self.Types.append('2D Point u-Vel')
+                        self.Data_2D.types.append('Vu')
+                        if self.nTypes == 1:
+                            self.times = self.Data_2D.Vu.Values[:, 1]
+            elif dat_type.find('2D Point v-Vel') >= 0:
+                if self.resFileFormat == "CSV":
+                    if rdata != 'NONE':
+                        fullpath = getOSIndependentFilePath(self.fpath, rdata)
+                        indA = dat_type.index('[')
+                        indB = dat_type.index(']')
+                        # self.Data_2D.Vx = Timeseries(fullpath,'VX',self.displayname)
+                        error, message = self.Data_2D.Vv.load(fullpath, 'Vv', self.displayname)
+                        if error:
+                            return error, message
+                        self.nTypes = self.nTypes + 1
+                        self.Types.append('2D Point v-Vel')
+                        self.Data_2D.types.append('Vv')
+                        if self.nTypes == 1:
+                            self.times = self.Data_2D.Vv.Values[:, 1]
+                elif self.resFileFormat == "NC":
+                    if self.netcdf_fpath:
+                        pass  # for now not written to netcdf
+                        error, message = self.Data_2D.Vv.loadFromNetCDF(self.netcdf_fpath, "v_velocities_2d",
+                                                                        "name_v_velocities_2d",
+                                                                        self.netCDFLib, self.ncopen, self.ncid,
+                                                                        self.ncdll,
+                                                                        self.ncDims, self.ncVars)
+                        if error:
+                            return error, message
+                        self.nTypes = self.nTypes + 1
+                        self.Types.append('2D Point v-Vel')
+                        self.Data_2D.types.append('Vv')
+                        if self.nTypes == 1:
+                            self.times = self.Data_2D.Vv.Values[:, 1]
+            elif dat_type.find('2D Point Flow Direction') >= 0:
+                if self.resFileFormat == "CSV":
+                    if rdata != 'NONE':
+                        fullpath = getOSIndependentFilePath(self.fpath, rdata)
+                        indA = dat_type.index('[')
+                        indB = dat_type.index(']')
+                        # self.Data_2D.Vx = Timeseries(fullpath,'VX',self.displayname)
+                        error, message = self.Data_2D.VA.load(fullpath, 'VA', self.displayname)
+                        if error:
+                            return error, message
+                        self.nTypes = self.nTypes + 1
+                        self.Types.append('2D Point Velocity Angle')
+                        self.Data_2D.types.append('Vv')
+                        if self.nTypes == 1:
+                            self.times = self.Data_2D.VA.Values[:, 1]
+                elif self.resFileFormat == "NC":
+                    if self.netcdf_fpath:
+                        pass  # for now not written to netcdf
+                        error, message = self.Data_2D.VA.loadFromNetCDF(self.netcdf_fpath, "velocity_angle_2d",
+                                                                        "name_velocity_angle_2d",
+                                                                        self.netCDFLib, self.ncopen, self.ncid,
+                                                                        self.ncdll,
+                                                                        self.ncDims, self.ncVars)
+                        if error:
+                            return error, message
+                        self.nTypes = self.nTypes + 1
+                        self.Types.append('2D Point Velocity Angle')
+                        if self.nTypes == 1:
+                            self.times = self.Data_2D.VA.Values[:, 1]
             elif dat_type.find('2D Point Velocity') >= 0:
-                if rdata != 'NONE':
-                    fullpath = getOSIndependentFilePath(self.fpath, rdata)
-                    indA = dat_type.index('[')
-                    indB = dat_type.index(']')
-                    #self.Data_2D.V = Timeseries(fullpath,'V',self.displayname)
-                    error, message = self.Data_2D.V.load(fullpath, 'V', self.displayname)
-                    if error:
-                        return error, message
-                    self.nTypes = self.nTypes + 1
-                    self.Types.append('2D Point Velocity')
-                    self.Data_2D.types.append('V')
-                    try:
-                        chk_nLocs = int(dat_type[indA+1:indB])
-                        if (chk_nLocs != self.Data_2D.V.nLocs):
-                            message = 'ERROR - number of locations in .csv doesn''t match value in .tpc'
-                            error = True
+                if self.resFileFormat == "CSV":
+                    if rdata != 'NONE':
+                        fullpath = getOSIndependentFilePath(self.fpath, rdata)
+                        indA = dat_type.index('[')
+                        indB = dat_type.index(']')
+                        # self.Data_2D.V = Timeseries(fullpath,'V',self.displayname)
+                        error, message = self.Data_2D.V.load(fullpath, 'V', self.displayname)
+                        if error:
                             return error, message
-                    except:
-                        message.append('WARNING - Unable to extact number of values in .tpc file entry')
+                        self.nTypes = self.nTypes + 1
+                        self.Types.append('2D Point Velocity')
+                        self.Data_2D.types.append('V')
+                        try:
+                            chk_nLocs = int(dat_type[indA + 1:indB])
+                            if (chk_nLocs != self.Data_2D.V.nLocs):
+                                message = 'ERROR - number of locations in .csv doesn''t match value in .tpc'
+                                error = True
+                                return error, message
+                        except:
+                            print('WARNING - Unable to extact number of values in .tpc file entry')
+                elif self.resFileFormat == "NC":
+                    if self.netcdf_fpath:
+                        error, message = self.Data_2D.V.loadFromNetCDF(self.netcdf_fpath, "velocities_2d",
+                                                                       "name_velocities_2d",
+                                                                       self.netCDFLib, self.ncopen, self.ncid,
+                                                                       self.ncdll,
+                                                                       self.ncDims, self.ncVars)
+                        if error:
+                            return error, message
+                        self.nTypes = self.nTypes + 1
+                        self.Types.append('2D Point Velocity')
+                        self.Data_2D.types.append('V')
+                        if self.nTypes == 1:
+                            self.times = self.Data_2D.V.Values[:, 1]
             elif dat_type.find('2D Line Integral Flow') >= 0:
-                if rdata != 'NONE':
-                    fullpath = getOSIndependentFilePath(self.fpath, rdata)
-                    indA = dat_type.index('[')
-                    indB = dat_type.index(']')
-                    #self.Data_2D.QI = Timeseries(fullpath,'QI',self.displayname)
-                    error, message = self.Data_2D.QI.load(fullpath, 'QI', self.displayname)
-                    if error:
-                        return error, message
-                    self.nTypes = self.nTypes + 1
-                    self.Types.append('2D Line Integral Flow')
-                    self.Data_2D.types.append('QI')
-                    try:
-                        chk_nLocs = int(dat_type[indA+1:indB])
-                        if (chk_nLocs != self.Data_2D.QI.nLocs):
-                            message = 'ERROR - number of locations in .csv doesn''t match value in .tpc'
-                            error = True
+                if self.resFileFormat == "CSV":
+                    if rdata != 'NONE':
+                        fullpath = getOSIndependentFilePath(self.fpath, rdata)
+                        indA = dat_type.index('[')
+                        indB = dat_type.index(']')
+                        # self.Data_2D.QI = Timeseries(fullpath,'QI',self.displayname)
+                        error, message = self.Data_2D.QI.load(fullpath, 'QI', self.displayname)
+                        if error:
                             return error, message
-                    except:
-                        message.append('WARNING - Unable to extact number of values in .tpc file entry')
+                        self.nTypes = self.nTypes + 1
+                        self.Types.append('2D Line Integral Flow')
+                        self.Data_2D.types.append('QI')
+                        try:
+                            chk_nLocs = int(dat_type[indA + 1:indB])
+                            if (chk_nLocs != self.Data_2D.QI.nLocs):
+                                message = 'ERROR - number of locations in .csv doesn''t match value in .tpc'
+                                error = True
+                                return error, message
+                        except:
+                            print('WARNING - Unable to extact number of values in .tpc file entry')
+                elif self.resFileFormat == "NC":
+                    if self.netcdf_fpath:
+                        error, message = self.Data_2D.QI.loadFromNetCDF(self.netcdf_fpath, "integral_flows_2d",
+                                                                        "name_integral_flows_2d",
+                                                                        self.netCDFLib, self.ncopen, self.ncid,
+                                                                        self.ncdll,
+                                                                        self.ncDims, self.ncVars)
+                        if error:
+                            return error, message
+                        self.nTypes = self.nTypes + 1
+                        self.Types.append('2D Line Integral Flow')
+                        self.Data_2D.types.append('QI')
+                        if self.nTypes == 1:
+                            self.times = self.Data_2D.QI.Values[:, 1]
             elif dat_type.find('2D Line Structure Flow') >= 0:
-                if rdata != 'NONE':
-                    fullpath = getOSIndependentFilePath(self.fpath, rdata)
-                    indA = dat_type.index('[')
-                    indB = dat_type.index(']')
-                    #self.Data_2D.QI = Timeseries(fullpath,'QI',self.displayname)
-                    error, message = self.Data_2D.QS.load(fullpath, 'QS', self.displayname)
-                    if error:
-                        return error, message
-                    self.nTypes = self.nTypes + 1
-                    self.Types.append('2D Line Structure Flow')
-                    self.Data_2D.types.append('QS')
-                    try:
-                        chk_nLocs = int(dat_type[indA+1:indB])
-                        if (chk_nLocs != self.Data_2D.QS.nLocs):
-                            message = 'ERROR - number of locations in .csv doesn''t match value in .tpc'
-                            error = True
+                if self.resFileFormat == "CSV":
+                    if rdata != 'NONE':
+                        fullpath = getOSIndependentFilePath(self.fpath, rdata)
+                        indA = dat_type.index('[')
+                        indB = dat_type.index(']')
+                        # self.Data_2D.QI = Timeseries(fullpath,'QI',self.displayname)
+                        error, message = self.Data_2D.QS.load(fullpath, 'QS', self.displayname)
+                        if error:
                             return error, message
-                    except:
-                        message.append('WARNING - Unable to extact number of values in .tpc file entry')
+                        self.nTypes = self.nTypes + 1
+                        self.Types.append('2D Line Structure Flow')
+                        self.Data_2D.types.append('QS')
+                        try:
+                            chk_nLocs = int(dat_type[indA + 1:indB])
+                            if (chk_nLocs != self.Data_2D.QS.nLocs):
+                                message = 'ERROR - number of locations in .csv doesn''t match value in .tpc'
+                                error = True
+                                return error, message
+                        except:
+                            print('WARNING - Unable to extact number of values in .tpc file entry')
+                elif self.resFileFormat == "NC":
+                    if self.netcdf_fpath:
+                        error, message = self.Data_2D.QS.loadFromNetCDF(self.netcdf_fpath, "structure_flows_2d",
+                                                                        "name_structure_flows_2d",
+                                                                        self.netCDFLib, self.ncopen, self.ncid,
+                                                                        self.ncdll,
+                                                                        self.ncDims, self.ncVars)
+                        if error:
+                            return error, message
+                        self.nTypes = self.nTypes + 1
+                        self.Types.append('2D Line Structure Flow')
+                        self.Data_2D.types.append('QS')
+                        if self.nTypes == 1:
+                            self.times = self.Data_2D.QS.Values[:, 1]
             elif dat_type.find('2D Line U/S Structure Water') >= 0:
-                if rdata != 'NONE':
-                    fullpath = getOSIndependentFilePath(self.fpath, rdata)
-                    indA = dat_type.index('[')
-                    indB = dat_type.index(']')
-                    #self.Data_2D.QI = Timeseries(fullpath,'QI',self.displayname)
-                    error, message = self.Data_2D.HUS.load(fullpath, 'HU', self.displayname)
-                    if error:
-                        return error, message
-                    self.nTypes = self.nTypes + 1
-                    self.Types.append('2D Structure Levels')
-                    self.Data_2D.types.append('HU')
-                    try:
-                        chk_nLocs = int(dat_type[indA+1:indB])
-                        if (chk_nLocs != self.Data_2D.HUS.nLocs):
-                            message = 'ERROR - number of locations in .csv doesn''t match value in .tpc'
-                            error = True
+                if self.resFileFormat == "CSV":
+                    if rdata != 'NONE':
+                        fullpath = getOSIndependentFilePath(self.fpath, rdata)
+                        indA = dat_type.index('[')
+                        indB = dat_type.index(']')
+                        # self.Data_2D.QI = Timeseries(fullpath,'QI',self.displayname)
+                        error, message = self.Data_2D.HUS.load(fullpath, 'HU', self.displayname)
+                        if error:
                             return error, message
-                    except:
-                        message.append('WARNING - Unable to extact number of values in .tpc file entry')
+                        self.nTypes = self.nTypes + 1
+                        self.Types.append('2D Structure Levels')
+                        self.Data_2D.types.append('HU')
+                        try:
+                            chk_nLocs = int(dat_type[indA + 1:indB])
+                            if (chk_nLocs != self.Data_2D.HUS.nLocs):
+                                message = 'ERROR - number of locations in .csv doesn''t match value in .tpc'
+                                error = True
+                                return error, message
+                        except:
+                            print('WARNING - Unable to extact number of values in .tpc file entry')
+                elif self.resFileFormat == "NC":
+                    if self.netcdf_fpath:
+                        error, message = self.Data_2D.HUS.loadFromNetCDF(self.netcdf_fpath, "upstream_water_levels_2d",
+                                                                         "name_upstream_water_levels_2d",
+                                                                         self.netCDFLib, self.ncopen, self.ncid,
+                                                                         self.ncdll,
+                                                                         self.ncDims, self.ncVars)
+                        if error:
+                            return error, message
+                        self.nTypes = self.nTypes + 1
+                        self.Types.append('2D Structure Levels')
+                        self.Data_2D.types.append('HU')
+                        if self.nTypes == 1:
+                            self.times = self.Data_2D.HUS.Values[:, 1]
             elif dat_type.find('2D Line D/S Structure Water') >= 0:
-                if rdata != 'NONE':
-                    fullpath = getOSIndependentFilePath(self.fpath, rdata)
-                    indA = dat_type.index('[')
-                    indB = dat_type.index(']')
-                    #self.Data_2D.QI = Timeseries(fullpath,'QI',self.displayname)
-                    error, message = self.Data_2D.HDS.load(fullpath, 'HD', self.displayname)
-                    if error:
-                        return error, message
-                    self.nTypes = self.nTypes + 1
-                    self.Types.append('2D Structure Levels')
-                    self.Data_2D.types.append('HD')
-                    try:
-                        chk_nLocs = int(dat_type[indA+1:indB])
-                        if (chk_nLocs != self.Data_2D.HDS.nLocs):
-                            message = 'ERROR - number of locations in .csv doesn''t match value in .tpc'
-                            error = True
+                if self.resFileFormat == "CSV":
+                    if rdata != 'NONE':
+                        fullpath = getOSIndependentFilePath(self.fpath, rdata)
+                        indA = dat_type.index('[')
+                        indB = dat_type.index(']')
+                        # self.Data_2D.QI = Timeseries(fullpath,'QI',self.displayname)
+                        error, message = self.Data_2D.HDS.load(fullpath, 'HD', self.displayname)
+                        if error:
                             return error, message
-                    except:
-                        message.append('WARNING - Unable to extact number of values in .tpc file entry')
+                        self.nTypes = self.nTypes + 1
+                        self.Types.append('2D Structure Levels')
+                        self.Data_2D.types.append('HD')
+                        try:
+                            chk_nLocs = int(dat_type[indA + 1:indB])
+                            if (chk_nLocs != self.Data_2D.HDS.nLocs):
+                                message = 'ERROR - number of locations in .csv doesn''t match value in .tpc'
+                                error = True
+                                return error, message
+                        except:
+                            print('WARNING - Unable to extact number of values in .tpc file entry')
+                elif self.resFileFormat == "NC":
+                    if self.netcdf_fpath:
+                        error, message = self.Data_2D.HDS.loadFromNetCDF(self.netcdf_fpath,
+                                                                         "downstream_water_levels_2d",
+                                                                         "name_downstream_water_levels_2d",
+                                                                         self.netCDFLib, self.ncopen, self.ncid,
+                                                                         self.ncdll,
+                                                                         self.ncDims, self.ncVars)
+                        if error:
+                            return error, message
+                        self.nTypes = self.nTypes + 1
+                        self.Types.append('2D Structure Levels')
+                        self.Data_2D.types.append('HD')
+                        if self.nTypes == 1:
+                            self.times = self.Data_2D.HDS.Values[:, 1]
             elif dat_type.find('2D Region Average Water Level') >= 0:
-                if rdata != 'NONE':
-                    fullpath = getOSIndependentFilePath(self.fpath, rdata)
-                    indA = dat_type.index('[')
-                    indB = dat_type.index(']')
-                    error, message = self.Data_2D.HAvg.load(fullpath, 'HA', self.displayname)
-                    if error:
-                        return error, message
-                    self.nTypes = self.nTypes + 1
-                    self.Types.append('2D Region Average Water Level')
-                    self.Data_2D.types.append('HAvg')
-                    try:
-                        chk_nLocs = int(dat_type[indA+1:indB])
-                        if (chk_nLocs != self.Data_2D.HAvg.nLocs):
-                            message = 'ERROR - number of locations in .csv doesn''t match value in .tpc'
-                            error = True
+                if self.resFileFormat == "CSV":
+                    if rdata != 'NONE':
+                        fullpath = getOSIndependentFilePath(self.fpath, rdata)
+                        indA = dat_type.index('[')
+                        indB = dat_type.index(']')
+                        error, message = self.Data_2D.HAvg.load(fullpath, 'HA', self.displayname)
+                        if error:
                             return error, message
-                    except:
-                        message.append('WARNING - Unable to extact number of values in .tpc file entry')
+                        self.nTypes = self.nTypes + 1
+                        self.Types.append('2D Region Average Water Level')
+                        self.Data_2D.types.append('HAvg')
+                        try:
+                            chk_nLocs = int(dat_type[indA + 1:indB])
+                            if (chk_nLocs != self.Data_2D.HAvg.nLocs):
+                                message = 'ERROR - number of locations in .csv doesn''t match value in .tpc'
+                                error = True
+                                return error, message
+                        except:
+                            print('WARNING - Unable to extact number of values in .tpc file entry')
+                elif self.resFileFormat == "NC":
+                    if self.netcdf_fpath:
+                        pass  # for now not written to netcdf
+                        error, message = self.Data_2D.HAvg.loadFromNetCDF(self.netcdf_fpath, "average_water_levels_2d",
+                                                                          "name_average_water_levels_2d",
+                                                                          self.netCDFLib, self.ncopen, self.ncid,
+                                                                          self.ncdll,
+                                                                          self.ncDims, self.ncVars)
+                        if error:
+                            return error, message
+                        self.nTypes = self.nTypes + 1
+                        self.Types.append('2D Region Average Water Level')
+                        self.Data_2D.types.append('HAvg')
+                        if self.nTypes == 1:
+                            self.times = self.Data_2D.HAvg.Values[:, 1]
             elif dat_type.find('2D Region Max Water Level') >= 0:
-                if rdata != 'NONE':
-                    fullpath = getOSIndependentFilePath(self.fpath, rdata)
-                    indA = dat_type.index('[')
-                    indB = dat_type.index(']')
-                    error, message = self.Data_2D.HMax.load(fullpath,'HM',self.displayname)
-                    if error:
-                        return error, message
-                    self.nTypes = self.nTypes + 1
-                    self.Types.append('2D Region Max Water Level')
-                    self.Data_2D.types.append('HMax')
-                    try:
-                        chk_nLocs = int(dat_type[indA+1:indB])
-                        if (chk_nLocs != self.Data_2D.HMax.nLocs):
-                            message = 'ERROR - number of locations in .csv doesn''t match value in .tpc'
-                            error = True
+                if self.resFileFormat == "CSV":
+                    if rdata != 'NONE':
+                        fullpath = getOSIndependentFilePath(self.fpath, rdata)
+                        indA = dat_type.index('[')
+                        indB = dat_type.index(']')
+                        error, message = self.Data_2D.HMax.load(fullpath, 'HM', self.displayname)
+                        if error:
                             return error, message
-                    except:
-                        message.append('WARNING - Unable to extact number of values in .tpc file entry')
+                        self.nTypes = self.nTypes + 1
+                        self.Types.append('2D Region Max Water Level')
+                        self.Data_2D.types.append('HMax')
+                        try:
+                            chk_nLocs = int(dat_type[indA + 1:indB])
+                            if (chk_nLocs != self.Data_2D.HMax.nLocs):
+                                message = 'ERROR - number of locations in .csv doesn''t match value in .tpc'
+                                error = True
+                                return error, message
+                        except:
+                            print('WARNING - Unable to extact number of values in .tpc file entry')
+                elif self.resFileFormat == "NC":
+                    if self.netcdf_fpath:
+                        pass  # for now not written to netcdf
+                        error, message = self.Data_2D.HMax.loadFromNetCDF(self.netcdf_fpath, "maximum_water_levels_2d",
+                                                                          "name_maximum_water_levels_2d",
+                                                                          self.netCDFLib, self.ncopen, self.ncid,
+                                                                          self.ncdll,
+                                                                          self.ncDims, self.ncVars)
+                        if error:
+                            return error, message
+                        self.nTypes = self.nTypes + 1
+                        self.Types.append('2D Region Max Water Level')
+                        self.Data_2D.types.append('HMax')
+                        if self.nTypes == 1:
+                            self.times = self.Data_2D.HMax.Values[:, 1]
             elif dat_type.find('2D Region Flow into Region') >= 0:
-                if rdata != 'NONE':
-                    fullpath = getOSIndependentFilePath(self.fpath, rdata)
-                    indA = dat_type.index('[')
-                    indB = dat_type.index(']')
-                    error, message = self.Data_2D.QIn.load(fullpath,'FI',self.displayname)
-                    if error:
-                        return error, message
-                    self.nTypes = self.nTypes + 1
-                    self.Types.append('2D Region Flow into')
-                    self.Data_2D.types.append('QIn')
-                    try:
-                        chk_nLocs = int(dat_type[indA+1:indB])
-                        if (chk_nLocs != self.Data_2D.QIn.nLocs):
-                            message = 'ERROR - number of locations in .csv doesn''t match value in .tpc'
-                            error = True
+                if self.resFileFormat == "CSV":
+                    if rdata != 'NONE':
+                        fullpath = getOSIndependentFilePath(self.fpath, rdata)
+                        indA = dat_type.index('[')
+                        indB = dat_type.index(']')
+                        error, message = self.Data_2D.QIn.load(fullpath, 'FI', self.displayname)
+                        if error:
                             return error, message
-                    except:
-                        message.append('WARNING - Unable to extact number of values in .tpc file entry')
+                        self.nTypes = self.nTypes + 1
+                        self.Types.append('2D Region Flow into')
+                        self.Data_2D.types.append('QIn')
+                        try:
+                            chk_nLocs = int(dat_type[indA + 1:indB])
+                            if (chk_nLocs != self.Data_2D.QIn.nLocs):
+                                message = 'ERROR - number of locations in .csv doesn''t match value in .tpc'
+                                error = True
+                                return error, message
+                        except:
+                            print('WARNING - Unable to extact number of values in .tpc file entry')
+                elif self.resFileFormat == "NC":
+                    if self.netcdf_fpath:
+                        error, message = self.Data_2D.QIn.loadFromNetCDF(self.netcdf_fpath, "flows_into_region_2d",
+                                                                         "name_flows_into_region_2d",
+                                                                         self.netCDFLib, self.ncopen, self.ncid,
+                                                                         self.ncdll,
+                                                                         self.ncDims, self.ncVars)
+                        if error:
+                            return error, message
+                        self.nTypes = self.nTypes + 1
+                        self.Types.append('2D Region Flow into')
+                        self.Data_2D.types.append('QIn')
+                        if self.nTypes == 1:
+                            self.times = self.Data_2D.QIn.Values[:, 1]
             elif dat_type.find('2D Region Flow out of Region') >= 0:
-                if rdata != 'NONE':
-                    fullpath = getOSIndependentFilePath(self.fpath, rdata)
-                    indA = dat_type.index('[')
-                    indB = dat_type.index(']')
-                    error, message = self.Data_2D.QOut.load(fullpath,'FO',self.displayname)
-                    if error:
-                        return error, message
-                    self.nTypes = self.nTypes + 1
-                    self.Types.append('2D Region Flow out of')
-                    self.Data_2D.types.append('QOut')
-                    try:
-                        chk_nLocs = int(dat_type[indA+1:indB])
-                        if (chk_nLocs != self.Data_2D.QOut.nLocs):
-                            message = 'ERROR - number of locations in .csv doesn''t match value in .tpc'
-                            error = True
+                if self.resFileFormat == "CSV":
+                    if rdata != 'NONE':
+                        fullpath = getOSIndependentFilePath(self.fpath, rdata)
+                        indA = dat_type.index('[')
+                        indB = dat_type.index(']')
+                        error, message = self.Data_2D.QOut.load(fullpath, 'FO', self.displayname)
+                        if error:
                             return error, message
-                    except:
-                        message.append('WARNING - Unable to extact number of values in .tpc file entry')
+                        self.nTypes = self.nTypes + 1
+                        self.Types.append('2D Region Flow out of')
+                        self.Data_2D.types.append('QOut')
+                        try:
+                            chk_nLocs = int(dat_type[indA + 1:indB])
+                            if (chk_nLocs != self.Data_2D.QOut.nLocs):
+                                message = 'ERROR - number of locations in .csv doesn''t match value in .tpc'
+                                error = True
+                                return error, message
+                        except:
+                            print('WARNING - Unable to extact number of values in .tpc file entry')
+                elif self.resFileFormat == "NC":
+                    if self.netcdf_fpath:
+                        error, message = self.Data_2D.QOut.loadFromNetCDF(self.netcdf_fpath, "flows_out_of_region_2d",
+                                                                          "name_flows_out_of_region_2d",
+                                                                          self.netCDFLib, self.ncopen, self.ncid,
+                                                                          self.ncdll,
+                                                                          self.ncDims, self.ncVars)
+                        if error:
+                            return error, message
+                        self.nTypes = self.nTypes + 1
+                        self.Types.append('2D Region Flow out of')
+                        self.Data_2D.types.append('QOut')
+                        if self.nTypes == 1:
+                            self.times = self.Data_2D.QOut.Values[:, 1]
             elif dat_type.find('2D Region Volume') >= 0:
-                if rdata != 'NONE':
-                    fullpath = getOSIndependentFilePath(self.fpath, rdata)
-                    indA = dat_type.index('[')
-                    indB = dat_type.index(']')
-                    error, message = self.Data_2D.Vol.load(fullpath,'VL',self.displayname)
-                    if error:
-                        return error, message
-                    self.nTypes = self.nTypes + 1
-                    self.Types.append('2D Region Volume')
-                    self.Data_2D.types.append('Vol')
-                    try:
-                        chk_nLocs = int(dat_type[indA+1:indB])
-                        if (chk_nLocs != self.Data_2D.Vol.nLocs):
-                            message = 'ERROR - number of locations in .csv doesn''t match value in .tpc'
-                            error = True
+                if self.resFileFormat == "CSV":
+                    if rdata != 'NONE':
+                        fullpath = getOSIndependentFilePath(self.fpath, rdata)
+                        indA = dat_type.index('[')
+                        indB = dat_type.index(']')
+                        error, message = self.Data_2D.Vol.load(fullpath, 'VL', self.displayname)
+                        if error:
                             return error, message
-                    except:
-                        message.append('WARNING - Unable to extact number of values in .tpc file entry')
+                        self.nTypes = self.nTypes + 1
+                        self.Types.append('2D Region Volume')
+                        self.Data_2D.types.append('Vol')
+                        try:
+                            chk_nLocs = int(dat_type[indA + 1:indB])
+                            if (chk_nLocs != self.Data_2D.Vol.nLocs):
+                                message = 'ERROR - number of locations in .csv doesn''t match value in .tpc'
+                                error = True
+                                return error, message
+                        except:
+                            print('WARNING - Unable to extact number of values in .tpc file entry')
+                elif self.resFileFormat == "NC":
+                    if self.netcdf_fpath:
+                        error, message = self.Data_2D.Vol.loadFromNetCDF(self.netcdf_fpath, "volume_2d",
+                                                                         "name_volume_2d",
+                                                                         self.netCDFLib, self.ncopen, self.ncid,
+                                                                         self.ncdll,
+                                                                         self.ncDims, self.ncVars)
+                        if error:
+                            return error, message
+                        self.nTypes = self.nTypes + 1
+                        self.Types.append('2D Region Volume')
+                        self.Data_2D.types.append('Vol')
+                        if self.nTypes == 1:
+                            self.times = self.Data_2D.Vol.Values[:, 1]
             elif dat_type.find('Region Sink/Source') >= 0:
-                if rdata != 'NONE':
-                    fullpath = getOSIndependentFilePath(self.fpath, rdata)
-                    indA = dat_type.index('[')
-                    indB = dat_type.index(']')
-                    error, message = self.Data_2D.SS.load(fullpath,'SS',self.displayname)
-                    if error:
-                        return error, message
-                    self.nTypes = self.nTypes + 1
-                    self.Types.append('2D Region Sink/Source')
-                    self.Data_2D.types.append('SS')
-                    try:
-                        chk_nLocs = int(dat_type[indA+1:indB])
-                        if (chk_nLocs != self.Data_2D.SS.nLocs):
-                            message = 'ERROR - number of locations in .csv doesn''t match value in .tpc'
-                            error = True
+                if self.resFileFormat == "CSV":
+                    if rdata != 'NONE':
+                        fullpath = getOSIndependentFilePath(self.fpath, rdata)
+                        indA = dat_type.index('[')
+                        indB = dat_type.index(']')
+                        error, message = self.Data_2D.SS.load(fullpath, 'SS', self.displayname)
+                        if error:
                             return error, message
-                    except:
-                        message.append('WARNING - Unable to extact number of values in .tpc file entry')
+                        self.nTypes = self.nTypes + 1
+                        self.Types.append('2D Region Sink/Source')
+                        self.Data_2D.types.append('SS')
+                        try:
+                            chk_nLocs = int(dat_type[indA + 1:indB])
+                            if (chk_nLocs != self.Data_2D.SS.nLocs):
+                                message = 'ERROR - number of locations in .csv doesn''t match value in .tpc'
+                                error = True
+                                return error, message
+                        except:
+                            print('WARNING - Unable to extact number of values in .tpc file entry')
+                elif self.resFileFormat == "NC":
+                    if self.netcdf_fpath:
+                        error, message = self.Data_2D.SS.loadFromNetCDF(self.netcdf_fpath, "sink_source_2d",
+                                                                        "name_sink_source_2d",
+                                                                        self.netCDFLib, self.ncopen, self.ncid,
+                                                                        self.ncdll,
+                                                                        self.ncDims, self.ncVars)
+                        if error:
+                            return error, message
+                        self.nTypes = self.nTypes + 1
+                        self.Types.append('2D Region Sink/Source')
+                        self.Data_2D.types.append('SS')
+                        if self.nTypes == 1:
+                            self.times = self.Data_2D.SS.Values[:, 1]
             elif dat_type == 'Reporting Location Points Maximums':
                 if rdata != 'NONE':
                     fullpath = getOSIndependentFilePath(self.fpath, rdata)
@@ -1947,10 +3013,632 @@ class ResData():
                     error, message = self.Data_RL.R_Max.load(fullpath)
                     if error:
                         return error, message
+            elif dat_type == "1D Mass Balance Errors":
+                if self.resFileFormat == "CSV":
+                    if rdata != 'NONE':
+                        fullpath = getOSIndependentFilePath(self.fpath, rdata)
+                        indA = dat_type.index('[')
+                        indB = dat_type.index(']')
+                        error, message = self.Data_1D.MB.load(fullpath, 'MB', self.displayname)
+                        if error:
+                            return error, message
+                        self.nTypes = self.nTypes + 1
+                        self.Types.append('1D Mass Balance Error')
+                        if self.nTypes == 1:
+                            self.times = self.Data_1D.MB.Values[:, 1]
+                elif self.resFileFormat == "NC":
+                    if self.netcdf_fpath:
+                        error, message = self.Data_1D.MB.loadFromNetCDF(self.netcdf_fpath, "mass_balance_error_1d",
+                                                                        "node_names",
+                                                                        self.netCDFLib, self.ncopen, self.ncid,
+                                                                        self.ncdll,
+                                                                        self.ncDims, self.ncVars)
+                        if error:
+                            return error, message
+                        self.nTypes = self.nTypes + 1
+                        self.Types.append('1D Mass Balance Error')
+                        if self.nTypes == 1:
+                            self.times = self.Data_1D.MB.Values[:, 1]
+            elif dat_type == "1D Node Regime":
+                if self.resFileFormat == "CSV":
+                    if rdata != 'NONE':
+                        fullpath = getOSIndependentFilePath(self.fpath, rdata)
+                        indA = dat_type.index('[')
+                        indB = dat_type.index(']')
+                        error, message = self.Data_1D.NF.load(fullpath, 'F', self.displayname)
+                        if error:
+                            return error, message
+                        self.nTypes = self.nTypes + 1
+                        self.Types.append('1D Node Flow Regime')
+                        if self.nTypes == 1:
+                            self.times = self.Data_1D.NF.Values[:, 1]
+                elif self.resFileFormat == "NC":
+                    if self.netcdf_fpath:
+                        error, message = self.Data_1D.NF.loadFromNetCDF(self.netcdf_fpath, "node_flow_regime_1d",
+                                                                        "node_names",
+                                                                        self.netCDFLib, self.ncopen, self.ncid,
+                                                                        self.ncdll,
+                                                                        self.ncDims, self.ncVars)
+                        if error:
+                            return error, message
+                        self.nTypes = self.nTypes + 1
+                        self.Types.append('1D Node Flow Regime')
+                        if self.nTypes == 1:
+                            self.times = self.Data_1D.NF.Values[:, 1]
+            elif dat_type == "1D Channel Regime":
+                if self.resFileFormat == "CSV":
+                    if rdata != 'NONE':
+                        fullpath = getOSIndependentFilePath(self.fpath, rdata)
+                        indA = dat_type.index('[')
+                        indB = dat_type.index(']')
+                        error, message = self.Data_1D.CF.load(fullpath, 'F', self.displayname)
+                        if error:
+                            return error, message
+                        self.nTypes = self.nTypes + 1
+                        self.Types.append('1D Channel Flow Regime')
+                        if self.nTypes == 1:
+                            self.times = self.Data_1D.CF.Values[:, 1]
+                elif self.resFileFormat == "NC":
+                    if self.netcdf_fpath:
+                        error, message = self.Data_1D.CF.loadFromNetCDF(self.netcdf_fpath, "channel_flow_regime_1d",
+                                                                        "channel_names",
+                                                                        self.netCDFLib, self.ncopen, self.ncid,
+                                                                        self.ncdll,
+                                                                        self.ncDims, self.ncVars)
+                        if error:
+                            return error, message
+                        self.nTypes = self.nTypes + 1
+                        self.Types.append('1D Channel Flow Regime')
+                        if self.nTypes == 1:
+                            self.times = self.Data_1D.CF.Values[:, 1]
+            elif dat_type == "1D Channel Losses":
+                if self.resFileFormat == "CSV":
+                    if rdata != 'NONE':
+                        fullpath = getOSIndependentFilePath(self.fpath, rdata)
+                        indA = dat_type.index('[')
+                        indB = dat_type.index(']')
+                        error, message = self.Data_1D.CL.load(fullpath, 'L', self.displayname)
+                        if error:
+                            return error, message
+                        self.nTypes = self.nTypes + 1
+                        self.Types.append('1D Channel Losses')
+                        if self.nTypes == 1:
+                            self.times = self.Data_1D.CL.Values[:, 1]
+                elif self.resFileFormat == "NC":
+                    if self.netcdf_fpath:
+                        error, message = self.Data_1D.CL.loadFromNetCDF(self.netcdf_fpath, "losses_1d",
+                                                                        "channel_names",
+                                                                        self.netCDFLib, self.ncopen, self.ncid,
+                                                                        self.ncdll,
+                                                                        self.ncDims, self.ncVars)
+                        if error:
+                            return error, message
+                        self.nTypes = self.nTypes + 1
+                        self.Types.append('1D Channel Losses')
+                        if self.nTypes == 1:
+                            self.times = self.Data_1D.CL.Values[:, 1]
             else:
-                message.append('Warning - Unknown Data Type: {0}'.format(dat_type))
+                print('Warning - Unknown Data Type ' + dat_type)
+        # successful load
+        return error, message
 
-        return error, '; '.join(message)
+    #def load(self, fname):
+    #    error = False
+    #    message = []
+    #    self.filename = fname
+    #    self.fpath = os.path.dirname(fname)
+    #    try:
+    #        data = numpy.genfromtxt(fname, dtype=str, delimiter="==")
+    #    except:
+    #        error = True
+    #        message = 'ERROR - Unable to load data, check file exists.'
+    #        return error, message
+
+    #    for i in range (0,len(data)):
+    #        tmp = data[i,0]
+    #        dat_type = tmp.strip()
+    #        tmp = data[i,1]
+    #        rdata = tmp.strip()
+    #
+    #        if dat_type == 'Format Version':
+    #            self.formatVersion = int(rdata)
+    #        elif dat_type == 'Units':
+    #            self.units = rdata
+    #        elif dat_type == 'Simulation ID':
+    #            self.displayname = rdata
+    #        elif dat_type == 'GIS Plot Layer Points':
+    #            self.GIS.P = rdata[2:]
+    #        elif dat_type == 'GIS Plot Layer Lines':
+    #            self.GIS.L = rdata[2:]
+    #        elif dat_type == 'GIS Plot Layer Regions':
+    #            self.GIS.R = rdata[2:]
+    #        elif dat_type == 'GIS Plot Objects':
+    #            fullpath = getOSIndependentFilePath(self.fpath, rdata)
+    #            self.Index = PlotObjects(fullpath)
+    #            if self.Index.message:
+    #                message.append(self.Index.message)
+    #        elif dat_type == 'GIS Reporting Location Points':
+    #            self.GIS.RL_P = rdata[2:]
+    #        elif dat_type == 'GIS Reporting Location Lines':
+    #            self.GIS.RL_L = rdata[2:]
+    #        elif dat_type == 'GIS Reporting Location Regions':
+    #            self.GIS.RL_R = rdata[2:]
+    #        elif dat_type == 'Number 1D Channels':
+    #            #self.nChannels = int(rdata)
+    #            self.Data_1D.nChan = int(rdata)
+    #        elif dat_type == 'Number 1D Nodes':
+    #            self.Data_1D.nNode = int(rdata)
+    #        elif dat_type == 'Number Reporting Location Points':
+    #            self.Data_RL.nPoint= int(rdata)
+    #        elif dat_type == 'Number Reporting Location Lines':
+    #            self.Data_RL.nLine= int(rdata)
+    #        elif dat_type == 'Number Reporting Location Regions':
+    #            self.Data_RL.nRegion= int(rdata)
+    #        elif dat_type == '1D Channel Info':
+    #            if rdata != 'NONE':
+    #                fullpath = getOSIndependentFilePath(self.fpath, rdata)
+    #                self.Channels = ChanInfo(fullpath)
+    #                if self.Data_1D.nChan != self.Channels.nChan:
+    #                    error = True
+    #                    message = 'Number of Channels does not match value in .tpc'
+    #                    return error, message
+    #        elif dat_type == '1D Node Info':
+    #            if rdata != 'NONE':
+    #                fullpath = getOSIndependentFilePath(self.fpath, rdata)
+    #                self.nodes = NodeInfo(fullpath)
+    #                if self.nodes.message:
+    #                    return True, '; '.join(self.nodes.message)
+    #        elif dat_type == '1D Water Levels':
+    #            if rdata != 'NONE':
+    #                fullpath = getOSIndependentFilePath(self.fpath, rdata)
+    #                error, message = self.Data_1D.H.load(fullpath, 'H', self.displayname)
+    #                if error:
+    #                    return error, message
+    #                self.nTypes = self.nTypes + 1
+    #                self.Types.append('1D Water Levels')
+    #                if self.nTypes == 1:
+    #                    self.times = self.Data_1D.H.Values[:,1]
+    #        elif dat_type == '1D Energy Levels':
+    #            if rdata != 'NONE':
+    #                fullpath = getOSIndependentFilePath(self.fpath, rdata)
+    #                error, message = self.Data_1D.E.load(fullpath, 'H', self.displayname)
+    #                if error:
+    #                    return error, message
+    #                self.nTypes = self.nTypes + 1
+    #                self.Types.append('1D Energy Levels')
+    #                if self.nTypes == 1:
+    #                    self.times = self.Data_1D.H.Values[:,1]
+    #        elif dat_type == 'Reporting Location Points Water Levels':
+    #            if rdata != 'NONE':
+    #                fullpath = getOSIndependentFilePath(self.fpath, rdata)
+    #                error, message = self.Data_RL.H_P.load(fullpath, 'H', self.displayname)
+    #                self.Data_RL.types.append('H')
+    #                if error:
+    #                    return error, message
+    #        elif dat_type == 'Reporting Location Lines Flows':
+    #            if rdata != 'NONE':
+    #                fullpath = getOSIndependentFilePath(self.fpath, rdata)
+    #                error, message = self.Data_RL.Q_L.load(fullpath, 'Q', self.displayname)
+    #                self.Data_RL.types.append('Q')
+    #                if error:
+    #                    return error, message
+    #        elif dat_type == 'Reporting Location Regions Volumes':
+    #            if rdata != 'NONE':
+    #                fullpath = getOSIndependentFilePath(self.fpath, rdata)
+    #                error, message = self.Data_RL.Vol_R.load(fullpath, 'Vol', self.displayname)
+    #                if error:
+    #                    return error, message
+    #                self.nTypes = self.nTypes + 1
+    #                self.Types.append('2D Region Volume')
+    #                self.Data_RL.types.append('Vol')
+    #                try:
+    #                    chk_nLocs = self.Data_RL.nRegion
+    #                    if (chk_nLocs != self.Data_RL.Vol_R.nLocs):
+    #                        message = 'ERROR - number of locations in .csv doesn''t match value in .tpc'
+    #                        error = True
+    #                        return error, message
+    #                except:
+    #                    message.append('WARNING - Unable to extact number of values in .tpc file entry')
+    #        elif dat_type == '1D Node Maximums':
+    #            if rdata != 'NONE':
+    #                fullpath = getOSIndependentFilePath(self.fpath, rdata)
+    #                error, message = self.Data_1D.Node_Max.load(fullpath)
+    #                if error:
+    #                    return error, message
+    #        elif dat_type == '1D Channel Maximums':
+    #            if rdata != 'NONE':
+    #                fullpath = getOSIndependentFilePath(self.fpath, rdata)
+    #                error, message = self.Data_1D.Chan_Max.load(fullpath)
+    #                if error:
+    #                    return error, message
+    #        elif dat_type == '1D Flows':
+    #            if rdata != 'NONE':
+    #                fullpath = getOSIndependentFilePath(self.fpath, rdata)
+    #                error, message = self.Data_1D.Q.load(fullpath, 'Q', self.displayname)
+    #                if error:
+    #                    return error, message
+    #                self.nTypes = self.nTypes + 1
+    #                self.Types.append('1D Flows')
+    #                if self.nTypes == 1:
+    #                    self.times = self.Data_1D.Q.Values[:,1]
+    #        elif dat_type == '1D Flow Areas':
+    #            if rdata != 'NONE':
+    #                fullpath = getOSIndependentFilePath(self.fpath, rdata)
+    #                error, message = self.Data_1D.A.load(fullpath, 'A', self.displayname)
+    #                if error:
+    #                    return error, message
+    #                self.nTypes = self.nTypes + 1
+    #                self.Types.append('1D Flow Area')
+    #                if self.nTypes == 1:
+    #                    self.times = self.Data_1D.Q.Values[:,1]
+    #        elif dat_type == '1D Velocities':
+    #            if rdata != 'NONE':
+    #                fullpath = getOSIndependentFilePath(self.fpath, rdata)
+    #                error, message = self.Data_1D.V.load(fullpath, 'V', self.displayname)
+    #                if error:
+    #                    return error, message
+    #                self.nTypes = self.nTypes + 1
+    #                self.Types.append('1D Velocities')
+    #                if self.nTypes == 1:
+    #                    self.times = self.Data_1D.V.Values[:,1]
+    #        elif dat_type.find('2D Line Flow Area') >= 0:
+    #            if rdata != 'NONE':
+    #                fullpath = getOSIndependentFilePath(self.fpath, rdata)
+    #                indA = dat_type.index('[')
+    #                indB = dat_type.index(']')
+    #                #self.Data_2D.QA = Timeseries(fullpath,'QA',self.displayname)
+    #                error, message = self.Data_2D.QA.load(fullpath, 'QA', self.displayname)
+    #                if error:
+    #                    return error, message
+    #                self.nTypes = self.nTypes + 1
+    #                self.Types.append('2D Line Flow Area')
+    #                self.Data_2D.types.append('QA')
+    #                try:
+    #                    chk_nLocs = int(dat_type[indA+1:indB])
+    #                    if (chk_nLocs != self.Data_2D.QA.nLocs):
+    #                        return True, 'ERROR - number of locations in .csv doesn''t match value in .tpc'
+    #                except:
+    #                    message.append('WARNING - Unable to extact number of values in .tpc file entry')
+    #        elif dat_type.find('2D Line Flow') >= 0:
+    #            if rdata != 'NONE':
+    #                fullpath = getOSIndependentFilePath(self.fpath, rdata)
+    #                indA = dat_type.index('[')
+    #                indB = dat_type.index(']')
+    #                #self.Data_2D.Q = Timeseries(fullpath,'Q',self.displayname)
+    #                error, message = self.Data_2D.Q.load(fullpath, 'Q', self.displayname)
+    #                if error:
+    #                    return error, message
+    #                self.nTypes = self.nTypes + 1
+    #                if self.nTypes == 1:
+    #                    self.times = self.Data_2D.Q.Values[:,1]
+    #                self.Types.append('2D Line Flow')
+    #                self.Data_2D.types.append('Q')
+    #                try:
+    #                    chk_nLocs = int(dat_type[indA+1:indB])
+    #                    if (chk_nLocs != self.Data_2D.Q.nLocs):
+    #                        message = 'ERROR - number of locations in .csv doesn''t match value in .tpc'
+    #                        error = True
+    #                        return error, message
+    #                except:
+    #                    message.append('WARNING - Unable to extact number of values in .tpc file entry')
+    #        elif dat_type.find('2D Point Gauge Level') >= 0:
+    #            if rdata != 'NONE':
+    #                fullpath = getOSIndependentFilePath(self.fpath, rdata)
+    #                indA = dat_type.index('[')
+    #                indB = dat_type.index(']')
+    #                #self.Data_2D.GL = Timeseries(fullpath,'G',self.displayname)
+    #                error, message = self.Data_2D.GL.load(fullpath, 'G', self.displayname)
+    #                if error:
+    #                    return error, message
+    #                self.nTypes = self.nTypes + 1
+    #                self.Types.append('2D Point Gauge Level')
+    #                self.Data_2D.types.append('G')
+    #                try:
+    #                    chk_nLocs = int(dat_type[indA+1:indB])
+    #                    if (chk_nLocs != self.Data_2D.GL.nLocs):
+    #                        message = 'ERROR - number of locations in .csv doesn''t match value in .tpc'
+    #                        error = True
+    #                        return error, message
+    #                except:
+    #                    message.append('WARNING - Unable to extact number of values in .tpc file entry')
+    #        elif dat_type.find('2D Point Water Level') >= 0:
+    #            if rdata != 'NONE':
+    #                fullpath = getOSIndependentFilePath(self.fpath, rdata)
+    #                indA = dat_type.index('[')
+    #                indB = dat_type.index(']')
+    #                #self.Data_2D.H = Timeseries(fullpath,'H',self.displayname)
+    #                error, message = self.Data_2D.H.load(fullpath, 'H', self.displayname)
+    #                if error:
+    #                    return error, message
+    #                self.nTypes = self.nTypes + 1
+    #                self.Types.append('2D Point Water Level')
+    #                self.Data_2D.types.append('H')
+    #                if self.nTypes == 1:
+    #                    self.times = self.Data_2D.H.Values[:,1]
+    #                try:
+    #                    chk_nLocs = int(dat_type[indA+1:indB])
+    #                    if (chk_nLocs != self.Data_2D.H.nLocs):
+    #                        message = 'ERROR - number of locations in .csv doesn''t match value in .tpc'
+    #                        error = True
+    #                        return error, message
+    #                except:
+    #                    message.append('WARNING - Unable to extact number of values in .tpc file entry')
+    #        elif dat_type.find('2D Point X-Vel') >= 0:
+    #            if rdata != 'NONE':
+    #                fullpath = getOSIndependentFilePath(self.fpath, rdata)
+    #                indA = dat_type.index('[')
+    #                indB = dat_type.index(']')
+    #                #self.Data_2D.Vx = Timeseries(fullpath,'VX',self.displayname)
+    #                error, message = self.Data_2D.Vx.load(fullpath, 'VX', self.displayname)
+    #                if error:
+    #                    return error, message
+    #                self.nTypes = self.nTypes + 1
+    #                self.Types.append('2D Point X-Vel')
+    #                self.Data_2D.types.append('VX')
+    #                try:
+    #                    chk_nLocs = int(dat_type[indA+1:indB])
+    #                    if (chk_nLocs != self.Data_2D.Vx.nLocs):
+    #                        message = 'ERROR - number of locations in .csv doesn''t match value in .tpc'
+    #                        error = True
+    #                        return error, message
+    #                except:
+    #                    message.append('WARNING - Unable to extact number of values in .tpc file entry')
+    #        elif dat_type.find('2D Point Y-Vel') >= 0:
+    #            if rdata != 'NONE':
+    #                fullpath = getOSIndependentFilePath(self.fpath, rdata)
+    #                indA = dat_type.index('[')
+    #                indB = dat_type.index(']')
+    #                #self.Data_2D.Vy = Timeseries(fullpath,'VY',self.displayname)
+    #                error, message = self.Data_2D.Vy.load(fullpath, 'VY', self.displayname)
+    #                if error:
+    #                    return error, message
+    #                self.nTypes = self.nTypes + 1
+    #                self.Types.append('2D Point Y-Vel')
+    #                self.Data_2D.types.append('VY')
+    #                try:
+    #                    chk_nLocs = int(dat_type[indA+1:indB])
+    #                    if (chk_nLocs != self.Data_2D.Vy.nLocs):
+    #                        message = 'ERROR - number of locations in .csv doesn''t match value in .tpc'
+    #                        error = True
+    #                        return error, message
+    #                except:
+    #                    message.append('WARNING - Unable to extact number of values in .tpc file entry')
+    #        elif dat_type.find('2D Point Velocity') >= 0:
+    #            if rdata != 'NONE':
+    #                fullpath = getOSIndependentFilePath(self.fpath, rdata)
+    #                indA = dat_type.index('[')
+    #                indB = dat_type.index(']')
+    #                #self.Data_2D.V = Timeseries(fullpath,'V',self.displayname)
+    #                error, message = self.Data_2D.V.load(fullpath, 'V', self.displayname)
+    #                if error:
+    #                    return error, message
+    #                self.nTypes = self.nTypes + 1
+    #                self.Types.append('2D Point Velocity')
+    #                self.Data_2D.types.append('V')
+    #                try:
+    #                    chk_nLocs = int(dat_type[indA+1:indB])
+    #                    if (chk_nLocs != self.Data_2D.V.nLocs):
+    #                        message = 'ERROR - number of locations in .csv doesn''t match value in .tpc'
+    #                        error = True
+    #                        return error, message
+    #                except:
+    #                    message.append('WARNING - Unable to extact number of values in .tpc file entry')
+    #        elif dat_type.find('2D Line Integral Flow') >= 0:
+    #            if rdata != 'NONE':
+    #                fullpath = getOSIndependentFilePath(self.fpath, rdata)
+    #                indA = dat_type.index('[')
+    #                indB = dat_type.index(']')
+    #                #self.Data_2D.QI = Timeseries(fullpath,'QI',self.displayname)
+    #                error, message = self.Data_2D.QI.load(fullpath, 'QI', self.displayname)
+    #                if error:
+    #                    return error, message
+    #                self.nTypes = self.nTypes + 1
+    #                self.Types.append('2D Line Integral Flow')
+    #                self.Data_2D.types.append('QI')
+    #                try:
+    #                    chk_nLocs = int(dat_type[indA+1:indB])
+    #                    if (chk_nLocs != self.Data_2D.QI.nLocs):
+    #                        message = 'ERROR - number of locations in .csv doesn''t match value in .tpc'
+    #                        error = True
+    #                        return error, message
+    #                except:
+    #                    message.append('WARNING - Unable to extact number of values in .tpc file entry')
+    #        elif dat_type.find('2D Line Structure Flow') >= 0:
+    #            if rdata != 'NONE':
+    #                fullpath = getOSIndependentFilePath(self.fpath, rdata)
+    #                indA = dat_type.index('[')
+    #                indB = dat_type.index(']')
+    #                #self.Data_2D.QI = Timeseries(fullpath,'QI',self.displayname)
+    #                error, message = self.Data_2D.QS.load(fullpath, 'QS', self.displayname)
+    #                if error:
+    #                    return error, message
+    #                self.nTypes = self.nTypes + 1
+    #                self.Types.append('2D Line Structure Flow')
+    #                self.Data_2D.types.append('QS')
+    #                try:
+    #                    chk_nLocs = int(dat_type[indA+1:indB])
+    #                    if (chk_nLocs != self.Data_2D.QS.nLocs):
+    #                        message = 'ERROR - number of locations in .csv doesn''t match value in .tpc'
+    #                        error = True
+    #                        return error, message
+    #                except:
+    #                    message.append('WARNING - Unable to extact number of values in .tpc file entry')
+    #        elif dat_type.find('2D Line U/S Structure Water') >= 0:
+    #            if rdata != 'NONE':
+    #                fullpath = getOSIndependentFilePath(self.fpath, rdata)
+    #                indA = dat_type.index('[')
+    #                indB = dat_type.index(']')
+    #                #self.Data_2D.QI = Timeseries(fullpath,'QI',self.displayname)
+    #                error, message = self.Data_2D.HUS.load(fullpath, 'HU', self.displayname)
+    #                if error:
+    #                    return error, message
+    #                self.nTypes = self.nTypes + 1
+    #                self.Types.append('2D Structure Levels')
+    #                self.Data_2D.types.append('HU')
+    #                try:
+    #                    chk_nLocs = int(dat_type[indA+1:indB])
+    #                    if (chk_nLocs != self.Data_2D.HUS.nLocs):
+    #                        message = 'ERROR - number of locations in .csv doesn''t match value in .tpc'
+    #                        error = True
+    #                        return error, message
+    #                except:
+    #                    message.append('WARNING - Unable to extact number of values in .tpc file entry')
+    #        elif dat_type.find('2D Line D/S Structure Water') >= 0:
+    #            if rdata != 'NONE':
+    #                fullpath = getOSIndependentFilePath(self.fpath, rdata)
+    #                indA = dat_type.index('[')
+    #                indB = dat_type.index(']')
+    #                #self.Data_2D.QI = Timeseries(fullpath,'QI',self.displayname)
+    #                error, message = self.Data_2D.HDS.load(fullpath, 'HD', self.displayname)
+    #                if error:
+    #                    return error, message
+    #                self.nTypes = self.nTypes + 1
+    #                self.Types.append('2D Structure Levels')
+    #                self.Data_2D.types.append('HD')
+    #                try:
+    #                    chk_nLocs = int(dat_type[indA+1:indB])
+    #                    if (chk_nLocs != self.Data_2D.HDS.nLocs):
+    #                        message = 'ERROR - number of locations in .csv doesn''t match value in .tpc'
+    #                        error = True
+    #                        return error, message
+    #                except:
+    #                    message.append('WARNING - Unable to extact number of values in .tpc file entry')
+    #        elif dat_type.find('2D Region Average Water Level') >= 0:
+    #            if rdata != 'NONE':
+    #                fullpath = getOSIndependentFilePath(self.fpath, rdata)
+    #                indA = dat_type.index('[')
+    #                indB = dat_type.index(']')
+    #                error, message = self.Data_2D.HAvg.load(fullpath, 'HA', self.displayname)
+    #                if error:
+    #                    return error, message
+    #                self.nTypes = self.nTypes + 1
+    #                self.Types.append('2D Region Average Water Level')
+    #                self.Data_2D.types.append('HAvg')
+    #                try:
+    #                    chk_nLocs = int(dat_type[indA+1:indB])
+    #                    if (chk_nLocs != self.Data_2D.HAvg.nLocs):
+    #                        message = 'ERROR - number of locations in .csv doesn''t match value in .tpc'
+    #                        error = True
+    #                        return error, message
+    #                except:
+    #                    message.append('WARNING - Unable to extact number of values in .tpc file entry')
+    #        elif dat_type.find('2D Region Max Water Level') >= 0:
+    #            if rdata != 'NONE':
+    #                fullpath = getOSIndependentFilePath(self.fpath, rdata)
+    #                indA = dat_type.index('[')
+    #                indB = dat_type.index(']')
+    #                error, message = self.Data_2D.HMax.load(fullpath,'HM',self.displayname)
+    #                if error:
+    #                    return error, message
+    #                self.nTypes = self.nTypes + 1
+    #                self.Types.append('2D Region Max Water Level')
+    #                self.Data_2D.types.append('HMax')
+    #                try:
+    #                    chk_nLocs = int(dat_type[indA+1:indB])
+    #                    if (chk_nLocs != self.Data_2D.HMax.nLocs):
+    #                        message = 'ERROR - number of locations in .csv doesn''t match value in .tpc'
+    #                        error = True
+    #                        return error, message
+    #                except:
+    #                    message.append('WARNING - Unable to extact number of values in .tpc file entry')
+    #        elif dat_type.find('2D Region Flow into Region') >= 0:
+    #            if rdata != 'NONE':
+    #                fullpath = getOSIndependentFilePath(self.fpath, rdata)
+    #                indA = dat_type.index('[')
+    #                indB = dat_type.index(']')
+    #                error, message = self.Data_2D.QIn.load(fullpath,'FI',self.displayname)
+    #                if error:
+    #                    return error, message
+    #                self.nTypes = self.nTypes + 1
+    #                self.Types.append('2D Region Flow into')
+    #                self.Data_2D.types.append('QIn')
+    #                try:
+    #                    chk_nLocs = int(dat_type[indA+1:indB])
+    #                    if (chk_nLocs != self.Data_2D.QIn.nLocs):
+    #                        message = 'ERROR - number of locations in .csv doesn''t match value in .tpc'
+    #                        error = True
+    #                        return error, message
+    #                except:
+    #                    message.append('WARNING - Unable to extact number of values in .tpc file entry')
+    #        elif dat_type.find('2D Region Flow out of Region') >= 0:
+    #            if rdata != 'NONE':
+    #                fullpath = getOSIndependentFilePath(self.fpath, rdata)
+    #                indA = dat_type.index('[')
+    #                indB = dat_type.index(']')
+    #                error, message = self.Data_2D.QOut.load(fullpath,'FO',self.displayname)
+    #                if error:
+    #                    return error, message
+    #                self.nTypes = self.nTypes + 1
+    #                self.Types.append('2D Region Flow out of')
+    #                self.Data_2D.types.append('QOut')
+    #                try:
+    #                    chk_nLocs = int(dat_type[indA+1:indB])
+    #                    if (chk_nLocs != self.Data_2D.QOut.nLocs):
+    #                        message = 'ERROR - number of locations in .csv doesn''t match value in .tpc'
+    #                        error = True
+    #                        return error, message
+    #                except:
+    #                    message.append('WARNING - Unable to extact number of values in .tpc file entry')
+    #        elif dat_type.find('2D Region Volume') >= 0:
+    #            if rdata != 'NONE':
+    #                fullpath = getOSIndependentFilePath(self.fpath, rdata)
+    #                indA = dat_type.index('[')
+    #                indB = dat_type.index(']')
+    #                error, message = self.Data_2D.Vol.load(fullpath,'VL',self.displayname)
+    #                if error:
+    #                    return error, message
+    #                self.nTypes = self.nTypes + 1
+    #                self.Types.append('2D Region Volume')
+    #                self.Data_2D.types.append('Vol')
+    #                try:
+    #                    chk_nLocs = int(dat_type[indA+1:indB])
+    #                    if (chk_nLocs != self.Data_2D.Vol.nLocs):
+    #                        message = 'ERROR - number of locations in .csv doesn''t match value in .tpc'
+    #                        error = True
+    #                        return error, message
+    #                except:
+    #                    message.append('WARNING - Unable to extact number of values in .tpc file entry')
+    #        elif dat_type.find('Region Sink/Source') >= 0:
+    #            if rdata != 'NONE':
+    #                fullpath = getOSIndependentFilePath(self.fpath, rdata)
+    #                indA = dat_type.index('[')
+    #                indB = dat_type.index(']')
+    #                error, message = self.Data_2D.SS.load(fullpath,'SS',self.displayname)
+    #                if error:
+    #                    return error, message
+    #                self.nTypes = self.nTypes + 1
+    #                self.Types.append('2D Region Sink/Source')
+    #                self.Data_2D.types.append('SS')
+    #                try:
+    #                    chk_nLocs = int(dat_type[indA+1:indB])
+    #                    if (chk_nLocs != self.Data_2D.SS.nLocs):
+    #                        message = 'ERROR - number of locations in .csv doesn''t match value in .tpc'
+    #                        error = True
+    #                        return error, message
+    #                except:
+    #                    message.append('WARNING - Unable to extact number of values in .tpc file entry')
+    #        elif dat_type == 'Reporting Location Points Maximums':
+    #            if rdata != 'NONE':
+    #                fullpath = getOSIndependentFilePath(self.fpath, rdata)
+    #                error, message = self.Data_RL.P_Max.load(fullpath)
+    #                if error:
+    #                    return error, message
+    #        elif dat_type == 'Reporting Location Lines Maximums':
+    #            if rdata != 'NONE':
+    #                fullpath = getOSIndependentFilePath(self.fpath, rdata)
+    #                error, message = self.Data_RL.L_Max.load(fullpath)
+    #                if error:
+    #                    return error, message
+    #        elif dat_type == 'Reporting Location Regions Maximums':
+    #            if rdata != 'NONE':
+    #                fullpath = getOSIndependentFilePath(self.fpath, rdata)
+    #                error, message = self.Data_RL.R_Max.load(fullpath)
+    #                if error:
+    #                    return error, message
+    #        else:
+    #            message.append('Warning - Unknown Data Type: {0}'.format(dat_type))
+
+    #    return error, '; '.join(message)
     
     def pointResultTypesTS(self):
         """
@@ -1958,21 +3646,35 @@ class ResData():
         
         :return: list -> str result type e.g. 'flows'
         """
-        
+
         types = []
-        
+
         for type in self.Types:
-            if 'WATER LEVELS' in type.upper():
+            if 'STRUCTURE LEVELS' in type.upper():
+                types.append('Structure Levels')
+            elif 'WATER LEVEL' in type.upper():
                 types.append('Level')
             elif 'ENERGY LEVELS' in type.upper():
                 types.append('Energy Level')
-            elif 'POINT VELOCITY' in type.upper():
-                types.append('Velocity')
             elif 'POINT X-VEL' in type.upper():
                 types.append('VX')
             elif 'POINT Y-VEL' in type.upper():
                 types.append('VY')
-                
+            elif 'POINT U-VEL' in type.upper():
+                types.append('Vu')
+            elif 'POINT V-VEL' in type.upper():
+                types.append('Vv')
+            elif 'POINT V-VEL' in type.upper():
+                types.append('Vv')
+            elif '2D POINT VELOCITY ANGLE' in type.upper():
+                types.append("VA")
+            elif 'POINT VELOCITY' in type.upper():
+                types.append('Velocity')
+            elif '1D MASS BALANCE ERROR' in type.upper():
+                types.append('MB')
+            elif '1D NODE FLOW REGIME' in type.upper():
+                types.append('Flow Regime')
+
         return types
     
     def lineResultTypesTS(self):
@@ -1983,11 +3685,9 @@ class ResData():
         """
         
         types = []
-        
+
         for type in self.Types:
-            if 'FLOWS' in type.upper():
-                types.append('Flow')
-            elif 'VELOCITIES' in type.upper():
+            if 'VELOCITIES' in type.upper():
                 types.append('Velocity')
             elif 'LINE FLOW AREA' in type.upper():
                 types.append('Flow Area')
@@ -2001,14 +3701,26 @@ class ResData():
                 types.append('DS Levels')
             elif 'LINE STRUCTURE FLOW' in type.upper():
                 types.append('Structure Flows')
-            elif 'STRUCTURE LEVELS' in type.upper():
-                types.append('Structure Levels')
-        
-        if types:
-            if 'US Levels' not in types:
-                types.append('US Levels')
-            if 'DS Levels' not in types:
-                types.append('DS Levels')
+            elif '1D Flow Area' in type:
+                types.append('Flow Area')
+            elif 'X-FLOW' in type.upper():
+                types.append('X Flow')
+            elif 'Y-FLOW' in type.upper():
+                types.append('Y Flow')
+            elif '1D CHANNEL FLOW REGIME' in type.upper():
+                types.append('Flow Regime')
+            elif '1D CHANNEL LOSSES' in type.upper():
+                types.append('Losses')
+            elif 'FLOW' in type.upper():
+                types.append('Flow')
+
+        if self.nodes is not None:
+            point_types = self.pointResultTypesTS()
+            if 'Level' in point_types:
+                if 'US Levels' not in types:
+                    types.append('US Levels')
+                if 'DS Levels' not in types:
+                    types.append('DS Levels')
         
         return types
     

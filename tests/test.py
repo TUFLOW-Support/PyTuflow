@@ -2520,8 +2520,7 @@ class TestAdverseGradients(unittest.TestCase):
 class TestPipes(unittest.TestCase):
     """Test for getPipes() function"""
     
-    pipes = [[(0.0001, 37.6), (19.7999, 37.5), (19.7999, 38.7), (0.0001, 38.8)], None,
-             None, None, None, None]
+    pipes = [[(0.0001, 37.6), (19.7999, 37.5), (19.7999, 38.7), (0.0001, 38.8)]]
     
     def test_tpc(self):
         dir = os.path.dirname(__file__)
@@ -2563,6 +2562,19 @@ class TestLongProfileTimeOfMaximum(unittest.TestCase):
         err, out, d = res.getLongProfileData('max', 'H', 'FC01.2_R', 'FC01.05')
         tom = res.getLongProfileTimeOfMaximum()
         self.assertEqual(tom, ([], []))
+
+
+class TestNCOutput(unittest.TestCase):
+
+    def testNC(self):
+        dir = os.path.dirname(__file__)
+        tpc = os.path.join(dir, '2019', 'M03_5m_001.tpc')
+        res = tu.ResData()
+        err, mess = res.load(tpc)
+        self.assertFalse(err)
+        self.assertEqual("", mess)
+
+        err, mess, data = res.getTimeSeriesData("FC01.2_R", "Q")
 
 if __name__ == '__main__':
     unittest.main()

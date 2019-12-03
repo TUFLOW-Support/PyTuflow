@@ -241,6 +241,10 @@ class ResData():
                     rtypes.append('V')
                 elif '1D Flow' in rtype:
                     rtypes.append('Q')
+                elif '1D CHANNEL FLOW REGIME' in rtype.upper():
+                    rtypes.append('F')
+                elif '1D CHANNEL LOSSES' in rtype.upper():
+                    rtypes.append('L')
             return rtypes
             
         return []
@@ -259,6 +263,10 @@ class ResData():
                     rtypes.append('H')
                 elif '1D Energy Levels' in rtype:
                     rtypes.append('E')
+                elif '1D MASS BALANCE ERROR' in rtype.upper():
+                    rtypes.append('MB')
+                elif '1D NODE FLOW REGIME' in rtype.upper():
+                    rtypes.append('F')
             return rtypes
         
         return []
@@ -850,4 +858,10 @@ class ResData():
                     return self._res.LP.dist_chan_inverts[:], self._res.LP.tHmax[:]
             
         return [], []
-    
+
+
+if __name__ == "__main__":
+    # debugging
+    tpc = r"C:\_Tutorial\TUFLOW\results\M03\2d\plot\M03_5m_001.tpc"
+    res = ResData()
+    res.load(tpc)
