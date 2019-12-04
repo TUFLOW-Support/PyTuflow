@@ -2,6 +2,7 @@ import os
 import numpy
 import csv
 import ctypes
+import re
 from pytuflow.helper import getOSIndependentFilePath
 
 
@@ -236,6 +237,9 @@ class Timeseries():
         self.nVals = 0
         self.nLocs = 0
         self.null_data = -99999.
+        self.nCols = []  # number of columns - added for losses incase more than one column associated with any channel
+        self.uID = []  # unique ids - added for losses
+        self.lossNames = []  # record loss names because this will be useful later
 
     def load(self, fullpath, prefix, simID):
         error = False
@@ -244,27 +248,45 @@ class Timeseries():
             with open(fullpath, 'r') as csvfile:
                 reader = csv.reader(csvfile, delimiter=',', quotechar='"')
                 header = next(reader)
-            csvfile.close()
         except:
             message = '"ERROR - Error reading header from: '+fullpath
             error = True
             return error, message
         header[0] = 'Timestep'
         header[1] = 'Time'
-        self.ID = []
-        i=1
+        self.ID.clear()
+        i = 1
+        nCol = 1
         for col in header[2:]:
-            i= i+1
-            a = col[len(prefix)+1:]
-            indA = a.find(simID)
-            indB = a.rfind('[') #find last occurrence of [
-            if (indA >= 0) and (indB >= 0): # strip simulation ID from header
-                a = a[0:indB-1]
+            i += 1
+            # strip simulation name - highly unlikely more than one match
+            a = "".join(re.split(r"\[?{0}]?".format(simID), col, re.IGNORECASE)).strip()
+            # strip prefix - only take the first occurrence just in case there's more than one match
+            rx = re.search(r"{0}\s".format(prefix), a, re.IGNORECASE)
+            if rx is None:
+                message = "ERROR - Error reading header data in: {0}".format(fullpath)
+                error = True
+                return error, message
+            if rx.span()[0]:
+                self.lossNames.append(a[:rx.span()[0]])
+            a = a[rx.span()[1]:]
             self.ID.append(a)
-            header [i] = a
+            header[i] = a
+            if a == header[i-1]:
+                nCol += 1
+            elif i > 2:  # first column with element names
+                self.nCols.append(nCol)
+                self.uID.append(header[i-1])
+                nCol = 1
+            if i + 1 == len(header):  # last column
+                self.nCols.append(nCol)
+                self.uID.append(header[i-1])
         self.Header = header
         try:
-            values = numpy.genfromtxt(fullpath, delimiter=",", skip_header=1)
+            if prefix == "F":
+                values = numpy.genfromtxt(fullpath, delimiter=",", skip_header=1, dtype=str)
+            else:
+                values = numpy.genfromtxt(fullpath, delimiter=",", skip_header=1)
             null_array = values == self.null_data
             self.Values = numpy.ma.masked_array(values,null_array)
         except:
@@ -1022,18 +1044,13 @@ class ResData():
                     message = 'No 1D Velocity Data loaded for: ' + self.displayname
                     return False, [0.0], message
             elif (res.upper() in ("LOSSES", "CL")):
-                if self.Data_1D.NF.loaded or self.Data_1D.CF.loaded:
+                if self.Data_1D.CL.loaded:
                     try:
-                        if id in self.Data_1D.NF.Header:
-                            ind = self.Data_1D.NF.Header.index(id)
-                            data = self.Data_1D.NF.Values[:, ind]
-                            return True, data, message
-                        elif id in self.Data_1D.CF.Header:
-                            ind = self.Data_1D.CF.Header.index(id)
-                            data = self.Data_1D.CF.Values[:, ind]
-                            return True, data, message
-                        else:
-                            return True, [0.0], message
+                        ind = self.Data_1D.CL.Header.index(id)
+                        iun = self.Data_1D.CL.uID.index(id)  # index unique name
+                        nCol = self.Data_1D.CL.nCols[iun]  # number of columns associated with element losses
+                        data = self.Data_1D.CL.Values[:, ind:ind+nCol]
+                        return True, data, message
                     except:
                         message = 'Data not found for 1D MB with ID: ' + id
                         return False, [0.0], message
@@ -2059,7 +2076,7 @@ class ResData():
                 if self.resFileFormat == "CSV":
                     if rdata != 'NONE':
                         fullpath = getOSIndependentFilePath(self.fpath, rdata)
-                        error, message = self.Data_1D.E.load(fullpath, 'H', self.displayname)
+                        error, message = self.Data_1D.E.load(fullpath, 'E', self.displayname)
                         if error:
                             return error, message
                         self.nTypes = self.nTypes + 1
@@ -3017,8 +3034,6 @@ class ResData():
                 if self.resFileFormat == "CSV":
                     if rdata != 'NONE':
                         fullpath = getOSIndependentFilePath(self.fpath, rdata)
-                        indA = dat_type.index('[')
-                        indB = dat_type.index(']')
                         error, message = self.Data_1D.MB.load(fullpath, 'MB', self.displayname)
                         if error:
                             return error, message
@@ -3043,15 +3058,13 @@ class ResData():
                 if self.resFileFormat == "CSV":
                     if rdata != 'NONE':
                         fullpath = getOSIndependentFilePath(self.fpath, rdata)
-                        indA = dat_type.index('[')
-                        indB = dat_type.index(']')
                         error, message = self.Data_1D.NF.load(fullpath, 'F', self.displayname)
                         if error:
                             return error, message
                         self.nTypes = self.nTypes + 1
                         self.Types.append('1D Node Flow Regime')
                         if self.nTypes == 1:
-                            self.times = self.Data_1D.NF.Values[:, 1]
+                            self.times = self.Data_1D.NF.Values[:, 1].astype(float)
                 elif self.resFileFormat == "NC":
                     if self.netcdf_fpath:
                         error, message = self.Data_1D.NF.loadFromNetCDF(self.netcdf_fpath, "node_flow_regime_1d",
@@ -3069,15 +3082,13 @@ class ResData():
                 if self.resFileFormat == "CSV":
                     if rdata != 'NONE':
                         fullpath = getOSIndependentFilePath(self.fpath, rdata)
-                        indA = dat_type.index('[')
-                        indB = dat_type.index(']')
                         error, message = self.Data_1D.CF.load(fullpath, 'F', self.displayname)
                         if error:
                             return error, message
                         self.nTypes = self.nTypes + 1
                         self.Types.append('1D Channel Flow Regime')
                         if self.nTypes == 1:
-                            self.times = self.Data_1D.CF.Values[:, 1]
+                            self.times = self.Data_1D.CF.Values[:, 1].astype(float)
                 elif self.resFileFormat == "NC":
                     if self.netcdf_fpath:
                         error, message = self.Data_1D.CF.loadFromNetCDF(self.netcdf_fpath, "channel_flow_regime_1d",
@@ -3095,9 +3106,7 @@ class ResData():
                 if self.resFileFormat == "CSV":
                     if rdata != 'NONE':
                         fullpath = getOSIndependentFilePath(self.fpath, rdata)
-                        indA = dat_type.index('[')
-                        indB = dat_type.index(']')
-                        error, message = self.Data_1D.CL.load(fullpath, 'L', self.displayname)
+                        error, message = self.Data_1D.CL.load(fullpath, 'LC', self.displayname)
                         if error:
                             return error, message
                         self.nTypes = self.nTypes + 1

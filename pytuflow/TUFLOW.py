@@ -476,7 +476,13 @@ class ResData():
             x = self.timesteps()
             success, y, out = self._res.getTSData(element, resultType, domain)
             if success:
-                return False, out, (x, y.tolist())
+                if len(y.shape) == 1:
+                    return False, out, (x, y.tolist())
+                else:
+                    y_list = []
+                    for i in range(y.shape[1]):
+                        y_list.append(y[:,i].tolist())
+                    return False, out, (x, y_list)
             else:
                 return True, out, ([], [])
         
@@ -864,4 +870,11 @@ if __name__ == "__main__":
     # debugging
     tpc = r"C:\_Tutorial\TUFLOW\results\M03\2d\plot\M03_5m_001.tpc"
     res = ResData()
-    res.load(tpc)
+    err, mess = res.load(tpc)
+    if err:
+        print(mess)
+    err, mess, data = res.getTimeSeriesData("FC01.2_R", "CF")
+    if err:
+        print(mess)
+
+    print("Finisehd")

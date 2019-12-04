@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="pytuflow",
-    version="0.0.6",
+    version="0.0.7",
     author="tuflowsupport",
     author_email="support@tuflow.com",
     description="Package for scripting TUFLOW time series results.",
