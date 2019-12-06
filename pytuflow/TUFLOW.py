@@ -873,7 +873,7 @@ if __name__ == "__main__":
     err, mess = res.load(tpc)
     if err:
         print(mess)
-    err, mess, data = res.getTimeSeriesData("FC01.2_R", "CF")
+    err, mess, data = res.getTimeSeriesData("FC01.2_R", "CL")
     if err:
         print(mess)
 

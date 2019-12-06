@@ -331,10 +331,35 @@ class Timeseries():
             self.nLocs = dims[0]
             self.ID.clear()
             for i in range(self.nLocs):
-                self.ID.append("".join([x.decode("utf-8") for x in ncopen[resType][i, :].tolist()]).strip())
+                try:
+                    self.ID.append("".join([x.decode("utf-8") for x in ncopen[resType][i, :].tolist()]).strip())
+                except UnicodeDecodeError:  # 1D loss headers are written at end of TUFLOW and if unclean exit don't bother loading
+                    return False, ""
         else:
             return False, ""
         self.Header = ['Timestep', 'Time'] + self.ID[:]
+        if resName == 'losses_1d':
+            self.lossNames = self.ID[:]
+            self.ID.clear()
+            self.Header = self.Header[:2]
+            nCol = 1
+            i = 1
+            # loop and find channel ids
+            for id in self.lossNames[:]:
+                i += 1
+                rx = re.search(r"LC\s", id, re.IGNORECASE)
+                a = id[rx.span()[1]:]
+                self.ID.append(a)
+                self.Header.append(a)
+                if a == self.Header[i - 1]:
+                    nCol += 1
+                elif i > 2:  # first column with element names
+                    self.nCols.append(nCol)
+                    self.uID.append(self.Header[i - 1])
+                    nCol = 1
+                if i - 1 == len(self.lossNames):  # last column
+                    self.nCols.append(nCol)
+                    self.uID.append(self.Header[i - 1])
 
         # times
         if "time" in [x.name for x in ncVars]:
@@ -351,8 +376,21 @@ class Timeseries():
 
         # values
         if resName in [x.name for x in ncVars]:
-            a = ncopen[resName][:, :]
-            self.Values = numpy.insert(a, 0, values, axis=0)
+            if "flow_regime_1d" in resName:
+                self.Values = values[:]
+                for a in ncopen[resName][:]:
+                    #ma = [''.join([x.decode('UTF-8') for x in a[y,:]]).strip() for y in range(a.shape[0])]
+                    ma = []
+                    for i in range(a.shape[0]):
+                        try:
+                            ma.append(''.join([x.decode('UTF-8') for x in a[i, :]]))
+                        except UnicodeDecodeError:  # can occur if the model is interrupted
+                            ma.append("G")
+                    ma = numpy.ma.masked_array(numpy.array([ma]))
+                    self.Values = numpy.append(self.Values, ma, axis=0)
+            else:
+                a = ncopen[resName][:, :]
+                self.Values = numpy.insert(a, 0, values, axis=0)
             self.Values = numpy.transpose(self.Values)
         else:
             return False, ""
@@ -3116,7 +3154,7 @@ class ResData():
                 elif self.resFileFormat == "NC":
                     if self.netcdf_fpath:
                         error, message = self.Data_1D.CL.loadFromNetCDF(self.netcdf_fpath, "losses_1d",
-                                                                        "channel_names",
+                                                                        "names_losses_1d",
                                                                         self.netCDFLib, self.ncopen, self.ncid,
                                                                         self.ncdll,
                                                                         self.ncDims, self.ncVars)
