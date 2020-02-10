@@ -523,32 +523,34 @@ class ResData():
             else:
                 return True, 'Unrecognised domain type', 0
             if domain.upper() == '1D':
-                if element.lower() in nodes:
-                    ids = [x.lower() for x in self._res.Data_1D.Node_Max.ID]
-                    if element.lower() in ids:
-                        i = ids.index(element.lower())
-                        if resultType.upper() == 'H':
-                            return False, '', self._res.Data_1D.Node_Max.HMax[i]
-                        elif resultType.upper() == 'E':
-                            return False, '', self._res.Data_1D.Node_Max.EMax[i]
+                if resultType.upper() in [x.upper() for x in self.nodeResultTypes()]:
+                    if element.lower() in nodes:
+                        ids = [x.lower() for x in self._res.Data_1D.Node_Max.ID]
+                        if element.lower() in ids:
+                            i = ids.index(element.lower())
+                            if resultType.upper() == 'H':
+                                return False, '', self._res.Data_1D.Node_Max.HMax[i]
+                            elif resultType.upper() == 'E':
+                                return False, '', self._res.Data_1D.Node_Max.EMax[i]
+                            else:
+                                return True, 'Result type not recognised or unavailable as max type', 0
                         else:
-                            return True, 'Result type not recognised or unavailable as max type', 0
-                    else:
-                        return True, 'Unexpected Error - could not find element in node max ids', 0
-                elif element.lower() in channels:
-                    ids = [x.lower() for x in self._res.Data_1D.Chan_Max.ID]
-                    if element.lower() in ids:
-                        i = ids.index(element.lower())
-                        if resultType.upper() == 'Q':
-                            return False, '', self._res.Data_1D.Chan_Max.QMax[i]
-                        elif resultType.upper() == 'V':
-                            return False, '', self._res.Data_1D.Chan_Max.VMax[i]
+                            return True, 'Unexpected Error - could not find element in node max ids', 0
+                elif resultType.upper() in [x.upper() for x in self.channelResultTypes()]:
+                    if element.lower() in channels:
+                        ids = [x.lower() for x in self._res.Data_1D.Chan_Max.ID]
+                        if element.lower() in ids:
+                            i = ids.index(element.lower())
+                            if resultType.upper() == 'Q':
+                                return False, '', self._res.Data_1D.Chan_Max.QMax[i]
+                            elif resultType.upper() == 'V':
+                                return False, '', self._res.Data_1D.Chan_Max.VMax[i]
+                            else:
+                                return True, 'Result type not recognised or unavailable as max type', 0
                         else:
-                            return True, 'Result type not recognised or unavailable as max type', 0
-                    else:
-                        return True, 'Unexpected Error - could not find element in channel max ids', 0
+                            return True, 'Unexpected Error - could not find element in channel max ids', 0
                 else:
-                    return True, 'Could not find element ID in available results', 0
+                    return True, 'Result type not recognised', 0
             elif domain.upper() == 'RL':
                 if resultType.upper() == 'H':
                     ids = [x.lower() for x in self._res.Data_RL.P_Max.ID]
@@ -604,30 +606,32 @@ class ResData():
             else:
                 return True, 'Unrecognised domain type', 0
             if domain.upper() == '1D':
-                if element.lower() in nodes:
-                    ids = [x.lower() for x in self._res.Data_1D.Node_Max.ID]
-                    if element.lower() in ids:
-                        i = ids.index(element.lower())
-                        if resultType.upper() == 'H':
-                            return False, '', self._res.Data_1D.Node_Max.tHmax[i]
+                if resultType.upper() in [x.upper() for x in self.nodeResultTypes()]:
+                    if element.lower() in nodes:
+                        ids = [x.lower() for x in self._res.Data_1D.Node_Max.ID]
+                        if element.lower() in ids:
+                            i = ids.index(element.lower())
+                            if resultType.upper() == 'H':
+                                return False, '', self._res.Data_1D.Node_Max.tHmax[i]
+                            else:
+                                return True, 'Result type not recognised or unavailable for time of maximum', 0
                         else:
-                            return True, 'Result type not recognised or unavailable for time of maximum', 0
-                    else:
-                        return True, 'Unexpected Error - could not find element in node time of maximum ids', 0
-                elif element.lower() in channels:
-                    ids = [x.lower() for x in self._res.Data_1D.Chan_Max.ID]
-                    if element.lower() in ids:
-                        i = ids.index(element.lower())
-                        if resultType.upper() == 'V':
-                            return False, '', self._res.Data_1D.Chan_Max.tVmax[i]
-                        elif resultType.upper() == 'Q':
-                            return False, '', self._res.Data_1D.Chan_Max.tQmax[i]
+                            return True, 'Unexpected Error - could not find element in node time of maximum ids', 0
+                elif resultType.upper() in [x.upper() for x in self.channelResultTypes()]:
+                    if element.lower() in channels:
+                        ids = [x.lower() for x in self._res.Data_1D.Chan_Max.ID]
+                        if element.lower() in ids:
+                            i = ids.index(element.lower())
+                            if resultType.upper() == 'V':
+                                return False, '', self._res.Data_1D.Chan_Max.tVmax[i]
+                            elif resultType.upper() == 'Q':
+                                return False, '', self._res.Data_1D.Chan_Max.tQmax[i]
+                            else:
+                                return True, 'Result type not recognised or unavailable for time of maximum', 0
                         else:
-                            return True, 'Result type not recognised or unavailable for time of maximum', 0
-                    else:
-                        return True, 'Unexpected Error - could not find element in channel time of maximum ids', 0
+                            return True, 'Unexpected Error - could not find element in channel time of maximum ids', 0
                 else:
-                    return True, 'Could not find element ID in available results', 0
+                    return True, 'Result type not recognised', 0
             elif domain.upper() == 'RL':
                 if resultType.upper() == 'H':
                     ids = [x.lower() for x in self._res.Data_RL.P_Max.ID]
@@ -868,13 +872,15 @@ class ResData():
 
 if __name__ == "__main__":
     # debugging
-    tpc = r"C:\_Tutorial\TUFLOW\results\M03\2d\plot\M03_5m_001.tpc"
+    tpc = r"C:\_TT_Training\Completed_Models\TUFLOW\results\plot\TUT_5m_011.tpc"
     res = ResData()
     err, mess = res.load(tpc)
     if err:
         print(mess)
-    err, mess, data = res.getTimeSeriesData("FC01.2_R", "CL")
+    err, mess, qmax = res.maximum("Pit1", "Q")
     if err:
         print(mess)
+    else:
+        print(qmax)
 
-    print("Finisehd")
+    print("Finished")
