@@ -248,8 +248,8 @@ class Timeseries():
             with open(fullpath, 'r') as csvfile:
                 reader = csv.reader(csvfile, delimiter=',', quotechar='"')
                 header = next(reader)
-        except:
-            message = '"ERROR - Error reading header from: '+fullpath
+        except Exception as e:
+            message = 'ERROR - Error reading data from: {0}\n\n{1}'.format(fullpath, e)
             error = True
             return error, message
         header[0] = 'Timestep'
@@ -528,8 +528,8 @@ class NodeMax():
             #close file
             csvfile.close()
 
-        except:
-            message = 'ERROR - Error reading data from: '+fullpath
+        except Exception as e:
+            message = 'ERROR - Error reading data from: {0}\n\n{1}'.format(fullpath, e)
             error = True
             return error, message
 
@@ -611,8 +611,8 @@ class ChanMax():
 
             # close file
             csvfile.close()
-        except:
-            message = 'ERROR - Error reading header from: '+fullpath
+        except Exception as e:
+            message = 'ERROR - Error reading data from: {0}\n\n{1}'.format(fullpath, e)
             error = True
             return error, message
 
@@ -664,8 +664,8 @@ class RLPointMax():
                     except:
                         self.Q.append(float('Nan'))
             #csvfile.close()
-        except:
-            message = 'ERROR - Error reading header from: '+fullpath
+        except Exception as e:
+            message = 'ERROR - Error reading data from: {0}\n\n{1}'.format(fullpath, e)
             error = True
             return error, message
         if len(header)>7:
@@ -734,8 +734,8 @@ class RLLineMax():
                     except:
                         self.H.append(float('Nan'))
             #csvfile.close()
-        except:
-            message = 'ERROR - Error reading header from: '+fullpath
+        except Exception as e:
+            message = 'ERROR - Error reading data from: {0}\n\n{1}'.format(fullpath, e)
             error = True
             return error, message
         if len(header)>7:
@@ -808,8 +808,8 @@ class RLRegionMax():
                     except:
                         self.H.append(float('Nan'))
             #csvfile.close()
-        except:
-            message = 'ERROR - Error reading header from: '+fullpath
+        except Exception as e:
+            message = 'ERROR - Error reading data from: {0}\n\n{1}'.format(fullpath, e)
             error = True
             return error, message
         if len(header)>7:

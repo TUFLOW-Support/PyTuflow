@@ -872,7 +872,7 @@ class ResData():
 
 if __name__ == "__main__":
     # debugging
-    tpc = r"C:\_TT_Training\Completed_Models\TUFLOW\results\plot\TUT_5m_011.tpc"
+    tpc = r"D:\plot\TUT_5m_002_HPC+QuadTree+SGS.tpc"
     res = ResData()
     err, mess = res.load(tpc)
     if err:
