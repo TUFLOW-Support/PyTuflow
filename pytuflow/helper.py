@@ -17,6 +17,8 @@
 """
 
 import os
+from math import floor
+from datetime import timedelta
 
 
 def getPathFromRel(dir, relPath, **kwargs):
@@ -82,6 +84,23 @@ def getOSIndependentFilePath(dir, folders):
         folders = os.sep.join(folders)
         
     return getPathFromRel(dir, folders)
+
+
+def roundSeconds(dateTimeObject, prec):
+    """rounds datetime object to nearest second"""
+
+    newDateTime = dateTimeObject
+
+    a = 500000  # 0.5s
+    b = 1000000  # 1.0s
+    if prec > 0:
+        a = a / (10 ** prec)
+        b = b / (10 ** prec)
+    ms = newDateTime.microsecond - floor(newDateTime.microsecond / b) * b
+    if ms >= a:
+        newDateTime = newDateTime + timedelta(microseconds=b)
+
+    return newDateTime - timedelta(microseconds=ms)
 
     
 

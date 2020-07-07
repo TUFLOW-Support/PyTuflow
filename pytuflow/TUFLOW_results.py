@@ -3,7 +3,9 @@ import numpy
 import csv
 import ctypes
 import re
-from pytuflow.helper import getOSIndependentFilePath
+from dateutil.parser import parse
+from datetime import timedelta, datetime
+from pytuflow.helper import getOSIndependentFilePath, roundSeconds
 
 
 class NC_Error:
@@ -139,6 +141,7 @@ class Data2D():
         self.QOut = Timeseries() #2017-09-AA flow out of a region
         self.SS = Timeseries() #2017-09-AA Sink / Source within a region
         self.Vol = Timeseries() #2017-09-AA Volume within a region
+        self.D = Timeseries()
 
 
 class DataRL():
@@ -260,7 +263,7 @@ class Timeseries():
         for col in header[2:]:
             i += 1
             # strip simulation name - highly unlikely more than one match
-            a = "".join(re.split(r"\[?{0}]?".format(simID), col, re.IGNORECASE)).strip()
+            a = "".join(re.split(r"\[?{0}]?".format(simID.replace('+', r'\+')), col, re.IGNORECASE)).strip()
             # strip prefix - only take the first occurrence just in case there's more than one match
             rx = re.search(r"{0}\s".format(prefix), a, re.IGNORECASE)
             if rx is None:
@@ -287,8 +290,11 @@ class Timeseries():
                 values = numpy.genfromtxt(fullpath, delimiter=",", skip_header=1, dtype=str)
             else:
                 values = numpy.genfromtxt(fullpath, delimiter=",", skip_header=1)
-            null_array = values == self.null_data
-            self.Values = numpy.ma.masked_array(values,null_array)
+            #null_array = values == self.null_data
+            #self.Values = numpy.ma.masked_array(values,null_array)
+            self.Values = numpy.ma.masked_array(values)
+            if self.Values.dtype == numpy.float64:
+                self.Values = numpy.ma.masked_equal(self.Values, self.null_data)
         except:
             message = 'ERROR - Error reading data from: '+fullpath
             error = True
@@ -951,6 +957,10 @@ class ResData():
         self.ncDims = []
         self.ncVars = []
 
+        self.reference_time = None
+        self.has_reference_time = False
+        self._tmp_reference_time = None
+
     def getTSData(self, id, res, dom):
         message = ''
         if (dom.upper() == "1D"):
@@ -1112,6 +1122,19 @@ class ResData():
                         return False, [0.0], message
                 else:
                     message = 'No 2D Level Data loaded for: '+self.displayname
+                    return False, [0.0], message
+            if (res.upper() in ("D", "D_", "DEPTH", "DEPTHS", "POINT DEPTH")):
+                if self.Data_2D.D.loaded:
+                    try:
+                        ind = self.Data_2D.D.Header.index(id)
+                        data = self.Data_2D.D.Values[:, ind]
+                        self.times = self.Data_2D.D.Values[:, 1]
+                        return True, data, message
+                    except:
+                        message = 'Data not found for 2D D with ID: ' + id
+                        return False, [0.0], message
+                else:
+                    message = 'No 2D Depth Data loaded for: ' + self.displayname
                     return False, [0.0], message
             elif(res.upper() in ("Q","Q_","FLOW","FLOWS")):
                 if self.Data_2D.Q.loaded:
@@ -2507,6 +2530,43 @@ class ResData():
                         self.Data_2D.types.append('H')
                         if self.nTypes == 1:
                             self.times = self.Data_2D.H.Values[:, 1]
+            elif dat_type.find('2D Point Depth') >= 0:
+                if self.resFileFormat == "CSV":
+                    if rdata != 'NONE':
+                        fullpath = getOSIndependentFilePath(self.fpath, rdata)
+                        indA = dat_type.index('[')
+                        indB = dat_type.index(']')
+                        # self.Data_2D.H = Timeseries(fullpath,'H',self.displayname)
+                        error, message = self.Data_2D.D.load(fullpath, 'D', self.displayname)
+                        if error:
+                            return error, message
+                        self.nTypes = self.nTypes + 1
+                        self.Types.append('2D Point Depth')
+                        self.Data_2D.types.append('D')
+                        if self.nTypes == 1:
+                            self.times = self.Data_2D.D.Values[:, 1]
+                        try:
+                            chk_nLocs = int(dat_type[indA + 1:indB])
+                            if (chk_nLocs != self.Data_2D.D.nLocs):
+                                message = 'ERROR - number of locations in .csv doesn''t match value in .tpc'
+                                error = True
+                                return error, message
+                        except:
+                            print('WARNING - Unable to extact number of values in .tpc file entry')
+                elif self.resFileFormat == "NC":
+                    if self.netcdf_fpath:
+                        error, message = self.Data_2D.D.loadFromNetCDF(self.netcdf_fpath, "depths_2d",
+                                                                       "name_depths_2d",
+                                                                       self.netCDFLib, self.ncopen, self.ncid,
+                                                                       self.ncdll,
+                                                                       self.ncDims, self.ncVars)
+                        if error:
+                            return error, message
+                        self.nTypes = self.nTypes + 1
+                        self.Types.append('2D Point Depth')
+                        self.Data_2D.types.append('D')
+                        if self.nTypes == 1:
+                            self.times = self.Data_2D.D.Values[:, 1]
             elif dat_type.find('2D Point X-Vel') >= 0:
                 if self.resFileFormat == "CSV":
                     if rdata != 'NONE':
@@ -3164,6 +3224,10 @@ class ResData():
                         self.Types.append('1D Channel Losses')
                         if self.nTypes == 1:
                             self.times = self.Data_1D.CL.Values[:, 1]
+            elif dat_type == 'Reference Time':
+                self.reference_time = parse(rdata.strip())
+                self._tmp_reference_time = self.reference_time
+                self.has_reference_time = True
             else:
                 print('Warning - Unknown Data Type ' + dat_type)
         # successful load
@@ -3721,6 +3785,8 @@ class ResData():
                 types.append('MB')
             elif '1D NODE FLOW REGIME' in type.upper():
                 types.append('Flow Regime')
+            elif 'DEPTH' in type.upper():
+                types.append('Depth')
 
         return types
     
@@ -3760,6 +3826,8 @@ class ResData():
                 types.append('Losses')
             elif 'FLOW' in type.upper():
                 types.append('Flow')
+            elif 'DEPTH' in type.upper():
+                types.append('Depth')
 
         if self.nodes is not None:
             point_types = self.pointResultTypesTS()
@@ -3821,13 +3889,91 @@ class ResData():
         types.append('Adverse Gradients (if any)')
         
         return types
-    
-    def timeSteps(self):
+
+    def reloadTimesteps(self, zeroTime):
+        """
+
+        """
+
+        factor = 60. * 60.
+        diff = timedelta(hours=0)
+        if zeroTime is not None:
+            if self.has_reference_time:
+                if self._tmp_reference_time is None:
+                    diff = self.reference_time - zeroTime
+                else:
+                    diff = self._tmp_reference_time - zeroTime
+
+        if diff.total_seconds() == 0:
+            return
+
+        if self.Data_1D.H.loaded:
+            self.Data_1D.H.Values[:, 1] = self.Data_1D.H.Values[:, 1] + diff.total_seconds() / factor
+        if self.Data_1D.V.loaded:
+            self.Data_1D.V.Values[:, 1] = self.Data_1D.V.Values[:, 1] + diff.total_seconds() / factor
+        if self.Data_1D.E.loaded:
+            self.Data_1D.E.Values[:, 1] = self.Data_1D.E.Values[:, 1] + diff.total_seconds() / factor
+        if self.Data_1D.Q.loaded:
+            self.Data_1D.Q.Values[:, 1] = self.Data_1D.Q.Values[:, 1] + diff.total_seconds() / factor
+        if self.Data_1D.A.loaded:
+            self.Data_1D.A.Values[:, 1] = self.Data_1D.A.Values[:, 1] + diff.total_seconds() / factor
+        if self.Data_2D.H.loaded:
+            self.Data_2D.H.Values[:, 1] = self.Data_2D.H.Values[:, 1] + diff.total_seconds() / factor
+        if self.Data_2D.V.loaded:
+            self.Data_2D.V.Values[:, 1] = self.Data_2D.V.Values[:, 1] + diff.total_seconds() / factor
+        if self.Data_2D.Q.loaded:
+            self.Data_2D.Q.Values[:, 1] = self.Data_2D.Q.Values[:, 1] + diff.total_seconds() / factor
+        if self.Data_2D.GL.loaded:
+            self.Data_2D.GL.Values[:, 1] = self.Data_2D.GL.Values[:, 1] + diff.total_seconds() / factor
+        if self.Data_2D.QA.loaded:
+            self.Data_2D.QA.Values[:, 1] = self.Data_2D.QA.Values[:, 1] + diff.total_seconds() / factor
+        if self.Data_2D.QI.loaded:
+            self.Data_2D.QI.Values[:, 1] = self.Data_2D.QI.Values[:, 1] + diff.total_seconds() / factor
+        if self.Data_2D.Vx.loaded:
+            self.Data_2D.Vx.Values[:, 1] = self.Data_2D.Vx.Values[:, 1] + diff.total_seconds() / factor
+        if self.Data_2D.Vy.loaded:
+            self.Data_2D.Vy.Values[:, 1] = self.Data_2D.Vy.Values[:, 1] + diff.total_seconds() / factor
+        if self.Data_2D.QS.loaded:
+            self.Data_2D.QS.Values[:, 1] = self.Data_2D.QS.Values[:, 1] + diff.total_seconds() / factor
+        if self.Data_2D.HUS.loaded:
+            self.Data_2D.HUS.Values[:, 1] = self.Data_2D.HUS.Values[:, 1] + diff.total_seconds() / factor
+        if self.Data_2D.HDS.loaded:
+            self.Data_2D.HDS.Values[:, 1] = self.Data_2D.HDS.Values[:, 1] + diff.total_seconds() / factor
+        if self.Data_2D.HAvg.loaded:
+            self.Data_2D.HAvg.Values[:, 1] = self.Data_2D.HAvg.Values[:, 1] + diff.total_seconds() / factor
+        if self.Data_2D.HMax.loaded:
+            self.Data_2D.HMax.Values[:, 1] = self.Data_2D.HMax.Values[:, 1] + diff.total_seconds() / factor
+        if self.Data_2D.QIn.loaded:
+            self.Data_2D.QIn.Values[:, 1] = self.Data_2D.QIn.Values[:, 1] + diff.total_seconds() / factor
+        if self.Data_2D.QOut.loaded:
+            self.Data_2D.QOut.Values[:, 1] = self.Data_2D.QOut.Values[:, 1] + diff.total_seconds() / factor
+        if self.Data_2D.SS.loaded:
+            self.Data_2D.SS.Values[:, 1] = self.Data_2D.SS.Values[:, 1] + diff.total_seconds() / factor
+        if self.Data_2D.Vol.loaded:
+            self.Data_2D.Vol.Values[:, 1] = self.Data_2D.Vol.Values[:, 1] + diff.total_seconds() / factor
+        if self.Data_RL.H_P.loaded:
+            self.Data_RL.H_P.Values[:, 1] = self.Data_RL.H_P.Values[:, 1] + diff.total_seconds() / factor
+        if self.Data_RL.Q_L.loaded:
+            self.Data_RL.Q_L.Values[:, 1] = self.Data_RL.Q_L.Values[:, 1] + diff.total_seconds() / factor
+        if self.Data_RL.Vol_R.loaded:
+            self.Data_RL.Vol_R.Values[:, 1] = self.Data_RL.Vol_R.Values[:, 1] + diff.total_seconds() / factor
+        if self.Data_2D.D.loaded:
+            self.Data_2D.D.Values[:, 1] = self.Data_2D.D.Values[:, 1] + diff.total_seconds() / factor
+
+        if self.has_reference_time:
+            self._tmp_reference_time = zeroTime
+
+    def timeSteps(self, zeroTime=None):
         """
         Returns a list of the available time steps. Assumes all time series results have the same timesteps.
         
         :return: list -> float time (hr)
         """
+
+        if zeroTime is None and self.has_reference_time:
+            self.reloadTimesteps(self.reference_time)
+        else:
+            self.reloadTimesteps(zeroTime)
         
         if self.Data_1D.H.loaded:
             return self.Data_1D.H.Values[:,1].tolist()
@@ -3841,6 +3987,8 @@ class ResData():
             return self.Data_1D.A.Values[:,1].tolist()
         elif self.Data_2D.H.loaded:
             return self.Data_2D.H.Values[:,1].tolist()
+        elif self.Data_2D.D.loaded:
+            return self.Data_2D.D.Values[:,1].tolist()
         elif self.Data_2D.V.loaded:
             return self.Data_2D.V.Values[:,1].tolist()
         elif self.Data_2D.Q.loaded:
@@ -3881,6 +4029,31 @@ class ResData():
             return self.Data_RL.Vol_R.Values[:,1].tolist()
         else:
             return []
+
+    def dates(self):
+        """Returns timesteps as dates"""
+
+        if not self.has_reference_time:
+            return []
+
+        if self._tmp_reference_time is None:
+            return [roundSeconds(self.reference_time + timedelta(hours=x), 2) for x in self.timeSteps()]
+        else:
+            return [roundSeconds(self._tmp_reference_time + timedelta(hours=x), 2) for x in self.timeSteps()]
+
+    def set_reference_time(self, reference_time):
+        """Sets results reference time - old time will be overridden"""
+
+        assert type(reference_time) is datetime, "input reference time must be an DateTime object"
+        if not self.has_reference_time:
+            self.has_reference_time = True
+        elif self._tmp_reference_time is None:
+            pass
+        else:
+            self.reloadTimesteps(self.reference_time)
+            self._tmp_reference_time = reference_time
+
+        self.reference_time = reference_time
         
     def getLongPlotXY(self, type, time):
         """

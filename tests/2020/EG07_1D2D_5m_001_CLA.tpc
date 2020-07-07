@@ -1,0 +1,40 @@
+Format Version == 2
+Units == METRIC
+Simulation ID == EG07_1D2D_5m_001_CLA
+Time Series Output Format == CSV 
+Reference Time == 1990-01-01 00:00:00
+
+GIS Plot Layer Points == .\gis\EG07_1D2D_5m_001_CLA_PLOT_P.mif
+GIS Plot Layer Lines == .\gis\EG07_1D2D_5m_001_CLA_PLOT_L.mif
+GIS Plot Layer Regions == .\gis\EG07_1D2D_5m_001_CLA_PLOT_R.mif
+GIS Plot Objects == .\gis\EG07_1D2D_5m_001_CLA_PLOT.csv
+
+NetCDF Time Series == NONE
+
+
+Number 1D Nodes == 8
+Number 1D Channels == 4
+
+1D Node Info == .\csv\EG07_1D2D_5m_001_CLA_1d_Node.csv
+1D Channel Info == .\csv\EG07_1D2D_5m_001_CLA_1d_Chan.csv
+
+1D Node Maximums == .\csv\EG07_1D2D_5m_001_CLA_1d_Nmx.csv
+1D Water Levels == .\csv\EG07_1D2D_5m_001_CLA_1d_H.csv
+1D Energy Levels == NONE
+1D Mass Balance Errors == .\csv\EG07_1D2D_5m_001_CLA_1d_TSMB.csv
+1D Node Regime == .\csv\EG07_1D2D_5m_001_CLA_1d_NF.csv
+
+1D Channel Maximums == .\csv\EG07_1D2D_5m_001_CLA_1d_Cmx.csv
+1D Flows == .\csv\EG07_1D2D_5m_001_CLA_1d_Q.csv
+1D Velocities == .\csv\EG07_1D2D_5m_001_CLA_1d_V.csv
+1D Flow Areas == NONE
+1D Channel Losses == .\csv\EG07_1D2D_5m_001_CLA_1d_L.csv
+1D Channel Regime == .\csv\EG07_1D2D_5m_001_CLA_1d_CF.csv
+
+Number Reporting Location Points == 0
+
+Number Reporting Location Lines == 0
+
+Number Reporting Location Regions == 0
+
+2D Region Average Water Level [1] == .\csv\EG07_1D2D_5m_001_CLA_2d_HA.csv

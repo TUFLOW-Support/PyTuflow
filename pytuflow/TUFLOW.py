@@ -425,18 +425,47 @@ class ResData():
             
         return 0
     
-    def timesteps(self):
+    def timesteps(self, zeroTime=None, asDates=False):
         """
         Returns a list of the available timesteps.
         Assumes all results have the same x-axis.
+
+        If zeroTime is specified:
+            if results have reference time, relative time will be updated before returned
+            if results do not have reference time, absolute time will be updated before returned
+
+        if asDates:
+            return timesteps as dates if there is a reference time
         
         :return: list -> float timestep
         """
         
         if self._res is not None:
-            return self._res.timeSteps()
+            if asDates:
+                assert self._format == '2016', "Date format only available in TUFLOW 2016 or later"
+                assert self._res.has_reference_time, "Results do not have reference time. Reference time can be set" \
+                                                     "using setReferenceTime(DateTime)"
+                return self._res.dates()
+            else:
+                if zeroTime is not None:
+                    assert self._format == '2016', "Date format only available in TUFLOW 2016 or later"
+                    return self._res.timeSteps(zeroTime)
+                else:
+                    return self._res.timeSteps()
         
         return []
+
+    def setReferenceTime(self, referenceTime):
+        """
+        Sets reference time of results - relative time will remain unchanged.
+
+        :param referenceTime: datetime
+        :return: None
+        """
+
+        if self._res is not None:
+            assert self._format == '2016', "Date format only available in TUFLOW 2016 or later"
+            self._res.set_reference_time(referenceTime)
     
     def getTimeSeriesData(self, element, resultType, domain=None):
         """
@@ -868,6 +897,16 @@ class ResData():
                     return self._res.LP.dist_chan_inverts[:], self._res.LP.tHmax[:]
             
         return [], []
+
+    def referenceTime(self):
+        """
+        Returns result reference time if one exists
+
+        :return: DateTime
+        """
+
+        if self._res is not None:
+            return self._res.reference_time
 
 
 if __name__ == "__main__":
