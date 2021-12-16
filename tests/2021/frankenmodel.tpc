@@ -1,0 +1,57 @@
+Format Version == 2
+Units == METRIC
+Simulation ID == frankenmodel
+Time Series Output Format == CSV 
+Reference Time == 01/01/1990 00:00:00
+
+GIS Plot Layer Points == .\gis\frankenmodel_PLOT_P.shp
+GIS Plot Layer Lines == .\gis\frankenmodel_PLOT_L.shp
+GIS Plot Layer Regions == .\gis\frankenmodel_PLOT_R.shp
+GIS Plot Objects == .\gis\frankenmodel_PLOT.csv
+
+NetCDF Time Series == NONE
+
+
+Number 1D Nodes == 0
+Number 1D Channels == 0
+
+1D Node Info == NONE
+1D Channel Info == NONE
+
+1D Node Maximums == NONE
+1D Water Levels == NONE
+1D Energy Levels == NONE
+1D Mass Balance Errors == NONE
+1D Node Regime == NONE
+
+1D Channel Maximums == NONE
+1D Flows == NONE
+1D Velocities == NONE
+1D Flow Areas == NONE
+1D Channel Losses == NONE
+1D Channel Regime == NONE
+
+Number Reporting Location Points == 0
+
+Number Reporting Location Lines == 0
+
+Number Reporting Location Regions == 0
+
+2D Line Flow [6] == .\csv\frankenmodel_2D_Q.csv
+2D Line SALT_FLUX [6] == .\csv\frankenmodel_2D_SALT_FLUX.csv
+2D Line TEMP_FLUX [6] == .\csv\frankenmodel_2D_TEMP_FLUX.csv
+2D Line SED_1_FLUX [6] == .\csv\frankenmodel_2D_SED_1_FLUX.csv
+2D Line SED_2_FLUX [6] == .\csv\frankenmodel_2D_SED_2_FLUX.csv
+2D Line TRACE_1_FLUX [6] == .\csv\frankenmodel_2D_TRACE_1_FLUX.csv
+2D Line TRACE_2_FLUX [6] == .\csv\frankenmodel_2D_TRACE_2_FLUX.csv
+2D Line SED_1_BEDLOAD_FLUX [6] == .\csv\frankenmodel_2D_SED_1_BEDLOAD_FLUX.csv
+2D Line SED_2_BEDLOAD_FLUX [6] == .\csv\frankenmodel_2D_SED_2_BEDLOAD_FLUX.csv
+2D Point Water Level [3] == .\csv\frankenmodel_2D_H.csv
+2D Point X-Vel [3] == .\csv\frankenmodel_2D_VX.csv
+2D Point Y-Vel [3] == .\csv\frankenmodel_2D_VY.csv
+2D Point temperature [3] == .\csv\frankenmodel_2D_TEMP.csv
+2D Point salinity [3] == .\csv\frankenmodel_2D_SAL.csv
+2D Point sediment fraction 1 concentration [3] == .\csv\frankenmodel_2D_SED_1.csv
+2D Point sediment fraction 2 concentration [3] == .\csv\frankenmodel_2D_SED_2.csv
+2D Point tracer 1 concentration [3] == .\csv\frankenmodel_2D_TRACE_1.csv
+2D Point tracer 2 concentration [3] == .\csv\frankenmodel_2D_TRACE_2.csv
