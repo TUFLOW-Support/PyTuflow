@@ -2687,6 +2687,39 @@ class TestReferenceTime(unittest.TestCase):
         self.assertEqual(dates, [roundSeconds(r1 + timedelta(hours=x), 2) for x in rel_time1])
 
 
+class TestImportFV(unittest.TestCase):
+
+    def test_tpc_test_rig(self):
+        dir = os.path.dirname(__file__)
+        tpc = os.path.join(dir, '2021', 'trap_steady_05_005.tpc')
+        res = tu.ResData()
+        err, out = res.load(tpc)
+        self.assertFalse(err)
+        self.assertEqual(out, '')
+        self.assertEqual(res.poNames(), ['ADCP1', 'ADCP2', 'ADCP3', 'NS1', 'NS2', 'NS3', 'NS4', 'NS5', 'NS6'])
+        self.assertEqual(res.poResultTypes(), ['Q', 'TRACE_1_FLUX', 'TRACE_2_FLUX', 'H', 'Vx', 'Vy'])
+        err, msg, (x,y) = res.getTimeSeriesData('NS1', 'TRACE_1_FLUX')
+        self.assertFalse(err)
+        self.assertEqual(out, '')
+
+    def test_tpc_frankenmodel(self):
+        dir = os.path.dirname(__file__)
+        tpc = os.path.join(dir, '2021', 'frankenmodel.tpc')
+        res = tu.ResData()
+        err, out = res.load(tpc)
+        self.assertFalse(err)
+        self.assertEqual(out, '')
+        self.assertEqual(res.poNames(), ['ADCP1', 'ADCP2', 'ADCP3', 'NS1', 'NS2', 'NS3', 'NS4', 'NS5', 'NS6'])
+        self.assertEqual(res.poResultTypes(),
+                         ['Q', 'SALT_FLUX', 'TEMP_FLUX', 'SED_1_FLUX', 'SED_2_FLUX', 'TRACE_1_FLUX', 'TRACE_2_FLUX',
+                          'SED_1_BEDLOAD_FLUX', 'SED_2_BEDLOAD_FLUX', 'H', 'Vx', 'Vy', 'temperature', 'salinity',
+                          'sediment fraction 1 concentration', 'sediment fraction 2 concentration',
+                          'tracer 1 concentration', 'tracer 2 concentration'])
+        err, msg, (x,y) = res.getTimeSeriesData('NS3', 'SALT_FLUX')
+        self.assertFalse(err)
+        self.assertEqual(out, '')
+
+
 
 
 

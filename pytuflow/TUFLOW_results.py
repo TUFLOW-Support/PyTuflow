@@ -59,6 +59,12 @@ class NcVar():
         self.dimLens = ()
 
 
+class DynamicResult:
+    def __init__(self, res, geom):
+        self.res = res
+        self.geom = geom
+
+
 class LP():
     def __init__(self): #initialise the LP data
         self.chan_list = [] #list of channel IDs
@@ -142,6 +148,7 @@ class Data2D():
         self.SS = Timeseries() #2017-09-AA Sink / Source within a region
         self.Vol = Timeseries() #2017-09-AA Volume within a region
         self.D = Timeseries()
+        self.dynamic_results = {}
 
 
 class DataRL():
@@ -262,28 +269,32 @@ class Timeseries():
         nCol = 1
         for col in header[2:]:
             i += 1
+            a = col[len(prefix) + 1:]
             # strip simulation name - highly unlikely more than one match
-            a = "".join(re.split(r"\[?{0}]?".format(simID.replace('+', r'\+')), col, re.IGNORECASE)).strip()
+            a = "".join(re.split(r"\[{0}]".format(re.escape(simID)), col, re.IGNORECASE)).strip()
             # strip prefix - only take the first occurrence just in case there's more than one match
-            rx = re.search(r"{0}\s".format(prefix), a, re.IGNORECASE)
+            rx = re.search(r"{0}\s".format(re.escape(prefix)), a, re.IGNORECASE)
+
+            if prefix == "LC":
+                if rx.span()[0]:
+                    self.lossNames.append(a[:rx.span()[0]])
+                else:
+                    self.lossNames.append(prefix)
             if rx is None:
-                message = "ERROR - Error reading header data in: {0}".format(fullpath)
-                error = True
-                return error, message
-            if rx.span()[0]:
-                self.lossNames.append(a[:rx.span()[0]])
-            a = a[rx.span()[1]:]
+                a = ' '.join(a.split(' ')[1:])
+            else:
+                a = a[rx.span()[1]:]
             self.ID.append(a)
             header[i] = a
-            if a == header[i-1]:
+            if a == header[i - 1]:
                 nCol += 1
             elif i > 2:  # first column with element names
                 self.nCols.append(nCol)
-                self.uID.append(header[i-1])
+                self.uID.append(header[i - 1])
                 nCol = 1
             if i + 1 == len(header):  # last column
                 self.nCols.append(nCol)
-                self.uID.append(header[i-1])
+                self.uID.append(header[i - 1])
         self.Header = header
         try:
             if prefix == "F":
@@ -1110,6 +1121,17 @@ class ResData():
                 return False, [0.0], message
 
         elif (dom.upper() == "2D"):
+            if res in self.Data_2D.dynamic_results:
+                timeSeries = self.Data_2D.dynamic_results[res].res
+                if timeSeries.loaded:
+                    try:
+                        ind = timeSeries.Header.index(id)
+                        data = timeSeries.Values[:, ind]
+                        self.times = timeSeries.Values[:, 1]
+                        return True, data, message
+                    except:
+                        message = 'Data not found for 2D H with ID: ' + id
+                        return False, [0.0], message
             if(res.upper() in  ("H", "H_", "LEVEL","LEVELS","POINT WATER LEVEL")):
                 if self.Data_2D.H.loaded:
                     try:
@@ -3228,6 +3250,19 @@ class ResData():
                 self.reference_time = parse(rdata.strip())
                 self._tmp_reference_time = self.reference_time
                 self.has_reference_time = True
+            elif re.findall(r'^2D (point|line|region)', dat_type, flags=re.IGNORECASE):
+                geom, res_type = re.split(r'^2D (point|line|region)', dat_type, flags=re.IGNORECASE)[1:]
+                res_type = res_type.split('[')[0].strip()
+                if self.resFileFormat == "CSV":
+                    fullpath = getOSIndependentFilePath(self.fpath, rdata)
+                    timeSeries = Timeseries()
+                    error, message = timeSeries.load(fullpath, res_type, self.displayname)
+                    if error:
+                        return error, message
+                    self.nTypes += 1
+                    self.Types.append(res_type)
+                    self.Data_2D.dynamic_results[res_type] = DynamicResult(timeSeries, geom.lower())
+                    self.Data_2D.types.append(res_type)
             else:
                 print('Warning - Unknown Data Type ' + dat_type)
         # successful load
@@ -3763,7 +3798,7 @@ class ResData():
         for type in self.Types:
             if 'STRUCTURE LEVELS' in type.upper():
                 types.append('Structure Levels')
-            elif 'WATER LEVEL' in type.upper():
+            elif 'WATER LEVEL' in type.upper() and 'GROUNDWATER' not in type.upper():
                 types.append('Level')
             elif 'ENERGY LEVELS' in type.upper():
                 types.append('Energy Level')
@@ -3785,8 +3820,12 @@ class ResData():
                 types.append('MB')
             elif '1D NODE FLOW REGIME' in type.upper():
                 types.append('Flow Regime')
-            elif 'DEPTH' in type.upper():
+            elif 'DEPTH' in type.upper() and 'GROUNDWATER' not in type.upper():
                 types.append('Depth')
+            else:
+                res = self.Data_2D.dynamic_results.get(type)
+                if res is not None and res.geom == 'point':
+                    types.append(type)
 
         return types
     
@@ -3824,10 +3863,14 @@ class ResData():
                 types.append('Flow Regime')
             elif '1D CHANNEL LOSSES' in type.upper():
                 types.append('Losses')
-            elif 'FLOW' in type.upper():
+            elif 'FLOW' in type.upper() and 'GROUNDWATER' not in type.upper():
                 types.append('Flow')
-            elif 'DEPTH' in type.upper():
-                types.append('Depth')
+            # elif 'DEPTH' in type.upper():
+            #     types.append('Depth')
+            else:
+                res = self.Data_2D.dynamic_results.get(type)
+                if res is not None and res.geom == 'line':
+                    types.append(type)
 
         if self.nodes is not None:
             point_types = self.pointResultTypesTS()
@@ -3861,6 +3904,10 @@ class ResData():
                 types.append('Volume')
             elif 'REGION SINK/SOURCE' in type.upper():  # 2017-09-AA
                 types.append('Sink/Source')
+            else:
+                res = self.Data_2D.dynamic_results.get(type)
+                if res is not None and res.geom == 'region':
+                    types.append(type)
                 
         return types
     

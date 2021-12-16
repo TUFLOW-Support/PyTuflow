@@ -86,7 +86,7 @@ class ResData():
         :return: list -> str channel name
         """
         
-        if self._res is not None:
+        if self._res is not None and self._res.Channels is not None:
             return self._res.Channels.chan_name
         
         return []
@@ -98,7 +98,7 @@ class ResData():
         :return: list -> str node name
         """
         
-        if self._res is not None:
+        if self._res is not None and self._res.Channels is not None:
             return self._res.nodes.node_name[:]
         
         return []
@@ -907,6 +907,20 @@ class ResData():
 
         if self._res is not None:
             return self._res.reference_time
+
+    def units(self):
+        """
+        Returns the unit system of the results:
+            METRIC
+            ENGLISH
+
+        return: str
+        """
+
+        if self._res is not None:
+            return self._res.units
+
+        return ''
 
 
 if __name__ == "__main__":

@@ -1,3 +1,6 @@
 .idea*
 pytuflow.egg-info*
 venv*
+build*
+dist*
+tests/_test.py

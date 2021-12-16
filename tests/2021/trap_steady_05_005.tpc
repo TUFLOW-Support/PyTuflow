@@ -1,0 +1,45 @@
+Format Version == 2
+Units == METRIC
+Simulation ID == trap_steady_05_005
+Time Series Output Format == CSV 
+Reference Time == 01/01/1990 00:00:00
+
+GIS Plot Layer Points == .\gis\trap_steady_05_005_PLOT_P.shp
+GIS Plot Layer Lines == .\gis\trap_steady_05_005_PLOT_L.shp
+GIS Plot Layer Regions == .\gis\trap_steady_05_005_PLOT_R.shp
+GIS Plot Objects == .\gis\trap_steady_05_005_PLOT.csv
+
+NetCDF Time Series == NONE
+
+
+Number 1D Nodes == 0
+Number 1D Channels == 0
+
+1D Node Info == NONE
+1D Channel Info == NONE
+
+1D Node Maximums == NONE
+1D Water Levels == NONE
+1D Energy Levels == NONE
+1D Mass Balance Errors == NONE
+1D Node Regime == NONE
+
+1D Channel Maximums == NONE
+1D Flows == NONE
+1D Velocities == NONE
+1D Flow Areas == NONE
+1D Channel Losses == NONE
+1D Channel Regime == NONE
+
+Number Reporting Location Points == 0
+
+Number Reporting Location Lines == 0
+
+Number Reporting Location Regions == 0
+
+2D Line Flow [6] == .\csv\trap_steady_05_005_2D_Q.csv
+2D Line TRACE_1_FLUX [6] == .\csv\trap_steady_05_005_2D_TRACE_1_FLUX.csv
+2D Line TRACE_2_FLUX [6] == .\csv\trap_steady_05_005_2D_TRACE_2_FLUX.csv
+2D Point Water Level [3] == .\csv\trap_steady_05_005_2D_H.csv
+2D Point X-Vel [3] == .\csv\trap_steady_05_005_2D_VX.csv
+2D Point Y-Vel [3] == .\csv\trap_steady_05_005_2D_VY.csv
