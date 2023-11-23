@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="pytuflow",
-    version="0.0.12",
+    version="0.0.13",
     author="tuflowsupport",
     author_email="support@tuflow.com",
     description="Package for scripting TUFLOW time series results.",
@@ -19,5 +19,5 @@ setuptools.setup(
         "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
         "Operating System :: OS Independent",
     ],
-    install_requires=['numpy', 'netCDF4'],
+    install_requires=['numpy', 'netCDF4', 'python-dateutil'],
 )

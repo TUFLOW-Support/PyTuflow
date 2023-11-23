@@ -1473,14 +1473,24 @@ class ResData():
     def getLPConnectivity(self, id1, id2=None):
         message = None
         error = False
-        self.LP.chan_list = []
-        if (id2 == None): # only one channel selected
+
+        self.LP.chan_list.clear()
+        self.LP.chan_index.clear()
+        self.LP.node_list.clear()
+        if id1 is None and id2 is None:
+            return True, ""
+
+        if self.Channels is None:
+            return error, message
+        if id2 == None:  # only one channel selected
             finished = False
             i = 0
             chan_list = tuple(self.Channels.chan_name)
             try:
                 ind1 = chan_list.index(str(id1))
             except:
+                # QMessageBox.information(iface.mainWindow(),"ERROR", ("ID not found: " + str(id1)))
+                # print('ERROR - ID not found: ' + str(id1))
                 message = 'ERROR - ID not found: ' + str(id1)
                 error = True
                 return error, message
@@ -1492,7 +1502,7 @@ class ResData():
             while not finished:
                 i = i + 1
                 chan = self.Channels.chan_DS_Chan[id]
-                if(chan=='------'):
+                if chan == '------' or chan in self.LP.chan_list:
                     finished = True
                 else:
                     self.LP.chan_list.append(chan)
@@ -1502,13 +1512,13 @@ class ResData():
                         self.LP.node_list.append(self.Channels.chan_DS_Node[id])
                     except:
                         error = True
-                        message = 'ERROR - Unable to process channel: '+chan
+                        message = 'ERROR - Unable to process channel: ' + chan
                         return error, message
             if not error:
                 self.LP.connected = True
             return error, message
 
-        else: # two channels selected (check for more than two in main routine)
+        else:  # two channels selected (check for more than two in main routine)
             finished = False
             found = False
             i = 0
@@ -1518,15 +1528,15 @@ class ResData():
                 ind1 = chan_list.index(str(id1))
             except:
                 error = True
-                message = 'ERROR - ID not found: '+str(id1)
+                message = 'ERROR - ID not found: ' + str(id1)
                 return error, message
             # check 2nd ID exists
             try:
                 ind2 = chan_list.index(str(id2))
             except:
-                #QMessageBox.information(iface.mainWindow(),"ERROR", ("ID not found: " + str(id2)))
+                # QMessageBox.information(iface.mainWindow(),"ERROR", ("ID not found: " + str(id2)))
                 error = True
-                message = 'ERROR - ID not found: '+str(id2)
+                message = 'ERROR - ID not found: ' + str(id2)
                 return error, message
             # assume ID2 is downstream of ID1
             endchan = id2
@@ -1538,9 +1548,9 @@ class ResData():
             while not finished:
                 i = i + 1
                 chan = self.Channels.chan_DS_Chan[id]
-                if(chan=='------'):
+                if chan == '------' or chan in self.LP.chan_list:
                     finished = True
-                elif(chan==endchan):
+                elif chan == endchan:
                     found = True
                     finished = True
                     self.LP.chan_list.append(chan)
@@ -1550,7 +1560,7 @@ class ResData():
                         self.LP.node_list.append(self.Channels.chan_DS_Node[id])
                     except:
                         error = True
-                        message = 'ERROR - Unable to process channel: '+chan
+                        message = 'ERROR - Unable to process channel: ' + chan
                         return error, message
                 else:
                     self.LP.chan_list.append(chan)
@@ -1560,11 +1570,11 @@ class ResData():
                         self.LP.node_list.append(self.Channels.chan_DS_Node[id])
                     except:
                         error = True
-                        message = 'ERROR - ID not found: '+str(id)
+                        message = 'ERROR - ID not found: ' + str(id)
                         return error, message
 
-            if not (found): # id2 is not downstream of 1d1, reverse direction and try again...
-                #QMessageBox.information(iface.mainWindow(), "DEBUG", "reverse direction and try again")
+            if not found:  # id2 is not downstream of 1d1, reverse direction and try again...
+                # QMessageBox.information(iface.mainWindow(), "DEBUG", "reverse direction and try again")
                 finished = False
                 found = False
                 i = 0
@@ -1577,9 +1587,9 @@ class ResData():
                 while not finished:
                     i = i + 1
                     chan = self.Channels.chan_DS_Chan[id]
-                    if(chan=='------'):
+                    if chan == '------' or chan in self.LP.chan_list:
                         finished = True
-                    elif(chan==endchan):
+                    elif chan == endchan:
                         found = True
                         finished = True
                         self.LP.chan_list.append(chan)
@@ -1589,7 +1599,7 @@ class ResData():
                             self.LP.node_list.append(self.Channels.chan_DS_Node[id])
                         except:
                             error = True
-                            message = 'ERROR - Unable to process channel: '+chan
+                            message = 'ERROR - Unable to process channel: ' + chan
                             return error, message
                     else:
                         self.LP.chan_list.append(chan)
@@ -1599,16 +1609,82 @@ class ResData():
                             self.LP.node_list.append(self.Channels.chan_DS_Node[id])
                         except:
                             error = True
-                            message = 'ERROR - Unable to process channel: '+chan
+                            message = 'ERROR - Unable to process channel: ' + chan
                             return error, message
-            if not (found): # id1 and 1d2 are not connected
-                error = True
-                message = 'Channels ' +id1 + ' and '+id2+' are not connected'
+            if found:
+                self.LP.connected = True
                 return error, message
-            else:
-                if not error:
-                    self.LP.connected = True
+
+            # could be that id1 and id2 are connected, but not by main path
+            # once again assume id1 is upstream of id2
+            found = self.LP_force_connection(id1, id2)
+            if found:
+                self.LP.connected = True
+                return error, message
+
+            # reverse id1 and id2
+            found = self.LP_force_connection(id2, id1)
+            if found:
+                self.LP.connected = True
+                return error, message
+
             return error, message
+
+    def LP_force_connection(self, start_chan, end_chan):
+        # assume checking channels exist has already been done
+        self.LP.chan_list = []
+        self.LP.chan_index = []
+        self.LP.node_list = []
+
+        branches = []
+        chan_ids = []
+        found = self.find_branches(start_chan, end_chan, chan_ids[:], branches)
+        if found and branches and branches[-1]:
+            for j, chan_name in enumerate(branches[-1]):
+                i = self.Channels.chan_name.index(chan_name)
+                self.LP.chan_list.append(chan_name)
+                self.LP.chan_index.append(i)
+                if j == 0:
+                    self.LP.node_list.append(self.Channels.chan_US_Node[i])
+                self.LP.node_list.append(self.Channels.chan_DS_Node[i])
+
+        return found
+
+    def find_branches(self, start_chan, end_chan, chan_ids, branches):
+        found = False
+        if start_chan:
+            chan_ids.append(start_chan)
+            i = 0
+            for chan in self.LP_iterate_downstream_channels(start_chan):
+                if chan in chan_ids:
+                    branches.append(chan_ids)
+                    return found
+                if chan == end_chan:
+                    chan_ids.append(chan)
+                    branches.append(chan_ids)
+                    return True
+
+                i += 1
+                try:
+                    found = self.find_branches(chan, end_chan, chan_ids[:], branches)
+                    if found:
+                        return found
+                except RecursionError:
+                    branches.append(chan_ids)
+                    return found
+
+            if not i:
+                branches.append(chan_ids)
+                if end_chan is None:
+                    found = True
+
+        return found
+
+    def LP_iterate_downstream_channels(self, channel_id):
+        ds_node = self.Channels.chan_DS_Node[self.Channels.chan_name.index(channel_id)]
+        for i, node in enumerate(self.Channels.chan_US_Node):
+            if node == ds_node:
+                yield self.Channels.chan_name[i]
 
     def getLPStaticData(self):
         # get the channel and node properties length, elevations etc doesn't change with results
