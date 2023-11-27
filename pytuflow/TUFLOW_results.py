@@ -868,6 +868,10 @@ class NodeInfo():
         self.node_nChan = []
         self.node_channels = []
         self.message = []
+
+        if not fullpath:
+            return
+
         with open(fullpath, 'r') as csvfile:
             reader = csv.reader(csvfile, delimiter=',', quotechar='"')
             header = next(reader)
@@ -908,6 +912,9 @@ class ChanInfo():
         self.chan_LBDS_Obv = []
         self.chan_RBDS_Obv = []
         self.chan_Blockage = []
+
+        if not fullpath:
+            return
 
         with open(fullpath, 'r') as csvfile:
             reader = csv.reader(csvfile, delimiter=',', quotechar='"')

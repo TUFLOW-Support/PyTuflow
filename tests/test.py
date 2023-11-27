@@ -1,4 +1,7 @@
 import os, sys
+
+import numpy as np
+
 import pytuflow as tu
 if sys.version_info[0] == 3:
     import unittest
@@ -6,6 +9,269 @@ else:
     import unittest2 as unittest
 from datetime import datetime, timedelta
 from pytuflow.helper import roundSeconds
+
+
+class TestGPKGTS(unittest.TestCase):
+
+    def test_load(self):
+        dir = os.path.dirname(__file__)
+        tpc = os.path.join(dir, '2023', 'urban_HPC_SWMM_________swmm_ts 1.gpkg')
+        res = tu.ResData()
+        err, out = res.load(tpc)
+        self.assertFalse(err)
+
+    def test_channel_names(self):
+        dir = os.path.dirname(__file__)
+        tpc = os.path.join(dir, '2023', 'urban_HPC_SWMM_________swmm_ts 1.gpkg')
+        res = tu.ResData()
+        err, out = res.load(tpc)
+        ch = res.channels()
+        self.assertEqual(18, len(ch))
+
+    def test_node_names(self):
+        dir = os.path.dirname(__file__)
+        tpc = os.path.join(dir, '2023', 'urban_HPC_SWMM_________swmm_ts 1.gpkg')
+        res = tu.ResData()
+        err, out = res.load(tpc)
+        nd = res.nodes()
+        self.assertEqual(22, len(nd))
+
+    def test_channel_count(self):
+        dir = os.path.dirname(__file__)
+        tpc = os.path.join(dir, '2023', 'urban_HPC_SWMM_________swmm_ts 1.gpkg')
+        res = tu.ResData()
+        err, out = res.load(tpc)
+        nchan = res.channelCount()
+        self.assertEqual(18, nchan)
+
+    def test_node_count(self):
+        dir = os.path.dirname(__file__)
+        tpc = os.path.join(dir, '2023', 'urban_HPC_SWMM_________swmm_ts 1.gpkg')
+        res = tu.ResData()
+        err, out = res.load(tpc)
+        nnode = res.nodeCount()
+        self.assertEqual(22, nnode)
+
+    def test_chan_us_node(self):
+        dir = os.path.dirname(__file__)
+        tpc = os.path.join(dir, '2023', 'urban_HPC_SWMM_________swmm_ts 1.gpkg')
+        res = tu.ResData()
+        err, out = res.load(tpc)
+        node = res.nodeUpstream('Pipe1')
+        self.assertEqual('Pit2', node)
+
+    def test_chan_ds_node(self):
+        dir = os.path.dirname(__file__)
+        tpc = os.path.join(dir, '2023', 'urban_HPC_SWMM_________swmm_ts 1.gpkg')
+        res = tu.ResData()
+        err, out = res.load(tpc)
+        node = res.nodeDownstream('Pipe1')
+        self.assertEqual('Pit3', node)
+
+    def test_chan_us_channels(self):
+        dir = os.path.dirname(__file__)
+        tpc = os.path.join(dir, '2023', 'urban_HPC_SWMM_________swmm_ts 1.gpkg')
+        res = tu.ResData()
+        err, out = res.load(tpc)
+        chs = {ch: us_ch for ch, us_ch in zip(res.channels(), res._res.Channels.chan_US_Chan)}
+        self.assertEqual([], chs['FC01.1_R'])
+        self.assertEqual(['Pipe10'], chs['Pipe11'])
+        self.assertEqual(['Pipe14', 'Pipe15'], chs['Pipe16'])
+
+    def test_chan_ds_channels(self):
+        dir = os.path.dirname(__file__)
+        tpc = os.path.join(dir, '2023', 'urban_HPC_SWMM_________swmm_ts 1.gpkg')
+        res = tu.ResData()
+        err, out = res.load(tpc)
+        chs = {ch: us_ch for ch, us_ch in zip(res.channels(), res._res.Channels.chan_DS_Chan)}
+        self.assertEqual([], chs['FC01.1_R'])
+        self.assertEqual(['Pipe11'], chs['Pipe10'])
+        self.assertEqual(['Pipe16'], chs['Pipe14'])
+
+    def test_chan_lengths(self):
+        dir = os.path.dirname(__file__)
+        tpc = os.path.join(dir, '2023', 'urban_HPC_SWMM_________swmm_ts 1.gpkg')
+        res = tu.ResData()
+        err, out = res.load(tpc)
+        lens = res._res.Channels.chan_Length
+        self.assertEqual(18, len(lens))
+
+    def test_node_bed(self):
+        dir = os.path.dirname(__file__)
+        tpc = os.path.join(dir, '2023', 'urban_HPC_SWMM_________swmm_ts 1.gpkg')
+        res = tu.ResData()
+        err, out = res.load(tpc)
+        z = res._res.nodes.node_bed
+        self.assertEqual(22, len(z))
+        self.assertFalse(0 in z)
+
+    def test_chan_us_invert(self):
+        dir = os.path.dirname(__file__)
+        tpc = os.path.join(dir, '2023', 'urban_HPC_SWMM_________swmm_ts 1.gpkg')
+        res = tu.ResData()
+        err, out = res.load(tpc)
+        z = res._res.Channels.chan_US_Inv
+        i = res.channels().index('FC01.1_R')
+        inv = z[i]
+        self.assertTrue(np.isclose(45.4, inv))
+
+    def test_chan_ds_invert(self):
+        dir = os.path.dirname(__file__)
+        tpc = os.path.join(dir, '2023', 'urban_HPC_SWMM_________swmm_ts 1.gpkg')
+        res = tu.ResData()
+        err, out = res.load(tpc)
+        z = res._res.Channels.chan_DS_Inv
+        i = res.channels().index('FC01.1_R')
+        inv = z[i]
+        self.assertTrue(np.isclose(44.5, inv))
+
+    def test_chan_slope(self):
+        dir = os.path.dirname(__file__)
+        tpc = os.path.join(dir, '2023', 'urban_HPC_SWMM_________swmm_ts 1.gpkg')
+        res = tu.ResData()
+        err, out = res.load(tpc)
+        s = res._res.Channels.chan_slope
+        i = res.channels().index('FC01.1_R')
+        slope = s[i]
+        self.assertTrue(np.isclose(0.086, slope, atol=0.001))
+
+    def test_node_us_channels(self):
+        dir = os.path.dirname(__file__)
+        tpc = os.path.join(dir, '2023', 'urban_HPC_SWMM_________swmm_ts 1.gpkg')
+        res = tu.ResData()
+        err, out = res.load(tpc)
+        chs = res.channelsUpstream('Pit2')
+        self.assertEqual([], chs)
+        chs = res.channelsUpstream('FC01.1_R.1')
+        self.assertEqual([], chs)
+        chs = res.channelsUpstream('Pit9')
+        self.assertEqual(['Pipe10'], chs)
+        chs = res.channelsUpstream('Pit13')
+        self.assertEqual(['Pipe14', 'Pipe15'], chs)
+
+    def test_node_ds_channels(self):
+        dir = os.path.dirname(__file__)
+        tpc = os.path.join(dir, '2023', 'urban_HPC_SWMM_________swmm_ts 1.gpkg')
+        res = tu.ResData()
+        err, out = res.load(tpc)
+        chs = res.channelsDownstream('FC01.1_R.2')
+        self.assertEqual([], chs)
+        chs = res.channelsDownstream('Pit9')
+        self.assertEqual(['Pipe11'], chs)
+        chs = res.channelsDownstream('Pit13')
+        self.assertEqual(['Pipe16'], chs)
+
+    def test_chan_result_types(self):
+        dir = os.path.dirname(__file__)
+        tpc = os.path.join(dir, '2023', 'urban_HPC_SWMM_________swmm_ts 1.gpkg')
+        res = tu.ResData()
+        err, out = res.load(tpc)
+        res_types = res.channelResultTypes()
+        self.assertEqual(5, len(res_types))
+
+    def test_node_result_types(self):
+        dir = os.path.dirname(__file__)
+        tpc = os.path.join(dir, '2023', 'urban_HPC_SWMM_________swmm_ts 1.gpkg')
+        res = tu.ResData()
+        err, out = res.load(tpc)
+        res_types = res.nodeResultTypes()
+        self.assertEqual(7, len(res_types))
+
+    def test_po_names(self):
+        dir = os.path.dirname(__file__)
+        tpc = os.path.join(dir, '2023', 'urban_HPC_SWMM_________swmm_ts 1.gpkg')
+        res = tu.ResData()
+        err, out = res.load(tpc)
+        names = res.poNames()
+        self.assertEqual([], names)
+
+    def test_po_result_types(self):
+        dir = os.path.dirname(__file__)
+        tpc = os.path.join(dir, '2023', 'urban_HPC_SWMM_________swmm_ts 1.gpkg')
+        res = tu.ResData()
+        err, out = res.load(tpc)
+        names = res.poResultTypes()
+        self.assertEqual([], names)
+
+    def test_rl_names(self):
+        dir = os.path.dirname(__file__)
+        tpc = os.path.join(dir, '2023', 'urban_HPC_SWMM_________swmm_ts 1.gpkg')
+        res = tu.ResData()
+        err, out = res.load(tpc)
+        names = res.rlNames()
+        self.assertEqual([], names)
+
+    def test_rl_result_types(self):
+        dir = os.path.dirname(__file__)
+        tpc = os.path.join(dir, '2023', 'urban_HPC_SWMM_________swmm_ts 1.gpkg')
+        res = tu.ResData()
+        err, out = res.load(tpc)
+        names = res.rlResultTypes()
+        self.assertEqual([], names)
+
+    def test_rl_point_count(self):
+        dir = os.path.dirname(__file__)
+        tpc = os.path.join(dir, '2023', 'urban_HPC_SWMM_________swmm_ts 1.gpkg')
+        res = tu.ResData()
+        err, out = res.load(tpc)
+        count = res.rlPointCount()
+        self.assertEqual(0, count)
+
+    def test_rl_line_count(self):
+        dir = os.path.dirname(__file__)
+        tpc = os.path.join(dir, '2023', 'urban_HPC_SWMM_________swmm_ts 1.gpkg')
+        res = tu.ResData()
+        err, out = res.load(tpc)
+        count = res.rlLineCount()
+        self.assertEqual(0, count)
+
+    def test_rl_region_count(self):
+        dir = os.path.dirname(__file__)
+        tpc = os.path.join(dir, '2023', 'urban_HPC_SWMM_________swmm_ts 1.gpkg')
+        res = tu.ResData()
+        err, out = res.load(tpc)
+        count = res.rlRegionCount()
+        self.assertEqual(0, count)
+
+    def test_timesteps(self):
+        dir = os.path.dirname(__file__)
+        tpc = os.path.join(dir, '2023', 'urban_HPC_SWMM_________swmm_ts 1.gpkg')
+        res = tu.ResData()
+        err, out = res.load(tpc)
+        ts = res.timesteps()
+        self.assertEqual(150, len(ts))
+
+    def test_time_series(self):
+        dir = os.path.dirname(__file__)
+        tpc = os.path.join(dir, '2023', 'urban_HPC_SWMM_________swmm_ts 1.gpkg')
+        res = tu.ResData()
+        err, out = res.load(tpc)
+        err, msg, (x, y) = res.getTimeSeriesData('FC01.1_R', 'Q')
+        self.assertFalse(err)
+        self.assertEqual(150, len(x))
+        self.assertEqual(150, len(y))
+
+    def test_long_profile(self):
+        dir = os.path.dirname(__file__)
+        tpc = os.path.join(dir, '2023', 'urban_HPC_SWMM_________swmm_ts 1.gpkg')
+        res = tu.ResData()
+        err, out = res.load(tpc)
+        err, msg, (x, y) = res.getLongProfileData(1.1, 'H', 'FC01.1_R')
+        self.assertFalse(err)
+        self.assertEqual(2, len(x))
+        self.assertEqual(2, len(y))
+        err, msg, (x, y) = res.getLongProfileData(1.1, 'H', 'Pipe7')
+        self.assertFalse(err)
+        self.assertEqual(16, len(x))
+        self.assertEqual(16, len(y))
+
+    def test_units(self):
+        dir = os.path.dirname(__file__)
+        tpc = os.path.join(dir, '2023', 'urban_HPC_SWMM_________swmm_ts 1.gpkg')
+        res = tu.ResData()
+        err, out = res.load(tpc)
+        units = res.units()
+        self.assertEqual('METRIC', units)
 
 
 class TestImport(unittest.TestCase):
@@ -2723,5 +2989,5 @@ class TestImportFV(unittest.TestCase):
 
 
 
-if __name__ == '__main__':
-    unittest.main()
+# if __name__ == '__main__':
+#     unittest.main()

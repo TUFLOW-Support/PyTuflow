@@ -2,6 +2,7 @@ import os, sys
 sys.path.append(os.path.dirname(__file__))
 import TUFLOW_results
 import TUFLOW_results2013
+import tuflow_results_gpkg
 
 
 class ResData():
@@ -15,7 +16,12 @@ class ResData():
         self._res = None
         self._format = ''  # 2013 or 2016 file formats
         if file is not None:
-            self.load(file)
+            err, msg = self.load(file)
+            if err:
+                raise Exception(msg)
+
+    def __del__(self):
+        self.close()
     
     def format(self):
         """
@@ -52,6 +58,12 @@ class ResData():
             return self._res.filename
 
         return ''
+
+    def close(self):
+        """Closes the result file - only required for GPKG time series."""
+        if self._res and isinstance(self._res, tuflow_results_gpkg.ResData_GPKG):
+            self._res.close()
+        self._res = None
         
     def load(self, file):
         """
@@ -73,6 +85,11 @@ class ResData():
             err, out = self._res.load(file)
             if not err:
                 self._format = '2013'
+        elif ext == '.GPKG':
+            self._res = tuflow_results_gpkg.ResData_GPKG()
+            err, out = self._res.load(file)
+            if not err:
+                self._format = '2016'
         else:
             err = True
             out = 'Unrecognised file extension'
@@ -98,7 +115,7 @@ class ResData():
         :return: list -> str node name
         """
         
-        if self._res is not None and self._res.Channels is not None:
+        if self._res is not None and self._res.nodes is not None:
             return self._res.nodes.node_name[:]
         
         return []
@@ -233,6 +250,9 @@ class ResData():
         """
         
         if self._res is not None:
+            if isinstance(self._res, tuflow_results_gpkg.ResData_GPKG):
+                return self._res.lineResultTypesTS()
+
             rtypes = []
             for rtype in self._res.Types:
                 if '1D Flow Area' in rtype:
@@ -257,6 +277,9 @@ class ResData():
         """
         
         if self._res is not None:
+            if isinstance(self._res, tuflow_results_gpkg.ResData_GPKG):
+                return self._res.pointResultTypesTS()
+
             rtypes = []
             for rtype in self._res.Types:
                 if '1D Water Levels' in rtype:
@@ -535,6 +558,8 @@ class ResData():
         if self._res is not None:
             if self._format == '2013':
                 return True, 'Maximums not supported for 2013 format', 0
+            if isinstance(self._res, tuflow_results_gpkg.ResData_GPKG):
+                return True, 'Maximums are not recorded in the GPKG format', 0
             poNames = [x.lower() for x in self.poNames()]
             rlNames = [x.lower() for x in self.rlNames()]
             channels = [x.lower() for x in self.channels()]
@@ -618,6 +643,8 @@ class ResData():
         if self._res is not None:
             if self._format == '2013':
                 return True, 'Time of maximum not supported for 2013 format', 0
+            if isinstance(self._res, tuflow_results_gpkg.ResData_GPKG):
+                return True, 'Time of maximum not recorded in GPKG format', 0
             poNames = [x.lower() for x in self.poNames()]
             rlNames = [x.lower() for x in self.rlNames()]
             channels = [x.lower() for x in self.channels()]
@@ -698,6 +725,8 @@ class ResData():
         if self._res is not None:
             if self._format == '2013':
                 return True, 'Maximum timestep change not supported for 2013 format', 0
+            if isinstance(self._res, tuflow_results_gpkg.ResData_GPKG):
+                return True, 'Maximum timestep change not recorded in GPKG format', 0
             poNames = [x.lower() for x in self.poNames()]
             rlNames = [x.lower() for x in self.rlNames()]
             channels = [x.lower() for x in self.channels()]
@@ -753,6 +782,8 @@ class ResData():
         if self._res is not None:
             if self._format == '2013':
                 return True, 'Time of maximum timestep change not supported for 2013 format', 0
+            if isinstance(self._res, tuflow_results_gpkg.ResData_GPKG):
+                return True, 'Time of maximum timestep change not recorded in GPKG format', 0
             poNames = [x.lower() for x in self.poNames()]
             rlNames = [x.lower() for x in self.rlNames()]
             channels = [x.lower() for x in self.channels()]
@@ -843,7 +874,7 @@ class ResData():
         """
         
         if self._res is not None:
-            if self._format != '2013':
+            if self._format != '2013' and not isinstance(self._res, tuflow_results_gpkg.ResData_GPKG):
                 if self._res.LP.chan_list:
                     return (self._res.LP.adverseH.chainage[:], self._res.LP.adverseH.elevation[:]), \
                            (self._res.LP.adverseE.chainage[:], self._res.LP.adverseE.elevation[:])
@@ -860,7 +891,7 @@ class ResData():
         """
 
         if self._res is not None:
-            if self._format != '2013':
+            if self._format != '2013' and not isinstance(self._res, tuflow_results_gpkg.ResData_GPKG):
                 if self._res.LP.chan_list:
                     return self._res.LP.culv_verts[:]
             
@@ -876,9 +907,10 @@ class ResData():
         if self._res is not None:
             rtypes = self.nodeResultTypes()
             rtypes.insert(0, 'Bed Level')
-            rtypes.append('Left Bank Obvert')
-            rtypes.append('Right Bank Obvert')
-            rtypes.append('Pit Ground Levels')
+            if not isinstance(self._res, tuflow_results_gpkg.ResData_GPKG):
+                rtypes.append('Left Bank Obvert')
+                rtypes.append('Right Bank Obvert')
+                rtypes.append('Pit Ground Levels')
             return rtypes
         
         return []
@@ -892,7 +924,7 @@ class ResData():
         """
         
         if self._res is not None:
-            if self._format != '2013':
+            if self._format != '2013' and not isinstance(self._res, tuflow_results_gpkg.ResData_GPKG):
                 if self._res.LP.chan_list:
                     return self._res.LP.dist_chan_inverts[:], self._res.LP.tHmax[:]
             
