@@ -808,8 +808,6 @@ class ResData_GPKG(ResData):
         if id1 == self.LP.id1 and id2 == self.LP.id2:
             self.LP.loaded = True
             return False, ''
-        if self.gis_point_layer is None or self.gis_line_layer is None:
-            return True, 'No GIS Layers or Drivers available'
         found = self.LP_force_connection(id1, id2)
         if found:
             self.LP.id1 = id1
@@ -822,131 +820,10 @@ class ResData_GPKG(ResData):
             return False, ''
         return True, 'No connection found'
 
-    def LP_force_connection(self, start_chan: str, end_chan: str) -> bool:
-        self.LP.chan_list = []
-        self.LP.chan_index = []
-        self.LP.node_list = []
-        self.LP.dist_chan_inverts = []
-
-        branches = []
-        chans = []
-        feat = self._gis_line_layer.get_feature_by_field_value('ID', start_chan)
-        found = self.find_branches(feat, end_chan, chans[:], branches)
-        if found and branches:
-            dist = 0.
-            for j, feat in enumerate(branches[-1]):
-                self.LP.chan_list.append(feat['ID'])
-                if j == 0:
-                    self.LP.node_list.append(self.chan_us_node(feat['ID'], feat))
-                    self.LP.dist_chan_inverts.append(dist)
-                dist += feat.length()
-                self.LP.dist_chan_inverts.append(dist)
-                self.LP.node_list.append(self.chan_ds_node(feat['ID'], feat))
-
-        return found
-
-    def find_branches(self, feat, end_chan, chans, branches):
-        found = False
-        if feat:
-            chans.append(feat)
-            i = 0
-            for feat_ in self.LP_iterate_downstream_channels(feat):
-                chan = feat_['ID']
-                if chan in [x['ID'] for x in chans]:
-                    branches.append(chans)
-                    return found
-                if chan == end_chan:
-                    chans.append(feat_)
-                    branches.append(chans)
-                    return True
-
-                i += 1
-                try:
-                    found = self.find_branches(feat_, end_chan, chans[:], branches)
-                    if found:
-                        return found
-                except RecursionError:
-                    branches.append(chans)
-                    return found
-
-            if not i:
-                branches.append(chans)
-                if end_chan is None:
-                    found = True
-
-        return found
-
-    def LP_iterate_downstream_channels(self, feat):
-        # end vertex coordinates
-        timestep = feat['Time_relative']
-        try:
-            pos = feat.vertices()[-1]
-        except IndexError:
-            return
-        if not pos.valid:
-            return
-        # create search envelope
-        rect = Rect(pos.x, pos.y, width=1., height=1.)
-        if not rect.valid:
-            return
-        # iterate through snapped channels
-        for feat_ in self.gis_line_layer.get_snapped_features_in_ds_dir(rect, pos, timestep):
-            yield feat_
-
-    def LP_iterate_upstream_channels(self, feat):
-        # end vertex coordinates
-        timestep = feat['Time_relative']
-        try:
-            pos = feat.vertices()[0]
-        except IndexError:
-            return
-        if not pos.valid:
-            return
-        # create search envelope
-        rect = Rect(pos.x, pos.y, width=1., height=1.)
-        if not rect.valid:
-            return
-        # iterate through snapped channels
-        for feat_ in self.gis_line_layer.get_snapped_features_in_us_dir(rect, pos, timestep):
-            yield feat_
-
-    def chan_us_node(self, channel_id: str, feat: Feature = None) -> str:
-        if feat is None:
-            feat = self.gis_line_layer.get_feature_by_field_value('ID', channel_id)
-        if feat is None:
-            return
-        try:
-            pos = feat.vertices()[0]
-        except IndexError:
-            return
-        if not pos.valid:
-            return
-        rect = Rect(pos.x, pos.y, width=10., height=10.)
-        if not rect.valid:
-            return
-        for feat in self.gis_point_layer.get_snapped_features_in_us_dir(rect, pos, feat['Time_relative']):
-            return feat['ID']
-
-    def chan_ds_node(self, channel_id: str, feat: Feature = None) -> str:
-        if feat is None:
-            feat = self.gis_line_layer.get_feature_by_field_value('ID', channel_id)
-        if feat is None:
-            return
-        try:
-            pos = feat.vertices()[-1]
-        except IndexError:
-            return
-        if not pos.valid:
-            return
-        rect = Rect(pos.x, pos.y, width=1., height=1.)
-        if not rect.valid:
-            return
-        for feat in self.gis_point_layer.get_snapped_features_in_ds_dir(rect, pos, feat['Time_relative']):
-            return feat['ID']
-
     def getLPStaticData(self) -> typing.Tuple[bool, str]:
         if self.LP.loaded:
             return False, ''
+        self.LP.dist_chan_inverts = []
         self.LP.chan_inv = []
         self.LP.node_bed = []
         self.LP.node_top = []
@@ -969,27 +846,15 @@ class ResData_GPKG(ResData):
             time = self.timeSteps()[0]
         except IndexError:
             return True, 'Cannot load bed level without temporal data'
-        # use one query - very expensive to do multiple little queries
-        ids = 'ID = ' + ' OR ID = '.join(['"{0}"'.format(x) for x in self.LP.node_list])
-        sql = 'SELECT "ID", "Water Level", "Depth" FROM "{0}" WHERE Time_relative = {1} AND ({2});'.format(self.gis_point_layer_name, time, ids)
-        z = [0. for _ in self.LP.node_list]
-        try:
-            for id_, h, d in self._cur.execute(sql):
-                i = self.LP.node_list.index(id_)
-                try:
-                    z[i] = float(h) - float(d)
-                except ValueError:
-                    continue
-        except Exception as e:
-            return True, 'Error loading bed level'
-        dists = self.LP.dist_chan_inverts[:]
-        self.LP.dist_chan_inverts.clear()
-        for i, (d_, z_) in enumerate(zip(dists, z)):
-            self.LP.dist_chan_inverts.append(d_)
-            self.LP.chan_inv.append(z_)
-            if 0 < i < len(self.LP.node_list) - 1:
-                self.LP.dist_chan_inverts.append(d_)
-                self.LP.chan_inv.append(z_)
+
+        total_len = 0
+        for i, idx in enumerate(self.LP.chan_index):
+            self.LP.dist_chan_inverts.append(total_len)
+            total_len += self.Channels.chan_Length[i]
+            self.LP.dist_chan_inverts.append(total_len)
+            self.LP.chan_inv.append(self.Channels.chan_US_Inv[idx])
+            self.LP.chan_inv.append(self.Channels.chan_DS_Inv[idx])
+
         return False, ''
 
     def getLongPlotXY(self, dat_type: str, time: float) -> typing.Tuple[bool, str]:
@@ -999,7 +864,7 @@ class ResData_GPKG(ResData):
             if not found:
                 return True, 'Error loading {0}'.format(dat_type)
             try:
-                j = self.timeSteps().index(float(time))
+                j = [i for i, x in enumerate(self.timeSteps()) if np.isclose(x, time, atol=0.00001)][0]
             except ValueError:
                 return True, 'Time step not found', ([], [])
             v = data[j]
@@ -1087,13 +952,16 @@ class ChanInfo_GPKG(ChanInfo):
     def chan_US_Node(self) -> list[str]:
         if self.cur and self.parent:
             if not self._chan_US_Node:
-                if self.parent.gis_line_layer is None:
-                    raise ModuleNotFoundError(
-                        'No GIS driver available - '
-                        'GPKG time series requires PyQGIS or GDAL to determine channel connections'
+                try:
+                    self.cur.execute(
+                        'SELECT p.ID FROM "{0}" AS p, "{1}" as l WHERE p.fid = l.US_Node AND l.TimeId = 1;'.
+                        format(self.parent.gis_point_layer_name, self.parent.gis_line_layer_name)
                     )
-                for chan in self.chan_name:
-                    self._chan_US_Node.append(self.parent.chan_us_node(chan))
+                    ret = self.cur.fetchall()
+                    if ret:
+                        self._chan_US_Node = [x[0] for x in ret]
+                except Exception as e:
+                    Logging.warning(e)
         return self._chan_US_Node
 
     @chan_US_Node.setter
@@ -1104,13 +972,16 @@ class ChanInfo_GPKG(ChanInfo):
     def chan_DS_Node(self) -> list[str]:
         if self.cur and self.parent:
             if not self._chan_DS_Node:
-                if self.parent.gis_line_layer is None:
-                    raise ModuleNotFoundError(
-                        'No GIS driver available - '
-                        'GPKG time series requires PyQGIS or GDAL to determine channel connections'
+                try:
+                    self.cur.execute(
+                        'SELECT p.ID FROM "{0}" AS p, "{1}" as l WHERE p.fid = l.DS_Node AND l.TimeId = 1;'.
+                        format(self.parent.gis_point_layer_name, self.parent.gis_line_layer_name)
                     )
-                for chan in self.chan_name:
-                    self._chan_DS_Node.append(self.parent.chan_ds_node(chan))
+                    ret = self.cur.fetchall()
+                    if ret:
+                        self._chan_DS_Node = [x[0] for x in ret]
+                except Exception as e:
+                    Logging.warning(e)
         return self._chan_DS_Node
 
     @chan_DS_Node.setter
@@ -1121,17 +992,12 @@ class ChanInfo_GPKG(ChanInfo):
     def chan_US_Chan(self) -> list[list[str]]:
         if self.cur and self.parent:
             if not self._chan_US_Chan:
-                if self.parent.gis_line_layer is None:
-                    raise ModuleNotFoundError(
-                        'No GIS driver available - '
-                        'GPKG time series requires PyQGIS or GDAL to determine channel connections'
-                    )
-                for chan in self.chan_name:
-                    feat = self.parent.gis_line_layer.get_feature_by_field_value('ID', chan)
-                    if feat is None:
-                        self._chan_US_Chan.append([])
-                        continue
-                    self._chan_US_Chan.append([x['ID'] for x in self.parent.LP_iterate_upstream_channels(feat)])
+                for node in self.chan_US_Node:
+                    chans = []
+                    for i, nd in enumerate(self.chan_DS_Node):
+                        if nd == node:
+                            chans.append(self.chan_name[i])
+                    self._chan_US_Chan.append(chans)
         return self._chan_US_Chan
 
     @chan_US_Chan.setter
@@ -1142,17 +1008,12 @@ class ChanInfo_GPKG(ChanInfo):
     def chan_DS_Chan(self) -> list[list[str]]:
         if self.cur and self.parent:
             if not self._chan_DS_Chan:
-                if self.parent.gis_line_layer is None:
-                    raise ModuleNotFoundError(
-                        'No GIS driver available - '
-                        'GPKG time series requires PyQGIS or GDAL to determine channel connections'
-                    )
-                for chan in self.chan_name:
-                    feat = self.parent.gis_line_layer.get_feature_by_field_value('ID', chan)
-                    if feat is None:
-                        self._chan_DS_Chan.append([])
-                        continue
-                    self._chan_DS_Chan.append([x['ID'] for x in self.parent.LP_iterate_downstream_channels(feat)])
+                for node in self.chan_DS_Node:
+                    chans = []
+                    for i, nd in enumerate(self.chan_US_Node):
+                        if nd == node:
+                            chans.append(self.chan_name[i])
+                    self._chan_DS_Chan.append(chans)
         return self._chan_DS_Chan
 
     @chan_DS_Chan.setter
@@ -1171,17 +1032,15 @@ class ChanInfo_GPKG(ChanInfo):
     def chan_Length(self) -> list[float]:
         if self.cur and self.parent:
             if not self._chan_Length:
-                if self.parent.gis_line_layer is None:
-                    raise ModuleNotFoundError(
-                        'No GIS driver available - '
-                        'GPKG time series requires PyQGIS or GDAL to determine channel lengths'
+                try:
+                    self.cur.execute(
+                        'SELECT Length FROM "{0}" WHERE TimeId = 1;'.format(self.parent.gis_line_layer_name)
                     )
-                for chan in self.chan_name:
-                    feat = self.parent.gis_line_layer.get_feature_by_field_value('ID', chan)
-                    if feat is None:
-                        self._chan_Length.append(0.)
-                        continue
-                    self._chan_Length.append(feat.length())
+                    ret = self.cur.fetchall()
+                    if ret:
+                        self._chan_Length = [float(x[0]) for x in ret]
+                except Exception as e:
+                    Logging.warning(e)
         return self._chan_Length
 
     @chan_Length.setter
@@ -1220,19 +1079,15 @@ class ChanInfo_GPKG(ChanInfo):
     def chan_US_Inv(self) -> list[float]:
         if self.cur and self.parent:
             if not self._chan_US_Inv:
-                if self.parent.gis_line_layer is None:
-                    raise ModuleNotFoundError(
-                        'No GIS driver available - '
-                        'GPKG time series requires PyQGIS or GDAL to determine channel inverts'
+                try:
+                    self.cur.execute(
+                        'SELECT US_Invert FROM "{0}" WHERE TimeId = 1;'.format(self.parent.gis_line_layer_name)
                     )
-                if not self._inv_warning_shown:
-                    self._inv_warning_shown = True
-                    Logging.warning(
-                        'Channel inverts calculated based on node bed levels and not directly from pipe inverts'
-                    )
-                for i, chan in enumerate(self.chan_name):
-                    node = self.chan_US_Node[i]
-                    self._chan_US_Inv.append(self.parent.nodes.node_bed[self.parent.nodes.node_name.index(node)])
+                    ret = self.cur.fetchall()
+                    if ret:
+                        self._chan_US_Inv = [float(x[0]) for x in ret]
+                except Exception as e:
+                    Logging.warning(e)
         return self._chan_US_Inv
 
     @chan_US_Inv.setter
@@ -1242,19 +1097,15 @@ class ChanInfo_GPKG(ChanInfo):
     @property
     def chan_DS_Inv(self) -> list[float]:
         if not self._chan_DS_Inv:
-            if self.parent.gis_line_layer is None:
-                raise ModuleNotFoundError(
-                    'No GIS driver available - '
-                    'GPKG time series requires PyQGIS or GDAL to determine channel inverts'
+            try:
+                self.cur.execute(
+                    'SELECT DS_Invert FROM "{0}" WHERE TimeId = 1;'.format(self.parent.gis_line_layer_name)
                 )
-            if not self._inv_warning_shown:
-                self._inv_warning_shown = True
-                Logging.warning(
-                    'Channel inverts calculated based on node bed levels and not directly from pipe inverts'
-                )
-            for i, chan in enumerate(self.chan_name):
-                node = self.chan_DS_Node[i]
-                self._chan_DS_Inv.append(self.parent.nodes.node_bed[self.parent.nodes.node_name.index(node)])
+                ret = self.cur.fetchall()
+                if ret:
+                    self._chan_DS_Inv = [float(x[0]) for x in ret]
+            except Exception as e:
+                Logging.warning(e)
         return self._chan_DS_Inv
 
     @chan_DS_Inv.setter
@@ -1349,21 +1200,15 @@ class NodeInfo_GPKG(NodeInfo):
     def node_bed(self) -> list[float]:
         if self.cur and self.parent:
             if not self._node_bed:
-                time = self.parent.timeSteps()
-                if time:
-                    time = time[0]
-                else:
-                    time = 0
-                ids = 'ID = ' + ' OR ID = '.join(['"{0}"'.format(x) for x in self.node_name])
-                sql = 'SELECT "ID", "Water Level", "Depth" FROM "{0}" WHERE Time_relative = {1} AND ({2});'.format(
-                    self.parent.gis_point_layer_name, time, ids)
-                self._node_bed = [0. for _ in self.node_name]
-                for id_, h, d in self.cur.execute(sql):
-                    i = self._node_name.index(id_)  # don't want to accidentally reset cursor so use _node_name
-                    try:
-                        self._node_bed[i] = float(h) - float(d)
-                    except ValueError:
-                        continue
+                for node in self.node_name:
+                    z = 9e29
+                    for i, nd in enumerate(self.parent.Channels.chan_US_Node):
+                        if nd == node:
+                            z = min(z, self.parent.Channels.chan_US_Inv[i])
+                    for i, nd in enumerate(self.parent.Channels.chan_DS_Node):
+                        if nd == node:
+                            z = min(z, self.parent.Channels.chan_DS_Inv[i])
+                    self._node_bed.append(z)
         return self._node_bed
 
     @node_bed.setter
@@ -1390,24 +1235,15 @@ class NodeInfo_GPKG(NodeInfo):
     def node_channels(self) -> list[list[str]]:
         if self.cur and self.parent:
             if not self._node_channels:
-                if self.parent.gis_point_layer is None:
-                    raise ModuleNotFoundError(
-                        'No GIS driver available - '
-                        'GPKG time series requires PyQGIS or GDAL to determine node connections'
-                    )
-                time = self.parent.timeSteps()
-                if time:
-                    time = time[0]
-                    for nd in self.node_name:
-                        feat = self.parent.gis_point_layer.get_feature_by_field_value('ID', nd)
-                        if feat is None:
-                            self._node_channels.append([])
-                            continue
-                        pos = feat.vertices()[0]
-                        rect = Rect(pos.x, pos.y, width=1., height=1.)
-                        self._node_channels.append(
-                            [x['ID'] for x in self.parent.gis_line_layer.get_snapped_features(rect, pos, time)]
-                        )
+                for node in self.node_name:
+                    chans = []
+                    for i, nd in enumerate(self.parent.Channels.chan_US_Node):
+                        if nd == node:
+                            chans.append(self.parent.Channels.chan_name[i])
+                    for i, nd in enumerate(self.parent.Channels.chan_DS_Node):
+                        if nd == node:
+                            chans.append(self.parent.Channels.chan_name[i])
+                    self._node_channels.append(chans)
         return self._node_channels
 
     @node_channels.setter

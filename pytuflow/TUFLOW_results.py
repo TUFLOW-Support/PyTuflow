@@ -1697,7 +1697,7 @@ class ResData():
         # get the channel and node properties length, elevations etc doesn't change with results
         error = False
         message = None
-        if (len(self.LP.chan_index)<1):
+        if (len(self.LP.chan_list)<1):
             error = True
             message = 'No LP channel data exists - Use .getLP_Connectivity to generate'
             return error, message
