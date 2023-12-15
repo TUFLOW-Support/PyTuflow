@@ -14,7 +14,8 @@ try:
 except ImportError:
     has_qgis_lib = False
 try:
-    from osgeo import ogr
+    from osgeo import ogr, gdal
+    gdal.UseExceptions()
     has_gdal_lib = True
 except ImportError:
     has_gdal_lib = False
@@ -824,6 +825,7 @@ class ResData_GPKG(ResData):
         if self.LP.loaded:
             return False, ''
         self.LP.dist_chan_inverts = []
+        self.LP.culv_verts = []
         self.LP.chan_inv = []
         self.LP.node_bed = []
         self.LP.node_top = []
@@ -849,11 +851,32 @@ class ResData_GPKG(ResData):
 
         total_len = 0
         for i, idx in enumerate(self.LP.chan_index):
+            # bed level
             self.LP.dist_chan_inverts.append(total_len)
             total_len += self.Channels.chan_Length[i]
             self.LP.dist_chan_inverts.append(total_len)
             self.LP.chan_inv.append(self.Channels.chan_US_Inv[idx])
             self.LP.chan_inv.append(self.Channels.chan_DS_Inv[idx])
+
+            # culverts/pipes
+            hgt_us, hgt_ds = -1, -1
+            if not np.isnan(self.Channels.chan_US_Obv[idx]):
+                hgt_us = self.Channels.chan_US_Obv[idx] - self.Channels.chan_US_Inv[idx]
+            if not np.isnan(self.Channels.chan_DS_Obv[idx]):
+                hgt_ds = self.Channels.chan_DS_Obv[idx] - self.Channels.chan_DS_Inv[idx]
+            if hgt_us > 0 or hgt_ds > 0:
+                x = [
+                    self.LP.dist_chan_inverts[-2], self.LP.dist_chan_inverts[-1],
+                    self.LP.dist_chan_inverts[-1], self.LP.dist_chan_inverts[-2]
+                ]
+                y = [
+                    self.Channels.chan_US_Inv[idx], self.Channels.chan_DS_Inv[idx],
+                    self.Channels.chan_DS_Obv[idx], self.Channels.chan_US_Obv[idx]
+                ]
+                verts = list(zip(x, y))
+                self.LP.culv_verts.append(verts)
+            else:
+                self.LP.culv_verts.append(None)
 
         return False, ''
 
@@ -896,6 +919,8 @@ class ChanInfo_GPKG(ChanInfo):
         self._chan_slope = []
         self._chan_US_Inv = []
         self._chan_DS_Inv = []
+        self._chan_US_Obv = []
+        self._chan_DS_Obv = []
         self._chan_LBUS_Obv = []
         self._chan_RBUS_Obv = []
         self._chan_LBDS_Obv = []
@@ -1110,6 +1135,51 @@ class ChanInfo_GPKG(ChanInfo):
 
     @chan_DS_Inv.setter
     def chan_DS_Inv(self, valud: list[float]) -> None:
+        pass
+
+    @property
+    def chan_US_Obv(self) -> list[float]:
+        if self.cur and self.parent:
+            if not self._chan_US_Obv:
+                try:
+                    self.cur.execute(
+                        'SELECT US_Obvert FROM "{0}" WHERE TimeId = 1;'.format(self.parent.gis_line_layer_name)
+                    )
+                    ret = self.cur.fetchall()
+                    if ret:
+                        for row in ret:
+                            try:
+                                self._chan_US_Obv.append(float(row[0]))
+                            except (TypeError, ValueError):
+                                self._chan_US_Obv.append(np.nan)
+                except Exception as e:
+                    Logging.warning(e)
+        return self._chan_US_Obv
+
+    @chan_US_Obv.setter
+    def chan_US_Obv(self, valud: list[float]) -> None:
+        pass
+
+    @property
+    def chan_DS_Obv(self) -> list[float]:
+        if not self._chan_DS_Obv:
+            try:
+                self.cur.execute(
+                    'SELECT DS_Obvert FROM "{0}" WHERE TimeId = 1;'.format(self.parent.gis_line_layer_name)
+                )
+                ret = self.cur.fetchall()
+                if ret:
+                    for row in ret:
+                        try:
+                            self._chan_DS_Obv.append(float(row[0]))
+                        except (TypeError, ValueError):
+                            self._chan_DS_Obv.append(np.nan)
+            except Exception as e:
+                Logging.warning(e)
+        return self._chan_DS_Obv
+
+    @chan_DS_Obv.setter
+    def chan_DS_Obv(self, valud: list[float]) -> None:
         pass
 
     @property

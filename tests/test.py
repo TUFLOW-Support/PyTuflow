@@ -249,6 +249,7 @@ class TestGPKGTS(unittest.TestCase):
         self.assertFalse(err)
         self.assertEqual(32, len(x))
         self.assertEqual(32, len(y))
+        pipes = res.getPipes()
 
     def test_units(self):
         dir = os.path.dirname(__file__)
