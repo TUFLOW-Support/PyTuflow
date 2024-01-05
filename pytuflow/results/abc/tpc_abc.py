@@ -22,22 +22,25 @@ class TPCResultItem(TimeSeriesResultItem):
             return 0
         return self._df.shape[0]
 
-    def ids(self) -> list[str]:
+    def ids(self, result_type: str) -> list[str]:
         if self._df is None:
             return []
-        return self._df.index.tolist()
+        if not result_type:
+            return self._df.index.tolist()
+        if result_type.lower() in self.time_series:
+            return self._df_columns_to_ids(self.time_series[result_type.lower()].df)
+        return []
 
     def result_types(self, id: str) -> list[str]:
         if not self.time_series:
             return []
         if not id:
             return list(self.time_series.keys())
-        else:
-            result_types = []
-            for result_type, ts in self.time_series.items():
-                if result_type not in result_types and id in [x.lower() for x in self._df_columns_to_ids(ts.df)]:
-                    result_types.append(result_type)
-            return result_types
+        result_types = []
+        for result_type, ts in self.time_series.items():
+            if result_type not in result_types and id in [x.lower() for x in self._df_columns_to_ids(ts.df)]:
+                result_types.append(result_type)
+        return result_types
 
     def _df_columns_to_ids(self, df: pd.DataFrame) -> list[str]:
         return [self._name(x) for x in df.columns[2:]]

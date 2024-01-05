@@ -16,14 +16,14 @@ class TPCPO(TPCResultItem):
         pass
 
     def count(self) -> int:
-        if not self._df and self.time_series:
+        if self._df is None and self.time_series:
             self._create_df()
         return super().count()
 
-    def ids(self) -> list[str]:
-        if not self._df and self.time_series:
+    def ids(self, result_type: str) -> list[str]:
+        if self._df is None and self.time_series:
             self._create_df()
-        return super().ids()
+        return super().ids(result_type)
 
     def _create_df(self) -> None:
         ids = []

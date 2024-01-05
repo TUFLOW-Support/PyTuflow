@@ -37,24 +37,37 @@ class TimeSeriesResult:
             return self.rl.count()
         return 0
 
-    def channel_ids(self) -> list[str]:
+    def ids(self, result_type: str = '') -> list[str]:
+        ids = self.channel_ids(result_type)
+        for id in self.node_ids(result_type):
+            if id not in ids:
+                ids.append(id)
+        for id in self.po_ids(result_type):
+            if id not in ids:
+                ids.append(id)
+        for id in self.rl_ids(result_type):
+            if id not in ids:
+                ids.append(id)
+        return ids
+
+    def channel_ids(self, result_type: str = '') -> list[str]:
         if self.channels:
-            return self.channels.ids()
+            return self.channels.ids(result_type)
         return []
 
-    def node_ids(self) -> list[str]:
+    def node_ids(self, result_type: str = '') -> list[str]:
         if self.nodes:
-            return self.nodes.ids()
+            return self.nodes.ids(result_type)
         return []
 
-    def po_ids(self) -> list[str]:
+    def po_ids(self, result_type: str = '') -> list[str]:
         if self.po:
-            return self.po.ids()
+            return self.po.ids(result_type)
         return []
 
-    def rl_ids(self) -> list[str]:
+    def rl_ids(self, result_type: str = '') -> list[str]:
         if self.rl:
-            return self.rl.ids()
+            return self.rl.ids(result_type)
         return []
 
     def result_types(self, id: str = '') -> list[str]:

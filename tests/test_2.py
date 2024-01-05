@@ -77,3 +77,8 @@ class Test_TPC_2016(TestCase):
         self.assertEqual(len(res.result_types('ds1')), 3)
         self.assertEqual(len(res.result_types('test')), 1)
         self.assertEqual(len(res.result_types('test_2')), 3)
+
+    def test_ids(self):
+        p = './2016/M04_5m_001.tpc'
+        res = TPC(p)
+        self.assertEqual(len(res.ids('flow')), 55)
