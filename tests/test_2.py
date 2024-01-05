@@ -3,7 +3,7 @@ from unittest import TestCase
 from pytuflow.results.tpc import TPC
 
 
-class Test_TPC(TestCase):
+class Test_TPC_2016(TestCase):
 
     def test_load(self):
         p = './2016/M04_5m_001.tpc'
@@ -69,3 +69,11 @@ class Test_TPC(TestCase):
         p = './2016/M04_5m_001.tpc'
         res = TPC(p)
         self.assertEqual(len(res.rl_result_types()), 3)
+
+    def test_result_types(self):
+        p = './2016/M04_5m_001.tpc'
+        res = TPC(p)
+        self.assertEqual(len(res.result_types()), 9)
+        self.assertEqual(len(res.result_types('ds1')), 3)
+        self.assertEqual(len(res.result_types('test')), 1)
+        self.assertEqual(len(res.result_types('test_2')), 3)

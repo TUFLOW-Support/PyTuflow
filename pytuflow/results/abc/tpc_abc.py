@@ -1,3 +1,4 @@
+import re
 from pathlib import Path
 from typing import Union
 
@@ -26,7 +27,22 @@ class TPCResultItem(TimeSeriesResultItem):
             return []
         return self._df.index.tolist()
 
-    def result_types(self) -> list[str]:
+    def result_types(self, id: str) -> list[str]:
         if not self.time_series:
             return []
-        return list(self.time_series.keys())
+        if not id:
+            return list(self.time_series.keys())
+        else:
+            result_types = []
+            for result_type, ts in self.time_series.items():
+                if result_type not in result_types and id in [x.lower() for x in self._df_columns_to_ids(ts.df)]:
+                    result_types.append(result_type)
+            return result_types
+
+    def _df_columns_to_ids(self, df: pd.DataFrame) -> list[str]:
+        return [self._name(x) for x in df.columns[2:]]
+
+    def _name(self, name: str) -> str:
+        name = ' '.join(name.split(' ')[1:])
+        name = re.sub(r'\[.*]', '', name).strip()
+        return name

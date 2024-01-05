@@ -28,11 +28,6 @@ class TPCPO(TPCResultItem):
     def _create_df(self) -> None:
         ids = []
         for ts in self.time_series.values():
-            ids.extend([self._po_name(x) for x in ts.df.columns[2:] if self._po_name(x) not in ids])
+            ids.extend([x for x in self._df_columns_to_ids(ts.df) if x not in ids])
         self._df = pd.DataFrame(ids, columns=['id'])
         self._df.set_index('id', inplace=True)
-
-    def _po_name(self, name: str) -> str:
-        name = ' '.join(name.split(' ')[1:])
-        name = re.sub(r'\[.*]', '', name).strip()
-        return name

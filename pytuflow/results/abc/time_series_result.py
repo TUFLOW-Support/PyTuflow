@@ -57,22 +57,35 @@ class TimeSeriesResult:
             return self.rl.ids()
         return []
 
-    def channel_result_types(self) -> list[str]:
+    def result_types(self, id: str = '') -> list[str]:
+        result_types = self.channel_result_types(id)
+        for result_type in self.node_result_types(id):
+            if result_type not in result_types:
+                result_types.append(result_type)
+        for result_type in self.po_result_types(id):
+            if result_type not in result_types:
+                result_types.append(result_type)
+        for result_type in self.rl_result_types(id):
+            if result_type not in result_types:
+                result_types.append(result_type)
+        return result_types
+
+    def channel_result_types(self, id: str = '') -> list[str]:
         if self.channels:
-            return self.channels.result_types()
+            return self.channels.result_types(id)
         return []
 
-    def node_result_types(self) -> list[str]:
+    def node_result_types(self, id: str = '') -> list[str]:
         if self.nodes:
-            return self.nodes.result_types()
+            return self.nodes.result_types(id)
         return []
 
-    def po_result_types(self) -> list[str]:
+    def po_result_types(self, id: str = '') -> list[str]:
         if self.po:
-            return self.po.result_types()
+            return self.po.result_types(id)
         return []
 
-    def rl_result_types(self) -> list[str]:
+    def rl_result_types(self, id: str = '') -> list[str]:
         if self.rl:
-            return self.rl.result_types()
+            return self.rl.result_types(id)
         return []
