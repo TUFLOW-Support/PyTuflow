@@ -54,6 +54,10 @@ class TPCResultItem(TimeSeriesResultItem):
                 return pd.DataFrame()
             return self.time_series[result_type].df.iloc[:,[i]]
 
+    @staticmethod
+    def conv_result_type_name(result_type: str) -> str:
+        return RESULT_SHORT_NAME.get(result_type.lower(), result_type.lower())
+
     def _df_columns_to_ids(self, df: pd.DataFrame) -> list[str]:
         return [self._name(x) for x in df.columns[1:]]
 

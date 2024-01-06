@@ -5,6 +5,7 @@ from typing import Union, Any
 import pandas as pd
 
 from .abc.time_series_result import TimeSeriesResult
+from .abc.tpc_abc import TPCResultItem
 from .nodes.nodes_tpc import TPCNodes
 from .channels.channels_tpc import TPCChannels
 from .maximum.maximum_tpc import TPCMaximum
@@ -40,6 +41,9 @@ class TPC(TimeSeriesResult):
         self._load_1d_results()
         self._load_po_results()
         self._load_rl_results()
+
+    def conv_result_type_name(self, result_type: str) -> str:
+        return TPCResultItem.conv_result_type_name(result_type)
 
     def _get_property(self, name: str) -> Any:
         try:

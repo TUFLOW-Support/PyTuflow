@@ -93,6 +93,12 @@ class Test_TPC_2016(TestCase):
         ts = res.time_series('ds1', ['flow', 'velocity'])
         self.assertEqual((181, 3), ts.shape)
 
+    def test_time_series_2(self):
+        p = './2016/M04_5m_001.tpc'
+        res = TPC(p)
+        ts = res.time_series('ds1', 'Q')
+        self.assertEqual((181, 2), ts.shape)
+
     def test_req_id_result_types(self):
         p = './2016/M04_5m_001.tpc'
         res = TPC(p)

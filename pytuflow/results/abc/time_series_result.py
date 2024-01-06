@@ -42,6 +42,7 @@ class TimeSeriesResult:
         return 0
 
     def ids(self, result_type: str = '') -> list[str]:
+        result_type = self.conv_result_type_name(result_type)
         ids = self.channel_ids(result_type)
         for id in self.node_ids(result_type):
             if id not in ids:
@@ -55,21 +56,25 @@ class TimeSeriesResult:
         return ids
 
     def channel_ids(self, result_type: str = '') -> list[str]:
+        result_type = self.conv_result_type_name(result_type)
         if self.channels:
             return self.channels.ids(result_type)
         return []
 
     def node_ids(self, result_type: str = '') -> list[str]:
+        result_type = self.conv_result_type_name(result_type)
         if self.nodes:
             return self.nodes.ids(result_type)
         return []
 
     def po_ids(self, result_type: str = '') -> list[str]:
+        result_type = self.conv_result_type_name(result_type)
         if self.po:
             return self.po.ids(result_type)
         return []
 
     def rl_ids(self, result_type: str = '') -> list[str]:
+        result_type = self.conv_result_type_name(result_type)
         if self.rl:
             return self.rl.ids(result_type)
         return []
@@ -160,6 +165,9 @@ class TimeSeriesResult:
                     data[h] = df.iloc[:,0].tolist()
 
         return pd.DataFrame(data)
+
+    def conv_result_type_name(self, result_type: str) -> str:
+        raise NotImplementedError
 
     def _req_id_and_result_type(self,
             id: list[str],
