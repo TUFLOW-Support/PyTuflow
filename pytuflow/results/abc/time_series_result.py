@@ -118,9 +118,9 @@ class TimeSeriesResult:
             domain: str = None
     ) -> pd.DataFrame:
         if not isinstance(id, list):
-            id = [id]
+            id = [id] if id is not None else []
         if not isinstance(result_type, list):
-            result_type = [result_type]
+            result_type = [result_type] if result_type is not None else []
         id, result_type = self._req_id_and_result_type(id, result_type, domain)
         x, data = [], OrderedDict({})
         order = ['channel', 'node', 'po', 'rl']
