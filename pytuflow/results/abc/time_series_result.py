@@ -119,11 +119,14 @@ class TimeSeriesResult:
     ) -> pd.DataFrame:
         if not isinstance(id, list):
             id = [id] if id is not None else []
+
         if not isinstance(result_type, list):
             result_type = [result_type] if result_type is not None else []
+
         id, result_type = self._req_id_and_result_type(id, result_type, domain)
+
+        order = ['channel', 'node', 'po', 'rl']  # order of the returned dataframes below
         x, data = [], OrderedDict({})
-        order = ['channel', 'node', 'po', 'rl']
         for rt in result_type:
             for id_ in id:
                 df1, df2, df3, df4 = None, None, None, None
