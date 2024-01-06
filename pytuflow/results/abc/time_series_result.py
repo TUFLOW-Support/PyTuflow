@@ -169,6 +169,12 @@ class TimeSeriesResult:
 
         return pd.DataFrame(data)
 
+    def connectivity(self, ids: Union[str, list[str]]) -> pd.DataFrame:
+        if not isinstance(ids, list):
+            ids = [ids] if ids is not None else []
+
+
+
     def conv_result_type_name(self, result_type: str) -> str:
         raise NotImplementedError
 

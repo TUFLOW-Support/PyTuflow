@@ -1,4 +1,4 @@
-from ..po.po_tpc import TPCPO
+from .tpc_po import TPCPO
 
 
 class TPCRL(TPCPO):

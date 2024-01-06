@@ -4,13 +4,13 @@ from typing import Union, Any
 
 import pandas as pd
 
-from .abc.time_series_result import TimeSeriesResult
-from .abc.tpc_abc import TPCResultItem
-from .nodes.nodes_tpc import TPCNodes
-from .channels.channels_tpc import TPCChannels
-from .maximum.maximum_tpc import TPCMaximum
-from .po.po_tpc import TPCPO
-from .rl.rl_tpc import TPCRL
+from ..abc.time_series_result import TimeSeriesResult
+from .tpc_time_series_result_item import TPCResultItem
+from .tpc_nodes import TPCNodes
+from .tpc_channels import TPCChannels
+from .tpc_maximums import TPCMaximums
+from .tpc_po import TPCPO
+from .tpc_rl import TPCRL
 
 
 NAME_MAP = {'velocities': 'velocity', 'energy levels': 'energy'}
@@ -102,7 +102,7 @@ class TPC(TimeSeriesResult):
             relpath = self._get_property('1D Node Maximums')
             if relpath:
                 fpath = self.fpath.parent / relpath
-                self.nodes.maximums = TPCMaximum(fpath)
+                self.nodes.maximums = TPCMaximums(fpath)
             i = self._get_property_index('1D Node Maximums') + 1
             for row in self._df.iloc[i:].itertuples():
                 if row[1] == '1D Channel Maximums':
@@ -120,7 +120,7 @@ class TPC(TimeSeriesResult):
             relpath = self._get_property('1D Channel Maximums')
             if relpath:
                 fpath = self.fpath.parent / relpath
-                self.channels.maximums = TPCMaximum(fpath)
+                self.channels.maximums = TPCMaximums(fpath)
             i = self._get_property_index('1D Channel Maximums') + 1
             for row in self._df.iloc[i:].itertuples():
                 if row[1] == '1D Channel Maximums':
@@ -160,7 +160,7 @@ class TPC(TimeSeriesResult):
                 fpath = self.fpath.parent / relpath
                 if name == 'maximum':
                     if not self.rl.maximums:
-                        self.rl.maximums = TPCMaximum(fpath)
+                        self.rl.maximums = TPCMaximums(fpath)
                     else:
                         self.rl.maximums.append(fpath)
                 else:
@@ -183,7 +183,7 @@ class TPC(TimeSeriesResult):
                 fpath = self.fpath.parent / relpath
                 if name == 'maximum':
                     if not self.rl.maximums:
-                        self.rl.maximums = TPCMaximum(fpath)
+                        self.rl.maximums = TPCMaximums(fpath)
                     else:
                         self.rl.maximums.append(fpath)
                 else:
@@ -206,7 +206,7 @@ class TPC(TimeSeriesResult):
                 fpath = self.fpath.parent / relpath
                 if name == 'maximum':
                     if not self.rl.maximums:
-                        self.rl.maximums = TPCMaximum(fpath)
+                        self.rl.maximums = TPCMaximums(fpath)
                     else:
                         self.rl.maximums.append(fpath)
                 else:

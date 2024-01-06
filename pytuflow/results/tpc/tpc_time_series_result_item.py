@@ -1,11 +1,10 @@
-import re
 from pathlib import Path
 from typing import Union
 
 import pandas as pd
 
-from ..time_series.time_series_tpc import TPCTimeSeries
-from .time_series_result_item import TimeSeriesResultItem
+from .tpc_time_series import TPCTimeSeries
+from ..abc.time_series_result_item import TimeSeriesResultItem
 
 
 RESULT_SHORT_NAME = {'h': 'water level', 'q': 'flow', 'v': 'velocity', 'e': 'energy'}

@@ -1,6 +1,6 @@
 from unittest import TestCase
 
-from pytuflow.results.tpc import TPC
+from pytuflow.results.tpc.tpc import TPC
 
 
 class Test_TPC_2016(TestCase):

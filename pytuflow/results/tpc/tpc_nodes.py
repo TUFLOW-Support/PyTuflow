@@ -1,5 +1,5 @@
 from .node_csv_parser import parse_node_csv
-from ..abc.tpc_abc import TPCResultItem
+from .tpc_time_series_result_item import TPCResultItem
 
 
 class TPCNodes(TPCResultItem):

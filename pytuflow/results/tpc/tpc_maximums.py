@@ -3,10 +3,10 @@ from typing import Union
 
 import pandas as pd
 
-from ..abc.maximum import Maximum
+from ..abc.maximums import Maximums
 
 
-class TPCMaximum(Maximum):
+class TPCMaximums(Maximums):
 
     def __init__(self, fpath: Union[str, Path]) -> None:
         super().__init__(fpath)

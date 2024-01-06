@@ -1,8 +1,6 @@
-import re
-
 import pandas as pd
 
-from ..abc.tpc_abc import TPCResultItem
+from .tpc_time_series_result_item import TPCResultItem
 
 
 class TPCPO(TPCResultItem):
