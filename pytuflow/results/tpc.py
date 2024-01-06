@@ -108,7 +108,7 @@ class TPC(TimeSeriesResult):
                 _, name, relpath = row
                 name = self._1d_result_name(name)
                 fpath = self.fpath.parent / relpath
-                self.nodes.load_time_series(name, fpath)
+                self.nodes.load_time_series(name, fpath, index_col=1)
 
         chan_count = int(self._get_property('Number 1D Channels'))
         if chan_count > 0:
@@ -126,7 +126,7 @@ class TPC(TimeSeriesResult):
                 _, name, relpath = row
                 name = self._1d_result_name(name)
                 fpath = self.fpath.parent / relpath
-                self.channels.load_time_series(name, fpath)
+                self.channels.load_time_series(name, fpath, index_col=1)
 
     def _load_po_results(self) -> None:
         df = self._df[self._df.iloc[:,0].str.contains('2D')]
@@ -136,7 +136,7 @@ class TPC(TimeSeriesResult):
             _, name, relpath = row
             name = self._2d_result_name(name)
             fpath = self.fpath.parent / relpath
-            self.po.load_time_series(name, fpath)
+            self.po.load_time_series(name, fpath, index_col=1)
 
     def _load_rl_results(self) -> None:
         rl_point_count = self._get_property('Number Reporting Location Points')
@@ -160,7 +160,7 @@ class TPC(TimeSeriesResult):
                     else:
                         self.rl.maximums.append(fpath)
                 else:
-                    self.rl.load_time_series(name, fpath)
+                    self.rl.load_time_series(name, fpath, index_col=1)
 
         rl_line_count = self._get_property('Number Reporting Location Lines')
         if rl_line_count:
@@ -183,7 +183,7 @@ class TPC(TimeSeriesResult):
                     else:
                         self.rl.maximums.append(fpath)
                 else:
-                    self.rl.load_time_series(name, fpath)
+                    self.rl.load_time_series(name, fpath, index_col=1)
 
         rl_region_count = self._get_property('Number Reporting Location Regions')
         if rl_region_count:
@@ -206,4 +206,4 @@ class TPC(TimeSeriesResult):
                     else:
                         self.rl.maximums.append(fpath)
                 else:
-                    self.rl.load_time_series(name, fpath)
+                    self.rl.load_time_series(name, fpath, index_col=1)

@@ -8,6 +8,9 @@ from ..time_series.time_series_tpc import TPCTimeSeries
 from .time_series_result_item import TimeSeriesResultItem
 
 
+RESULT_SHORT_NAME = {'h': 'water level', 'q': 'flow', 'v': 'velocity', 'e': 'energy'}
+
+
 class TPCResultItem(TimeSeriesResultItem):
 
     def __init__(self, fpath: Union[str, Path]) -> None:
@@ -42,8 +45,17 @@ class TPCResultItem(TimeSeriesResultItem):
                 result_types.append(result_type)
         return result_types
 
+    def get_time_series(self, id: str, result_type: str) -> pd.DataFrame:
+        result_type = RESULT_SHORT_NAME.get(result_type.lower(), result_type.lower())
+        if result_type in self.time_series:
+            try:
+                i = self._df_columns_to_ids(self.time_series[result_type].df).index(id) + 1
+            except ValueError:
+                return pd.DataFrame()
+            return self.time_series[result_type].df.iloc[:,[i]]
+
     def _df_columns_to_ids(self, df: pd.DataFrame) -> list[str]:
-        return [self._name(x) for x in df.columns[2:]]
+        return [self._name(x) for x in df.columns[1:]]
 
     def _name(self, name: str) -> str:
         name = ' '.join(name.split(' ')[1:])
