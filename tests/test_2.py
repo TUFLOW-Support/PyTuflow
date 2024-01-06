@@ -86,6 +86,8 @@ class Test_TPC_2016(TestCase):
     def test_time_series(self):
         p = './2016/M04_5m_001.tpc'
         res = TPC(p)
+        ts = res.time_series('test', 'flow')
+        self.assertEqual((181, 3), ts.shape)
         ts = res.time_series('ds1', 'flow')
         self.assertEqual((181, 2), ts.shape)
         ts = res.time_series(['ds1', 'ds2'], 'flow')

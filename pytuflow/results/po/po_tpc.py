@@ -28,6 +28,6 @@ class TPCPO(TPCResultItem):
     def _create_df(self) -> None:
         ids = []
         for ts in self.time_series.values():
-            ids.extend([x for x in self._df_columns_to_ids(ts.df) if x not in ids])
+            ids.extend([x for x in ts.df.columns if x.lower() not in [y.lower() for y in ids]])
         self._df = pd.DataFrame(ids, columns=['id'])
         self._df.set_index('id', inplace=True)

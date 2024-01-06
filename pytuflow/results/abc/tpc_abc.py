@@ -31,7 +31,7 @@ class TPCResultItem(TimeSeriesResultItem):
         if not result_type:
             return self._df.index.tolist()
         if result_type.lower() in self.time_series:
-            return self._df_columns_to_ids(self.time_series[result_type.lower()].df)
+            return self.time_series[result_type.lower()].df.columns.tolist()
         return []
 
     def result_types(self, id: str) -> list[str]:
@@ -41,7 +41,7 @@ class TPCResultItem(TimeSeriesResultItem):
             return list(self.time_series.keys())
         result_types = []
         for result_type, ts in self.time_series.items():
-            if result_type not in result_types and id in [x.lower() for x in self._df_columns_to_ids(ts.df)]:
+            if result_type not in result_types and id in [x.lower() for x in ts.df.columns]:
                 result_types.append(result_type)
         return result_types
 
@@ -49,7 +49,7 @@ class TPCResultItem(TimeSeriesResultItem):
         result_type = RESULT_SHORT_NAME.get(result_type.lower(), result_type.lower())
         if result_type in self.time_series:
             try:
-                i = self._df_columns_to_ids(self.time_series[result_type].df).index(id) + 1
+                i = [x.lower() for x in self.time_series[result_type].df.columns].index(id.lower())
             except ValueError:
                 return pd.DataFrame()
             return self.time_series[result_type].df.iloc[:,[i]]
@@ -57,11 +57,3 @@ class TPCResultItem(TimeSeriesResultItem):
     @staticmethod
     def conv_result_type_name(result_type: str) -> str:
         return RESULT_SHORT_NAME.get(result_type.lower(), result_type.lower())
-
-    def _df_columns_to_ids(self, df: pd.DataFrame) -> list[str]:
-        return [self._name(x) for x in df.columns[1:]]
-
-    def _name(self, name: str) -> str:
-        name = ' '.join(name.split(' ')[1:])
-        name = re.sub(r'\[.*]', '', name).strip()
-        return name

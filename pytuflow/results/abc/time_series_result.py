@@ -135,10 +135,10 @@ class TimeSeriesResult:
                         df1 = self.channels.get_time_series(id_, rt)
                     if id_ in self.node_ids(rt):
                         df2 = self.nodes.get_time_series(id_, rt)
-                elif domain is None or domain.lower() == '2d':
+                if domain is None or domain.lower() == '2d':
                     if id_ in self.po_ids(rt):
                         df3 = self.po.get_time_series(id_, rt)
-                elif domain is None or domain.lower() == 'rl':
+                if domain is None or domain.lower() == 'rl':
                     if id_ in self.rl_ids(rt):
                         df4 = self.rl.get_time_series(id_, rt)
 
