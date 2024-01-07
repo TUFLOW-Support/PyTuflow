@@ -127,3 +127,8 @@ class Test_TPC_2016(TestCase):
         res = TPC(p)
         df = res.connectivity(['ds1', 'ds4'])
         self.assertEqual((4, 7), df.shape)
+
+    def test_long_plot(self):
+        p = './2016/M04_5m_001.tpc'
+        res = TPC(p)
+        res.long_plot('ds1', 'bed elevation', 0)

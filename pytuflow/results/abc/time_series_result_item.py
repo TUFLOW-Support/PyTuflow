@@ -1,3 +1,4 @@
+from datetime import datetime
 from pathlib import Path
 from typing import Union
 
@@ -25,6 +26,9 @@ class TimeSeriesResultItem:
         raise NotImplementedError
 
     def result_types(self, id: Union[str, None]) -> list[str]:
+        raise NotImplementedError
+
+    def timesteps(self, dtype: str) -> list[Union[float, datetime]]:
         raise NotImplementedError
 
     def get_time_series(self, id: str, result_type: str) -> pd.DataFrame:

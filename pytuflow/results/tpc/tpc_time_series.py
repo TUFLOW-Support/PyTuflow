@@ -1,4 +1,5 @@
 import re
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Union
 
@@ -9,11 +10,12 @@ from ..abc.time_series import TimeSeries
 
 class TPCTimeSeries(TimeSeries):
 
-    def __init__(self, fpath: Union[str, Path], index_col: str) -> None:
+    def __init__(self, fpath: Union[str, Path], reference_time: datetime, index_col: Union[str, int]) -> None:
         super().__init__()
         self._index_col = index_col
         self.df = None
         self.fpath = Path(fpath)
+        self.reference_time = reference_time
         self.load()
 
     def __repr__(self) -> str:
@@ -36,6 +38,11 @@ class TPCTimeSeries(TimeSeries):
             self.df.rename(columns={x: self._name(x) for x in self.df.columns}, inplace=True)
         except Exception as e:
             raise f'Error loading CSV file: {e}'
+
+    def timesteps(self, dtype: str) -> list[Union[float, datetime]]:
+        if dtype == 'datetime':
+            return [self.reference_time + timedelta(hours=x) for x in self.df.index]
+        return self.df.index.tolist()
 
     def _name(self, name: str) -> str:
         name = ' '.join(name.split(' ')[1:])

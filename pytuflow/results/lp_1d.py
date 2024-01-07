@@ -1,17 +1,22 @@
 from typing import TYPE_CHECKING, Union, Generator
 
+import numpy as np
 import pandas as pd
 
 if TYPE_CHECKING:
     from .abc.channels import Channels
+    from .abc.nodes import Nodes
 
 class LP_1D:
 
-    def __init__(self, channels: 'Channels', ids: list[str] = ()) -> None:
+    def __init__(self, channels: 'Channels', nodes: 'Nodes', ids: list[str] = ()) -> None:
+        self._static_types = []
         self.channels = channels
+        self.nodes = nodes
         self.ids = ids
-        self.columns = ['US Node', 'DS Node', 'Length', 'US Invert', 'DS Invert']
+        self.columns = ['US Node', 'DS Node', 'Flags', 'Length', 'US Invert', 'DS Invert', 'LBUS Obvert', 'LBDS Obvert']
         self.df = pd.DataFrame([], columns=['Channel'] + self.columns + ['Branch ID'])
+        self.df_static = pd.DataFrame([], columns=['Offset'])
 
     def __repr__(self) -> str:
         if hasattr(self, 'ids'):
@@ -63,6 +68,65 @@ class LP_1D:
 
         self.df = df
 
+    def static_data(self, result_types: list[str] = ()) -> pd.DataFrame:
+        if self.df.empty:
+            raise ValueError('Connectivity must be calculated before static data, or connection between ids not found')
+
+        if not self.df_static.empty and result_types == self._static_types:
+            return self.df_static
+
+        # offsets - always required
+        if self.df_static.empty:
+            offset = 0.
+            offsets = []
+            for i, length in enumerate(self.df['Length']):
+                offsets.append(offset)
+                offset += length
+                offsets.append(offset)
+            df = pd.DataFrame(offsets, columns=['Offset'])
+        else:
+            df = self.df_static[['Offset']]
+
+        # other static result types
+        for result_type in result_types:
+            if result_type.lower() in [x.lower() for x in self.df_static.columns]:
+                i = [x.lower() for x in self.df_static.columns].index(result_type.lower())
+                df[result_type] = self.df_static.iloc[:,i]
+            elif result_type.lower() == 'bed elevation':
+                y = []
+                for row in self.df.iterrows():
+                    y.append(row[1]['US Invert'])
+                    y.append(row[1]['DS Invert'])
+                df['Bed Elevation'] = y
+            elif 'pit' in result_type.lower():
+                y = []
+                for row in self.df.iterrows():
+                    if row[1]['US Channel'] == '------' and row[1]['DS Channel'] == '------':
+                        y.append(row[1]['US Invert'])
+                    else:
+                        y.append(np.nan)
+                    y.append(np.nan)
+                df['Pit'] = y
+            elif 'culvert' in result_type.lower() or 'pipe' in result_type.lower():
+                y = []
+                for row in self.df.iterrows():
+                    us_inv = row[1]['US Invert']
+                    ds_inv = row[1]['DS Invert']
+                    us_obv = row[1]['LBUS Obvert']
+                    ds_obv = row[1]['LBDS Obvert']
+                    if row[1]['Flags'] in ['R', 'C'] and not np.isclose(us_inv, ds_inv):
+                        y.append(us_obv)
+                        y.append(ds_obv)
+                    else:
+                        y.append(np.nan)
+                        y.append(np.nan)
+                df['Pipe Obvert'] = y
+
+        self.df_static = df
+        return self.df_static
+
+    def temporal_data(self, result_types: list[str], timestep_index: int) -> pd.DataFrame:
+        pass
 
 class Connectivity:
 

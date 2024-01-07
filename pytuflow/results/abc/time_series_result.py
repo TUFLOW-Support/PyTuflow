@@ -1,4 +1,6 @@
+import re
 from collections import OrderedDict
+from datetime import datetime
 from pathlib import Path
 from typing import Union
 
@@ -6,6 +8,7 @@ import numpy as np
 import pandas as pd
 
 from ..lp_1d import LP_1D
+from ..time_util import closest_time_index
 
 
 class TimeSeriesResult:
@@ -19,6 +22,7 @@ class TimeSeriesResult:
         self.po = None
         self.rl = None
         self.lp_1d = None
+        self.reference_time = datetime(1990, 1, 1)
         self.load()
 
     def load(self) -> None:
@@ -115,6 +119,16 @@ class TimeSeriesResult:
             return self.rl.result_types(id)
         return []
 
+    def timesteps(self, domain: str = '', dtype: str = 'relative') -> list[Union[float, datetime]]:
+        if domain:
+            return self._timesteps(domain, dtype)
+        timesteps = []
+        for domain in ['1d', '2d', '0d']:
+            for timestep in self._timesteps(domain, dtype):
+                if timestep not in timesteps:
+                    timesteps.append(timestep)
+        return sorted(timesteps)
+
     def time_series(self,
             id: Union[str, list[str]],
             result_type: Union[str, list[str]],
@@ -172,6 +186,32 @@ class TimeSeriesResult:
 
         return pd.DataFrame(data)
 
+    def long_plot(self, ids: Union[str, list[str]], result_type: Union[str, list[str]], time: float) -> pd.DataFrame:
+        if not isinstance(ids, list):
+            ids = [ids] if ids is not None else []
+
+        if not isinstance(result_type, list):
+            result_type = [result_type] if result_type is not None else []
+
+        if not ids:
+            raise ValueError('No ids provided')
+
+        ids, result_type = self._req_id_and_result_type(ids, result_type, '1d nodes')
+
+        df = self.connectivity(ids)
+        if df.empty:
+            return pd.DataFrame([], columns=['Offset'] + result_type)
+
+        timestep_index = closest_time_index(self.timesteps(domain='1d'), time)
+
+        static_types = [x for x in result_type if [y for y in ['bed elevation', 'pit', 'pipes'] if y in x.lower()]]
+        df = self.lp_1d.static_data(static_types)
+
+        temp_types = [x for x in result_type if x not in static_types]
+        df = pd.concat([df, self.lp_1d.temporal_data(temp_types, timestep_index)])
+
+        return df
+
     def connectivity(self, ids: Union[str, list[str]]) -> pd.DataFrame:
         if not isinstance(ids, list):
             ids = [ids] if ids is not None else []
@@ -180,7 +220,7 @@ class TimeSeriesResult:
             if id_ not in self.channel_ids():
                 raise ValueError(f'Invalid channel id: {id_}')
 
-        lp = LP_1D(self.channels, ids)
+        lp = LP_1D(self.channels, self.nodes, ids)
         if self.lp_1d is not None and lp == self.lp_1d:
             return self.lp_1d.df
 
@@ -257,17 +297,26 @@ class TimeSeriesResult:
                         result_types.append(rt)
             return result_types
         elif domain.lower() == '1d' and not id:
+            result_types = []
+            flag = re.sub(r'\dd', '', domain, flags=re.IGNORECASE).lower().strip()
+            if 'channel' in flag or not flag:
+                result_types.extend(self.channel_result_types())
+            if 'node' in flag or not flag:
+                result_types.extend(self.node_result_types())
             return self.channel_result_types() + self.node_result_types()
         elif domain.lower() == '1d':
             result_types = []
-            for id_ in id:
-                for rt in self.channel_result_types(id_):
-                    if rt not in result_types:
-                        result_types.append(rt)
-            for id_ in id:
-                for rt in self.node_result_types(id_):
-                    if rt not in result_types:
-                        result_types.append(rt)
+            flag = re.sub(r'\dd', '', domain, flags=re.IGNORECASE).lower().strip()
+            if 'channel' in flag or not flag:
+                for id_ in id:
+                    for rt in self.channel_result_types(id_):
+                        if rt not in result_types:
+                            result_types.append(rt)
+            if 'node' in flag or not flag:
+                for id_ in id:
+                    for rt in self.node_result_types(id_):
+                        if rt not in result_types:
+                            result_types.append(rt)
             return result_types
         elif domain.lower() == '2d' and not id:
             return self.po_result_types()
@@ -289,3 +338,17 @@ class TimeSeriesResult:
             return result_types
         else:
             raise ValueError(f'Invalid domain: {domain}')
+
+    def _timesteps(self, domain: str, dtype: str) -> list[Union[float, datetime]]:
+        if domain.lower() == '1d' and (self.channels or self.nodes):
+            if self.channels:
+                return self.channels.timesteps(dtype)
+            elif self.nodes:
+                return self.nodes.timesteps(dtype)
+        elif domain.lower() == '2d' and self.po:
+            return self.po.timesteps(dtype)
+        elif domain.lower() == '0d' and self.rl:
+            return self.rl.timesteps(dtype)
+        else:
+            raise ValueError(f'Invalid domain: {domain}')
+

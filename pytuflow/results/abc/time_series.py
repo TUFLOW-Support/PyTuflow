@@ -1,4 +1,11 @@
+from datetime import datetime
+from typing import Union
+
+
 class TimeSeries:
 
     def __init__(self):
-        pass
+        self.reference_time = None
+
+    def timesteps(self, dtype: str) -> list[Union[float, datetime]]:
+        raise NotImplementedError

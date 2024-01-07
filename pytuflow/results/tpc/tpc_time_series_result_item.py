@@ -1,3 +1,4 @@
+from datetime import datetime
 from pathlib import Path
 from typing import Union
 
@@ -16,8 +17,8 @@ class TPCResultItem(TimeSeriesResultItem):
         self._df = None
         super().__init__(fpath)
 
-    def load_time_series(self, name: str, fpath: Union[str, Path], index_col=None) -> None:
-        self.time_series[name] = TPCTimeSeries(fpath, index_col)
+    def load_time_series(self, name: str, fpath: Union[str, Path], reference_time: datetime, index_col=None) -> None:
+        self.time_series[name] = TPCTimeSeries(fpath, reference_time, index_col)
 
     def count(self) -> int:
         if self._df is None:
@@ -43,6 +44,13 @@ class TPCResultItem(TimeSeriesResultItem):
             if result_type not in result_types and id in [x.lower() for x in ts.df.columns]:
                 result_types.append(result_type)
         return result_types
+
+    def timesteps(self, dtype: str) -> list[Union[float, datetime]]:
+        if not self.time_series:
+            return []
+
+        for ts in self.time_series.values():
+            return ts.timesteps(dtype)
 
     def get_time_series(self, id: str, result_type: str) -> pd.DataFrame:
         result_type = RESULT_SHORT_NAME.get(result_type.lower(), result_type.lower())
