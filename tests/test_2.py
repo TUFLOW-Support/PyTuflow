@@ -121,3 +121,9 @@ class Test_TPC_2016(TestCase):
         self.assertEqual(3, len(result_types))
         ids, result_types = res._req_id_and_result_type(['test_2'], [], '0d')
         self.assertEqual(1, len(result_types))
+
+    def test_connectivity(self):
+        p = './2016/M04_5m_001.tpc'
+        res = TPC(p)
+        df = res.connectivity(['ds1', 'ds4'])
+        self.assertEqual((4, 7), df.shape)

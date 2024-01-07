@@ -24,7 +24,7 @@ class TPCResultItem(TimeSeriesResultItem):
             return 0
         return self._df.shape[0]
 
-    def ids(self, result_type: str) -> list[str]:
+    def ids(self, result_type: Union[str, None]) -> list[str]:
         if self._df is None:
             return []
         if not result_type:
@@ -33,7 +33,7 @@ class TPCResultItem(TimeSeriesResultItem):
             return self.time_series[result_type.lower()].df.columns.tolist()
         return []
 
-    def result_types(self, id: str) -> list[str]:
+    def result_types(self, id: Union[str, None]) -> list[str]:
         if not self.time_series:
             return []
         if not id:

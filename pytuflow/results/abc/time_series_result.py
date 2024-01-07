@@ -5,6 +5,8 @@ from typing import Union
 import numpy as np
 import pandas as pd
 
+from ..lp_1d import LP_1D
+
 
 class TimeSeriesResult:
 
@@ -16,6 +18,7 @@ class TimeSeriesResult:
         self.nodes = None
         self.po = None
         self.rl = None
+        self.lp_1d = None
         self.load()
 
     def load(self) -> None:
@@ -173,7 +176,17 @@ class TimeSeriesResult:
         if not isinstance(ids, list):
             ids = [ids] if ids is not None else []
 
+        for id_ in ids:
+            if id_ not in self.channel_ids():
+                raise ValueError(f'Invalid channel id: {id_}')
 
+        lp = LP_1D(self.channels, ids)
+        if self.lp_1d is not None and lp == self.lp_1d:
+            return self.lp_1d.df
+
+        lp.connectivity()
+        self.lp_1d = lp
+        return lp.df
 
     def conv_result_type_name(self, result_type: str) -> str:
         raise NotImplementedError
