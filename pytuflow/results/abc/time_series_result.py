@@ -119,6 +119,11 @@ class TimeSeriesResult:
             return self.rl.result_types(id)
         return []
 
+    def long_plot_result_types(self) -> list[str]:
+        if self.nodes:
+            return self.nodes.long_plot_result_types()
+        return []
+
     def timesteps(self, domain: str = '', dtype: str = 'relative') -> list[Union[float, datetime]]:
         if domain:
             return self._timesteps(domain, dtype)

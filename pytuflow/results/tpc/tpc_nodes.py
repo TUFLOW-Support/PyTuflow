@@ -15,3 +15,6 @@ class TPCNodes(TPCResultItem, Nodes):
             self._df = parse_node_csv(self.fpath)
         except Exception as e:
             raise f'Error loading TPC 1d_Nodes.csv file: {e}'
+
+    def long_plot_result_types(self) -> list[str]:
+        return ['Bed Level', 'Pit Level', 'Pipes'] + self.result_types(None)

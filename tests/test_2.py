@@ -126,7 +126,12 @@ class Test_TPC_2016(TestCase):
         p = './2016/M04_5m_001.tpc'
         res = TPC(p)
         df = res.connectivity(['ds1', 'ds4'])
-        self.assertEqual((4, 7), df.shape)
+        self.assertEqual((4, 10), df.shape)
+
+    def test_long_plot_result_types(self):
+        p = './2016/M04_5m_001.tpc'
+        res = TPC(p)
+        self.assertEqual(5, len(res.long_plot_result_types()))
 
     def test_long_plot(self):
         p = './2016/M04_5m_001.tpc'
