@@ -204,13 +204,7 @@ class TimeSeriesResult:
 
         timestep_index = closest_time_index(self.timesteps(domain='1d'), time)
 
-        static_types = [x for x in result_type if [y for y in ['bed elevation', 'pit', 'pipes'] if y in x.lower()]]
-        df = self.lp_1d.static_data(static_types)
-
-        temp_types = [x for x in result_type if x not in static_types]
-        df = pd.concat([df, self.lp_1d.temporal_data(temp_types, timestep_index)])
-
-        return df
+        return self.lp_1d.long_plot(result_type, timestep_index)
 
     def connectivity(self, ids: Union[str, list[str]]) -> pd.DataFrame:
         if not isinstance(ids, list):

@@ -34,6 +34,9 @@ class TimeSeriesResultItem:
     def get_time_series(self, id: str, result_type: str) -> pd.DataFrame:
         raise NotImplementedError
 
+    def val(self, result_type: str, ids: list[str], timestep_index: int) -> pd.DataFrame:
+        raise NotImplementedError
+
     @staticmethod
     def conv_result_type_name(result_type: str) -> str:
         raise NotImplementedError

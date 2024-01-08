@@ -131,4 +131,5 @@ class Test_TPC_2016(TestCase):
     def test_long_plot(self):
         p = './2016/M04_5m_001.tpc'
         res = TPC(p)
-        res.long_plot('ds1', 'bed elevation', 0)
+        df = res.long_plot('ds1', ['bed level', 'water level'], 1)
+        self.assertEqual((12, 5), df.shape)

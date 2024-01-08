@@ -11,12 +11,14 @@ class LP_1D:
 
     def __init__(self, channels: 'Channels', nodes: 'Nodes', ids: list[str] = ()) -> None:
         self._static_types = []
+        self._temp_types = []
         self.channels = channels
         self.nodes = nodes
         self.ids = ids
         self.columns = ['US Node', 'DS Node', 'Flags', 'Length', 'US Invert', 'DS Invert', 'LBUS Obvert', 'LBDS Obvert']
         self.df = pd.DataFrame([], columns=['Channel'] + self.columns + ['Branch ID'])
         self.df_static = pd.DataFrame([], columns=['Offset'])
+        self.df_temp = pd.DataFrame([])
 
     def __repr__(self) -> str:
         if hasattr(self, 'ids'):
@@ -68,12 +70,27 @@ class LP_1D:
 
         self.df = df
 
+    def long_plot(self, result_type: list[str], timestep_index: int) -> pd.DataFrame:
+        static_types = [x for x in result_type if [y for y in ['bed', 'pit', 'pipes'] if y in x.lower()]]
+        df = self.static_data(static_types)
+        temp_types = [x for x in result_type if x not in static_types]
+        return pd.concat([df, self.temporal_data(temp_types, timestep_index)], axis=1)
+
     def static_data(self, result_types: list[str] = ()) -> pd.DataFrame:
         if self.df.empty:
             raise ValueError('Connectivity must be calculated before static data, or connection between ids not found')
 
         if not self.df_static.empty and result_types == self._static_types:
             return self.df_static
+
+        self._static_types = result_types
+
+        # initialise df with channel and node ids
+        df = pd.melt(
+            self.df.reset_index(),
+            id_vars=['Channel', 'index'],
+            value_vars=['US Node', 'DS Node']
+        ).sort_values('index')[['Channel', 'value']].rename(columns={'value': 'Node'})
 
         # offsets - always required
         if self.df_static.empty:
@@ -83,21 +100,21 @@ class LP_1D:
                 offsets.append(offset)
                 offset += length
                 offsets.append(offset)
-            df = pd.DataFrame(offsets, columns=['Offset'])
+            df['Offset'] = offsets
         else:
-            df = self.df_static[['Offset']]
+            df['Offset'] = self.df_static[['Offset']]
 
         # other static result types
         for result_type in result_types:
             if result_type.lower() in [x.lower() for x in self.df_static.columns]:
                 i = [x.lower() for x in self.df_static.columns].index(result_type.lower())
                 df[result_type] = self.df_static.iloc[:,i]
-            elif result_type.lower() == 'bed elevation':
+            elif 'bed' in result_type.lower():
                 y = []
                 for row in self.df.iterrows():
                     y.append(row[1]['US Invert'])
                     y.append(row[1]['DS Invert'])
-                df['Bed Elevation'] = y
+                df[result_type] = y
             elif 'pit' in result_type.lower():
                 y = []
                 for row in self.df.iterrows():
@@ -122,11 +139,36 @@ class LP_1D:
                         y.append(np.nan)
                 df['Pipe Obvert'] = y
 
-        self.df_static = df
+        self.df_static = df.reset_index(drop=True)
         return self.df_static
 
     def temporal_data(self, result_types: list[str], timestep_index: int) -> pd.DataFrame:
-        pass
+        if self.df.empty:
+            raise ValueError('Connectivity must be calculated before static data, or connection between ids not found')
+
+        if not self.df_temp.empty and result_types == self._temp_types:
+            return self.df_temp
+
+        self._temp_types = result_types
+
+        # convert connected channels into a node list
+        nodes = pd.melt(
+            self.df.reset_index(),
+            id_vars=['index'],
+            value_vars=['US Node', 'DS Node']
+        ).sort_values('index')['value'].tolist()
+
+        df = pd.DataFrame([])
+        for result_type in result_types:
+            if result_type.lower() in [x.lower() for x in self.df_static.columns]:
+                i = [x.lower() for x in self.df_static.columns].index(result_type.lower())
+                df[result_type] = self.df_temp.iloc[:, i]
+            else:
+                y = self.nodes.val(result_type, nodes, timestep_index)
+                if not y.empty:
+                    df[result_type] = y
+
+        return df.reset_index(drop=True)
 
 class Connectivity:
 

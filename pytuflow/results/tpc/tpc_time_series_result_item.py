@@ -61,6 +61,13 @@ class TPCResultItem(TimeSeriesResultItem):
                 return pd.DataFrame()
             return self.time_series[result_type].df.iloc[:,[i]]
 
+    def val(self, result_type: str, ids: list[str], timestep_index: int) -> pd.DataFrame:
+        result_type_ = RESULT_SHORT_NAME.get(result_type.lower(), result_type.lower())
+        if result_type_ in self.time_series:
+            time = self.time_series[result_type_].df.index[timestep_index]
+            return self.time_series[result_type].df[ids].iloc[timestep_index].to_frame().rename(columns={time: result_type})
+        return pd.DataFrame([], columns=result_type)
+
     @staticmethod
     def conv_result_type_name(result_type: str) -> str:
         return RESULT_SHORT_NAME.get(result_type.lower(), result_type.lower())
