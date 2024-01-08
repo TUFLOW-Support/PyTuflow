@@ -37,7 +37,7 @@ class TPCTimeSeriesCSV(TimeSeries):
             )
             self.df.rename(columns={x: self._name(x) for x in self.df.columns}, inplace=True)
         except Exception as e:
-            raise f'Error loading CSV file: {e}'
+            raise Exception(f'Error loading CSV file: {e}')
 
     def timesteps(self, dtype: str) -> list[Union[float, datetime]]:
         if dtype == 'absolute':

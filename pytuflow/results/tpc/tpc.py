@@ -39,7 +39,7 @@ class TPC(TimeSeriesResult):
         try:
             self._df = pd.read_csv(self.fpath, sep=' == ', engine='python', header=None)
         except Exception as e:
-            raise f'Error loading TPC file: {e}'
+            raise Exception(f'Error loading TPC file: {e}')
 
         self.units = self._get_property('Units')
         self.sim_id = self._get_property('Simulation ID')

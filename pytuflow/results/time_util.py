@@ -1,5 +1,6 @@
 import re
 from datetime import datetime
+from pathlib import Path
 from typing import Union
 
 import numpy as np
@@ -12,25 +13,45 @@ except ImportError:
 default_reference_time = datetime(1990, 1, 1)
 
 
-def nc_time_series_reference_time(nc):
+def parse_time_units_string(string: str, regex: str, format: str) -> tuple[datetime, str]:
+    if 'hour' in string:
+        u = 'h'
+    elif 'minute' in string:
+        u = 'm'
+    elif 'second' in string:
+        u = 's'
+    elif 'since' in string:
+        u = string.split(' ')[0]
+    else:
+        u = string
+    time = re.findall(regex, string)
+    if time:
+        return datetime.strptime(time[0], format), u
+    return default_reference_time, u
+
+
+def gpkg_time_series_reference_time(gpkg: Union[str, Path]) -> tuple[datetime, str]:
+    import sqlite3
+    try:
+        conn = sqlite3.connect(gpkg)
+        cur = conn.cursor()
+        cur.execute('SELECT Reference_time FROM Timeseries_info LIMIT 1;')
+        units = cur.fetchone()[0]
+        rt, u = parse_time_units_string(units, r'\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}', '%Y-%m-%d %H:%M:%S')
+    except Exception as e:
+        rt, u = default_reference_time, ''
+    finally:
+        cur = None
+        conn.close()
+        return rt, u
+
+
+def nc_time_series_reference_time(nc: Union[str, Path]) -> tuple[datetime, str]:
     if Dataset is None:
         raise ModuleNotFoundError('netCDF4 is not installed')
     with Dataset(nc, 'r') as ds:
         units = ds.variables['time'].units
-        if 'hour' in units:
-            u = 'h'
-        elif 'minute' in units:
-            u = 'm'
-        elif 'second' in units:
-            u = 's'
-        elif 'since' in units:
-            u = units[:units.index('since')].strip()
-        else:
-            u = units
-        time = re.findall(r'\d{4}-\d{2}-\d{2} \d{2}:\d{2}', units)
-        if time:
-            return datetime.strptime(time[0], '%Y-%m-%d %H:%M'), u
-    return default_reference_time, u
+        return parse_time_units_string(units, r'\d{4}-\d{2}-\d{2} \d{2}:\d{2}', '%Y-%m-%d %H:%M:%S')
 
 
 

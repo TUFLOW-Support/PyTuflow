@@ -22,11 +22,11 @@ class TPCMaximums(Maximums):
         try:
             self.df = pd.read_csv(self.fpath, index_col=1, header=0, delimiter=',', na_values='**********')
         except Exception as e:
-            raise f'Error loading TPC 1d_Nmx.csv file: {e}'
+            raise Exception(f'Error loading TPC 1d_Nmx.csv file: {e}')
 
     def append(self, fpath: Union[str, Path]) -> None:
         try:
             df = pd.read_csv(fpath, index_col=1, header=0, delimiter=',', na_values='**********')
         except Exception as e:
-            raise f'Error loading TPC 1d_Nmx.csv file: {e}'
+            raise Exception(f'Error loading TPC 1d_Nmx.csv file: {e}')
         self.df = pd.concat([self.df, df], join="outer")

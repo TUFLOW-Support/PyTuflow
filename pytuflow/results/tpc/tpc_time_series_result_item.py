@@ -33,6 +33,8 @@ class TPCResultItem(TimeSeriesResultItem):
         return self._df.shape[0]
 
     def ids(self, result_type: Union[str, None]) -> list[str]:
+        if result_type is not None:
+            result_type = RESULT_SHORT_NAME.get(result_type.lower(), result_type.lower())
         if self._df is None:
             return []
         if not result_type:
@@ -58,15 +60,6 @@ class TPCResultItem(TimeSeriesResultItem):
 
         for ts in self.time_series.values():
             return ts.timesteps(dtype)
-
-    def get_time_series(self, id: str, result_type: str) -> pd.DataFrame:
-        result_type = RESULT_SHORT_NAME.get(result_type.lower(), result_type.lower())
-        if result_type in self.time_series:
-            try:
-                i = [x.lower() for x in self.time_series[result_type].df.columns].index(id.lower())
-            except ValueError:
-                return pd.DataFrame()
-            return self.time_series[result_type].df.iloc[:,[i]]
 
     def val(self, result_type: str, ids: list[str], timestep_index: int) -> pd.DataFrame:
         result_type_ = RESULT_SHORT_NAME.get(result_type.lower(), result_type.lower())

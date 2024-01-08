@@ -49,7 +49,6 @@ class TimeSeriesResult:
         return 0
 
     def ids(self, result_type: str = '') -> list[str]:
-        result_type = self.conv_result_type_name(result_type)
         ids = self.channel_ids(result_type)
         for id in self.node_ids(result_type):
             if id not in ids:
@@ -63,25 +62,21 @@ class TimeSeriesResult:
         return ids
 
     def channel_ids(self, result_type: str = '') -> list[str]:
-        result_type = self.conv_result_type_name(result_type)
         if self.channels:
             return self.channels.ids(result_type)
         return []
 
     def node_ids(self, result_type: str = '') -> list[str]:
-        result_type = self.conv_result_type_name(result_type)
         if self.nodes:
             return self.nodes.ids(result_type)
         return []
 
     def po_ids(self, result_type: str = '') -> list[str]:
-        result_type = self.conv_result_type_name(result_type)
         if self.po:
             return self.po.ids(result_type)
         return []
 
     def rl_ids(self, result_type: str = '') -> list[str]:
-        result_type = self.conv_result_type_name(result_type)
         if self.rl:
             return self.rl.ids(result_type)
         return []
@@ -339,15 +334,21 @@ class TimeSeriesResult:
             raise ValueError(f'Invalid domain: {domain}')
 
     def _timesteps(self, domain: str, dtype: str) -> list[Union[float, datetime]]:
-        if domain.lower() == '1d' and (self.channels or self.nodes):
+        if domain.lower() == '1d':
             if self.channels:
                 return self.channels.timesteps(dtype)
             elif self.nodes:
                 return self.nodes.timesteps(dtype)
-        elif domain.lower() == '2d' and self.po:
-            return self.po.timesteps(dtype)
-        elif domain.lower() == '0d' and self.rl:
-            return self.rl.timesteps(dtype)
+            else:
+                return []
+        elif domain.lower() == '2d':
+            if self.po is not None:
+                return self.po.timesteps(dtype)
+            return []
+        elif domain.lower() == '0d':
+            if self.rl is not None:
+                return self.rl.timesteps(dtype)
+            return []
         else:
             raise ValueError(f'Invalid domain: {domain}')
 

@@ -2,6 +2,7 @@ from datetime import datetime
 from unittest import TestCase
 
 from pytuflow.results.tpc.tpc import TPC
+from pytuflow.results.gpkg_ts.gpkg_ts import GPKG_TS
 
 
 class Test_TPC_2016(TestCase):
@@ -200,3 +201,58 @@ class Test_TPC_2019(TestCase):
         res = TPC(p)
         df = res.long_plot('FC01.1_R', ['bed elevation', 'water level', 'pipes'], 1)
         self.assertEqual((2, 6), df.shape)
+
+
+class Test_GPKG_TS_2023(TestCase):
+
+    def test_load(self):
+        p = './2023/M06_5m_003_SWMM_swmm_ts.gpkg'
+        res = GPKG_TS(p)
+        self.assertEqual('M06_5m_003_SWMM', res.sim_id)
+
+    def test_channel_count(self):
+        p = './2023/M06_5m_003_SWMM_swmm_ts.gpkg'
+        res = GPKG_TS(p)
+        self.assertEqual(18, res.channel_count())
+
+    def test_node_count(self):
+        p = './2023/M06_5m_003_SWMM_swmm_ts.gpkg'
+        res = GPKG_TS(p)
+        self.assertEqual(22, res.node_count())
+
+    def test_channel_ids(self):
+        p = './2023/M06_5m_003_SWMM_swmm_ts.gpkg'
+        res = GPKG_TS(p)
+        self.assertEqual(18, len(res.channel_ids()))
+
+    def test_node_ids(self):
+        p = './2023/M06_5m_003_SWMM_swmm_ts.gpkg'
+        res = GPKG_TS(p)
+        self.assertEqual(22, len(res.node_ids()))
+
+    def test_channel_result_types(self):
+        p = './2023/M06_5m_003_SWMM_swmm_ts.gpkg'
+        res = GPKG_TS(p)
+        self.assertEqual(5, len(res.channel_result_types()))
+
+    def test_node_result_types(self):
+        p = './2023/M06_5m_003_SWMM_swmm_ts.gpkg'
+        res = GPKG_TS(p)
+        self.assertEqual(7, len(res.node_result_types()))
+
+    def test_ids(self):
+        p = './2023/M06_5m_003_SWMM_swmm_ts.gpkg'
+        res = GPKG_TS(p)
+        self.assertEqual(len(res.ids('flow')), 40)
+
+    def test_timesteps(self):
+        p = './2023/M06_5m_003_SWMM_swmm_ts.gpkg'
+        res = GPKG_TS(p)
+        ts = res.timesteps()
+        self.assertEqual(37, len(ts))
+
+    def test_time_series(self):
+        p = './2023/M06_5m_003_SWMM_swmm_ts.gpkg'
+        res = GPKG_TS(p)
+        ts = res.time_series('FC01.1_R', ['q', 'v'])
+        self.assertEqual((37, 3), ts.shape)

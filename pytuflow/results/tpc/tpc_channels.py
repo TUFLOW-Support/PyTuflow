@@ -35,7 +35,7 @@ class TPCChannels(TPCResultItem, Channels):
                 }
             )
         except Exception as e:
-            raise f'Error loading TPC 1d_channels.csv file: {e}'
+            raise Exception(f'Error loading TPC 1d_channels.csv file: {e}')
 
     def ds_node(self, id: str) -> str:
         return self._df.loc[id, 'DS Node']
