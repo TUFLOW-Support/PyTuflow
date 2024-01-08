@@ -16,6 +16,9 @@ def parse_node_csv(fpath: Union[str, Path]) -> pd.DataFrame:
         header = [x.strip() for x in f.readline().split(',')]
         data = [[y for y in x.split(',')] for x in f.read().split('\n')]
     for j, row in enumerate(data):
+        if not data or not row[0]:
+            data.pop(j)
+            break
         for i, val in enumerate(row):
             if i < len(DTYPE_MAP):
                 try:

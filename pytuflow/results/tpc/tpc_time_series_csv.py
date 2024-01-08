@@ -8,7 +8,7 @@ import pandas as pd
 from ..abc.time_series import TimeSeries
 
 
-class TPCTimeSeries(TimeSeries):
+class TPCTimeSeriesCSV(TimeSeries):
 
     def __init__(self, fpath: Union[str, Path], reference_time: datetime, index_col: Union[str, int]) -> None:
         super().__init__()
@@ -20,8 +20,8 @@ class TPCTimeSeries(TimeSeries):
 
     def __repr__(self) -> str:
         if hasattr(self, 'fpath'):
-            return f'<TPC Time Series: {self.fpath.stem}>'
-        return '<TPC Time Series>'
+            return f'<TPC Time Series (CSV): {self.fpath.stem}>'
+        return '<TPC Time Series (CSV)>'
 
     def load(self):
         try:
@@ -40,7 +40,7 @@ class TPCTimeSeries(TimeSeries):
             raise f'Error loading CSV file: {e}'
 
     def timesteps(self, dtype: str) -> list[Union[float, datetime]]:
-        if dtype == 'datetime':
+        if dtype == 'absolute':
             return [self.reference_time + timedelta(hours=x) for x in self.df.index]
         return self.df.index.tolist()
 

@@ -1,3 +1,5 @@
+import numpy as np
+
 from .node_csv_parser import parse_node_csv
 from .tpc_time_series_result_item import TPCResultItem
 from ..abc.nodes import Nodes

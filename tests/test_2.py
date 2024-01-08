@@ -1,3 +1,4 @@
+from datetime import datetime
 from unittest import TestCase
 
 from pytuflow.results.tpc.tpc import TPC
@@ -18,7 +19,7 @@ class Test_TPC_2016(TestCase):
     def test_node_count(self):
         p = './2016/M04_5m_001.tpc'
         res = TPC(p)
-        self.assertEqual(56, res.node_count())
+        self.assertEqual(55, res.node_count())
 
     def test_po_count(self):
         p = './2016/M04_5m_001.tpc'
@@ -38,7 +39,7 @@ class Test_TPC_2016(TestCase):
     def test_node_ids(self):
         p = './2016/M04_5m_001.tpc'
         res = TPC(p)
-        self.assertEqual(56, len(res.node_ids()))
+        self.assertEqual(55, len(res.node_ids()))
 
     def test_po_ids(self):
         p = './2016/M04_5m_001.tpc'
@@ -138,3 +139,64 @@ class Test_TPC_2016(TestCase):
         res = TPC(p)
         df = res.long_plot('ds1', ['bed level', 'water level'], 1)
         self.assertEqual((12, 5), df.shape)
+
+
+class Test_TPC_2019(TestCase):
+
+    def test_load(self):
+        p = './2019/M03_5m_001.tpc'
+        res = TPC(p)
+        self.assertEqual('M03_5m_001', res.sim_id)
+        self.assertEqual(datetime(2000, 1, 1), res.reference_time)
+        df = res.nodes.time_series['water level'].df
+        df = res.nodes.time_series['energy'].df
+        df = res.channels.time_series['flow'].df
+        df = res.channels.time_series['velocity'].df
+        df = res.channels.time_series['flow area'].df
+        df = res.rl.time_series['flow'].df
+        df = res.rl.time_series['water level'].df
+        df = res.rl.time_series['volume'].df
+
+    def test_channel_count(self):
+        p = './2019/M03_5m_001.tpc'
+        res = TPC(p)
+        self.assertEqual(3, res.channel_count())
+
+    def test_node_count(self):
+        p = './2019/M03_5m_001.tpc'
+        res = TPC(p)
+        self.assertEqual(6, res.node_count())
+
+    def test_rl_count(self):
+        p = './2019/M03_5m_001.tpc'
+        res = TPC(p)
+        self.assertEqual(3, res.rl_count())
+
+    def test_channel_ids(self):
+        p = './2019/M03_5m_001.tpc'
+        res = TPC(p)
+        self.assertEqual(3, len(res.channel_ids()))
+
+    def test_node_ids(self):
+        p = './2019/M03_5m_001.tpc'
+        res = TPC(p)
+        self.assertEqual(6, len(res.node_ids()))
+
+    def test_rl_ids(self):
+        p = './2019/M03_5m_001.tpc'
+        res = TPC(p)
+        self.assertEqual(3, len(res.rl_ids()))
+
+    def test_time_series(self):
+        p = './2019/M03_5m_001.tpc'
+        res = TPC(p)
+        ts = res.time_series('FC01.1_R', 'flow')
+        self.assertEqual((91, 2), ts.shape)
+        ts = res.time_series('RL region 1', 'vol')
+        self.assertEqual((91, 2), ts.shape)
+
+    def test_long_plot(self):
+        p = './2019/M03_5m_001.tpc'
+        res = TPC(p)
+        df = res.long_plot('FC01.1_R', ['bed elevation', 'water level', 'pipes'], 1)
+        self.assertEqual((2, 6), df.shape)
