@@ -210,9 +210,15 @@ class TimeSeriesResult:
         if not isinstance(ids, list):
             ids = [ids] if ids is not None else []
 
+        ids_lower = [x.lower() for x in self.channel_ids()]
+        ids_ = []
         for id_ in ids:
-            if id_ not in self.channel_ids():
+            if id_.lower() not in ids_lower:
                 raise ValueError(f'Invalid channel id: {id_}')
+            else:
+                i = ids_lower.index(id_.lower())
+                ids_.append(self.channel_ids()[i])
+        ids = ids_
 
         lp = LP_1D(self.channels, self.nodes, ids)
         if self.lp_1d is not None and lp == self.lp_1d:

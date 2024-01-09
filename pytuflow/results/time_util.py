@@ -51,7 +51,7 @@ def nc_time_series_reference_time(nc: Union[str, Path]) -> tuple[datetime, str]:
         raise ModuleNotFoundError('netCDF4 is not installed')
     with Dataset(nc, 'r') as ds:
         units = ds.variables['time'].units
-        return parse_time_units_string(units, r'\d{4}-\d{2}-\d{2} \d{2}:\d{2}', '%Y-%m-%d %H:%M:%S')
+        return parse_time_units_string(units, r'\d{4}-\d{2}-\d{2} \d{2}:\d{2}', '%Y-%m-%d %H:%M')
 
 
 

@@ -12,7 +12,7 @@ class TPCNodes(TPCResultItem, Nodes):
 
     def load(self) -> None:
         try:
-            self._df = parse_node_csv(self.fpath)
+            self.df = parse_node_csv(self.fpath)
         except Exception as e:
             raise Exception(f'Error loading TPC 1d_Nodes.csv file: {e}')
 

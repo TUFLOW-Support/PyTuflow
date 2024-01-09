@@ -13,7 +13,7 @@ class TPCChannels(TPCResultItem, Channels):
 
     def load(self) -> None:
         try:
-            self._df = pd.read_csv(
+            self.df = pd.read_csv(
                 self.fpath,
                 index_col='Channel',
                 delimiter=',',
@@ -36,9 +36,3 @@ class TPCChannels(TPCResultItem, Channels):
             )
         except Exception as e:
             raise Exception(f'Error loading TPC 1d_channels.csv file: {e}')
-
-    def ds_node(self, id: str) -> str:
-        return self._df.loc[id, 'DS Node']
-
-    def us_node(self, id: str) -> str:
-        return self._df.loc[id, 'US Node']

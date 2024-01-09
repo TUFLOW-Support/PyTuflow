@@ -4,10 +4,10 @@ from .time_series_result_item import TimeSeriesResultItem
 class Channels(TimeSeriesResultItem):
 
     def ds_node(self, id: str) -> str:
-        raise NotImplementedError
+        return self.df.loc[id, 'DS Node']
 
     def us_node(self, id: str) -> str:
-        raise NotImplementedError
+        return self.df.loc[id, 'US Node']
 
     def downstream_channels(self, id: str) -> list[str]:
         nd = self.ds_node(id)

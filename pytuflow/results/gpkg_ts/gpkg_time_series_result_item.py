@@ -11,6 +11,7 @@ from ..abc.time_series_result_item import TimeSeriesResultItem
 class GPKGResultItem(TimeSeriesResultItem):
 
     def __init__(self, fpath: Union[str, Path], layer_name: str) -> None:
+        self._df = None
         self._db = None
         self._cur = None
         self._keep_open = 0
@@ -85,9 +86,6 @@ class GPKGResultItem(TimeSeriesResultItem):
 
         for ts in self.time_series.values():
             return ts.timesteps(dtype)
-
-    def val(self, result_type: str, ids: list[str], timestep_index: int) -> pd.DataFrame:
-        pass
 
     @property
     def time_series(self) -> dict[str, GPKGTimeSeries]:

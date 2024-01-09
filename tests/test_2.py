@@ -256,3 +256,15 @@ class Test_GPKG_TS_2023(TestCase):
         res = GPKG_TS(p)
         ts = res.time_series('FC01.1_R', ['q', 'v'])
         self.assertEqual((37, 3), ts.shape)
+
+    def test_connectivity(self):
+        p = './2023/M06_5m_003_SWMM_swmm_ts.gpkg'
+        res = GPKG_TS(p)
+        df = res.connectivity(['pipe2'])
+        self.assertEqual((7, 10), df.shape)
+
+    def test_long_plot(self):
+        p = './2023/M06_5m_003_SWMM_swmm_ts.gpkg'
+        res = GPKG_TS(p)
+        df = res.long_plot('pipe1', ['bed level', 'water level'], 1)
+        self.assertEqual((37, 5), df.shape)

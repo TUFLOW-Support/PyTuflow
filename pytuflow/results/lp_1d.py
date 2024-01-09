@@ -63,7 +63,7 @@ class LP_1D:
         df = pd.DataFrame([], columns=['Channel'] + self.columns + ['Branch ID'])
         df['Branch ID'] = df['Branch ID'].astype(int)
         for i, branch in enumerate(branches):
-            df_ = self.channels._df.loc[branch, self.columns]
+            df_ = self.channels.df.loc[branch, self.columns]
             df_['Branch ID'] = [i for _ in range(df_.shape[0])]
             df_.reset_index(inplace=True)
             df = pd.concat([df, df_], ignore_index=True, axis=0)

@@ -17,7 +17,6 @@ RESULT_SHORT_NAME = {'h': 'water level', 'q': 'flow', 'v': 'velocity', 'e': 'ene
 class TPCResultItem(TimeSeriesResultItem):
 
     def __init__(self, fpath: Union[str, Path]) -> None:
-        self._df = None
         self.nc = None
         super().__init__(fpath)
 
@@ -28,17 +27,17 @@ class TPCResultItem(TimeSeriesResultItem):
             self.time_series[name] = TPCTimeSeriesCSV(fpath, reference_time, index_col)
 
     def count(self) -> int:
-        if self._df is None:
+        if self.df is None:
             return 0
-        return self._df.shape[0]
+        return self.df.shape[0]
 
     def ids(self, result_type: Union[str, None]) -> list[str]:
         if result_type is not None:
             result_type = RESULT_SHORT_NAME.get(result_type.lower(), result_type.lower())
-        if self._df is None:
+        if self.df is None:
             return []
         if not result_type:
-            return self._df.index.tolist()
+            return self.df.index.tolist()
         if result_type.lower() in self.time_series:
             return self.time_series[result_type.lower()].df.columns.tolist()
         return []
@@ -60,13 +59,6 @@ class TPCResultItem(TimeSeriesResultItem):
 
         for ts in self.time_series.values():
             return ts.timesteps(dtype)
-
-    def val(self, result_type: str, ids: list[str], timestep_index: int) -> pd.DataFrame:
-        result_type_ = RESULT_SHORT_NAME.get(result_type.lower(), result_type.lower())
-        if result_type_ in self.time_series:
-            time = self.time_series[result_type_].df.index[timestep_index]
-            return self.time_series[result_type].df[ids].iloc[timestep_index].to_frame().rename(columns={time: result_type})
-        return pd.DataFrame([], columns=result_type)
 
     @staticmethod
     def conv_result_type_name(result_type: str) -> str:
