@@ -36,3 +36,8 @@ class TPCChannels(TPCResultItem, Channels):
             )
         except Exception as e:
             raise Exception(f'Error loading TPC 1d_channels.csv file: {e}')
+
+    def connected_pit_channels(self, node_id: str) -> list[str]:
+        return self.df[
+            (self.df['DS Node'] == node_id) & (self.df['US Channel'] == '------') & (self.df['DS Channel'] == '------')
+            ].index.tolist()

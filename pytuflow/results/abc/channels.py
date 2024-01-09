@@ -11,8 +11,8 @@ class Channels(TimeSeriesResultItem):
 
     def downstream_channels(self, id: str) -> list[str]:
         nd = self.ds_node(id)
-        return [x for x in self.ids(None) if self.us_node(x) == nd]
+        return self.df[self.df['US Node'] == nd].index.tolist()
 
     def upstream_channels(self, id: str) -> list[str]:
         nd = self.us_node(id)
-        return [x for x in self.ids(None) if self.ds_node(x) == nd]
+        return self.df[self.df['DS Node'] == nd].index.tolist()

@@ -3,6 +3,8 @@ from typing import TYPE_CHECKING, Union, Generator
 import numpy as np
 import pandas as pd
 
+from .abc.utils import Utils
+
 if TYPE_CHECKING:
     from .abc.channels import Channels
     from .abc.nodes import Nodes
@@ -12,6 +14,7 @@ class LP_1D:
     def __init__(self, channels: 'Channels', nodes: 'Nodes', ids: list[str] = ()) -> None:
         self._static_types = []
         self._temp_types = []
+        self._utils = Utils(channels, nodes)
         self.channels = channels
         self.nodes = nodes
         self.ids = ids
@@ -116,28 +119,9 @@ class LP_1D:
                     y.append(row[1]['DS Invert'])
                 df[result_type] = y
             elif 'pit' in result_type.lower():
-                y = []
-                for row in self.df.iterrows():
-                    if row[1]['US Channel'] == '------' and row[1]['DS Channel'] == '------':
-                        y.append(row[1]['US Invert'])
-                    else:
-                        y.append(np.nan)
-                    y.append(np.nan)
-                df['Pit'] = y
+                df['Pit'] = self._utils.extract_pit_levels(self.df)
             elif 'culvert' in result_type.lower() or 'pipe' in result_type.lower():
-                y = []
-                for row in self.df.iterrows():
-                    us_inv = row[1]['US Invert']
-                    ds_inv = row[1]['DS Invert']
-                    us_obv = row[1]['LBUS Obvert']
-                    ds_obv = row[1]['LBDS Obvert']
-                    if row[1]['Flags'] in ['R', 'C'] and not np.isclose(us_inv, ds_inv):
-                        y.append(us_obv)
-                        y.append(ds_obv)
-                    else:
-                        y.append(np.nan)
-                        y.append(np.nan)
-                df['Pipe Obvert'] = y
+                df['Pipe Obvert'] = self._utils.extract_culvert_obvert(self.df)
 
         self.df_static = df.reset_index(drop=True)
         return self.df_static

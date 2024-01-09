@@ -1,3 +1,8 @@
+from collections import OrderedDict
+
+import numpy as np
+import pandas as pd
+
 from .gpkg_time_series_result_item import GPKGResultItem
 from ..abc.nodes import Nodes
 
@@ -19,6 +24,44 @@ class GPKGNodes(GPKGResultItem, Nodes):
 
     def long_plot_result_types(self) -> list[str]:
         return ['Bed Level', 'Pit Level', 'Pipes'] + self.result_types(None)
+
+    @property
+    def df(self) -> pd.DataFrame:
+        if self._df is None:
+            try:
+                COLUMNS = ['Node', 'Bed Level', 'Top Level', 'Inlet Level']
+                TYPE_MAP = [str, float, float, float]
+                self._open_db()
+                self._cur.execute(
+                    'SELECT '
+                      'ID as Node, '
+                      'Invert_elevation as "Bed Level", '
+                      'Top_elevation as "Top Level", '
+                      'Inlet_elevation as "Inlet Level" '
+                    'FROM Points_P;'
+                )
+                ret = self._cur.fetchall()
+                if ret:
+                    d = OrderedDict({x: [] for x in COLUMNS})
+                    for row in ret:
+                        for i, col in enumerate(COLUMNS):
+                            try:
+                                d[col].append(TYPE_MAP[i](row[i]))
+                            except (TypeError, ValueError):
+                                d[col].append(np.nan)
+                    self._df = pd.DataFrame(d)
+                else:
+                    self._df = pd.DataFrame([], columns=COLUMNS)
+                self._df.set_index('Node', inplace=True)
+            except Exception as e:
+                raise Exception(f'Error getting nodes: {e}')
+            finally:
+                self._close_db()
+        return self._df
+
+    @df.setter
+    def df(self, df: pd.DataFrame):
+        return
 
     @staticmethod
     def conv_result_type_name(result_type: str) -> str:

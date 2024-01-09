@@ -139,7 +139,7 @@ class Test_TPC_2016(TestCase):
         p = './2016/M04_5m_001.tpc'
         res = TPC(p)
         df = res.long_plot('ds1', ['bed level', 'water level'], 1)
-        self.assertEqual((12, 5), df.shape)
+        self.assertEqual((12, 6), df.shape)
 
 
 class Test_TPC_2019(TestCase):
@@ -197,10 +197,10 @@ class Test_TPC_2019(TestCase):
         self.assertEqual((91, 2), ts.shape)
 
     def test_long_plot(self):
-        p = './2019/M03_5m_001.tpc'
+        p = './2020/EG15_001.tpc'
         res = TPC(p)
-        df = res.long_plot('FC01.1_R', ['bed elevation', 'water level', 'pipes'], 1)
-        self.assertEqual((2, 6), df.shape)
+        df = res.long_plot('pipe1', ['bed elevation', 'water level', 'pipes', 'pits'], 1)
+        self.assertEqual((10, 7), df.shape)
 
 
 class Test_GPKG_TS_2023(TestCase):
@@ -268,3 +268,9 @@ class Test_GPKG_TS_2023(TestCase):
         res = GPKG_TS(p)
         df = res.long_plot('pipe1', ['bed level', 'water level'], 1)
         self.assertEqual((37, 5), df.shape)
+
+    def test_long_plot2(self):
+        p = './2023/M06_5m_003_SWMM_swmm_ts.gpkg'
+        res = GPKG_TS(p)
+        df = res.long_plot('pipe1', ['bed level', 'pipes', 'pits'], 1)
+        self.assertEqual((37, 6), df.shape)

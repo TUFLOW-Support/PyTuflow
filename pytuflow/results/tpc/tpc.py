@@ -153,6 +153,8 @@ class TPC(TimeSeriesResult):
                 elif '1D' not in row[1]:
                     break
                 _, name_, relpath = row
+                if relpath == 'NONE':
+                    continue
                 id = f'{"_".join(self._1d_name_extract(name_).split(" "))}_1d'  # netcdf timeseries variable name
                 name = self._1d_result_name(name_)
                 fpath = self.fpath.parent / relpath
@@ -172,6 +174,8 @@ class TPC(TimeSeriesResult):
                 elif '1D' not in row[1]:
                     break
                 _, name_, relpath = row
+                if relpath == 'NONE':
+                    continue
                 id = f'{"_".join(self._1d_name_extract(name_).split(" "))}_1d'  # netcdf timeseries variable name
                 name = self._1d_result_name(name_)
                 fpath = self.fpath.parent / relpath
@@ -184,6 +188,8 @@ class TPC(TimeSeriesResult):
                 self.po = TPCPO(None)
                 self.po.nc = self.nc
             _, name_, relpath = row
+            if relpath == 'NONE':
+                continue
             id = f'{"_".join(self._2d_name_extract(name_).split(" "))}_2d'  # netcdf timeseries variable name
             name = self._2d_result_name(name_)
             fpath = self.fpath.parent / relpath
@@ -204,6 +210,8 @@ class TPC(TimeSeriesResult):
                     self.rl = TPCRL(None)
                     self.rl.nc = self.nc
                 _, name_, relpath = row
+                if relpath == 'NONE':
+                    continue
                 id = f'{"_".join(self._rl_name_extract(name_).split(" "))}_rl'  # netcdf timeseries variable name
                 name = self._rl_result_name(name_)
                 fpath = self.fpath.parent / relpath
@@ -228,6 +236,8 @@ class TPC(TimeSeriesResult):
                 if not self.rl:
                     self.rl = TPCRL(None)
                 _, name_, relpath = row
+                if relpath == 'NONE':
+                    continue
                 id = f'{"_".join(self._rl_name_extract(name_).split(" "))}_rl'  # netcdf timeseries variable name
                 name = self._rl_result_name(name_)
                 fpath = self.fpath.parent / relpath
@@ -252,6 +262,8 @@ class TPC(TimeSeriesResult):
                 if not self.rl:
                     self.rl = TPCRL(None)
                 _, name_, relpath = row
+                if relpath == 'NONE':
+                    continue
                 id = f'{"_".join(self._rl_name_extract(name_).split(" "))}_rl'  # netcdf timeseries variable name
                 name = self._rl_result_name(name_)
                 fpath = self.fpath.parent / relpath
