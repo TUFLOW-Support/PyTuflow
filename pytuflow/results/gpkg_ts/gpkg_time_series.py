@@ -6,21 +6,19 @@ import numpy as np
 import pandas as pd
 
 from ..abc.time_series import TimeSeries
+from .gpkg_ts_base import GPKGBase
 
 if TYPE_CHECKING:
     from .gpkg_time_series_result_item import GPKGResultItem
 
 
-class GPKGTimeSeries(TimeSeries):
+class GPKGTimeSeries(GPKGBase, TimeSeries):
 
     def __init__(self, fpath: Union[str, Path], id: str, parent: 'GPKGResultItem') -> None:
-        super().__init__()
+        super(GPKGTimeSeries, self).__init__()
         self.fpath = fpath
         self._parent = parent
         self._id = id  # result type id
-        self._db = None
-        self._cur = None
-        self._keep_open = 0
         self._timesteps_rel = None
         self._timesteps_abs = None
         self._df = None
@@ -78,20 +76,3 @@ class GPKGTimeSeries(TimeSeries):
             finally:
                 self._close_db()
         return self._df
-
-    def _open_db(self) -> None:
-        import sqlite3
-        if self._db is None:
-            self._db = sqlite3.connect(self.fpath)
-            self._cur = self._db.cursor()
-        else:
-            self._keep_open += 1
-
-    def _close_db(self) -> None:
-        if self._db is not None:
-            if not self._keep_open:
-                self._cur = None
-                self._db.close()
-                self._db = None
-            else:
-                self._keep_open -= 1

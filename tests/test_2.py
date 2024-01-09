@@ -85,6 +85,12 @@ class Test_TPC_2016(TestCase):
         res = TPC(p)
         self.assertEqual(len(res.ids('flow')), 55)
 
+    def test_maximums(self):
+        p = './2016/M04_5m_001.tpc'
+        res = TPC(p)
+        df = res.rl.maximums.df
+        self.assertEqual((3, 15), df.shape)
+
     def test_time_series(self):
         p = './2016/M04_5m_001.tpc'
         res = TPC(p)
@@ -139,7 +145,7 @@ class Test_TPC_2016(TestCase):
         p = './2016/M04_5m_001.tpc'
         res = TPC(p)
         df = res.long_plot('ds1', ['bed level', 'water level'], 1)
-        self.assertEqual((12, 6), df.shape)
+        self.assertEqual((12, 5), df.shape)
 
 
 class Test_TPC_2019(TestCase):
@@ -267,10 +273,16 @@ class Test_GPKG_TS_2023(TestCase):
         p = './2023/M06_5m_003_SWMM_swmm_ts.gpkg'
         res = GPKG_TS(p)
         df = res.long_plot('pipe1', ['bed level', 'water level'], 1)
-        self.assertEqual((37, 5), df.shape)
+        self.assertEqual((10, 5), df.shape)
 
     def test_long_plot2(self):
         p = './2023/M06_5m_003_SWMM_swmm_ts.gpkg'
         res = GPKG_TS(p)
         df = res.long_plot('pipe1', ['bed level', 'pipes', 'pits'], 1)
-        self.assertEqual((37, 6), df.shape)
+        self.assertEqual((10, 6), df.shape)
+
+    def test_maximums(self):
+        p = './2023/M06_5m_003_SWMM_swmm_ts.gpkg'
+        res = GPKG_TS(p)
+        df = res.nodes.maximums.df
+        self.assertEqual((22, 14), df.shape)

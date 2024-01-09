@@ -2,19 +2,16 @@ from datetime import datetime
 from pathlib import Path
 from typing import Union
 
-import pandas as pd
-
 from .gpkg_time_series import GPKGTimeSeries
+from .gpkg_ts_base import GPKGBase
+from .gpkg_maximums import GPKGMaximums
 from ..abc.time_series_result_item import TimeSeriesResultItem
 
 
-class GPKGResultItem(TimeSeriesResultItem):
+class GPKGResultItem(GPKGBase, TimeSeriesResultItem):
 
     def __init__(self, fpath: Union[str, Path], layer_name: str) -> None:
         self._df = None
-        self._db = None
-        self._cur = None
-        self._keep_open = 0
         self._layer_name = layer_name
 
         # properties
@@ -22,8 +19,9 @@ class GPKGResultItem(TimeSeriesResultItem):
         self._ids = None
         self._result_types = None
         self._time_series = None
+        self._maximums = None
 
-        super().__init__(fpath)
+        super(GPKGResultItem, self).__init__(fpath)
 
     def load_time_series(self, name: str, id: str):
         self.time_series[name] = GPKGTimeSeries(self.fpath, id, self)
@@ -99,19 +97,12 @@ class GPKGResultItem(TimeSeriesResultItem):
     def time_series(self, value: dict[str, GPKGTimeSeries]) -> None:
         return
 
-    def _open_db(self) -> None:
-        import sqlite3
-        if self._db is None:
-            self._db = sqlite3.connect(self.fpath)
-            self._cur = self._db.cursor()
-        else:
-            self._keep_open += 1
+    @property
+    def maximums(self) -> GPKGMaximums:
+        if self._maximums is None:
+            self._maximums = GPKGMaximums(self.fpath, self._layer_name, self)
+        return self._maximums
 
-    def _close_db(self) -> None:
-        if self._db is not None:
-            if not self._keep_open:
-                self._cur = None
-                self._db.close()
-                self._db = None
-            else:
-                self._keep_open -= 1
+    @maximums.setter
+    def maximums(self, value: GPKGMaximums) -> None:
+        return
