@@ -90,7 +90,7 @@ class GPKGResultItem(GPKGBase, TimeSeriesResultItem):
         if self._time_series is None:
             self._time_series = {}
             for result_type in self.result_types(None):
-                self.load_time_series(result_type.lower(), result_type)
+                self.load_time_series(result_type, result_type)
         return self._time_series
 
     @time_series.setter
@@ -106,3 +106,11 @@ class GPKGResultItem(GPKGBase, TimeSeriesResultItem):
     @maximums.setter
     def maximums(self, value: GPKGMaximums) -> None:
         return
+
+    @staticmethod
+    def result_type_to_max(result_type: str) -> str:
+        return f'{result_type} Max'
+
+    @staticmethod
+    def result_type_to_tmax(result_type: str) -> str:
+        return f'{result_type} TMax'

@@ -32,14 +32,17 @@ class TimeSeriesResultItem:
     def timesteps(self, dtype: str) -> list[Union[float, datetime]]:
         raise NotImplementedError
 
-    def get_time_series(self, id: str, result_type: str) -> pd.DataFrame:
-        result_type = self.conv_result_type_name(result_type)
-        if result_type in self.time_series:
-            try:
-                i = [x.lower() for x in self.time_series[result_type].df.columns].index(id.lower())
-            except ValueError:
-                return pd.DataFrame()
-            return self.time_series[result_type].df.iloc[:, [i]]
+    def get_time_series(self, id: list[str], result_type: list[str]) -> pd.DataFrame:
+        df = pd.DataFrame()
+        for rt in result_type:
+            if rt in self.time_series:
+                alias_ids = [f'{rt}::{x}' for x in id]
+                df_ = self.time_series[rt].df[id].rename(columns={x: y for x, y in zip(id, alias_ids)})
+                if df.empty:
+                    df = df_
+                else:
+                    df = pd.concat([df, df_], axis=1)
+        return df
 
     def val(self, result_type: str, ids: list[str], timestep_index: int) -> pd.DataFrame:
         result_type_ = self.conv_result_type_name(result_type)
@@ -59,4 +62,12 @@ class TimeSeriesResultItem:
 
     @staticmethod
     def conv_result_type_name(result_type: str) -> str:
+        raise NotImplementedError
+
+    @staticmethod
+    def result_type_to_max(result_type: str) -> str:
+        raise NotImplementedError
+
+    @staticmethod
+    def result_type_to_tmax(result_type: str) -> str:
         raise NotImplementedError

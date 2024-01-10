@@ -3,6 +3,7 @@ from unittest import TestCase
 
 from pytuflow.results.tpc.tpc import TPC
 from pytuflow.results.gpkg_ts.gpkg_ts import GPKG_TS
+from pytuflow.results.abc.iterator import Iterator
 
 
 class Test_TPC_2016(TestCase):
@@ -261,7 +262,7 @@ class Test_GPKG_TS_2023(TestCase):
         p = './2023/M06_5m_003_SWMM_swmm_ts.gpkg'
         res = GPKG_TS(p)
         ts = res.time_series('FC01.1_R', ['q', 'v'])
-        self.assertEqual((37, 3), ts.shape)
+        self.assertEqual((37, 2), ts.shape)
 
     def test_connectivity(self):
         p = './2023/M06_5m_003_SWMM_swmm_ts.gpkg'
@@ -292,3 +293,36 @@ class Test_GPKG_TS_2023(TestCase):
         res = GPKG_TS(p)
         df = res.maximum('pipe1', 'q')
         self.assertEqual((18, 15), df.shape)
+
+
+class Test_Iterator(TestCase):
+
+    def test_get_nodes(self):
+        p = './2023/M06_5m_003_SWMM_swmm_ts.gpkg'
+        res = GPKG_TS(p)
+        iter = Iterator(res.channels, res.nodes, res.po, res.rl)
+        items = iter.get_nodes(['node20'], ['flow'], 'temporal')
+        self.assertEqual(1, len(items))
+        self.assertIsNotNone(items[0].id)
+        self.assertIsNotNone(items[0].result_type)
+
+    def test_get_nodes_2(self):
+        p = './2023/M06_5m_003_SWMM_swmm_ts.gpkg'
+        res = GPKG_TS(p)
+        iter = Iterator(res.channels, res.nodes, res.po, res.rl)
+        items = iter.get_nodes([], ['flow'], 'temporal')
+        self.assertEqual(22, len(items))
+
+    def test_get_nodes_3(self):
+        p = './2023/M06_5m_003_SWMM_swmm_ts.gpkg'
+        res = GPKG_TS(p)
+        iter = Iterator(res.channels, res.nodes, res.po, res.rl)
+        items = iter.get_nodes(['node20'], [], 'temporal')
+        self.assertEqual(7, len(items))
+
+    def test_id_result_type_gen(self):
+        p = './2023/M06_5m_003_SWMM_swmm_ts.gpkg'
+        res = GPKG_TS(p)
+        iter = Iterator(res.channels, res.nodes, res.po, res.rl)
+        items = list(iter.ids_result_types_domain(['node20'], ['flow'], None, 'temporal'))
+        self.assertEqual(1, len(items))

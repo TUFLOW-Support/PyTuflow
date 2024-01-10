@@ -9,6 +9,7 @@ import pandas as pd
 
 from ..lp_1d import LP_1D
 from ..time_util import closest_time_index
+from ..abc.iterator import Iterator
 
 
 class TimeSeriesResult:
@@ -134,57 +135,28 @@ class TimeSeriesResult:
             result_type: Union[str, list[str]],
             domain: str = None
     ) -> pd.DataFrame:
-        if not isinstance(id, list):
-            id = [id] if id is not None else []
-
-        if not isinstance(result_type, list):
-            result_type = [result_type] if result_type is not None else []
-
-        id, result_type = self._req_id_and_result_type(id, result_type, domain)
-
-        order = ['channel', 'node', 'po', 'rl']  # order of the returned dataframes below
-        x, data = [], OrderedDict({})
-        for rt in result_type:
-            for id_ in id:
-                df1, df2, df3, df4 = None, None, None, None
-                if domain is None or domain.lower() == '1d':
-                    if id_ in self.channel_ids(rt):
-                        df1 = self.channels.get_time_series(id_, rt)
-                    if id_ in self.node_ids(rt):
-                        df2 = self.nodes.get_time_series(id_, rt)
-                if domain is None or domain.lower() == '2d':
-                    if id_ in self.po_ids(rt):
-                        df3 = self.po.get_time_series(id_, rt)
-                if domain is None or domain.lower() == 'rl':
-                    if id_ in self.rl_ids(rt):
-                        df4 = self.rl.get_time_series(id_, rt)
-
-                c = [0 if x is None or x.empty else 1 for x in [df1, df2, df3, df4]].count(1)
-                for i, df in enumerate([df1, df2, df3, df4]):
-                    if df is None or df.empty:
-                        continue
-                    if c == 1:
-                        h = f'{rt}::{id_}'
-                    else:
-                        h = f'{order[i]}::{rt}::{id_}'
-                    if not x or not np.isclose(x, df.index.tolist(), atol=0.001).all():
-                        x = df.index.tolist()
-                        t = 'Time (h)'
-                        n = 1
-                        if t in data:
-                            t = f'Time (h)_{n}'
-                            while t in data:
-                                n += 1
-                        data[t] = x
-                    n = 1
-                    if h in data:
-                        h_ = f'{h}_{n}'
-                        while h_ in data:
-                            n += 1
-                        h = h_
-                    data[h] = df.iloc[:,0].tolist()
-
-        return pd.DataFrame(data)
+        df = pd.DataFrame()
+        x = []
+        dropped_index = False
+        iter = Iterator(self.channels, self.nodes, self.po, self.rl)
+        for item in iter.ids_result_types_domain(id, result_type, domain, 'temporal'):
+            df_ = item.result_item.get_time_series(item.ids, item.result_types)
+            df_.rename(columns={x: f'{item.result_item_name}::{x}' for x in df_.columns}, inplace=True)
+            if x and not np.isclose(x, df_.index.tolist(), atol=0.001).all():
+                x = df_.index.tolist()
+                if not dropped_index:
+                    df = df.reset_index().rename()
+                    dropped_index = True
+                df[f'{item.result_item_name}::Time (h)'] = x
+            if df.empty:
+                df = df_
+                x = df_.index.tolist()
+            else:
+                if dropped_index:
+                    df = pd.concat([df, df_.reset_index(drop=True)], axis=1)
+                else:
+                    df = pd.concat([df, df_], axis=1)
+        return df
 
     def long_plot(self, ids: Union[str, list[str]], result_type: Union[str, list[str]], time: float) -> pd.DataFrame:
         if not isinstance(ids, list):
@@ -272,9 +244,6 @@ class TimeSeriesResult:
         lp.connectivity()
         self.lp_1d = lp
         return lp.df
-
-    def conv_result_type_name(self, result_type: str) -> str:
-        raise NotImplementedError
 
     def _req_id_and_result_type(self,
             id: list[str],
