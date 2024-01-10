@@ -70,7 +70,7 @@ class Iterator:
             result_types: Union[str, list[str]],
             domain: str,
             type_: str,
-    ) -> Generator[Loc, None, None]:
+    ) -> Generator[IDResultTypeItem, None, None]:
         if not isinstance(ids, list):
             ids = [ids] if ids is not None else []
         if not isinstance(result_types, list):
@@ -124,22 +124,22 @@ class Iterator:
             if domain_2.lower() == 'node':
                 if self.nodes:
                     result_types = [self.nodes.conv_result_type_name(x) for x in result_types]
-                    result_types = [self.nodes.result_type_to_max(x) for x in result_types]
+                    result_types = sum([[self.nodes.result_type_to_max(x), self.nodes.result_type_to_tmax(x)] for x in result_types], [])
                     a = self.nodes.maximums.df.columns
             elif domain_2.lower() == 'channel':
                 if self.channels:
                     result_types = [self.channels.conv_result_type_name(x) for x in result_types]
-                    result_types = [self.channels.result_type_to_max(x) for x in result_types]
+                    result_types = sum([[self.channels.result_type_to_max(x), self.channels.result_type_to_tmax(x)] for x in result_types], [])
                     a = self.channels.maximums.df.columns
             elif domain_2.lower() == 'po':
                 if self.po:
                     result_types = [self.po.conv_result_type_name(x) for x in result_types]
-                    result_types = [self.po.result_type_to_max(x) for x in result_types]
+                    result_types = sum([[self.po.result_type_to_max(x), self.po.result_type_to_tmax(x)] for x in result_types], [])
                     a = self.po.maximums.df.columns
             elif domain_2.lower() == 'rl':
                 if self.rl:
                     result_types = [self.rl.conv_result_type_name(x) for x in result_types]
-                    result_types = [self.rl.result_type_to_max(x) for x in result_types]
+                    result_types = sum([[self.rl.result_type_to_max(x), self.rl.result_type_to_tmax(x)] for x in result_types], [])
                     a = self.rl.maximums.df.columns
         result_types_ = []
         for rt in result_types:
@@ -175,12 +175,16 @@ class Iterator:
             ids_ = self.correct_id(ids, cls.df)
         if result_types and cls is not None:
             result_types_ = self.correct_result_type(result_types, domain_2, type_)
+            if type_.lower() == 'max':
+                result_types = sum([[x, x] for x in result_types], [])
         if not ids and cls is not None:
             ids_ = cls.ids(result_types_)
             ids = ids_
         if not result_types and cls is not None:
             result_types_ = cls.result_types(ids_)
-            result_types = result_types_
+            result_types = sum([[x, x] for x in result_types_], [])
+            if type_.lower() == 'max':
+                result_types_ = sum([[cls.result_type_to_max(x), cls.result_type_to_tmax(x)] for x in result_types_], [])
         if cls is None:
             if ids:
                 ids_ = [None for _ in ids]

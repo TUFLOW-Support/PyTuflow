@@ -135,6 +135,7 @@ class TimeSeriesResult:
             result_type: Union[str, list[str]],
             domain: str = None
     ) -> pd.DataFrame:
+        """Extract time series data for the given id(s) and result type(s)."""
         df = pd.DataFrame()
         x = []
         dropped_index = False
@@ -158,6 +159,23 @@ class TimeSeriesResult:
                     df = pd.concat([df, df_], axis=1)
         return df
 
+    def maximum(self,
+            id: Union[str, list[str]],
+            result_type: Union[str, list[str]],
+            domain: str = None
+    ) -> pd.DataFrame:
+        """Extract maximum data for the given id(s) and result type(s)."""
+        df = pd.DataFrame()
+        iter = Iterator(self.channels, self.nodes, self.po, self.rl)
+        for item in iter.ids_result_types_domain(id, result_type, domain, 'max'):
+            df_ = item.result_item.get_maximum(item.ids, item.result_types)
+            df_.rename(columns={x: f'{item.result_item_name}::{x}' for x in df_.columns}, inplace=True)
+            if df.empty:
+                df = df_
+            else:
+                df = pd.concat([df, df_], axis=1)
+        return df
+
     def long_plot(self, ids: Union[str, list[str]], result_type: Union[str, list[str]], time: float) -> pd.DataFrame:
         if not isinstance(ids, list):
             ids = [ids] if ids is not None else []
@@ -178,7 +196,7 @@ class TimeSeriesResult:
 
         return self.lp_1d.long_plot(result_type, timestep_index)
 
-    def maximum(self, id: Union[str, list[str]], result_type: Union[str, list[str]], domain: str = None) -> pd.DataFrame:
+    def maximum_(self, id: Union[str, list[str]], result_type: Union[str, list[str]], domain: str = None) -> pd.DataFrame:
         if not isinstance(id, list):
             id = [id] if id is not None else []
 

@@ -44,6 +44,9 @@ class TimeSeriesResultItem:
                     df = pd.concat([df, df_], axis=1)
         return df
 
+    def get_maximum(self, id: list[str], result_type: list[str]) -> pd.DataFrame:
+        return self.maximums.df.loc[id, result_type]
+
     def val(self, result_type: str, ids: list[str], timestep_index: int) -> pd.DataFrame:
         result_type_ = self.conv_result_type_name(result_type)
         if result_type_ in self.time_series:
@@ -51,14 +54,6 @@ class TimeSeriesResultItem:
             return self.time_series[result_type].df[ids].iloc[timestep_index].to_frame().rename(
                 columns={time: result_type})
         return pd.DataFrame([], columns=result_type)
-
-    def get_maximum(self, id: str, result_type: str) -> pd.DataFrame:
-        result_type = self.conv_result_type_name(result_type)
-        columns = [f'{result_type} Max', f'{result_type} TMax']
-        if columns[0].lower() in [x.lower() for x in self.maximums.df.columns]:
-            columns = [self.maximums.df.columns[[x.lower() for x in self.maximums.df.columns].index(y.lower())] for y in columns]
-            return self.maximums.df.loc[[id],columns]
-        return pd.DataFrame([], columns=columns)
 
     @staticmethod
     def conv_result_type_name(result_type: str) -> str:
