@@ -286,3 +286,9 @@ class Test_GPKG_TS_2023(TestCase):
         res = GPKG_TS(p)
         df = res.nodes.maximums.df
         self.assertEqual((22, 14), df.shape)
+
+    def test_maximums_2(self):
+        p = './2023/M06_5m_003_SWMM_swmm_ts.gpkg'
+        res = GPKG_TS(p)
+        df = res.maximum('pipe1', 'q')
+        self.assertEqual((18, 15), df.shape)

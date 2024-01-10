@@ -49,6 +49,14 @@ class TimeSeriesResultItem:
                 columns={time: result_type})
         return pd.DataFrame([], columns=result_type)
 
+    def get_maximum(self, id: str, result_type: str) -> pd.DataFrame:
+        result_type = self.conv_result_type_name(result_type)
+        columns = [f'{result_type} Max', f'{result_type} TMax']
+        if columns[0].lower() in [x.lower() for x in self.maximums.df.columns]:
+            columns = [self.maximums.df.columns[[x.lower() for x in self.maximums.df.columns].index(y.lower())] for y in columns]
+            return self.maximums.df.loc[[id],columns]
+        return pd.DataFrame([], columns=columns)
+
     @staticmethod
     def conv_result_type_name(result_type: str) -> str:
         raise NotImplementedError

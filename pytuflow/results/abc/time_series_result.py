@@ -206,6 +206,51 @@ class TimeSeriesResult:
 
         return self.lp_1d.long_plot(result_type, timestep_index)
 
+    def maximum(self, id: Union[str, list[str]], result_type: Union[str, list[str]], domain: str = None) -> pd.DataFrame:
+        if not isinstance(id, list):
+            id = [id] if id is not None else []
+
+        if not isinstance(result_type, list):
+            result_type = [result_type] if result_type is not None else []
+
+        id, result_type = self._req_id_and_result_type(id, result_type, domain)
+
+        data = OrderedDict({})
+        order = ['channel', 'node', 'po', 'rl']  # order of the returned dataframes below
+        x, data = [], OrderedDict({'ID': id})
+        for rt in result_type:
+            for id_ in id:
+                df1, df2, df3, df4 = None, None, None, None
+                if domain is None or domain.lower() == '1d':
+                    if id_.lower() in [x.lower() for x in self.channel_ids(rt)]:
+                        id_ = self.channel_ids(rt)[[x.lower() for x in self.channel_ids(rt)].index(id_.lower())]
+                        df1 = self.channels.get_maximum(id_, rt)
+                    if id_ in self.node_ids(rt):
+                        df2 = self.nodes.get_maximum(id_, rt)
+                if domain is None or domain.lower() == '2d':
+                    if id_ in self.po_ids(rt):
+                        df3 = self.po.get_maximum(id_, rt)
+                if domain is None or domain.lower() == 'rl':
+                    if id_ in self.rl_ids(rt):
+                        df4 = self.rl.get_maximum(id_, rt)
+
+                c = [0 if x is None or x.empty else 1 for x in [df1, df2, df3, df4]].count(1)
+                for i, df in enumerate([df1, df2, df3, df4]):
+                    if df is None or df.empty:
+                        continue
+                    if c == 1:
+                        h1 = f'{rt}_Max'
+                        h2 = f'{rt}_TMax'
+                    else:
+                        h1 = f'{order[i]}::{rt}_Max'
+                        h2 = f'{order[i]}::{rt}_TMax'
+                    data[h1] = df.iloc[0,0]
+                    data[h2] = df.iloc[0,1]
+
+        df = pd.DataFrame(data)
+        df.set_index('ID', inplace=True)
+        return df
+
     def connectivity(self, ids: Union[str, list[str]]) -> pd.DataFrame:
         if not isinstance(ids, list):
             ids = [ids] if ids is not None else []
