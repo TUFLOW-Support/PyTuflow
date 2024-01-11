@@ -87,7 +87,7 @@ class Iterator:
             if len(a) == 2:
                 domain, domain_2 = a
 
-        if domain is None or domain.lower() == '1d':
+        if not domain or domain.lower() == '1d':
             if domain_2 is None or domain_2.lower() == 'node':
                 corr_items = self.get_nodes(ids, result_types, type_)
                 item = IDResultTypeItem('Node', corr_items, True)
@@ -98,12 +98,12 @@ class Iterator:
                 item = IDResultTypeItem('Channel', corr_items, True)
                 if item.valid:
                     yield item
-        if domain is None or domain.lower() == '2d':
+        if not domain or domain.lower() == '2d':
             corr_items = self.get_po(ids, result_types, type_)
             item = IDResultTypeItem('PO', corr_items, True)
             if item.valid:
                 yield item
-        if domain is None or domain.lower() == '0d':
+        if not domain or domain.lower() == '0d':
             corr_items = self.get_rl(ids, result_types, type_)
             item = IDResultTypeItem('RL', corr_items, True)
             if item.valid:

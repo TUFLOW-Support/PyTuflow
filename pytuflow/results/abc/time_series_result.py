@@ -48,10 +48,10 @@ class TimeSeriesResult:
             return self.rl.count()
         return 0
 
-    def ids(self, result_type: str = '') -> list[str]:
+    def ids(self, result_type: str = '', domain: str = '') -> list[str]:
         iter = Iterator(self.channels, self.nodes, self.po, self.rl)
         ids = []
-        for item in iter.ids_result_types_domain([], result_type, None, 'temporal'):
+        for item in iter.ids_result_types_domain([], result_type, domain, 'temporal'):
             for id_ in item.ids:
                 if id_ not in ids:
                     ids.append(id_)
@@ -59,22 +59,22 @@ class TimeSeriesResult:
 
     def channel_ids(self, result_type: str = '') -> list[str]:
         if self.channels:
-            return self.channels.ids(result_type)
+            return self.ids(result_type, '1d channel')
         return []
 
     def node_ids(self, result_type: str = '') -> list[str]:
         if self.nodes:
-            return self.nodes.ids(result_type)
+            return self.ids(result_type, '1d node')
         return []
 
     def po_ids(self, result_type: str = '') -> list[str]:
         if self.po:
-            return self.po.ids(result_type)
+            return self.ids(result_type, '2d')
         return []
 
     def rl_ids(self, result_type: str = '') -> list[str]:
         if self.rl:
-            return self.rl.ids(result_type)
+            return self.ids(result_type, '0d')
         return []
 
     def result_types(self, id: Union[str, list[str]] = '') -> list[str]:
@@ -205,114 +205,6 @@ class TimeSeriesResult:
         lp.connectivity()
         self.lp_1d = lp
         return lp.df
-
-    def _req_id_and_result_type(self,
-            id: list[str],
-            result_type: list[str],
-            domain: Union[str, None]
-    ) -> tuple[list[str], list[str]]:
-        if not id:
-            ids = self._req_id(result_type, domain)
-        else:
-            ids = id
-        if not result_type:
-            result_types = self._req_result_type(ids, domain)
-        else:
-            result_types = result_type
-        return ids, result_types
-
-    def _req_id(self, result_type: list[str], domain: Union[str, None]) -> list[str]:
-        if domain is None and not result_type:
-            return self.ids()
-        elif domain is None:
-            ids = []
-            for rt in result_type:
-                for id_ in self.ids(rt):
-                    if id_ not in ids:
-                        ids.append(id_)
-            return ids
-        elif domain.lower() == '1d' and not result_type:
-            return self.channel_ids() + self.node_ids()
-        elif domain.lower() == '1d':
-            ids = []
-            for rt in result_type:
-                ids.extend(self.channel_ids(rt))
-            for rt in result_type:
-                ids.extend(self.node_ids(rt))
-            return ids
-        elif domain.lower() == '2d' and not result_type:
-            return self.po_ids()
-        elif domain.lower() == '2d':
-            ids = []
-            for rt in result_type:
-                for id_ in self.po_ids(rt):
-                    if id_ not in ids:
-                        ids.append(id_)
-            return ids
-        elif domain.lower() == '0d' and not result_type:
-            return self.rl_ids()
-        elif domain.lower() == '0d':
-            ids = []
-            for rt in result_type:
-                for id_ in self.rl_ids(rt):
-                    if id_ not in ids:
-                        ids.append(id_)
-            return ids
-        else:
-            raise ValueError(f'Invalid domain: {domain}')
-
-    def _req_result_type(self, id: list[str], domain: Union[str, None]) -> list[str]:
-        if domain is None and not id:
-            return self.result_types()
-        elif domain is None:
-            result_types = []
-            for id_ in id:
-                for rt in self.result_types(id_):
-                    if rt not in result_types:
-                        result_types.append(rt)
-            return result_types
-        elif domain.lower() == '1d' and not id:
-            result_types = []
-            flag = re.sub(r'\dd', '', domain, flags=re.IGNORECASE).lower().strip()
-            if 'channel' in flag or not flag:
-                result_types.extend(self.channel_result_types())
-            if 'node' in flag or not flag:
-                result_types.extend(self.node_result_types())
-            return self.channel_result_types() + self.node_result_types()
-        elif domain.lower() == '1d':
-            result_types = []
-            flag = re.sub(r'\dd', '', domain, flags=re.IGNORECASE).lower().strip()
-            if 'channel' in flag or not flag:
-                for id_ in id:
-                    for rt in self.channel_result_types(id_):
-                        if rt not in result_types:
-                            result_types.append(rt)
-            if 'node' in flag or not flag:
-                for id_ in id:
-                    for rt in self.node_result_types(id_):
-                        if rt not in result_types:
-                            result_types.append(rt)
-            return result_types
-        elif domain.lower() == '2d' and not id:
-            return self.po_result_types()
-        elif domain.lower() == '2d':
-            result_types = []
-            for id_ in id:
-                for rt in self.po_result_types(id_):
-                    if rt not in result_types:
-                        result_types.append(rt)
-            return result_types
-        elif domain.lower() == '0d' and not id:
-            return self.rl_result_types()
-        elif domain.lower() == '0d':
-            result_types = []
-            for id_ in id:
-                for rt in self.rl_result_types(id_):
-                    if rt not in result_types:
-                        result_types.append(rt)
-            return result_types
-        else:
-            raise ValueError(f'Invalid domain: {domain}')
 
     def _timesteps(self, domain: str, dtype: str) -> list[Union[float, datetime]]:
         if domain.lower() == '1d':

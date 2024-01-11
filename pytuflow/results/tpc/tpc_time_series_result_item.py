@@ -32,8 +32,6 @@ class TPCResultItem(TimeSeriesResultItem):
         return self.df.shape[0]
 
     def ids(self, result_type: Union[str, None]) -> list[str]:
-        if result_type is not None:
-            result_type = RESULT_SHORT_NAME.get(result_type.lower(), result_type)
         if self.df is None:
             return []
         if not result_type:

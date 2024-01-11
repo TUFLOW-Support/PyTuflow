@@ -234,7 +234,7 @@ class Test_GPKG_TS_2023(TestCase):
     def test_ids(self):
         p = './2023/M06_5m_003_SWMM_swmm_ts.gpkg'
         res = GPKG_TS(p)
-        self.assertEqual(len(res.ids('flow')), 40)
+        self.assertEqual(40, len(res.ids('flow')))
 
     def test_timesteps(self):
         p = './2023/M06_5m_003_SWMM_swmm_ts.gpkg'

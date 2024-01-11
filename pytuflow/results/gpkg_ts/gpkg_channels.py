@@ -10,8 +10,8 @@ from ..abc.channels import Channels
 
 RESULT_SHORT_NAME = {'h': 'water level', 'q': 'flow', 'v': 'velocity', 'e': 'energy', 'vol': 'channel volume',
                      'channel vol': 'channel volume', 'chan vol': 'channel volume',
-                     'qa': 'flow area', 'd': 'channel depth', 'flow': 'total inflow',
-                     'total q': 'total inflow', 'total flow': 'total inflow'}
+                     'qa': 'flow area', 'd': 'channel depth',
+                     'total q': 'total flow'}
 
 
 class GPKGChannels(GPKGResultItem, Channels):

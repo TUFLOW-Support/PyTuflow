@@ -21,6 +21,8 @@ from ..time_util import default_reference_time, nc_time_series_reference_time
 
 
 NAME_MAP = {'velocities': 'Velocity', 'energy levels': 'Energy'}
+NC_MAP = {'1d channel losses': '1d losses', '1d node regime': None, '1d channel regime': '1d flow regime',
+          '1d mass balance errors': '1d mass balance error'}
 
 
 class TPC(TimeSeriesResult):
@@ -103,7 +105,7 @@ class TPC(TimeSeriesResult):
         return channels
 
     def _1d_name_extract(self, name: str) -> str:
-        return name.replace('1D ', '')
+        return name.replace('1D ', '').replace('1d', '')
 
     def _1d_result_name(self, name: str) -> str:
         name = self._1d_name_extract(name)
@@ -114,7 +116,7 @@ class TPC(TimeSeriesResult):
         return name
 
     def _2d_name_extract(self, name: str) -> str:
-        name = name.replace('2D ', '')
+        name = name.replace('2D ', '').replace('2d ', '')
         name = re.sub(r'(point|line|region)', '', name, flags=re.IGNORECASE)
         name = re.sub(r'\[\d+]', '', name).strip()
         return name
@@ -138,6 +140,17 @@ class TPC(TimeSeriesResult):
             name = name[:-1]
         return name
 
+    def _nc_id(self, name: str, domain: str) -> str:
+        name = NC_MAP.get(name.lower(), name.lower())
+        if name is None:
+            return None
+        if domain.lower() == '1d':
+            return f'{"_".join(self._1d_name_extract(name).split(" ")[1:]).lower()}_{domain.lower()}'
+        elif domain.lower() == '2d':
+            return f'{"_".join(self._2d_name_extract(name).split(" ")[1:]).lower()}_{domain.lower()}'
+        elif domain.lower() == '0d':
+            return f'{"_".join(self._rl_name_extract(name).split(" ")).lower()}_rl'
+
     def _load_1d_results(self) -> None:
         node_count = int(self._get_property('Number 1D Nodes'))
         if node_count > 0:
@@ -155,7 +168,9 @@ class TPC(TimeSeriesResult):
                 _, name_, relpath = row
                 if relpath == 'NONE':
                     continue
-                id = f'{"_".join(self._1d_name_extract(name_).split(" ")).lower()}_1d'  # netcdf timeseries variable name
+                id = self._nc_id(name_, '1d')
+                if id is None:
+                    continue
                 name = self._1d_result_name(name_)
                 fpath = self.fpath.parent / relpath
                 self.nodes.load_time_series(name, fpath, self.reference_time, 1, id)
@@ -176,7 +191,9 @@ class TPC(TimeSeriesResult):
                 _, name_, relpath = row
                 if relpath == 'NONE':
                     continue
-                id = f'{"_".join(self._1d_name_extract(name_).split(" ")).lower()}_1d'  # netcdf timeseries variable name
+                id = self._nc_id(name_, '1d')
+                if id is None:
+                    continue
                 name = self._1d_result_name(name_)
                 fpath = self.fpath.parent / relpath
                 self.channels.load_time_series(name, fpath, self.reference_time, 1, id)
@@ -190,7 +207,9 @@ class TPC(TimeSeriesResult):
             _, name_, relpath = row
             if relpath == 'NONE':
                 continue
-            id = f'{"_".join(self._2d_name_extract(name_).split(" ")).lower()}_2d'  # netcdf timeseries variable name
+            id = self._nc_id(name_, '2d')
+            if id is None:
+                continue
             name = self._2d_result_name(name_)
             fpath = self.fpath.parent / relpath
             self.po.load_time_series(name, fpath, self.reference_time, 1, id)
@@ -212,7 +231,9 @@ class TPC(TimeSeriesResult):
                 _, name_, relpath = row
                 if relpath == 'NONE':
                     continue
-                id = f'{"_".join(self._rl_name_extract(name_).split(" ")).lower()}_rl'  # netcdf timeseries variable name
+                id = self._nc_id(name_, '0d')
+                if id is None:
+                    continue
                 name = self._rl_result_name(name_)
                 fpath = self.fpath.parent / relpath
                 if name.lower() == 'maximum':
@@ -238,7 +259,9 @@ class TPC(TimeSeriesResult):
                 _, name_, relpath = row
                 if relpath == 'NONE':
                     continue
-                id = f'{"_".join(self._rl_name_extract(name_).split(" ")).lower()}_rl'  # netcdf timeseries variable name
+                id = self._nc_id(name_, '0d')
+                if id is None:
+                    continue
                 name = self._rl_result_name(name_)
                 fpath = self.fpath.parent / relpath
                 if name.lower() == 'maximum':
@@ -264,7 +287,9 @@ class TPC(TimeSeriesResult):
                 _, name_, relpath = row
                 if relpath == 'NONE':
                     continue
-                id = f'{"_".join(self._rl_name_extract(name_).split(" ")).lower()}_rl'  # netcdf timeseries variable name
+                id = self._nc_id(name_, '0d')
+                if id is None:
+                    continue
                 name = self._rl_result_name(name_)
                 fpath = self.fpath.parent / relpath
                 if name.lower() == 'maximum':
