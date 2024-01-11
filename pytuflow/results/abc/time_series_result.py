@@ -1,5 +1,4 @@
 import re
-from collections import OrderedDict
 from datetime import datetime
 from pathlib import Path
 from typing import Union
@@ -9,7 +8,7 @@ import pandas as pd
 
 from ..lp_1d import LP_1D
 from ..time_util import closest_time_index
-from ..abc.iterator import Iterator
+from pytuflow.results.iterator_util import Iterator
 
 
 class TimeSeriesResult:

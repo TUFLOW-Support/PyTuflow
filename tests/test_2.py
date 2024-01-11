@@ -3,7 +3,7 @@ from unittest import TestCase
 
 from pytuflow.results.tpc.tpc import TPC
 from pytuflow.results.gpkg_ts.gpkg_ts import GPKG_TS
-from pytuflow.results.abc.iterator import Iterator
+from pytuflow.results.iterator_util import Iterator
 
 
 class Test_TPC_2016(TestCase):

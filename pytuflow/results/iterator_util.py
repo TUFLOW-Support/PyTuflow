@@ -3,9 +3,9 @@ from dataclasses import dataclass, field
 
 import pandas as pd
 
-from .channels import Channels
-from .nodes import Nodes
-from .time_series_result_item import TimeSeriesResultItem
+from .abc.channels import Channels
+from .abc.nodes import Nodes
+from .abc.time_series_result_item import TimeSeriesResultItem
 
 
 @dataclass
@@ -53,17 +53,6 @@ class IDResultTypeItem:
 
 
 class Iterator:
-
-    def __new__(cls, channels: Channels, nodes: Nodes, po: TimeSeriesResultItem, rl: TimeSeriesResultItem):
-        from ..tpc.tpc_channels import TPCChannels
-        from ..gpkg_ts.gpkg_channels import GPKGChannels
-        if isinstance(channels, TPCChannels):
-            from ..tpc.tpc_iterator import TPCIterator
-            cls = TPCIterator
-        elif isinstance(channels, GPKGChannels):
-            from ..gpkg_ts.gpkg_iterator import GPKGIterator
-            cls = GPKGIterator
-        return super().__new__(cls)
 
     def __init__(self, channels: Channels, nodes: Nodes, po: TimeSeriesResultItem, rl: TimeSeriesResultItem):
         self.channels = channels
@@ -122,7 +111,7 @@ class Iterator:
             ids: Union[str, list[str]],
             result_types: Union[str, list[str]]
     ) -> Generator[IDResultTypeItem, None, None]:
-        from ..lp_1d import LP_1D
+        from .lp_1d import LP_1D
 
         if not isinstance(ids, list):
             ids = [ids] if ids is not None else []
