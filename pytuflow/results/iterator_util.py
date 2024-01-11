@@ -77,9 +77,9 @@ class Iterator:
         (i.e. correct case, result type short name converted to full name etc.)
         """
         if not isinstance(ids, list):
-            ids = [ids] if ids is not None else []
+            ids = [ids] if ids else []
         if not isinstance(result_types, list):
-            result_types = [result_types] if result_types is not None else []
+            result_types = [result_types] if result_types else []
 
         domain_2 = None
         if domain is not None:
@@ -139,7 +139,7 @@ class Iterator:
                 result_types_.append(corr_item.result_type)
         # deal with max
         max_result_types = [re.sub(r'max(imum)?', '', x, flags=re.IGNORECASE).strip() for x in result_types if 'max' in x.lower()]
-        if max_result_types or not result_types:
+        if max_result_types:
             for corr_item in self.get_nodes([], max_result_types, 'max'):
                 if corr_item.result_type is not None and corr_item.result_type not in result_types_:
                     result_types_.append(corr_item.result_type)
@@ -237,10 +237,21 @@ class Iterator:
             if type_.lower() == 'max':
                 result_types = sum([[x, x] for x in result_types], [])
         if not ids and cls is not None:
-            ids_ = cls.ids(result_types_)
+            ids_ = []
+            if result_types_:
+                for rt in result_types_:
+                    for id_ in cls.ids(rt):
+                        if id_ not in ids_:
+                            ids_.append(id_)
+            else:
+                ids_ = cls.ids(None)
             ids = ids_
         if not result_types and cls is not None:
-            result_types_ = cls.result_types(ids_)
+            result_types_ = []
+            for id_ in ids_:
+                for rt in cls.result_types(id_):
+                    if rt not in result_types_:
+                        result_types_.append(rt)
             result_types = sum([[x, x] for x in result_types_], [])
             if type_.lower() == 'max':
                 result_types_ = sum([[cls.result_type_to_max(x), cls.result_type_to_tmax(x)] for x in result_types_], [])

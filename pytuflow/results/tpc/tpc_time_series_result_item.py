@@ -33,13 +33,13 @@ class TPCResultItem(TimeSeriesResultItem):
 
     def ids(self, result_type: Union[str, None]) -> list[str]:
         if result_type is not None:
-            result_type = RESULT_SHORT_NAME.get(result_type.lower(), result_type.lower())
+            result_type = RESULT_SHORT_NAME.get(result_type.lower(), result_type)
         if self.df is None:
             return []
         if not result_type:
             return self.df.index.tolist()
-        if result_type.lower() in self.time_series:
-            return self.time_series[result_type.lower()].df.columns.tolist()
+        if result_type in self.time_series:
+            return self.time_series[result_type].df.columns.tolist()
         return []
 
     def result_types(self, id: Union[str, None]) -> list[str]:
@@ -49,7 +49,7 @@ class TPCResultItem(TimeSeriesResultItem):
             return list(self.time_series.keys())
         result_types = []
         for result_type, ts in self.time_series.items():
-            if result_type not in result_types and id in [x.lower() for x in ts.df.columns]:
+            if result_type not in result_types and id in [x for x in ts.df.columns]:
                 result_types.append(result_type)
         return result_types
 

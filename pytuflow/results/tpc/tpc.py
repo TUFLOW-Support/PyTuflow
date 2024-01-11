@@ -20,7 +20,7 @@ from .tpc_rl import TPCRL
 from ..time_util import default_reference_time, nc_time_series_reference_time
 
 
-NAME_MAP = {'velocities': 'velocity', 'energy levels': 'energy'}
+NAME_MAP = {'velocities': 'Velocity', 'energy levels': 'Energy'}
 
 
 class TPC(TimeSeriesResult):
@@ -103,37 +103,37 @@ class TPC(TimeSeriesResult):
         return channels
 
     def _1d_name_extract(self, name: str) -> str:
-        return name.replace('1D ', '').lower()
+        return name.replace('1D ', '')
 
     def _1d_result_name(self, name: str) -> str:
         name = self._1d_name_extract(name)
-        if name in NAME_MAP:
-            name = NAME_MAP[name]
+        if name.lower() in NAME_MAP:
+            name = NAME_MAP[name.lower()]
         if name[-1] == 's':
             name = name[:-1]
         return name
 
     def _2d_name_extract(self, name: str) -> str:
-        name = name.replace('2D ', '').lower()
-        name = re.sub(r'(point|line|region)', '', name)
+        name = name.replace('2D ', '')
+        name = re.sub(r'(point|line|region)', '', name, flags=re.IGNORECASE)
         name = re.sub(r'\[\d+]', '', name).strip()
         return name
 
     def _2d_result_name(self, name: str) -> str:
         name = self._2d_name_extract(name)
-        if name in NAME_MAP:
-            name = NAME_MAP[name]
+        if name.lower() in NAME_MAP:
+            name = NAME_MAP[name.lower()]
         if name[-1] == 's':
             name = name[:-1]
         return name
 
     def _rl_name_extract(self, name: str) -> str:
-        return re.sub(r'Reporting Location (Points|Lines|Regions)', '', name).strip().lower()
+        return re.sub(r'Reporting Location (Points|Lines|Regions)', '', name, flags=re.IGNORECASE).strip()
 
     def _rl_result_name(self, name: str) -> str:
         name = self._rl_name_extract(name)
-        if name in NAME_MAP:
-            name = NAME_MAP[name]
+        if name.lower() in NAME_MAP:
+            name = NAME_MAP[name.lower()]
         if name[-1] == 's':
             name = name[:-1]
         return name
@@ -155,7 +155,7 @@ class TPC(TimeSeriesResult):
                 _, name_, relpath = row
                 if relpath == 'NONE':
                     continue
-                id = f'{"_".join(self._1d_name_extract(name_).split(" "))}_1d'  # netcdf timeseries variable name
+                id = f'{"_".join(self._1d_name_extract(name_).split(" ")).lower()}_1d'  # netcdf timeseries variable name
                 name = self._1d_result_name(name_)
                 fpath = self.fpath.parent / relpath
                 self.nodes.load_time_series(name, fpath, self.reference_time, 1, id)
@@ -176,7 +176,7 @@ class TPC(TimeSeriesResult):
                 _, name_, relpath = row
                 if relpath == 'NONE':
                     continue
-                id = f'{"_".join(self._1d_name_extract(name_).split(" "))}_1d'  # netcdf timeseries variable name
+                id = f'{"_".join(self._1d_name_extract(name_).split(" ")).lower()}_1d'  # netcdf timeseries variable name
                 name = self._1d_result_name(name_)
                 fpath = self.fpath.parent / relpath
                 self.channels.load_time_series(name, fpath, self.reference_time, 1, id)
@@ -190,7 +190,7 @@ class TPC(TimeSeriesResult):
             _, name_, relpath = row
             if relpath == 'NONE':
                 continue
-            id = f'{"_".join(self._2d_name_extract(name_).split(" "))}_2d'  # netcdf timeseries variable name
+            id = f'{"_".join(self._2d_name_extract(name_).split(" ")).lower()}_2d'  # netcdf timeseries variable name
             name = self._2d_result_name(name_)
             fpath = self.fpath.parent / relpath
             self.po.load_time_series(name, fpath, self.reference_time, 1, id)
@@ -212,10 +212,10 @@ class TPC(TimeSeriesResult):
                 _, name_, relpath = row
                 if relpath == 'NONE':
                     continue
-                id = f'{"_".join(self._rl_name_extract(name_).split(" "))}_rl'  # netcdf timeseries variable name
+                id = f'{"_".join(self._rl_name_extract(name_).split(" ")).lower()}_rl'  # netcdf timeseries variable name
                 name = self._rl_result_name(name_)
                 fpath = self.fpath.parent / relpath
-                if name == 'maximum':
+                if name.lower() == 'maximum':
                     if not self.rl.maximums:
                         self.rl.maximums = TPCMaximums(fpath)
                     else:
@@ -238,10 +238,10 @@ class TPC(TimeSeriesResult):
                 _, name_, relpath = row
                 if relpath == 'NONE':
                     continue
-                id = f'{"_".join(self._rl_name_extract(name_).split(" "))}_rl'  # netcdf timeseries variable name
+                id = f'{"_".join(self._rl_name_extract(name_).split(" ")).lower()}_rl'  # netcdf timeseries variable name
                 name = self._rl_result_name(name_)
                 fpath = self.fpath.parent / relpath
-                if name == 'maximum':
+                if name.lower() == 'maximum':
                     if not self.rl.maximums:
                         self.rl.maximums = TPCMaximums(fpath)
                     else:
@@ -264,10 +264,10 @@ class TPC(TimeSeriesResult):
                 _, name_, relpath = row
                 if relpath == 'NONE':
                     continue
-                id = f'{"_".join(self._rl_name_extract(name_).split(" "))}_rl'  # netcdf timeseries variable name
+                id = f'{"_".join(self._rl_name_extract(name_).split(" ")).lower()}_rl'  # netcdf timeseries variable name
                 name = self._rl_result_name(name_)
                 fpath = self.fpath.parent / relpath
-                if name == 'maximum':
+                if name.lower() == 'maximum':
                     if not self.rl.maximums:
                         self.rl.maximums = TPCMaximums(fpath)
                     else:

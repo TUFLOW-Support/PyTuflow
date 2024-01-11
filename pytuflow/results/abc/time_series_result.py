@@ -49,16 +49,12 @@ class TimeSeriesResult:
         return 0
 
     def ids(self, result_type: str = '') -> list[str]:
-        ids = self.channel_ids(result_type)
-        for id in self.node_ids(result_type):
-            if id not in ids:
-                ids.append(id)
-        for id in self.po_ids(result_type):
-            if id not in ids:
-                ids.append(id)
-        for id in self.rl_ids(result_type):
-            if id not in ids:
-                ids.append(id)
+        iter = Iterator(self.channels, self.nodes, self.po, self.rl)
+        ids = []
+        for item in iter.ids_result_types_domain([], result_type, None, 'temporal'):
+            for id_ in item.ids:
+                if id_ not in ids:
+                    ids.append(id_)
         return ids
 
     def channel_ids(self, result_type: str = '') -> list[str]:
@@ -81,17 +77,13 @@ class TimeSeriesResult:
             return self.rl.ids(result_type)
         return []
 
-    def result_types(self, id: str = '') -> list[str]:
-        result_types = self.channel_result_types(id)
-        for result_type in self.node_result_types(id):
-            if result_type not in result_types:
-                result_types.append(result_type)
-        for result_type in self.po_result_types(id):
-            if result_type not in result_types:
-                result_types.append(result_type)
-        for result_type in self.rl_result_types(id):
-            if result_type not in result_types:
-                result_types.append(result_type)
+    def result_types(self, id: Union[str, list[str]] = '') -> list[str]:
+        iter = Iterator(self.channels, self.nodes, self.po, self.rl)
+        result_types = []
+        for item in iter.ids_result_types_domain(id, [], None, 'temporal'):
+            for rt in item.result_types:
+                if rt not in result_types:
+                    result_types.append(rt)
         return result_types
 
     def channel_result_types(self, id: str = '') -> list[str]:
@@ -155,7 +147,10 @@ class TimeSeriesResult:
                 if dropped_index:
                     df = pd.concat([df, df_.reset_index(drop=True)], axis=1)
                 else:
-                    df = pd.concat([df, df_], axis=1)
+                    # join on integer index as when time column is read from different CSV files, time index maybe don't match exactly
+                    index_name = df.index.name
+                    df = pd.concat([df.reset_index(), df_.reset_index(drop=True)], axis=1)
+                    df.set_index(index_name, inplace=True)
         return df
 
     def maximum(self,

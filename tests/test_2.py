@@ -86,6 +86,11 @@ class Test_TPC_2016(TestCase):
         res = TPC(p)
         self.assertEqual(len(res.ids('flow')), 55)
 
+    def test_ids2(self):
+        p = './2016/M04_5m_001.tpc'
+        res = TPC(p)
+        self.assertEqual(len(res.ids()), 113)
+
     def test_maximums(self):
         p = './2016/M04_5m_001.tpc'
         res = TPC(p)
@@ -96,40 +101,19 @@ class Test_TPC_2016(TestCase):
         p = './2016/M04_5m_001.tpc'
         res = TPC(p)
         ts = res.time_series('test', 'flow')
-        self.assertEqual((181, 3), ts.shape)
-        ts = res.time_series('ds1', 'flow')
         self.assertEqual((181, 2), ts.shape)
+        ts = res.time_series('ds1', 'flow')
+        self.assertEqual((181, 1), ts.shape)
         ts = res.time_series(['ds1', 'ds2'], 'flow')
-        self.assertEqual((181, 3), ts.shape)
+        self.assertEqual((181, 2), ts.shape)
         ts = res.time_series('ds1', ['flow', 'velocity'])
-        self.assertEqual((181, 3), ts.shape)
+        self.assertEqual((181, 2), ts.shape)
 
     def test_time_series_2(self):
         p = './2016/M04_5m_001.tpc'
         res = TPC(p)
         ts = res.time_series('ds1', 'Q')
-        self.assertEqual((181, 2), ts.shape)
-
-    def test_req_id_result_types(self):
-        p = './2016/M04_5m_001.tpc'
-        res = TPC(p)
-        ids, result_types = res._req_id_and_result_type([], ['flow'], None)
-        self.assertEqual(55, len(ids))
-        ids, result_types = res._req_id_and_result_type([], ['flow'], '1d')
-        self.assertEqual(54, len(ids))
-        ids, result_types = res._req_id_and_result_type([], ['flow'], '2d')
-        self.assertEqual(1, len(ids))
-        ids, result_types = res._req_id_and_result_type([], ['flow'], '0d')
-        self.assertEqual(1, len(ids))
-
-        ids, result_types = res._req_id_and_result_type(['test'], [], None)
-        self.assertEqual(1, len(result_types))
-        ids, result_types = res._req_id_and_result_type(['ds1'], [], '1d')
-        self.assertEqual(3, len(result_types))
-        ids, result_types = res._req_id_and_result_type(['test', 'test_2'], [], '2d')
-        self.assertEqual(3, len(result_types))
-        ids, result_types = res._req_id_and_result_type(['test_2'], [], '0d')
-        self.assertEqual(1, len(result_types))
+        self.assertEqual((181, 1), ts.shape)
 
     def test_connectivity(self):
         p = './2016/M04_5m_001.tpc'
@@ -156,14 +140,14 @@ class Test_TPC_2019(TestCase):
         res = TPC(p)
         self.assertEqual('M03_5m_001', res.sim_id)
         self.assertEqual(datetime(2000, 1, 1), res.reference_time)
-        df = res.nodes.time_series['water level'].df
-        df = res.nodes.time_series['energy'].df
-        df = res.channels.time_series['flow'].df
-        df = res.channels.time_series['velocity'].df
-        df = res.channels.time_series['flow area'].df
-        df = res.rl.time_series['flow'].df
-        df = res.rl.time_series['water level'].df
-        df = res.rl.time_series['volume'].df
+        df = res.nodes.time_series['Water Level'].df
+        df = res.nodes.time_series['Energy'].df
+        df = res.channels.time_series['Flow'].df
+        df = res.channels.time_series['Velocity'].df
+        df = res.channels.time_series['Flow Area'].df
+        df = res.rl.time_series['Flow'].df
+        df = res.rl.time_series['Water Level'].df
+        df = res.rl.time_series['Volume'].df
 
     def test_channel_count(self):
         p = './2019/M03_5m_001.tpc'
@@ -199,9 +183,9 @@ class Test_TPC_2019(TestCase):
         p = './2019/M03_5m_001.tpc'
         res = TPC(p)
         ts = res.time_series('FC01.1_R', 'flow')
-        self.assertEqual((91, 2), ts.shape)
+        self.assertEqual((91, 1), ts.shape)
         ts = res.time_series('RL region 1', 'vol')
-        self.assertEqual((91, 2), ts.shape)
+        self.assertEqual((91, 1), ts.shape)
 
     def test_long_plot(self):
         p = './2020/EG15_001.tpc'

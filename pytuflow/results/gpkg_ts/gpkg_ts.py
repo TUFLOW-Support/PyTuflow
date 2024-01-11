@@ -31,8 +31,6 @@ class GPKG_TS(GPKGBase, TimeSeriesResult):
         return '<GPKG TS>'
 
     def load(self) -> None:
-        from sqlite3 import DatabaseError
-
         if not self.fpath.exists():
             raise FileNotFoundError(f'File not found: {self.fpath}')
 
