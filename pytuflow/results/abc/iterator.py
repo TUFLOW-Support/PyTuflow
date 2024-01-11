@@ -25,11 +25,12 @@ class Corrected:
 class IDResultTypeItem:
     result_item_name: str
     correct: list[Corrected]
+    remove_invalid: bool
     ids: list[str] = field(init=False)
     result_types: list[str] = field(init=False)
     result_item: TimeSeriesResultItem = field(init=False)
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         self.ids = []
         for item in self.correct:
             if item.id not in self.ids:
@@ -40,6 +41,11 @@ class IDResultTypeItem:
                 self.result_types.append(item.result_type)
         if self.correct:
             self.result_item = self.correct[0].result_item
+
+    def _remove_invalid(self) -> None:
+        for item in self.correct.copy():
+            if not item.valid:
+                self.correct.remove(item)
 
     @property
     def valid(self) -> bool:
@@ -71,26 +77,77 @@ class Iterator:
             domain: str,
             type_: str,
     ) -> Generator[IDResultTypeItem, None, None]:
+        """
+        Given an ID or list of IDs and result types, as well as an optional domain argument - routine will yield
+        an IDResultTypeItem for each result item type within the given domain
+        (e.g. node, channel, po, rl) that contains valid
+        ID and result type combinations with corrected IDs and result type
+        (i.e. correct case, result type short name converted to full name etc.)
+        """
         if not isinstance(ids, list):
             ids = [ids] if ids is not None else []
         if not isinstance(result_types, list):
             result_types = [result_types] if result_types is not None else []
 
+        domain_2 = None
+        if domain is not None:
+            a = domain.split(' ', 1)
+            if len(a) == 2:
+                domain, domain_2 = a
+
         if domain is None or domain.lower() == '1d':
-            item = self.get_nodes(ids, result_types, type_)
-            if item.valid:
-                yield item
-            item = self.get_channels(ids, result_types, type_)
-            if item.valid:
-                yield item
+            if domain_2 is None or domain_2.lower() == 'node':
+                corr_items = self.get_nodes(ids, result_types, type_)
+                item = IDResultTypeItem('Node', corr_items, True)
+                if item.valid:
+                    yield item
+            if domain_2 is None or domain_2.lower() == 'channel':
+                corr_items = self.get_channels(ids, result_types, type_)
+                item = IDResultTypeItem('Channel', corr_items, True)
+                if item.valid:
+                    yield item
         if domain is None or domain.lower() == '2d':
-            item = self.get_po(ids, result_types, type_)
+            corr_items = self.get_po(ids, result_types, type_)
+            item = IDResultTypeItem('PO', corr_items, True)
             if item.valid:
                 yield item
         if domain is None or domain.lower() == '0d':
-            item = self.get_rl(ids, result_types, type_)
+            corr_items = self.get_rl(ids, result_types, type_)
+            item = IDResultTypeItem('RL', corr_items, True)
             if item.valid:
                 yield item
+
+    def ids_result_types_lp(
+            self,
+            ids: Union[str, list[str]],
+            result_types: Union[str, list[str]]
+    ) -> Generator[IDResultTypeItem, None, None]:
+        from ..lp_1d import LP_1D
+
+        if not isinstance(ids, list):
+            ids = [ids] if ids is not None else []
+        if not isinstance(result_types, list):
+            result_types = [result_types] if result_types is not None else []
+
+        ids_ = []
+        for corr_item in self.get_channels(ids, [], 'temporal'):
+            if corr_item.id is not None and corr_item.id_orig in ids and corr_item.id not in ids_:
+                ids_.append(corr_item.id)
+        static_result_types, static_result_types_corr_names = LP_1D.extract_static_results(result_types)
+        static_result_types = {x: y for x, y in zip(static_result_types, static_result_types_corr_names)}
+        result_types_ = []
+        for corr_item in self.get_nodes([], result_types, 'temporal'):
+            if corr_item.result_type_orig in static_result_types and static_result_types[corr_item.result_type_orig] not in result_types_:
+                result_types_.append(static_result_types[corr_item.result_type_orig])
+            elif corr_item.result_type is not None and corr_item.result_type not in result_types_:
+                result_types_.append(corr_item.result_type)
+
+        corrected = []
+        for id1, id2 in zip(ids, ids_):
+            for rt1, rt2 in zip(result_types, result_types_):
+                corr = Corrected(id1, rt1, self.nodes, id2, rt2)
+                corrected.append(corr)
+        yield IDResultTypeItem('Node', corrected, False)
 
     def correct_id(self, ids: list[str], df: pd.DataFrame) -> list[str]:
         ids_ = []
@@ -149,16 +206,16 @@ class Iterator:
                 result_types_.append(None)
         return result_types_
 
-    def get_nodes(self, ids: list[str], result_types: list[str], type_: str) -> IDResultTypeItem:
+    def get_nodes(self, ids: list[str], result_types: list[str], type_: str) -> list[Corrected]:
         return self._get_base(ids, result_types, '1d', 'Node', type_, self.nodes)
 
-    def get_channels(self, ids: list[str], result_types: list[str], type_: str) -> IDResultTypeItem:
+    def get_channels(self, ids: list[str], result_types: list[str], type_: str) -> list[Corrected]:
         return self._get_base(ids, result_types, '1d', 'Channel', type_, self.channels)
 
-    def get_po(self, ids: list[str], result_types: list[str], type_: str) -> IDResultTypeItem:
+    def get_po(self, ids: list[str], result_types: list[str], type_: str) -> list[Corrected]:
         return self._get_base(ids, result_types, '2d', 'PO', type_, self.po)
 
-    def get_rl(self, ids: list[str], result_types: list[str], type_: str) -> IDResultTypeItem:
+    def get_rl(self, ids: list[str], result_types: list[str], type_: str) -> list[Corrected]:
         return self._get_base(ids, result_types, '0d', 'RL', type_, self.rl)
 
     def _get_base(
@@ -169,7 +226,7 @@ class Iterator:
             domain_2: str,
             type_: str,
             cls: TimeSeriesResultItem
-    ) -> IDResultTypeItem:
+    ) -> list[Corrected]:
         ids_, result_types_ = [], []
         if ids and cls is not None:
             ids_ = self.correct_id(ids, cls.df)
@@ -194,6 +251,5 @@ class Iterator:
         for id1, id2 in zip(ids, ids_):
             for rt1, rt2 in zip(result_types, result_types_):
                 corr = Corrected(id1, rt1, cls, id2, rt2)
-                if corr.valid:
-                    corrected.append(corr)
-        return IDResultTypeItem(domain_2, corrected)
+                corrected.append(corr)
+        return corrected

@@ -48,9 +48,8 @@ class TimeSeriesResultItem:
         return self.maximums.df.loc[id, result_type]
 
     def val(self, result_type: str, ids: list[str], timestep_index: int) -> pd.DataFrame:
-        result_type_ = self.conv_result_type_name(result_type)
-        if result_type_ in self.time_series:
-            time = self.time_series[result_type_].df.index[timestep_index]
+        if result_type in self.time_series:
+            time = self.time_series[result_type].df.index[timestep_index]
             return self.time_series[result_type].df[ids].iloc[timestep_index].to_frame().rename(
                 columns={time: result_type})
         return pd.DataFrame([], columns=result_type)

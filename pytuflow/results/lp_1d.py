@@ -74,7 +74,7 @@ class LP_1D:
         self.df = df
 
     def long_plot(self, result_type: list[str], timestep_index: int) -> pd.DataFrame:
-        static_types = [x for x in result_type if [y for y in ['bed', 'pit', 'pipes'] if y in x.lower()]]
+        _, static_types = self.extract_static_results(result_type)
         df = self.static_data(static_types)
         temp_types = [x for x in result_type if x not in static_types]
         return pd.concat([df, self.temporal_data(temp_types, timestep_index)], axis=1)
@@ -109,9 +109,8 @@ class LP_1D:
 
         # other static result types
         for result_type in result_types:
-            if result_type.lower() in [x.lower() for x in self.df_static.columns]:
-                i = [x.lower() for x in self.df_static.columns].index(result_type.lower())
-                df[result_type] = self.df_static.iloc[:,i]
+            if result_type in self.df_static.columns:
+                df[result_type] = self.df_static[result_type]
             elif 'bed' in result_type.lower():
                 y = []
                 for row in self.df.iterrows():
@@ -119,9 +118,9 @@ class LP_1D:
                     y.append(row[1]['DS Invert'])
                 df[result_type] = y
             elif 'pit' in result_type.lower():
-                df['Pit'] = self._utils.extract_pit_levels(self.df)
+                df[result_type] = self._utils.extract_pit_levels(self.df)
             elif 'culvert' in result_type.lower() or 'pipe' in result_type.lower():
-                df['Pipe Obvert'] = self._utils.extract_culvert_obvert(self.df)
+                df[result_type] = self._utils.extract_culvert_obvert(self.df)
 
         self.df_static = df.reset_index(drop=True)
         return self.df_static
@@ -153,6 +152,14 @@ class LP_1D:
                     df[result_type] = y
 
         return df.reset_index(drop=True)
+
+    @staticmethod
+    def extract_static_results(result_types: list[str]) -> tuple[list[str], list[str]]:
+        STATIC_TYPE_KEYWORDS = ['bed', 'pit', 'pipe']
+        STATIC_TYPES = ['Bed Level', 'Pit Ground Elevation', 'Pipe Obvert']
+        return [x for x in result_types if [y for y in STATIC_TYPE_KEYWORDS if y in x.lower()]], \
+            [STATIC_TYPES[i] for i, x in enumerate(result_types) if [y for y in STATIC_TYPE_KEYWORDS if y in x.lower()]]
+
 
 class Connectivity:
 
