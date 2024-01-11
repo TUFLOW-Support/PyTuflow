@@ -17,4 +17,8 @@ class TPCNodes(TPCResultItem, Nodes):
             raise Exception(f'Error loading TPC 1d_Nodes.csv file: {e}')
 
     def long_plot_result_types(self) -> list[str]:
-        return ['Bed Level', 'Pit Level', 'Pipes'] + self.result_types(None)
+        result_types = ['Bed Level', 'Pit Level', 'Pipes'] + self.result_types(None)
+        if self.maximums:
+            maxes = [x for x in self.maximums.df.columns if 'TMax' not in x]
+            result_types.extend(maxes)
+        return result_types

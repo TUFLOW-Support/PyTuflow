@@ -124,7 +124,7 @@ class Test_TPC_2016(TestCase):
     def test_long_plot_result_types(self):
         p = './2016/M04_5m_001.tpc'
         res = TPC(p)
-        self.assertEqual(5, len(res.long_plot_result_types()))
+        self.assertEqual(7, len(res.long_plot_result_types()))
 
     def test_long_plot(self):
         p = './2016/M04_5m_001.tpc'
