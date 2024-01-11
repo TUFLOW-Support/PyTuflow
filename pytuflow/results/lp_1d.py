@@ -75,9 +75,11 @@ class LP_1D:
 
     def long_plot(self, result_type: list[str], timestep_index: int) -> pd.DataFrame:
         _, static_types = self.extract_static_results(result_type)
+        max_types = [x for x in result_type if x not in static_types and 'max' in x.lower()]
         df = self.static_data(static_types)
-        temp_types = [x for x in result_type if x not in static_types]
-        return pd.concat([df, self.temporal_data(temp_types, timestep_index)], axis=1)
+        temp_types = [x for x in result_type if x not in static_types and x not in max_types]
+        df = pd.concat([df, self.temporal_data(temp_types, timestep_index)], axis=1)
+        return pd.concat([df, self.max_data(max_types)], axis=1)
 
     def static_data(self, result_types: list[str] = ()) -> pd.DataFrame:
         if self.df.empty:
@@ -153,12 +155,29 @@ class LP_1D:
 
         return df.reset_index(drop=True)
 
+    def max_data(self, result_types: list[str]) -> pd.DataFrame:
+        if self.df.empty:
+            raise ValueError('Connectivity must be calculated before static data, or connection between ids not found')
+
+        # convert connected channels into a node list
+        nodes = pd.melt(
+            self.df.reset_index(),
+            id_vars=['index'],
+            value_vars=['US Node', 'DS Node']
+        ).sort_values('index')['value'].tolist()
+
+        df = pd.DataFrame([])
+        if result_types:
+            df = self.nodes.get_maximum(nodes, result_types)
+        return df.reset_index(drop=True)
+
     @staticmethod
     def extract_static_results(result_types: list[str]) -> tuple[list[str], list[str]]:
         STATIC_TYPE_KEYWORDS = ['bed', 'pit', 'pipe']
         STATIC_TYPES = ['Bed Level', 'Pit Ground Elevation', 'Pipe Obvert']
-        return [x for x in result_types if [y for y in STATIC_TYPE_KEYWORDS if y in x.lower()]], \
-            [STATIC_TYPES[i] for i, x in enumerate(result_types) if [y for y in STATIC_TYPE_KEYWORDS if y in x.lower()]]
+        static_result_types = [x for x in result_types if [y for y in STATIC_TYPE_KEYWORDS if y in x.lower()]]
+        correct_names = sum([[x for i, x in enumerate(STATIC_TYPES) if STATIC_TYPE_KEYWORDS[i] in y.lower()] for y in result_types], [])
+        return static_result_types, correct_names
 
 
 class Connectivity:

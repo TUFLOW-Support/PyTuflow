@@ -1,3 +1,4 @@
+import re
 from typing import Generator, Union
 from dataclasses import dataclass, field
 
@@ -31,6 +32,8 @@ class IDResultTypeItem:
     result_item: TimeSeriesResultItem = field(init=False)
 
     def __post_init__(self) -> None:
+        if self.remove_invalid:
+            self._remove_invalid()
         self.ids = []
         for item in self.correct:
             if item.id not in self.ids:
@@ -118,10 +121,14 @@ class Iterator:
         if not isinstance(result_types, list):
             result_types = [result_types] if result_types is not None else []
 
+        # get corrected ids (from channels)
         ids_ = []
         for corr_item in self.get_channels(ids, [], 'temporal'):
             if corr_item.id is not None and corr_item.id_orig in ids and corr_item.id not in ids_:
                 ids_.append(corr_item.id)
+
+        # get corrected result types (from nodes)
+        # separate static result types (not inc. max)
         static_result_types, static_result_types_corr_names = LP_1D.extract_static_results(result_types)
         static_result_types = {x: y for x, y in zip(static_result_types, static_result_types_corr_names)}
         result_types_ = []
@@ -130,10 +137,16 @@ class Iterator:
                 result_types_.append(static_result_types[corr_item.result_type_orig])
             elif corr_item.result_type is not None and corr_item.result_type not in result_types_:
                 result_types_.append(corr_item.result_type)
+        # deal with max
+        max_result_types = [re.sub(r'max(imum)?', '', x, flags=re.IGNORECASE).strip() for x in result_types if 'max' in x.lower()]
+        if max_result_types or not result_types:
+            for corr_item in self.get_nodes([], max_result_types, 'max'):
+                if corr_item.result_type is not None and corr_item.result_type not in result_types_:
+                    result_types_.append(corr_item.result_type)
 
         corrected = []
-        for id1, id2 in zip(ids, ids_):
-            for rt1, rt2 in zip(result_types, result_types_):
+        for id1, id2 in zip(ids_, ids_):
+            for rt1, rt2 in zip(result_types_, result_types_):
                 corr = Corrected(id1, rt1, self.nodes, id2, rt2)
                 corrected.append(corr)
         yield IDResultTypeItem('Node', corrected, False)

@@ -282,6 +282,19 @@ class Test_GPKG_TS_2023(TestCase):
         df = res.long_plot('pipe1', ['bed level', 'pipes', 'pits'], 1)
         self.assertEqual((10, 6), df.shape)
 
+    def test_long_plot3(self):
+        p = './2023/M06_5m_003_SWMM_swmm_ts.gpkg'
+        res = GPKG_TS(p)
+        df = res.long_plot('pipe1', ['bed level', 'pipes', 'water level', 'max h'], 1)
+        self.assertEqual((10, 8), df.shape)
+
+
+    def test_long_plot4(self):
+        p = './2023/M06_5m_003_SWMM_swmm_ts.gpkg'
+        res = GPKG_TS(p)
+        df = res.long_plot('pipe1', ['bed level', 'pipes', 'water level', 'energy'], 1)
+        self.assertEqual((10, 6), df.shape)
+
     def test_maximums(self):
         p = './2023/M06_5m_003_SWMM_swmm_ts.gpkg'
         res = GPKG_TS(p)
