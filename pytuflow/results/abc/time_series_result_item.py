@@ -60,8 +60,8 @@ class TimeSeriesResultItem:
 
     @staticmethod
     def result_type_to_max(result_type: str) -> str:
-        raise NotImplementedError
+        return f'{result_type} Max'
 
     @staticmethod
     def result_type_to_tmax(result_type: str) -> str:
-        raise NotImplementedError
+        return f'{result_type} TMax'

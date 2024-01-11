@@ -106,11 +106,3 @@ class GPKGResultItem(GPKGBase, TimeSeriesResultItem):
     @maximums.setter
     def maximums(self, value: GPKGMaximums) -> None:
         return
-
-    @staticmethod
-    def result_type_to_max(result_type: str) -> str:
-        return f'{result_type} Max'
-
-    @staticmethod
-    def result_type_to_tmax(result_type: str) -> str:
-        return f'{result_type} TMax'

@@ -23,21 +23,23 @@ class TPCMaximums(Maximums):
             return f'<TPC Maximum: {self.fpath.stem}>'
         return '<TPC Maximum>'
 
-    def load(self):
+    def _load(self, fpath: Path) -> pd.DataFrame:
         try:
             with self.fpath.open() as f:
                 ncol = len(f.readline().split(','))
-            self.df = pd.read_csv(self.fpath, index_col=0, header=0, delimiter=',', na_values='**********', usecols=range(1,ncol))
-            columns = {x: COLUMN_MAP.get(x, x) for x in self.df.columns}
-            self.df.rename(columns=columns, inplace=True)
-            if 'Energy Max' in self.df.columns:
-                self.df['Energy TMax'] = [np.nan for x in range(len(self.df))]
+            df = pd.read_csv(fpath, index_col=0, header=0, delimiter=',', na_values='**********', usecols=range(1,ncol))
+            columns = {x: COLUMN_MAP.get(x, x) for x in df.columns}
+            df.rename(columns=columns, inplace=True)
+            if 'Energy Max' in df.columns:
+                df['Energy TMax'] = [np.nan for x in range(len(df))]
         except Exception as e:
             raise Exception(f'Error loading TPC 1d_Nmx.csv file: {e}')
 
+        return df
+
+    def load(self):
+        self.df = self._load(self.fpath)
+
     def append(self, fpath: Union[str, Path]) -> None:
-        try:
-            df = pd.read_csv(fpath, index_col=1, header=0, delimiter=',', na_values='**********')
-        except Exception as e:
-            raise Exception(f'Error loading TPC 1d_Nmx.csv file: {e}')
+        df = self._load(fpath)
         self.df = pd.concat([self.df, df], join="outer")

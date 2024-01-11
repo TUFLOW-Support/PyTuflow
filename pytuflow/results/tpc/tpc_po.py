@@ -4,18 +4,14 @@ from typing import Union
 import pandas as pd
 
 from .tpc_time_series_result_item import TPCResultItem
+from .tpc_maximums_po import TPCMaximumsPO
 
 
-class TPCPO(TPCResultItem):
+class TPCPO_Base(TPCResultItem):
 
     def __init__(self, fpath: Union[str, Path]) -> None:
         super().__init__(fpath)
         self._df = None
-
-    def __repr__(self) -> str:
-        if hasattr(self, 'fpath'):
-            return f'<TPC Po: {self.fpath.stem}>'
-        return '<TPC PO>'
 
     def load(self) -> None:
         pass
@@ -36,3 +32,26 @@ class TPCPO(TPCResultItem):
             ids.extend([x for x in ts.df.columns if x.lower() not in [y.lower() for y in ids]])
         self._df = pd.DataFrame(ids, columns=['id'])
         self._df.set_index('id', inplace=True)
+
+
+class TPCPO(TPCPO_Base):
+
+    def __init__(self, fpath: Union[str, Path]) -> None:
+        super().__init__(fpath)
+        self._df = None
+        self._maximums = None
+
+    def __repr__(self) -> str:
+        if hasattr(self, 'fpath'):
+            return f'<TPC Po: {self.fpath.stem}>'
+        return '<TPC PO>'
+
+    @property
+    def maximums(self) -> TPCMaximumsPO:
+        if self._maximums is None:
+            self._maximums = TPCMaximumsPO(self)
+        return self._maximums
+
+    @maximums.setter
+    def maximums(self, value: TPCMaximumsPO) -> None:
+        return
