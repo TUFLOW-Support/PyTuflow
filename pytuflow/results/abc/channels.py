@@ -1,7 +1,15 @@
+from pathlib import Path
+from typing import Union
+
 from .time_series_result_item import TimeSeriesResultItem
 
 
 class Channels(TimeSeriesResultItem):
+
+    def __init__(self, fpath: Union[str, Path]) -> None:
+        super().__init__(fpath)
+        self.domain = '1d'
+        self.domain_2 = 'channel'
 
     def ds_node(self, id: str) -> str:
         return self.df.loc[id, 'DS Node']

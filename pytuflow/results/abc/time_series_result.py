@@ -1,19 +1,32 @@
-import re
 from datetime import datetime
 from pathlib import Path
 from typing import Union
+from abc import ABC, abstractmethod
 
 import numpy as np
 import pandas as pd
 
 from ..lp_1d import LP_1D
 from ..time_util import closest_time_index
-from pytuflow.results.iterator_util import Iterator
+from ..iterator_util import Iterator
 
 
-class TimeSeriesResult:
+class TimeSeriesResult(ABC):
+    """
+    Abstract base class for TUFLOW time series results.
 
-    def __init__(self, fpath: Union[str, Path]) -> None:
+    Methods requiring implementation:
+        load() -> None
+
+    e.g. time series results that subclass this:
+      - TPC
+      - GPKG_TS
+      - INFO
+
+    This class can also be used for other plot data such as 1d_ta_tables_check file and bc_check files.
+    """
+
+    def __init__(self, fpath: Union[str, Path], *args, **kwargs) -> None:
         self.fpath = Path(fpath)
         self.units = ''
         self.sim_id = ''
@@ -25,31 +38,54 @@ class TimeSeriesResult:
         self.reference_time = datetime(1990, 1, 1)
         self.load()
 
-    def load(self) -> None:
+    @abstractmethod
+    def load(self, *args, **kwargs) -> None:
+        """Load the result file. Called by __init__."""
         raise NotImplementedError
 
+    def init_iterator(self) -> Iterator:
+        """Initialise the class iterator."""
+        return Iterator(self.channels, self.nodes, self.po, self.rl)
+
     def channel_count(self) -> int:
+        """Return the number of channels in the result file."""
         if self.channels:
             return self.channels.count()
         return 0
 
     def node_count(self) -> int:
+        """Return the number of nodes in the result file."""
         if self.nodes:
             return self.nodes.count()
         return 0
 
     def po_count(self) -> int:
+        """Return the number of 2d PO objects in the result file."""
         if self.po:
             return self.po.count()
         return 0
 
     def rl_count(self) -> int:
+        """Return the number of 0d RL objects in the result file."""
         if self.rl:
             return self.rl.count()
         return 0
 
-    def ids(self, result_type: str = '', domain: str = '') -> list[str]:
-        iter = Iterator(self.channels, self.nodes, self.po, self.rl)
+    def ids(self, result_type: Union[str, list[str]] = '', domain: str = '') -> list[str]:
+        """
+        Return a list ids for the given result type(s) and domain.
+
+        :param result_type:
+            The result type can be a single value or a list of values and can be
+            the name of the result type (case in-sensitive) or be a well known short name
+            e.g. 'Flow' - 'q', 'Velocity' - 'v', etc.
+            If no result type is provided, all result types will be assumed to be all available.
+        :param domain:
+            Domain can be '1d', '2d', '0d' and will limit the returned ids by the domain. A secondary domain option
+            can be passed to further limit the ids e.g. '1d node' or '1d channel'. If no domain is provided, all domains
+            will be searched.
+        """
+        iter = self.init_iterator()
         ids = []
         for item in iter.ids_result_types_domain([], result_type, domain, 'temporal'):
             for id_ in item.ids:
@@ -57,80 +93,184 @@ class TimeSeriesResult:
                     ids.append(id_)
         return ids
 
-    def channel_ids(self, result_type: str = '') -> list[str]:
+    def channel_ids(self, result_type: Union[str, list[str]] = '') -> list[str]:
+        """
+        Returns the channel ids for the given result type(s).
+
+        :param result_type:
+            The result type can be a single value or a list of values and can be
+            the name of the result type (case in-sensitive) or be a well known short name
+            e.g. 'Flow' - 'q', 'Velocity' - 'v', etc.
+            If no result type is provided, all result types will be assumed to be all available.
+        """
         if self.channels:
             return self.ids(result_type, '1d channel')
         return []
 
-    def node_ids(self, result_type: str = '') -> list[str]:
+    def node_ids(self, result_type: Union[str, list[str]] = '') -> list[str]:
+        """
+        Returns the node ids for the given result type.
+
+        :param result_type:
+            The result type can be a single value or a list of values and can be
+            the name of the result type (case in-sensitive) or be a well known short name
+            e.g. 'Water Level' - 'h', 'Energy' - 'e', etc.
+            If no result type is provided, all result types will be assumed to be all available.
+        """
         if self.nodes:
             return self.ids(result_type, '1d node')
         return []
 
-    def po_ids(self, result_type: str = '') -> list[str]:
+    def po_ids(self, result_type: Union[str, list[str]] = '') -> list[str]:
+        """
+        Returns the PO ids for the given result type(s).
+
+        :param result_type:
+            The result type can be a single value or a list of values and can be
+            the name of the result type (case in-sensitive) or be a well known short name
+            e.g. 'Flow' - 'q', 'Velocity' - 'v', etc.
+            If no result type is provided, all result types will be assumed to be all available.
+        """
         if self.po:
             return self.ids(result_type, '2d')
         return []
 
-    def rl_ids(self, result_type: str = '') -> list[str]:
+    def rl_ids(self, result_type: Union[str, list[str]] = '') -> list[str]:
+        """
+        Returns the channel ids for the given result type(s).
+
+        :param result_type:
+            The result type can be a single value or a list of values and can be
+            the name of the result type (case in-sensitive) or be a well known short name
+            e.g. 'Flow' - 'q', 'Volume' - 'vol', etc.
+            If no result type is provided, all result types will be assumed to be all available.
+        """
         if self.rl:
             return self.ids(result_type, '0d')
         return []
 
-    def result_types(self, id: Union[str, list[str]] = '') -> list[str]:
-        iter = Iterator(self.channels, self.nodes, self.po, self.rl)
+    def result_types(self, id: Union[str, list[str]] = '', domain: str = '') -> list[str]:
+        """
+        Returns a list of result types for the given id(s) and domain.
+
+        :param id:
+            The ID can be a single value or a list of values. The ID values are case in-sensitive.
+            If no ID is provided, all IDs will be searched (within the provided domain).
+        :param domain:
+            The domain can be '1d', '2d', '0d' and will limit the returned result types by the domain.
+            A secondary domain option can be passed to further limit the ids
+            e.g. '1d node' or '1d channel'.
+            If no domain is provided, all domains will be searched.
+        """
+        iter = self.init_iterator()
         result_types = []
-        for item in iter.ids_result_types_domain(id, [], None, 'temporal'):
+        for item in iter.ids_result_types_domain(id, [], domain, 'temporal'):
             for rt in item.result_types:
                 if rt not in result_types:
                     result_types.append(rt)
         return result_types
 
-    def channel_result_types(self, id: str = '') -> list[str]:
+    def channel_result_types(self, id: Union[str, list[str]] = '') -> list[str]:
+        """
+        Returns a list of the result types for the given channel id(s).
+
+        :param id:
+            The ID value can be a single value or a list of values. The ID value(s) are case in-sensitive.
+            If no ID is provided, all IDs will be searched.
+        """
         if self.channels:
-            return self.channels.result_types(id)
+            return self.result_types(id, '1d channel')
         return []
 
-    def node_result_types(self, id: str = '') -> list[str]:
+    def node_result_types(self, id: Union[str, list[str]] = '') -> list[str]:
+        """
+        Returns a list of the result types for the given node id(s).
+
+        :param id:
+            The ID value can be a single value or a list of values. The ID value(s) are case in-sensitive.
+            If no ID is provided, all IDs will be searched.
+        """
         if self.nodes:
-            return self.nodes.result_types(id)
+            return self.result_types(id, '1d node')
         return []
 
-    def po_result_types(self, id: str = '') -> list[str]:
+    def po_result_types(self, id: Union[str, list[str]] = '') -> list[str]:
+        """
+        Returns a list of the result types for the given 2d PO id(s).
+
+        :param id:
+            The ID value can be a single value or a list of values. The ID value(s) are case in-sensitive.
+            If no ID is provided, all IDs will be searched.
+        """
         if self.po:
-            return self.po.result_types(id)
+            return self.result_types(id, '2d')
         return []
 
-    def rl_result_types(self, id: str = '') -> list[str]:
+    def rl_result_types(self, id: Union[str, list[str]] = '') -> list[str]:
+        """
+        Returns a list of the result types for the given 0d RL id(s).
+
+        :param id:
+            The ID value can be a single value or a list of values. The ID value(s) are case in-sensitive.
+            If no ID is provided, all IDs will be searched.
+        """
         if self.rl:
-            return self.rl.result_types(id)
+            return self.result_types(id, '0d')
         return []
 
     def long_plot_result_types(self) -> list[str]:
+        """Returns a list of result types available for long plotting."""
         if self.nodes:
             return self.nodes.long_plot_result_types()
         return []
 
     def timesteps(self, domain: str = '', dtype: str = 'relative') -> list[Union[float, datetime]]:
-        if domain:
-            return self._timesteps(domain, dtype)
+        """
+        Returns a list of time-steps available for the given domain.
+
+        :param domain:
+            The domain can be '1d', '2d', '0d' and will limit the returned time-steps by the domain.
+        :param dtype:
+            The return type can be either 'relative' e.g. hours or 'absolute' e.g. datetime.
+            Default is 'relative'.
+        """
+        iter = self.init_iterator()
+        domains = []
         timesteps = []
-        for domain in ['1d', '2d', '0d']:
-            for timestep in self._timesteps(domain, dtype):
-                if timestep not in timesteps:
-                    timesteps.append(timestep)
+        for item in iter.ids_result_types_domain([], [], domain, 'temporal'):
+            if item.result_item.domain not in domains:
+                domains.append(item.result_item.domain)
+                for timestep in item.result_item.timesteps(dtype):
+                    if timestep not in domains:
+                        timesteps.append(timestep)
         return sorted(timesteps)
 
     def time_series(self,
-            id: Union[str, list[str]],
-            result_type: Union[str, list[str]],
-            domain: str = None
-    ) -> pd.DataFrame:
-        """Extract time series data for the given id(s) and result type(s)."""
+                    id: Union[str, list[str]],
+                    result_type: Union[str, list[str]],
+                    domain: str = None
+                    ) -> pd.DataFrame:
+        """
+        Extract time series data for the given id(s), result type(s), and domain and returned as a DataFrame.
+
+        :param id:
+            ID can be either a single value or list of values. The ID value(s) are case in-sensitive.
+            If no ID is provided, all IDs will be returned (within the provided domain).
+        :param result_type:
+            The result type can be a single value or a list of values and can be
+            the name of the result type (case in-sensitive) or be a well known short name
+            e.g. 'Water Level' - 'h', 'Energy' - 'e', etc.
+            If no result type is provided, all result types will be assumed to be all available.
+        :param domain:
+            The domain can be '1d', '2d', '0d' and will limit the returned time series by the domain.
+            A secondary domain option can be passed to further limit the ids
+            e.g. '1d node' or '1d channel'.
+            If no domain is provided, all domains will be searched.
+        """
         df = pd.DataFrame()
         x = []
         dropped_index = False
-        iter = Iterator(self.channels, self.nodes, self.po, self.rl)
+        iter = self.init_iterator()
         for item in iter.ids_result_types_domain(id, result_type, domain, 'temporal'):
             df_ = item.result_item.get_time_series(item.ids, item.result_types)
             df_.rename(columns={x: f'{item.result_item_name}::{x}' for x in df_.columns}, inplace=True)
@@ -154,13 +294,29 @@ class TimeSeriesResult:
         return df
 
     def maximum(self,
-            id: Union[str, list[str]],
-            result_type: Union[str, list[str]],
-            domain: str = None
-    ) -> pd.DataFrame:
-        """Extract maximum data for the given id(s) and result type(s)."""
+                id: Union[str, list[str]],
+                result_type: Union[str, list[str]],
+                domain: str = None
+                ) -> pd.DataFrame:
+        """
+        Extract maximum data for the given id(s) and result type(s) and return as a DataFrame.
+
+        :param id:
+            ID can be either a single value or list of values. The ID value(s) are case in-sensitive.
+            If no ID is provided, all IDs will be returned (within the provided domain).
+        :param result_type:
+            The result type can be a single value or a list of values and can be
+            the name of the result type (case in-sensitive) or be a well known short name
+            e.g. 'Water Level' - 'h', 'Energy' - 'e', etc.
+            If no result type is provided, all result types will be assumed to be all available.
+        :param domain:
+            The domain can be '1d', '2d', '0d' and will limit the returned time series by the domain.
+            A secondary domain option can be passed to further limit the ids
+            e.g. '1d node' or '1d channel'.
+            If no domain is provided, all domains will be searched.
+        """
         df = pd.DataFrame()
-        iter = Iterator(self.channels, self.nodes, self.po, self.rl)
+        iter = self.init_iterator()
         for item in iter.ids_result_types_domain(id, result_type, domain, 'max'):
             df_ = item.result_item.get_maximum(item.ids, item.result_types)
             df_.rename(columns={x: f'{item.result_item_name}::{x}' for x in df_.columns}, inplace=True)
@@ -170,11 +326,36 @@ class TimeSeriesResult:
                 df = pd.concat([df, df_], axis=1)
         return df
 
-    def long_plot(self, ids: Union[str, list[str]], result_type: Union[str, list[str]], time: float) -> pd.DataFrame:
+    def long_plot(self,
+                  ids: Union[str, list[str]],
+                  result_type: Union[str, list[str]],
+                  time: Union[float, datetime]
+                  ) -> pd.DataFrame:
+        """
+        Extract long plot data for the given channel ids(s), node result type(s), and time and return as a DataFrame.
+        At least one ID must be provided.
+
+        If one ID is provided, the long plot will start from that channel ID and proceed downstream
+        to the outlet.
+        If multiple IDs are provided, the long plot will connect the IDs. The IDs are required to be connected.
+        e.g. if 2 IDs are provided one ID must be downstream of the other ID. If 3 IDs are provided, on ID must be
+        downstream of the other 2.
+
+        :param ids:
+            ID can be either a single value or list of values. The ID value(s) are case in-sensitive.
+        :param result_type:
+            The result type can be a single value or a list of values and can be
+            the name of the result type (case in-sensitive) or be a well known short name
+            e.g. 'Water Level' - 'h', 'Energy' - 'e', etc.
+            If no result type is provided, all result types will be assumed to be all available.
+        :param time:
+            The time-step to extract the long plot data for. The format can be either as a relative time-step (float)
+            or as an absolute time-step (datetime).
+        """
         if not ids:
             raise ValueError('No ids provided')
 
-        iter = Iterator(self.channels, self.nodes, self.po, self.rl)
+        iter = self.init_iterator()
         for item in iter.ids_result_types_lp(ids, result_type):
             df = self.connectivity(item.ids)
             if df.empty:
@@ -185,6 +366,19 @@ class TimeSeriesResult:
             return self.lp_1d.long_plot(item.result_types, timestep_index)
 
     def connectivity(self, ids: Union[str, list[str]]) -> pd.DataFrame:
+        """
+        Return the connectivity for the given channel ID(s) as a DataFrame with relevant information.
+        At least one ID must be provided.
+
+        If one ID is provided, the long plot will start from that channel ID and proceed downstream
+        to the outlet.
+        If multiple IDs are provided, the long plot will connect the IDs. The IDs are required to be connected.
+        e.g. if 2 IDs are provided one ID must be downstream of the other ID. If 3 IDs are provided, on ID must be
+        downstream of the other 2.
+
+        :param ids:
+            ID can be either a single value or list of values. The ID value(s) are case in-sensitive.
+        """
         if not isinstance(ids, list):
             ids = [ids] if ids is not None else []
 
@@ -205,23 +399,3 @@ class TimeSeriesResult:
         lp.connectivity()
         self.lp_1d = lp
         return lp.df
-
-    def _timesteps(self, domain: str, dtype: str) -> list[Union[float, datetime]]:
-        if domain.lower() == '1d':
-            if self.channels:
-                return self.channels.timesteps(dtype)
-            elif self.nodes:
-                return self.nodes.timesteps(dtype)
-            else:
-                return []
-        elif domain.lower() == '2d':
-            if self.po is not None:
-                return self.po.timesteps(dtype)
-            return []
-        elif domain.lower() == '0d':
-            if self.rl is not None:
-                return self.rl.timesteps(dtype)
-            return []
-        else:
-            raise ValueError(f'Invalid domain: {domain}')
-

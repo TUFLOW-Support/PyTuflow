@@ -4,9 +4,9 @@ from typing import Union
 from .time_series_result_item import TimeSeriesResultItem
 
 
-class Nodes(TimeSeriesResultItem):
+class RL(TimeSeriesResultItem):
 
     def __init__(self, fpath: Union[str, Path]) -> None:
         super().__init__(fpath)
-        self.domain = '1d'
-        self.domain_2 = 'node'
+        self.domain = '0d'
+        self.domain_2 = 'rl'

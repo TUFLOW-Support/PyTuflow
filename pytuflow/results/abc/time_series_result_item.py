@@ -8,6 +8,8 @@ import pandas as pd
 class TimeSeriesResultItem:
 
     def __init__(self, fpath: Union[str, Path]) -> None:
+        self.domain = None
+        self.domain_2 = None
         self.df = None
         self.fpath = fpath
         self.maximums = None

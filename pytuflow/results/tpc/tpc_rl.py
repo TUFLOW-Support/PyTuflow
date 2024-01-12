@@ -1,7 +1,8 @@
 from .tpc_po import TPCPO_Base
+from ..abc.rl import RL
 
 
-class TPCRL(TPCPO_Base):
+class TPCRL(RL, TPCPO_Base):
 
     def __repr__(self) -> str:
         if hasattr(self, 'fpath'):
