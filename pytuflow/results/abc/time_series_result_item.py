@@ -24,6 +24,9 @@ class TimeSeriesResultItem(ABC):
       - channels
       - po
       - rl
+
+    This class would not typically be used directly, but rather the classes that subclass this would be used
+    e.g. Nodes(TimeSeriesResultItem), Channels(TimeSeriesResultItem), etc.
     """
 
     def __init__(self, fpath: Union[str, Path], *args, **kwargs) -> None:
