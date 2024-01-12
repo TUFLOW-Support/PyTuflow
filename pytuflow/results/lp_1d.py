@@ -1,9 +1,8 @@
-from typing import TYPE_CHECKING, Union, Generator
+from typing import TYPE_CHECKING, Union
 
-import numpy as np
 import pandas as pd
 
-from .abc.utils import Utils
+from pytuflow.results.result_util import ResultUtil
 
 if TYPE_CHECKING:
     from .abc.channels import Channels
@@ -14,7 +13,7 @@ class LP_1D:
     def __init__(self, channels: 'Channels', nodes: 'Nodes', ids: list[str] = ()) -> None:
         self._static_types = []
         self._temp_types = []
-        self._utils = Utils(channels, nodes)
+        self._utils = ResultUtil(channels, nodes)
         self.channels = channels
         self.nodes = nodes
         self.ids = ids

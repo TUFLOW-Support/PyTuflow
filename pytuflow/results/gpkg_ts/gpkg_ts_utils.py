@@ -1,10 +1,10 @@
 import numpy as np
 import pandas as pd
 
-from ..abc.utils import Utils
+from ..result_util import ResultUtil
 
 
-class GPKG_TS_Utils(Utils):
+class GPKG_TSResultUtil(ResultUtil):
 
     def extract_culvert_obvert(self, inp_df: pd.DataFrame) -> list[float]:
         y = []

@@ -3,14 +3,13 @@ from typing import TYPE_CHECKING
 import numpy as np
 import pandas as pd
 
-from ..abc.utils import Utils
+from ..result_util import ResultUtil
 
 if TYPE_CHECKING:
-    from .tpc_channels import TPCChannels
-    from .tpc_nodes import TPCNodes
+    pass
 
 
-class TPC_Utils(Utils):
+class TPCResultUtil(ResultUtil):
 
     def extract_culvert_obvert(self, inp_df: pd.DataFrame) -> list[float]:
         y = []
