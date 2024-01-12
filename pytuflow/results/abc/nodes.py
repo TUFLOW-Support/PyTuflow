@@ -5,6 +5,7 @@ from .time_series_result_item import TimeSeriesResultItem
 
 
 class Nodes(TimeSeriesResultItem):
+    """Abstract base class for node result item."""
 
     def __init__(self, fpath: Union[str, Path]) -> None:
         super().__init__(fpath)

@@ -27,6 +27,7 @@ class TimeSeriesResult(ABC):
     """
 
     def __init__(self, fpath: Union[str, Path], *args, **kwargs) -> None:
+        super().__init__()
         self.fpath = Path(fpath)
         self.units = ''
         self.sim_id = ''

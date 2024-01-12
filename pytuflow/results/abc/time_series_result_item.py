@@ -30,6 +30,7 @@ class TimeSeriesResultItem(ABC):
     """
 
     def __init__(self, fpath: Union[str, Path], *args, **kwargs) -> None:
+        super().__init__()
         self.domain = None
         self.domain_2 = None
         self.df = None
