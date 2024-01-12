@@ -9,5 +9,6 @@ class RL(TimeSeriesResultItem):
 
     def __init__(self, fpath: Union[str, Path]) -> None:
         super().__init__(fpath)
+        self.name = 'RL'
         self.domain = '0d'
         self.domain_2 = 'rl'

@@ -332,7 +332,7 @@ class Test_Iterator(TestCase):
         p = './2023/M06_5m_003_SWMM_swmm_ts.gpkg'
         res = GPKG_TS(p)
         iter = Iterator(res.channels, res.nodes, res.po, res.rl)
-        items = iter.get_nodes(['node20'], ['flow'], 'temporal')
+        items = iter._corrected_items(['node20'], ['flow'], 'node', 'temporal', res.nodes)
         self.assertEqual(1, len(items))
         self.assertIsNotNone(items[0].id)
         self.assertIsNotNone(items[0].result_type)
@@ -341,19 +341,19 @@ class Test_Iterator(TestCase):
         p = './2023/M06_5m_003_SWMM_swmm_ts.gpkg'
         res = GPKG_TS(p)
         iter = Iterator(res.channels, res.nodes, res.po, res.rl)
-        items = iter.get_nodes([], ['flow'], 'temporal')
+        items = iter._corrected_items([], ['flow'], 'node', 'temporal', res.nodes)
         self.assertEqual(22, len(items))
 
     def test_get_nodes_3(self):
         p = './2023/M06_5m_003_SWMM_swmm_ts.gpkg'
         res = GPKG_TS(p)
         iter = Iterator(res.channels, res.nodes, res.po, res.rl)
-        items = iter.get_nodes(['node20'], [], 'temporal')
+        items = iter._corrected_items(['node20'], [], 'node', 'temporal', res.nodes)
         self.assertEqual(7, len(items))
 
     def test_id_result_type_gen(self):
         p = './2023/M06_5m_003_SWMM_swmm_ts.gpkg'
         res = GPKG_TS(p)
         iter = Iterator(res.channels, res.nodes, res.po, res.rl)
-        items = list(iter.ids_result_types_domain(['node20'], ['flow'], None, 'temporal'))
+        items = list(iter.id_result_type(['node20'], ['flow'], None, 'temporal'))
         self.assertEqual(1, len(items))

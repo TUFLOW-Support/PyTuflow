@@ -88,7 +88,7 @@ class TimeSeriesResult(ABC):
         """
         iter = self.init_iterator()
         ids = []
-        for item in iter.ids_result_types_domain([], result_type, domain, 'temporal'):
+        for item in iter.id_result_type([], result_type, domain, 'temporal'):
             for id_ in item.ids:
                 if id_ not in ids:
                     ids.append(id_)
@@ -165,7 +165,7 @@ class TimeSeriesResult(ABC):
         """
         iter = self.init_iterator()
         result_types = []
-        for item in iter.ids_result_types_domain(id, [], domain, 'temporal'):
+        for item in iter.id_result_type(id, [], domain, 'temporal'):
             for rt in item.result_types:
                 if rt not in result_types:
                     result_types.append(rt)
@@ -238,7 +238,7 @@ class TimeSeriesResult(ABC):
         iter = self.init_iterator()
         domains = []
         timesteps = []
-        for item in iter.ids_result_types_domain([], [], domain, 'temporal'):
+        for item in iter.id_result_type([], [], domain, 'temporal'):
             if item.result_item.domain not in domains:
                 domains.append(item.result_item.domain)
                 for timestep in item.result_item.timesteps(dtype):
@@ -272,7 +272,7 @@ class TimeSeriesResult(ABC):
         x = []
         dropped_index = False
         iter = self.init_iterator()
-        for item in iter.ids_result_types_domain(id, result_type, domain, 'temporal'):
+        for item in iter.id_result_type(id, result_type, domain, 'temporal'):
             df_ = item.result_item.get_time_series(item.ids, item.result_types)
             df_.rename(columns={x: f'{item.result_item_name}::{x}' for x in df_.columns}, inplace=True)
             if x and not np.isclose(x, df_.index.tolist(), atol=0.001).all():
@@ -318,7 +318,7 @@ class TimeSeriesResult(ABC):
         """
         df = pd.DataFrame()
         iter = self.init_iterator()
-        for item in iter.ids_result_types_domain(id, result_type, domain, 'max'):
+        for item in iter.id_result_type(id, result_type, domain, 'max'):
             df_ = item.result_item.get_maximum(item.ids, item.result_types)
             df_.rename(columns={x: f'{item.result_item_name}::{x}' for x in df_.columns}, inplace=True)
             if df.empty:
@@ -359,7 +359,7 @@ class TimeSeriesResult(ABC):
             raise ValueError('No ids provided')
 
         iter = self.init_iterator()
-        for item in iter.ids_result_types_lp(ids, result_type):
+        for item in iter.lp_id_result_type(ids, result_type):
             df = self.connectivity(item.ids)
             if df.empty:
                 return pd.DataFrame([], columns=['Offset'] + result_type)

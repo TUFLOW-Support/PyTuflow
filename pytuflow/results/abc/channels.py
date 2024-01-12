@@ -9,6 +9,7 @@ class Channels(TimeSeriesResultItem):
 
     def __init__(self, fpath: Union[str, Path]) -> None:
         super().__init__(fpath)
+        self.name = 'Channel'
         self.domain = '1d'
         self.domain_2 = 'channel'
 
