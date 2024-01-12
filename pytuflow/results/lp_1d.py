@@ -149,7 +149,7 @@ class LP_1D:
                 i = [x.lower() for x in self.df_static.columns].index(result_type.lower())
                 df[result_type] = self.df_temp.iloc[:, i]
             else:
-                y = self.nodes.val(result_type, nodes, timestep_index)
+                y = self.nodes.val(nodes, result_type, timestep_index)
                 if not y.empty:
                     df[result_type] = y
 

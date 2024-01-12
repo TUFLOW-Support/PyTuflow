@@ -299,7 +299,7 @@ class TimeSeriesResult(ABC):
                 domain: str = None
                 ) -> pd.DataFrame:
         """
-        Extract maximum data for the given id(s) and result type(s) and return as a DataFrame.
+        Extract maximum, and time of max data for the given id(s) and result type(s) and return as a DataFrame.
 
         :param id:
             ID can be either a single value or list of values. The ID value(s) are case in-sensitive.
@@ -351,6 +351,8 @@ class TimeSeriesResult(ABC):
         :param time:
             The time-step to extract the long plot data for. The format can be either as a relative time-step (float)
             or as an absolute time-step (datetime).
+            The time-step has a tolerance of 0.001 hrs and if no time-step is found,
+            the previous time-step will be used.
         """
         if not ids:
             raise ValueError('No ids provided')
