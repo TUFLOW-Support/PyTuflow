@@ -11,7 +11,8 @@ class ResultUtil(ABC):
     are format specific enough that df can't be massaged into a common format so requires
     sub-classing.
 
-    This class should be the class initialised and it will choose which subclass to use.
+    Although this is an abstract class, it should be the initialised class and it will choose which subclass to use
+    depending on the type of channels passed in (TPCChannels or GPKGChannels, etc).
     """
 
     def __new__(cls, channels: Channels, nodes: Nodes):
