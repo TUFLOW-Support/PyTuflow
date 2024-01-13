@@ -14,6 +14,18 @@ default_reference_time = datetime(1990, 1, 1)
 
 
 def parse_time_units_string(string: str, regex: str, format: str) -> tuple[datetime, str]:
+    """
+    Parses a string containing the time units and reference time
+    e.g. hours since 1990-01-01 00:00:00
+    Returns the reference time as a datetime object, the time units as a single character..
+
+    :param string:
+       String containing the time units and reference time.
+    :param regex:
+        Regular expression to match the format of the reference time.
+    :param format:
+        Format of the reference time.
+    """
     if 'hour' in string:
         u = 'h'
     elif 'minute' in string:
@@ -31,6 +43,12 @@ def parse_time_units_string(string: str, regex: str, format: str) -> tuple[datet
 
 
 def gpkg_time_series_reference_time(gpkg: Union[str, Path]) -> tuple[datetime, str]:
+    """
+    Returns the reference time and units from a GeoPackage time series result.
+
+    :param gpkg:
+        Path to the GeoPackage file.
+    """
     import sqlite3
     try:
         conn = sqlite3.connect(gpkg)
@@ -47,6 +65,12 @@ def gpkg_time_series_reference_time(gpkg: Union[str, Path]) -> tuple[datetime, s
 
 
 def nc_time_series_reference_time(nc: Union[str, Path]) -> tuple[datetime, str]:
+    """
+    Returns the reference time and units from a netCDF time series result.
+
+    :param nc:
+        Path to the netCDF file.
+    """
     if Dataset is None:
         raise ModuleNotFoundError('netCDF4 is not installed')
     with Dataset(nc, 'r') as ds:
@@ -55,7 +79,26 @@ def nc_time_series_reference_time(nc: Union[str, Path]) -> tuple[datetime, str]:
 
 
 
-def closest_time_index(timesteps: list[Union[float, datetime]], time: Union[float, datetime], method: str = 'previous', tol: float = 0.001):
+def closest_time_index(
+        timesteps: list[Union[float, datetime]],
+        time: Union[float, datetime],
+        method: str = 'previous',
+        tol: float = 0.001
+) -> int:
+    """
+    Returns the index of the closest time in timesteps to time.
+    It will try and find any matching time within the given tolerance, otherwise will return the index of the
+    previous or next time depending on the method.
+
+    :param timesteps:
+         List of time-steps as either float or datetime
+    :param time:
+        Time to find the closest time-step to.
+    :param method:
+        Method to use if no matching time-step is found within the tolerance.
+    :param tol:
+        Tolerance to use when comparing the time-steps.
+    """
     if isinstance(time, datetime):
         a = np.array([abs((x - time).total_seconds()) for x in timesteps])
     else:
