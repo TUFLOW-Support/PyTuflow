@@ -1,6 +1,8 @@
+import unittest
 from datetime import datetime
 from unittest import TestCase
 
+from pytuflow.results.fm.fm import FM_TS
 from pytuflow.results.tpc.tpc import TPC
 from pytuflow.results.gpkg_ts.gpkg_ts import GPKG_TS
 from pytuflow.results.iterator_util import Iterator
@@ -357,3 +359,21 @@ class Test_Iterator(TestCase):
         iter = Iterator(res.channels, res.nodes, res.po, res.rl)
         items = list(iter.id_result_type(['node20'], ['flow'], None, 'temporal'))
         self.assertEqual(1, len(items))
+
+
+class Test_FM_TS(unittest.TestCase):
+
+    def test_load_python_csv(self):
+        p = './fm/python_csv/FMT_M01_001.csv'
+        res = FM_TS(p, None, None)
+        self.assertEqual('FMT_M01_001', res.display_name)
+
+    def test_load_gui_csv_without_header_all_results(self):
+        p = './fm/gui_csv/LBE_TBP3_0100F_BASE_350_BM_HPC_GPU_one_column_per_node_all.csv'
+        res = FM_TS(p, None, None)
+        self.assertEqual('LBE_TBP3_0100F_BASE_350_BM_HPC_GPU_one_column_per_node_all', res.display_name)
+
+    def test_load_gui_csv_with_header_all_results(self):
+        p = './fm/gui_csv/LBE_TBP3_0100F_BASE_350_BM_HPC_GPU_one_column_per_node_all_header.csv'
+        res = FM_TS(p, None, None)
+        self.assertEqual('LBE_TBP3_0100F_BASE_350_BM_HPC_GPU', res.display_name)
