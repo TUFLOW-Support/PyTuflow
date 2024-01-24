@@ -366,14 +366,19 @@ class Test_FM_TS(unittest.TestCase):
     def test_load_python_csv(self):
         p = './fm/python_csv/FMT_M01_001.csv'
         res = FM_TS(p, None, None)
-        self.assertEqual('FMT_M01_001', res.display_name)
+        self.assertEqual('FMT_M01_001', res.sim_id)
 
     def test_load_gui_csv_without_header_all_results(self):
         p = './fm/gui_csv/LBE_TBP3_0100F_BASE_350_BM_HPC_GPU_one_column_per_node_all.csv'
         res = FM_TS(p, None, None)
-        self.assertEqual('LBE_TBP3_0100F_BASE_350_BM_HPC_GPU_one_column_per_node_all', res.display_name)
+        self.assertEqual('LBE_TBP3_0100F_BASE_350_BM_HPC_GPU_one_column_per_node_all', res.sim_id)
 
     def test_load_gui_csv_with_header_all_results(self):
         p = './fm/gui_csv/LBE_TBP3_0100F_BASE_350_BM_HPC_GPU_one_column_per_node_all_header.csv'
         res = FM_TS(p, None, None)
-        self.assertEqual('LBE_TBP3_0100F_BASE_350_BM_HPC_GPU', res.display_name)
+        self.assertEqual('LBE_TBP3_0100F_BASE_350_BM_HPC_GPU', res.sim_id)
+
+    def test_load_zzn(self):
+        p = './fm/zzn/FMT_M01_001.zzn'
+        res = FM_TS(p, None, None)
+        self.assertEqual('FMT_M01_001', res.sim_id)

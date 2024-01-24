@@ -1,7 +1,10 @@
 from pathlib import Path
 from typing import Generator, Union
 
+import numpy as np
 import pandas as pd
+
+from .zzn import ZZN
 
 
 class FM_ResultDriver:
@@ -49,10 +52,6 @@ class FM_ResultDriver:
 
 class FM_GuiCSVResult(FM_ResultDriver):
 
-    def __init__(self, fpath: Path) -> None:
-        self.dfs = []
-        super().__init__(fpath)
-
     def __repr__(self) -> str:
         if isinstance(self.fpath, list):
             return f'<FM CSV GUI Export: {self.fpath[0].stem}>'
@@ -73,7 +72,12 @@ class FM_GuiCSVResult(FM_ResultDriver):
             self.result_types.append(res_type)
             df = pd.read_csv(self.fpath, skiprows=ind, nrows=nrows)
             df.set_index('Time (hr)', inplace=True)
-            self.dfs.append(df)
+            df.columns = [f'{res_type}::{x}' for x in df.columns]
+            if self.df is None:
+                self.df = df
+            else:
+                self.df = pd.concat([self.df, df], axis=1)
+
 
     def get_header(self) -> Union[str, None]:
         with self.fpath.open() as f:
@@ -106,12 +110,6 @@ class FM_PythonCSVResult(FM_ResultDriver):
             return f'<FM CSV Python Export: {self.fpath[0].stem}>'
         return f'<FM CSV Python Export>'
 
-    @property
-    def display_name(self) -> str:
-        if self.fpath:
-            return self.fpath.stem
-        return ''
-
     def load(self) -> None:
         self.df = pd.read_csv(self.fpath, header=[0, 1, 2])
         self.df.columns = self.df.columns.map(lambda x: '::'.join([y for y in x if 'Unnamed' not in y]))
@@ -121,6 +119,7 @@ class FM_PythonCSVResult(FM_ResultDriver):
             if type_.strip() not in self.result_types:
                 self.result_types.append(type_.strip())
         self.timesteps = self.df.index.tolist()
+        self.display_name = self.fpath.stem
 
 
 class FM_ZZNResult(FM_ResultDriver):
@@ -131,4 +130,17 @@ class FM_ZZNResult(FM_ResultDriver):
         return f'<FM ZZN>'
 
     def load(self) -> None:
-        pass
+        self.zzn = ZZN(self.fpath)
+        self.ids = self.zzn.labels()
+        self._timesteps = np.array([[x + 1, (x * self.zzn.output_interval()) / 3600] for x in range(self.zzn.timestep_count())])
+        self.result_types = ['Flow', 'Stage', 'Froude', 'Velocity', 'Mode',  'State']
+        for res_type in self.result_types:
+            df = pd.DataFrame(self.zzn.get_time_series_data(res_type))
+            df.columns = [f'{res_type}::{x}' for x in self.ids]
+            df['Time (hr)'] = self._timesteps[:,1]
+            df.set_index('Time (hr)', inplace=True)
+            if self.df is None:
+                self.df = df
+            else:
+                self.df = pd.concat([self.df, df], axis=1)
+        self.display_name = self.fpath.stem

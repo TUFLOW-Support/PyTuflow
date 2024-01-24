@@ -31,7 +31,9 @@ class FM_TS(TimeSeriesResult):
                 self._driver.append(FM_ResultDriver(fpath))
             except NotImplementedError as e:
                 raise Exception('Flood Modeller result not recognised, supported, or result could be empty')
+            except FileNotFoundError as e:
+                raise FileNotFoundError(e)
             except Exception as e:
                 raise Exception(f'Error loading Flood Modeller result: {e}')
 
-        self.display_name = self._driver[0].display_name
+        self.sim_id = self._driver[0].display_name
