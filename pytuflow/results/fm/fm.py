@@ -2,7 +2,9 @@ from pathlib import Path
 from typing import Union
 
 from .fm_res_driver import FM_ResultDriver
+from .gxy import GXY
 from ..abc.time_series_result import TimeSeriesResult
+from ..time_util import default_reference_time
 
 
 PathType = Union[str, Path, None]
@@ -13,8 +15,10 @@ class FM_TS(TimeSeriesResult):
     def __init__(self, fpath: Union[PathType, list[PathType]], gxy: PathType, dat: PathType) -> None:
         self._df = None
         self._driver = []
-        self.gxy = Path(gxy) if gxy is not None else None
-        self.dat = Path(dat) if dat is not None else None
+        self.gxy_fpath = Path(gxy) if gxy is not None else None
+        self.dat_fpath = Path(dat) if dat is not None else None
+        self.gxy = None
+        self.dat = None
         super().__init__(fpath)
 
     def __repr__(self) -> str:
@@ -37,3 +41,12 @@ class FM_TS(TimeSeriesResult):
                 raise Exception(f'Error loading Flood Modeller result: {e}')
 
         self.sim_id = self._driver[0].display_name
+        for driver in self._driver:
+            driver.reference_time = default_reference_time
+
+        if self.gxy_fpath is not None:
+            self.gxy = GXY(self.gxy_fpath)
+
+        # if self.dat_fpath is not None:
+        #     self.dat = DAT(self.dat_fpath)
+

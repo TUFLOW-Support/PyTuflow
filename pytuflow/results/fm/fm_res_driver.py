@@ -1,3 +1,4 @@
+from datetime import datetime
 from pathlib import Path
 from typing import Generator, Union
 
@@ -41,6 +42,7 @@ class FM_ResultDriver:
 
     def __init__(self, fpath: Path) -> None:
         self.fpath = fpath
+        self._reference_time = None
         self.df = None
         self.result_types = []
         self.timesteps = []
@@ -48,6 +50,14 @@ class FM_ResultDriver:
 
     def load(self) -> None:
         raise NotImplementedError
+
+    @property
+    def reference_time(self) -> Union[datetime, None]:
+        return self._reference_time
+
+    @reference_time.setter
+    def reference_time(self, value: datetime) -> None:
+        self._reference_time = value
 
 
 class FM_GuiCSVResult(FM_ResultDriver):
@@ -144,3 +154,12 @@ class FM_ZZNResult(FM_ResultDriver):
             else:
                 self.df = pd.concat([self.df, df], axis=1)
         self.display_name = self.fpath.stem
+        self._reference_time = self.zzn.reference_time()
+
+    @property
+    def reference_time(self) -> Union[datetime, None]:
+        return self._reference_time
+
+    @reference_time.setter
+    def reference_time(self, value: datetime) -> None:
+        pass

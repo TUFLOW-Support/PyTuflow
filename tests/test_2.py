@@ -3,6 +3,7 @@ from datetime import datetime
 from unittest import TestCase
 
 from pytuflow.results.fm.fm import FM_TS
+from pytuflow.results.fm.gxy import GXY
 from pytuflow.results.tpc.tpc import TPC
 from pytuflow.results.gpkg_ts.gpkg_ts import GPKG_TS
 from pytuflow.results.iterator_util import Iterator
@@ -382,3 +383,12 @@ class Test_FM_TS(unittest.TestCase):
         p = './fm/zzn/FMT_M01_001.zzn'
         res = FM_TS(p, None, None)
         self.assertEqual('FMT_M01_001', res.sim_id)
+
+
+class Test_GXY(unittest.TestCase):
+
+    def test_gxy(self):
+        p = './fm/zzn/FMT_M01_001.gxy'
+        gxy = GXY(p)
+        self.assertEqual((115, 2), gxy.node_df.shape)
+        self.assertEqual((122, 2), gxy.link_df.shape)
