@@ -392,3 +392,24 @@ class Test_GXY(unittest.TestCase):
         gxy = GXY(p)
         self.assertEqual((115, 2), gxy.node_df.shape)
         self.assertEqual((122, 2), gxy.link_df.shape)
+
+
+class Test_Dat(unittest.TestCase):
+
+    def test_import(self):
+        from pytuflow.results.fm.dat import Dat
+        from pytuflow.results.fm.dat import available_classes
+        from pytuflow.results.fm.dat import UNITS_DIR
+        self.assertEqual(len(list(UNITS_DIR.glob('*.py')))-2, len(available_classes))
+
+    def test_load(self):
+        from pytuflow.results.fm.dat import Dat
+        p = './fm/zzn/FMT_M01_001.dat'
+        dat = Dat(p)
+        self.assertEqual(56, len(dat.units))
+
+    def test_load_2(self):
+        from pytuflow.results.fm.dat import Dat
+        p = './fm/gui_csv/LBE_TBP3_10PC_350.dat'
+        dat = Dat(p)
+        self.assertEqual(137, len(dat.units))

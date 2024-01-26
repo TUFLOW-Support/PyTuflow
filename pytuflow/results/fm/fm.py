@@ -3,6 +3,7 @@ from typing import Union
 
 from .fm_res_driver import FM_ResultDriver
 from .gxy import GXY
+from .dat import Dat
 from ..abc.time_series_result import TimeSeriesResult
 from ..time_util import default_reference_time
 
@@ -47,6 +48,6 @@ class FM_TS(TimeSeriesResult):
         if self.gxy_fpath is not None:
             self.gxy = GXY(self.gxy_fpath)
 
-        # if self.dat_fpath is not None:
-        #     self.dat = DAT(self.dat_fpath)
+        if self.dat_fpath is not None:
+            self.dat = Dat(self.dat_fpath)
 
