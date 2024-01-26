@@ -62,15 +62,13 @@ class TimeSeriesResultItem(ABC):
         """
         raise NotImplementedError
 
-    @abstractmethod
     def count(self) -> int:
         """
         Returns the number of elements in the result item.
         e.g. if result item is storing channel information, then this would return channel count.
         """
-        raise NotImplementedError
+        return len(self.ids(None))
 
-    @abstractmethod
     def ids(self, result_type: str) -> list[str]:
         """
         Return a list IDs for the given result type.
@@ -80,9 +78,14 @@ class TimeSeriesResultItem(ABC):
             The result_type must match exactly the result type name in the time_series dictionary.
             i.e. case correction, short name to long name conversion should be done before calling this method.
         """
-        raise NotImplementedError
+        if self.df is None:
+            return []
+        if not result_type:
+            return self.df.index.tolist()
+        if result_type in self.time_series:
+            return self.time_series[result_type].df.columns.tolist()
+        return []
 
-    @abstractmethod
     def result_types(self, id: str) -> list[str]:
         """
         Returns a list of result_types for the given id.
@@ -92,9 +95,16 @@ class TimeSeriesResultItem(ABC):
             The id must be a valid id (case-sensitive).
             i.e. any case correction should be done before calling this method.
         """
-        raise NotImplementedError
+        if not self.time_series:
+            return []
+        if not id:
+            return list(self.time_series.keys())
+        result_types = []
+        for result_type, ts in self.time_series.items():
+            if result_type not in result_types and id in [x for x in ts.df.columns]:
+                result_types.append(result_type)
+        return result_types
 
-    @abstractmethod
     def timesteps(self, dtype: str) -> list[Union[float, datetime]]:
         """
         Returns a list of time-steps for the given dtype.
@@ -102,7 +112,11 @@ class TimeSeriesResultItem(ABC):
         :param dtype:
             The return type can be either 'relative' e.g. hours or 'absolute' e.g. datetime.
         """
-        raise NotImplementedError
+        if not self.time_series:
+            return []
+
+        for ts in self.time_series.values():
+            return ts.timesteps(dtype)
 
     def get_time_series(self, id: list[str], result_type: list[str]) -> pd.DataFrame:
         """
@@ -164,7 +178,7 @@ class TimeSeriesResultItem(ABC):
     @abstractmethod
     def conv_result_type_name(result_type: str) -> str:
         """
-        Returns a corrected result type name i.e. will correct case and convert short-name to the correct name.
+        Returns a corrected result type name i.e. convert short-name to the correct name.
 
         :param result_type:
             Case-insensitive result type name or well known short name e.g. 'h' for 'Water Level'.

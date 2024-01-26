@@ -3,6 +3,7 @@ from datetime import datetime
 from unittest import TestCase
 
 from pytuflow.results.fm.fm import FM_TS
+from pytuflow.results.fm.fm_nodes import FMNodes
 from pytuflow.results.fm.gxy import GXY
 from pytuflow.results.tpc.tpc import TPC
 from pytuflow.results.gpkg_ts.gpkg_ts import GPKG_TS
@@ -406,10 +407,22 @@ class Test_Dat(unittest.TestCase):
         from pytuflow.results.fm.dat import Dat
         p = './fm/zzn/FMT_M01_001.dat'
         dat = Dat(p)
-        self.assertEqual(56, len(dat.units))
+        self.assertEqual(67, len(dat._units_id))
 
     def test_load_2(self):
         from pytuflow.results.fm.dat import Dat
         p = './fm/gui_csv/LBE_TBP3_10PC_350.dat'
         dat = Dat(p)
-        self.assertEqual(137, len(dat.units))
+        self.assertEqual(161, len(dat._units_id))
+
+
+class Test_FMNode(unittest.TestCase):
+
+    def test_load(self):
+        from pytuflow.results.fm.dat import Dat
+        p = './dummy'
+        gxy = GXY('./fm/zzn/FMT_M01_001.gxy')
+        dat = Dat('./fm/zzn/FMT_M01_001.dat')
+        id_list = list(dat._units_id.keys())
+        fm_node = FMNodes(p, id_list, gxy, dat)
+        self.assertEqual((67, 4), fm_node.df.shape)

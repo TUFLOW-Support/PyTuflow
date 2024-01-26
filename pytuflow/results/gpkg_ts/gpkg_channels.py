@@ -8,7 +8,8 @@ from .gpkg_time_series_result_item import GPKGResultItem
 from ..abc.channels import Channels
 
 
-RESULT_SHORT_NAME = {'h': 'water level', 'q': 'flow', 'v': 'velocity', 'e': 'energy', 'vol': 'channel volume',
+RESULT_SHORT_NAME = {'h': 'water level', 'q': 'flow', 'v': 'velocity', 'vel': 'velocity', 'e': 'energy',
+                     'vol': 'channel volume',
                      'channel vol': 'channel volume', 'chan vol': 'channel volume',
                      'qa': 'flow area', 'd': 'channel depth',
                      'total q': 'total flow'}

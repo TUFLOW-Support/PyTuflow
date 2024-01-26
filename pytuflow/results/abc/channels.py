@@ -7,7 +7,7 @@ from .time_series_result_item import TimeSeriesResultItem
 class Channels(TimeSeriesResultItem):
     """Abstract base class for channel result item."""
 
-    def __init__(self, fpath: Union[str, Path]) -> None:
+    def __init__(self, fpath: Union[str, Path], *args, **kwargs) -> None:
         super().__init__(fpath)
         self.name = 'Channel'
         self.domain = '1d'

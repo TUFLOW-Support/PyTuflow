@@ -1,8 +1,19 @@
-import io
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Union, TextIO
 
 import pandas as pd
+
+
+@dataclass
+class _Node:
+    uid: str
+    type: str = field(default='', init=False)
+    id: str = field(default='', init=False)
+
+    def __post_init__(self):
+        self.type = '_'.join(self.uid.split('_', 2)[:2])
+        self.id = self.uid.split('_', 2)[2]
 
 
 class GXY:
@@ -14,7 +25,15 @@ class GXY:
         self.connection_count = 0
         self._nodes_finished = False
         self._links_finished = False
+        self._nodes = []
         self._load()
+
+    def gxy_id(self, id_: str, types: list[str]) -> str:
+        for node in self._nodes:
+            if node.id == id_ and node.type in types:
+                return node.uid
+        return ''
+
 
     def _load(self) -> None:
         with self.fpath.open() as f:
@@ -31,6 +50,7 @@ class GXY:
                 break
             if line.startswith('['):
                 id_ = line.strip('[]\n')
+                self._nodes.append(_Node(id_))
                 try:
                     x = float(fo.readline().replace('X=', '').strip())
                 except ValueError:

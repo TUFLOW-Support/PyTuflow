@@ -20,3 +20,9 @@ class Unit:
 
     def bed_level(self, *args, **kwargs) -> float:
         return np.nan
+
+    def upstream_defined(self, *args, **kwargs) -> tuple['Unit', float]:
+        pass
+
+    def downstream_defined(self, *args, **kwargs) -> tuple['Unit', float]:
+        pass

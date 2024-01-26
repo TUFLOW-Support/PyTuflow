@@ -1,6 +1,7 @@
 from pathlib import Path
 from typing import Union
 
+from .fm_nodes import FMNodes
 from .fm_res_driver import FM_ResultDriver
 from .gxy import GXY
 from .dat import Dat
@@ -16,6 +17,7 @@ class FM_TS(TimeSeriesResult):
     def __init__(self, fpath: Union[PathType, list[PathType]], gxy: PathType, dat: PathType) -> None:
         self._df = None
         self._driver = []
+        self._id_list = None
         self.gxy_fpath = Path(gxy) if gxy is not None else None
         self.dat_fpath = Path(dat) if dat is not None else None
         self.gxy = None
@@ -34,6 +36,11 @@ class FM_TS(TimeSeriesResult):
         for fpath in self.fpath:
             try:
                 self._driver.append(FM_ResultDriver(fpath))
+                if self._id_list is None:
+                    self._id_list = self._driver[0].ids
+                else:
+                    if self._id_list != self._driver[-1].ids:
+                        raise Exception('Result IDs do not match')
             except NotImplementedError as e:
                 raise Exception('Flood Modeller result not recognised, supported, or result could be empty')
             except FileNotFoundError as e:
@@ -51,3 +58,4 @@ class FM_TS(TimeSeriesResult):
         if self.dat_fpath is not None:
             self.dat = Dat(self.dat_fpath)
 
+        self.nodes = FMNodes(self.fpath[0], self._id_list, self.gxy, self.dat)
