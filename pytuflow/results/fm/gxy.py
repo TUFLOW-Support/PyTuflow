@@ -12,7 +12,7 @@ class _Node:
     id: str = field(default='', init=False)
 
     def __post_init__(self):
-        self.type = '_'.join(self.uid.split('_', 2)[:2])
+        self.type = '_'.join(self.uid.split('_', 2)[:2]).strip('_')
         self.id = self.uid.split('_', 2)[2]
 
 
