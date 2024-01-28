@@ -393,6 +393,13 @@ class Test_FM_TS(unittest.TestCase):
         self.assertEqual(6, len(res.nodes.time_series))
         self.assertEqual((37, 103), res.nodes.time_series['Flow'].df.shape)
 
+    def test_load_channels(self):
+        p = './fm/zzn/FMT_M01_001.zzn'
+        dat = './fm/zzn/FMT_M01_001.dat'
+        gxy = './fm/zzn/FMT_M01_001.gxy'
+        res = FM_TS(p, gxy, dat)
+        self.assertEqual(1, 1)
+
 
 class Test_GXY(unittest.TestCase):
 

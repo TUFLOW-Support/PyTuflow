@@ -21,6 +21,12 @@ class Unit:
     def bed_level(self, *args, **kwargs) -> float:
         return np.nan
 
+    def us_invert(self, *args, **kwargs) -> float:
+        return self.bed_level(*args, **kwargs)
+
+    def ds_invert(self, *args, **kwargs) -> float:
+        return self.bed_level(*args, **kwargs)
+
     def upstream_defined(self, *args, **kwargs) -> tuple['Unit', float]:
         pass
 

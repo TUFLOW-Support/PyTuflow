@@ -1,6 +1,7 @@
 from pathlib import Path
 from typing import Union
 
+from .fm_channels import FMChannels
 from .fm_nodes import FMNodes
 from .fm_res_driver import FM_ResultDriver
 from .gxy import GXY
@@ -62,3 +63,6 @@ class FM_TS(TimeSeriesResult):
         for driver in self._driver:
             for res_type in driver.result_types:
                 self.nodes.load_time_series(res_type, driver.df, driver.reference_time)
+
+        if self.gxy is not None:
+            self.channels = FMChannels(self.fpath[0], self.gxy.link_df.index.tolist(), self.gxy, self.dat)

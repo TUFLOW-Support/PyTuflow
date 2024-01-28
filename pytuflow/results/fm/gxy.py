@@ -34,6 +34,11 @@ class GXY:
                 return node.uid
         return ''
 
+    def id(self, uid: str, types: list[str]) -> str:
+        for node in self._nodes:
+            if node.uid == uid and node.type in types:
+                return node.id
+        return ''
 
     def _load(self) -> None:
         with self.fpath.open() as f:
