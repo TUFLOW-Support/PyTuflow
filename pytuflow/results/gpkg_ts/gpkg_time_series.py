@@ -21,7 +21,6 @@ class GPKGTimeSeries(GPKGBase, TimeSeries):
         self._id = id  # result type id
         self._timesteps_rel = None
         self._timesteps_abs = None
-        self._df = None
 
     def __repr__(self) -> str:
         if hasattr(self, 'fpath'):

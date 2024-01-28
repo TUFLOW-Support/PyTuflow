@@ -13,7 +13,6 @@ class TPCTimeSeriesCSV(TimeSeries):
     def __init__(self, fpath: Union[str, Path], reference_time: datetime, index_col: Union[str, int]) -> None:
         super().__init__()
         self._index_col = index_col
-        self.df = None
         self.fpath = Path(fpath)
         self.reference_time = reference_time
         self.load()

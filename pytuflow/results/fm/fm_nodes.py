@@ -1,3 +1,4 @@
+from datetime import datetime
 from collections import OrderedDict
 
 import numpy as np
@@ -40,6 +41,3 @@ class FMNodes(FMResultItem, Nodes):
 
         self.df = pd.DataFrame(d)
         self.df.set_index('Node', inplace=True)
-
-    def load_time_series(self, name: str) -> None:
-        pass

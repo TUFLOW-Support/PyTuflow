@@ -1,6 +1,10 @@
+from datetime import datetime
 from pathlib import Path
 from typing import Union
 
+import pandas as pd
+
+from .fm_time_series import FMTimeSeries
 from ..abc.time_series_result_item import TimeSeriesResultItem
 from .dat import Dat
 from .gxy import GXY
@@ -24,6 +28,10 @@ class FMResultItem(TimeSeriesResultItem):
 
     def ids(self, result_type: Union[str, None]) -> list[str]:
         return self._ids
+
+    def load_time_series(self, name: str, df: pd.DataFrame, reference_time: datetime) -> None:
+        if name not in self.time_series or self.time_series[name].df.empty:
+            self.time_series[name] = FMTimeSeries(name, df, reference_time)
 
     @staticmethod
     def conv_result_type_name(result_type: str) -> str:

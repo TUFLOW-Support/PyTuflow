@@ -59,3 +59,6 @@ class FM_TS(TimeSeriesResult):
             self.dat = Dat(self.dat_fpath)
 
         self.nodes = FMNodes(self.fpath[0], self._id_list, self.gxy, self.dat)
+        for driver in self._driver:
+            for res_type in driver.result_types:
+                self.nodes.load_time_series(res_type, driver.df, driver.reference_time)
