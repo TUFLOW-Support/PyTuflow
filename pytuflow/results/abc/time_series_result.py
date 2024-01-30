@@ -45,8 +45,10 @@ class TimeSeriesResult(ABC):
         """Load the result file. Called by __init__."""
         raise NotImplementedError
 
-    def init_iterator(self) -> Iterator:
+    def init_iterator(self, *args) -> Iterator:
         """Initialise the class iterator."""
+        if args:
+            return Iterator(*args)
         return Iterator(self.channels, self.nodes, self.po, self.rl)
 
     def channel_count(self) -> int:
@@ -402,13 +404,13 @@ class TimeSeriesResult(ABC):
         if not isinstance(ids, list):
             ids = [ids] if ids is not None else []
 
-        ids_lower = [x.lower() for x in self.channel_ids()]
+        ids_lower = [str(x).lower() for x in self.channel_ids()]
         ids_ = []
         for id_ in ids:
-            if id_.lower() not in ids_lower:
+            if str(id_).lower() not in ids_lower:
                 raise ValueError(f'Invalid channel id: {id_}')
             else:
-                i = ids_lower.index(id_.lower())
+                i = ids_lower.index(str(id_).lower())
                 ids_.append(self.channel_ids()[i])
         ids = ids_
 

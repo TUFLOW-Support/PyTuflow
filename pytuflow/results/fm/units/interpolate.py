@@ -28,6 +28,10 @@ class Interpolate(Unit):
     def id(self) -> str:
         return f'INTERPOLATE__{self._id}'
 
+    @property
+    def type(self) -> str:
+        return 'Interpolate'
+
     def bed_level(self, dat: 'Dat', gxy: 'GXY', *args, **kwargs) -> float:
         if dat is not None and gxy is not None and self.id in gxy.node_df.index:
             ups_z, ups_dist, dns_z, dns_dist = None, None, None, None

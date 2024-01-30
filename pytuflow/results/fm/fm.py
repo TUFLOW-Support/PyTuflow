@@ -1,6 +1,10 @@
 import os
+from datetime import datetime
 from pathlib import Path
 from typing import Union
+
+import pandas as pd
+
 from ..types import PathLike
 
 from .fm_channels import FMChannels
@@ -9,8 +13,7 @@ from .fm_res_driver import FM_ResultDriver
 from .gxy import GXY
 from .dat import Dat
 from ..abc.time_series_result import TimeSeriesResult
-from ..time_util import default_reference_time
-
+from ..time_util import default_reference_time, closest_time_index
 
 
 class FM_TS(TimeSeriesResult):
@@ -62,7 +65,28 @@ class FM_TS(TimeSeriesResult):
         self.nodes = FMNodes(self.fpath[0], self._id_list, self.gxy, self.dat)
         for driver in self._driver:
             for res_type in driver.result_types:
-                self.nodes.load_time_series(res_type, driver.df, driver.reference_time)
+                self.nodes.load_time_series(res_type, driver.df, driver.reference_time, driver.timesteps)
 
         if self.gxy is not None:
             self.channels = FMChannels(self.fpath[0], self.gxy.link_df.index.tolist(), self.gxy, self.dat)
+
+    def long_plot(self,
+                  ids: Union[str, list[str]],
+                  result_type: Union[str, list[str]],
+                  time: Union[float, datetime]
+                  ) -> pd.DataFrame:
+        if not self.nodes or not self.channels:
+            return Exception('GXY file required for long plotting')
+
+        if not isinstance(ids, list):
+            ids = [ids] if ids else []
+
+        ids_ = []
+        for id_ in ids:
+            try:
+                dns_chans = self.nodes.df.loc[id_, 'Dns Channels']
+                if dns_chans:
+                    ids_.append(dns_chans[0])
+            except KeyError:
+                continue
+        return super().long_plot(ids_, result_type, time)

@@ -30,9 +30,9 @@ class FMResultItem(TimeSeriesResultItem):
     def ids(self, result_type: Union[str, None]) -> list[str]:
         return self._ids
 
-    def load_time_series(self, name: str, df: pd.DataFrame, reference_time: datetime) -> None:
+    def load_time_series(self, name: str, df: pd.DataFrame, reference_time: datetime, timesteps: list[float]) -> None:
         if name not in self.time_series or self.time_series[name].df.empty:
-            self.time_series[name] = FMTimeSeries(name, df, reference_time)
+            self.time_series[name] = FMTimeSeries(name, df, reference_time, timesteps)
 
     @staticmethod
     def conv_result_type_name(result_type: str) -> str:

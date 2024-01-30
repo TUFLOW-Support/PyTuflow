@@ -27,6 +27,10 @@ class River(Unit):
             return f'RIVER_SECTION_{self._id}'
         return f'RIVER_SECTION_UNKOWN_{uuid4()}'
 
+    @property
+    def type(self) -> str:
+        return 'River'
+
     def bed_level(self, *args, **kwargs) -> float:
         if self.df is not None:
             return np.nanmin(self.df['y'])

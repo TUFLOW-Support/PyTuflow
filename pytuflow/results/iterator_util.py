@@ -189,7 +189,7 @@ class Iterator:
 
         # find node and channel result items
         result_items = [x for x in self._result_items if x.name == 'Node' or x.name == 'Channel']
-        if len(result_items) != 2 or result_items[0].name == result_items[1].name:
+        if len(result_items) != 2:
             raise Exception('Need exactly 2 result items (Nodes and Channels) to extract LP results.')
         if result_items[0].name == 'Node':
             nodes, channels = result_items
@@ -201,6 +201,8 @@ class Iterator:
         for corr_item in self._corrected_items(ids, [], 'channel', 'temporal', channels):
             if corr_item.id is not None and corr_item.id_orig in ids and corr_item.id not in ids_:
                 ids_.append(corr_item.id)
+        if not ids_ and ids and not channels.result_types(None):  # if channels has not result types (FM result)
+            ids_ = self._correct_id(ids, channels.df)
 
         # separate static result types (not including maximums)
         static_result_types, static_result_types_corr_names = LP_1D.extract_static_results(result_types)
@@ -240,8 +242,8 @@ class Iterator:
         """
         ids_ = []
         for id_ in ids:
-            if id_.lower() in [x.lower() for x in df.index]:
-                ids_.append(df.index[[x.lower() for x in df.index].index(id_.lower())])
+            if str(id_).lower() in [str(x).lower() for x in df.index]:
+                ids_.append(df.index[[str(x).lower() for x in df.index].index(str(id_).lower())])
             else:
                 ids_.append(None)
         return ids_

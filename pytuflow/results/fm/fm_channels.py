@@ -16,7 +16,9 @@ class FMChannels(FMResultItem, Channels):
         return '<FM Channels>'
 
     def load(self) -> None:
-        d = OrderedDict({'Channel': [], 'US Node': [], 'DS Node': [], 'Length': [], 'US Invert': [], 'DS Invert': []})
+        d = OrderedDict({'Channel': [], 'Type': [], 'Flags': [], 'Length': [], 'US Node': [], 'DS Node': [],
+                         'US Invert': [], 'DS Invert': [], 'LBUS Obvert': [], 'RBUS Obvert': [], 'LBDS Obvert': [],
+                         'RBDS Obvert': []})
         for id_ in self._ids:
             ups_node_uid = self.gxy.link_df.loc[id_, 'ups_node']
             dns_node_uid = self.gxy.link_df.loc[id_, 'dns_node']
@@ -31,13 +33,20 @@ class FMChannels(FMResultItem, Channels):
                 unit = self.dat.unit(ups_node_id)
                 d['US Invert'].append(unit.ds_invert(self.dat, self.gxy))
                 d['Length'].append(unit.dx)
+                d['Type'].append(unit.type)
             else:
                 d['US Invert'].append(np.nan)
                 d['Length'].append(np.nan)
+                d['Type'].append('FM Unit')
             if self.dat and self.dat.unit(dns_node_id):
                 unit = self.dat.unit(dns_node_id)
                 d['DS Invert'].append(unit.us_invert(self.dat, self.gxy))
             else:
                 d['DS Invert'].append(np.nan)
+            d['Flags'].append('')
+            d['LBUS Obvert'].append(np.nan)
+            d['RBUS Obvert'].append(np.nan)
+            d['LBDS Obvert'].append(np.nan)
+            d['RBDS Obvert'].append(np.nan)
         self.df = pd.DataFrame(d)
         self.df.set_index('Channel', inplace=True)

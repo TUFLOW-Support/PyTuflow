@@ -431,7 +431,7 @@ class Test_FM_TS(unittest.TestCase):
         dat = './fm/zzn/FMT_M01_001.dat'
         gxy = './fm/zzn/FMT_M01_001.gxy'
         res = FM_TS(p, gxy, dat)
-        self.assertEqual((60, 5), res.channels.df.shape)
+        self.assertEqual((60, 11), res.channels.df.shape)
 
     def test_fm_channels(self):
         p = './fm/zzn/FMT_M01_001.zzn'
@@ -446,3 +446,11 @@ class Test_FM_TS(unittest.TestCase):
         gxy = './fm/zzn/FMT_M01_001.gxy'
         res = FM_TS(p, gxy, dat)
         self.assertEqual(['Bed Level', 'Water Level'], res.long_plot_result_types())
+
+    def test_lp(self):
+        p = './fm/zzn/FMT_M01_001.zzn'
+        dat = './fm/zzn/FMT_M01_001.dat'
+        gxy = './fm/zzn/FMT_M01_001.gxy'
+        res = FM_TS(p, gxy, dat)
+        df = res.long_plot('FC01.25', ['bed level', 'water level'], 1)
+        self.assertEqual((8, 5), df.shape)

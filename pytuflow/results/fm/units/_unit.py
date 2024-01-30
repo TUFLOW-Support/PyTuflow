@@ -15,6 +15,10 @@ class Unit:
     def id(self) -> str:
         return ''
 
+    @property
+    def type(self) -> str:
+        return 'FM Unit'
+
     def _load(self, fo: TextIO, fixed_field_len: int) -> None:
         pass
 

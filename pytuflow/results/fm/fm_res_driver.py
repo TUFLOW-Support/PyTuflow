@@ -147,12 +147,12 @@ class FM_ZZNResult(FM_ResultDriver):
     def load(self) -> None:
         self.zzn = ZZN(self.fpath)
         self.ids = self.zzn.labels()
-        self._timesteps = np.array([[x + 1, (x * self.zzn.output_interval()) / 3600] for x in range(self.zzn.timestep_count())])
+        self.timesteps = [(x * self.zzn.output_interval()) / 3600 for x in range(self.zzn.timestep_count())]
         self.result_types = ['Flow', 'Stage', 'Froude', 'Velocity', 'Mode',  'State']
         for res_type in self.result_types:
             df = pd.DataFrame(self.zzn.get_time_series_data(res_type))
             df.columns = [f'{res_type}::{x}' for x in self.ids]
-            df['Time (hr)'] = self._timesteps[:,1]
+            df['Time (hr)'] = self.timesteps
             df.set_index('Time (hr)', inplace=True)
             if self.df is None:
                 self.df = df

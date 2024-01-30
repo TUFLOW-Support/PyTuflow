@@ -1,11 +1,10 @@
 import pandas as pd
-from abc import ABC, abstractmethod
 
 from .abc.channels import Channels
 from .abc.nodes import Nodes
 
 
-class ResultUtil(ABC):
+class ResultUtil:
     """
     Class for handling functions that don't belong in either Channels or Nodes class and
     are format specific enough that df can't be massaged into a common format so requires
@@ -30,7 +29,6 @@ class ResultUtil(ABC):
         self.channels = channels
         self.nodes = nodes
 
-    @abstractmethod
     def extract_culvert_obvert(self, inp_df: pd.DataFrame) -> list[float]:
         """
         Extracts the culvert obverts from the inp_df which should contain a list of channel IDs.
@@ -38,9 +36,8 @@ class ResultUtil(ABC):
         :param inp_df:
             DataFrame containing a list of channel IDs as one of the columns.
         """
-        raise NotImplementedError
+        return []
 
-    @abstractmethod
     def extract_pit_levels(self, inp_df: pd.DataFrame) -> list[float]:
         """
         Extracts the pit ground levels from the inp_df which should contain a list of channel IDs and node IDs.
@@ -48,4 +45,4 @@ class ResultUtil(ABC):
         :param inp_df:
             DataFrame containing a list of channel IDs and node IDs as one of the columns.
         """
-        raise NotImplementedError
+        return []
