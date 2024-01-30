@@ -524,8 +524,19 @@ class Test_Info_2013(unittest.TestCase):
         df = res.maximum(['FC01.24.1', 'FC01.25.1'], ['h'])
         self.assertEqual((2, 2), df.shape)
 
+    def test_long_plot_result_types(self):
+        p = './2013/M04_5m_001_1d.info'
+        res = Info(p)
+        self.assertEqual(5, len(res.long_plot_result_types()))
+
     def test_long_plot(self):
         p = './2013/M04_5m_001_1d.info'
         res = Info(p)
         df = res.long_plot('ds1', ['bed level', 'water level', 'max water level'], 1)
         self.assertEqual((12, 7), df.shape)
+
+    def test_long_plot_2(self):
+        p = './2013/M04_5m_001_1d.info'
+        res = Info(p)
+        df = res.long_plot(['FC01.1_R', 'FC01.36'], ['bed level', 'water level', 'pipes'], 1)
+        self.assertEqual((4, 6), df.shape)
