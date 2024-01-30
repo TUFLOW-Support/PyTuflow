@@ -17,6 +17,7 @@ class GPKGTimeSeries(GPKGBase, TimeSeries):
     def __init__(self, fpath: Union[str, Path], id: str, parent: 'GPKGResultItem') -> None:
         super(GPKGTimeSeries, self).__init__()
         self.fpath = fpath
+        self._df = None
         self._parent = parent
         self._id = id  # result type id
         self._timesteps_rel = None
@@ -75,3 +76,7 @@ class GPKGTimeSeries(GPKGBase, TimeSeries):
             finally:
                 self._close_db()
         return self._df
+
+    @df.setter
+    def df(self, value: pd.DataFrame) -> None:
+        return

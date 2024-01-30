@@ -43,6 +43,7 @@ class FM_ResultDriver:
     def __init__(self, fpath: Path) -> None:
         self.fpath = fpath
         self._reference_time = None
+        self.ids = []
         self.df = None
         self.result_types = []
         self.timesteps = []
@@ -82,6 +83,8 @@ class FM_GuiCSVResult(FM_ResultDriver):
             self.result_types.append(res_type)
             df = pd.read_csv(self.fpath, skiprows=ind, nrows=nrows)
             df.set_index('Time (hr)', inplace=True)
+            if not self.ids:
+                self.ids = df.columns.tolist()
             df.columns = [f'{res_type}::{x}' for x in df.columns]
             if self.df is None:
                 self.df = df
@@ -125,9 +128,11 @@ class FM_PythonCSVResult(FM_ResultDriver):
         self.df.columns = self.df.columns.map(lambda x: '::'.join([y for y in x if 'Unnamed' not in y]))
         self.df.set_index('Time (hr)', inplace=True)
         for col_name in self.df.columns:
-            type_, _ = col_name.split('::', 1)
+            type_, id_ = col_name.split('::', 1)
             if type_.strip() not in self.result_types:
                 self.result_types.append(type_.strip())
+            if id_.strip() not in self.ids:
+                self.ids.append(id_.strip())
         self.timesteps = self.df.index.tolist()
         self.display_name = self.fpath.stem
 

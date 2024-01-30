@@ -105,6 +105,8 @@ class TimeSeriesResult(ABC):
             If no result type is provided, all result types will be assumed to be all available.
         """
         if self.channels:
+            if not result_type:
+                return self.channels.ids(None)
             return self.ids(result_type, '1d channel')
         return []
 
@@ -119,6 +121,8 @@ class TimeSeriesResult(ABC):
             If no result type is provided, all result types will be assumed to be all available.
         """
         if self.nodes:
+            if not result_type:
+                return self.nodes.ids(None)
             return self.ids(result_type, '1d node')
         return []
 
@@ -133,6 +137,8 @@ class TimeSeriesResult(ABC):
             If no result type is provided, all result types will be assumed to be all available.
         """
         if self.po:
+            if not result_type:
+                return self.po.ids(None)
             return self.ids(result_type, '2d')
         return []
 
@@ -147,6 +153,8 @@ class TimeSeriesResult(ABC):
             If no result type is provided, all result types will be assumed to be all available.
         """
         if self.rl:
+            if not result_type:
+                return self.rl.ids(None)
             return self.ids(result_type, '0d')
         return []
 
@@ -180,6 +188,8 @@ class TimeSeriesResult(ABC):
             If no ID is provided, all IDs will be searched.
         """
         if self.channels:
+            if not id:
+                return self.channels.result_types(None)
             return self.result_types(id, '1d channel')
         return []
 
@@ -192,6 +202,8 @@ class TimeSeriesResult(ABC):
             If no ID is provided, all IDs will be searched.
         """
         if self.nodes:
+            if not id:
+                return self.nodes.result_types(None)
             return self.result_types(id, '1d node')
         return []
 
@@ -204,6 +216,8 @@ class TimeSeriesResult(ABC):
             If no ID is provided, all IDs will be searched.
         """
         if self.po:
+            if not id:
+                return self.po.result_types(None)
             return self.result_types(id, '2d')
         return []
 
@@ -216,6 +230,8 @@ class TimeSeriesResult(ABC):
             If no ID is provided, all IDs will be searched.
         """
         if self.rl:
+            if not id:
+                return self.rl.result_types(None)
             return self.result_types(id, '0d')
         return []
 

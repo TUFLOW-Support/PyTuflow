@@ -46,6 +46,10 @@ class TPCTimeSeriesNC(TimeSeries):
             self._df = pd.concat([self._df, df], axis=1)
         return self._df
 
+    @df.setter
+    def df(self, value: pd.DataFrame) -> None:
+        return
+
     def load(self):
         if Dataset is None:
             raise ModuleNotFoundError('netCDF4 is not installed')

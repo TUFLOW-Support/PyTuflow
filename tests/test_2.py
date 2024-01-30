@@ -398,7 +398,14 @@ class Test_FM_TS(unittest.TestCase):
         dat = './fm/zzn/FMT_M01_001.dat'
         gxy = './fm/zzn/FMT_M01_001.gxy'
         res = FM_TS(p, gxy, dat)
-        self.assertEqual(1, 1)
+        self.assertEqual((60, 5), res.channels.df.shape)
+
+    def test_fm_channels(self):
+        p = './fm/zzn/FMT_M01_001.zzn'
+        dat = './fm/zzn/FMT_M01_001.dat'
+        gxy = './fm/zzn/FMT_M01_001.gxy'
+        res = FM_TS(p, gxy, dat)
+        self.assertEqual(122, len(res.channel_ids()))
 
 
 class Test_GXY(unittest.TestCase):
