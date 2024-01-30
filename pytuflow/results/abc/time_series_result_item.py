@@ -36,7 +36,10 @@ class TimeSeriesResultItem(ABC):
         self.domain = None
         self.domain_2 = None
         self.df = None
-        self.fpath = Path(fpath)
+        if fpath is not None:
+            self.fpath = Path(fpath)
+        else:
+            self.fpath = None
         self.maximums = None
         self.time_series = {}
         self.load()
