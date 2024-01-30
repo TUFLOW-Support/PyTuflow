@@ -5,6 +5,7 @@ from unittest import TestCase
 from pytuflow.results.fm.fm import FM_TS
 from pytuflow.results.fm.fm_nodes import FMNodes
 from pytuflow.results.fm.gxy import GXY
+from pytuflow.results.info.info import Info
 from pytuflow.results.tpc.tpc import TPC
 from pytuflow.results.gpkg_ts.gpkg_ts import GPKG_TS
 from pytuflow.results.iterator_util import Iterator
@@ -156,6 +157,12 @@ class Test_TPC_2016(TestCase):
         p = './2016/M04_5m_001.tpc'
         res = TPC(p)
         df = res.long_plot('ds1', ['bed level', 'pipes', 'pits', 'water level'], 1)
+        self.assertEqual((12, 7), df.shape)
+
+    def test_long_plot_3(self):
+        p = './2016/M04_5m_001.tpc'
+        res = TPC(p)
+        df = res.long_plot('ds1', ['bed level', 'water level', 'max water level'], 1)
         self.assertEqual((12, 7), df.shape)
 
 
@@ -480,3 +487,45 @@ class Test_FM_TS(unittest.TestCase):
         self.assertEqual(37, len(ts))
         ts = res.timesteps(dtype='absolute')
         self.assertEqual(37, len(ts))
+
+
+class Test_Info_2013(unittest.TestCase):
+
+    def test_load(self):
+        p = './2013/M04_5m_001_1d.info'
+        res = Info(p)
+        self.assertEqual('M04_5m_001', res.sim_id)
+
+    def test_channels(self):
+        p = './2013/M04_5m_001_1d.info'
+        res = Info(p)
+        self.assertEqual(54, res.channel_count())
+        self.assertEqual(54, len(res.channel_ids()))
+
+    def test_nodes(self):
+        p = './2013/M04_5m_001_1d.info'
+        res = Info(p)
+        self.assertEqual(55, res.node_count())
+        self.assertEqual(55, len(res.node_ids()))
+
+    def test_time_series(self):
+        p = './2013/M04_5m_001_1d.info'
+        res = Info(p)
+        ts = res.time_series('ds1', 'q')
+        self.assertEqual((181, 1), ts.shape)
+        ts = res.time_series(['FC01.24.1', 'FC01.25.1'], 'h')
+        self.assertEqual((181, 2), ts.shape)
+
+    def test_maximums(self):
+        p = './2013/M04_5m_001_1d.info'
+        res = Info(p)
+        df = res.maximum(['ds1', 'ds2'], ['flow', 'velocity'])
+        self.assertEqual((2, 4), df.shape)
+        df = res.maximum(['FC01.24.1', 'FC01.25.1'], ['h'])
+        self.assertEqual((2, 2), df.shape)
+
+    def test_long_plot(self):
+        p = './2013/M04_5m_001_1d.info'
+        res = Info(p)
+        df = res.long_plot('ds1', ['bed level', 'water level', 'max water level'], 1)
+        self.assertEqual((12, 7), df.shape)

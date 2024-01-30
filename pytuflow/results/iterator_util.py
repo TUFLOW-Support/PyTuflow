@@ -305,17 +305,22 @@ class Iterator:
         :param cls:
             result item class (e.g. Nodes, Channels, PO, RL)
         """
-        ids_, result_types_ = [], []
+        ids_, result_types_, result_types_temp, = [], [], []
         if ids and cls is not None:
             ids_ = self._correct_id(ids, cls.df)
         if result_types and cls is not None:
             result_types_ = self._correct_result_type(result_types, domain_2, type_)
             if type_.lower() == 'max':
                 result_types = sum([[x, x] for x in result_types], [])
+                result_types_temp = self._correct_result_type(result_types, domain_2, 'temporal')
+                result_types_temp = sum([[x, x] for x in result_types_temp], [])
         if not ids and cls is not None:
             ids_ = []
-            if result_types_:
-                for rt in result_types_:
+            rts = result_types_
+            if type_.lower() == 'max':
+                rts = result_types_temp
+            if rts:
+                for rt in rts:
                     for id_ in cls.ids(rt):
                         if id_ not in ids_:
                             ids_.append(id_)

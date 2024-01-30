@@ -1,5 +1,6 @@
 import re
 from datetime import datetime
+from pathlib import Path
 from typing import Any
 from ..types import PathLike
 
@@ -41,7 +42,7 @@ class TPC(TimeSeriesResult):
         try:
             self._df = pd.read_csv(self.fpath, sep=' == ', engine='python', header=None)
         except Exception as e:
-            raise Exception(f'Error loading TPC file: {e}')
+            raise Exception(f'Error loading file: {e}')
 
         self.units = self._get_property('Units')
         self.sim_id = self._get_property('Simulation ID')
@@ -151,6 +152,14 @@ class TPC(TimeSeriesResult):
         elif domain.lower() == '0d':
             return f'{"_".join(self._rl_name_extract(name).split(" ")).lower()}_rl'
 
+    def _expand_property(self, row: tuple[int, str, str]) -> tuple[str, Path]:
+        _, name_, relpath = row
+        if relpath == 'NONE':
+            p = None
+        else:
+            p = self.fpath.parent / relpath
+        return name_, p
+
     def _load_1d_results(self) -> None:
         node_count = int(self._get_property('Number 1D Nodes'))
         if node_count > 0:
@@ -161,18 +170,15 @@ class TPC(TimeSeriesResult):
                 self.nodes.maximums = TPCMaximums(fpath)
             i = self._get_property_index('1D Node Maximums') + 1
             for row in self._df.iloc[i:].itertuples():
-                if row[1] == '1D Channel Maximums':
+                name_, fpath = self._expand_property(row)
+                if name_ == '1D Channel Maximums':
                     break
-                elif '1D' not in row[1]:
+                elif '1D' not in name_:
                     break
-                _, name_, relpath = row
-                if relpath == 'NONE':
-                    continue
                 id = self._nc_id(name_, '1d')
-                if id is None:
+                if id is None or fpath is None:
                     continue
                 name = self._1d_result_name(name_)
-                fpath = self.fpath.parent / relpath
                 self.nodes.load_time_series(name, fpath, self.reference_time, 1, id)
 
         chan_count = int(self._get_property('Number 1D Channels'))
@@ -184,18 +190,16 @@ class TPC(TimeSeriesResult):
                 self.channels.maximums = TPCMaximums(fpath)
             i = self._get_property_index('1D Channel Maximums') + 1
             for row in self._df.iloc[i:].itertuples():
-                if row[1] == '1D Channel Maximums':
+                name_, fpath = self._expand_property(row)
+                if name_ == '1D Channel Maximums':
                     break
-                elif '1D' not in row[1]:
+                elif '1D' not in name_:
                     break
                 _, name_, relpath = row
-                if relpath == 'NONE':
-                    continue
                 id = self._nc_id(name_, '1d')
-                if id is None:
+                if id is None or fpath is None:
                     continue
                 name = self._1d_result_name(name_)
-                fpath = self.fpath.parent / relpath
                 self.channels.load_time_series(name, fpath, self.reference_time, 1, id)
 
     def _load_po_results(self) -> None:
@@ -204,14 +208,11 @@ class TPC(TimeSeriesResult):
             if not self.po:
                 self.po = TPCPO(None)
                 self.po.nc = self.nc
-            _, name_, relpath = row
-            if relpath == 'NONE':
-                continue
+            name_, fpath = self._expand_property(row)
             id = self._nc_id(name_, '2d')
-            if id is None:
+            if id is None or fpath is None:
                 continue
             name = self._2d_result_name(name_)
-            fpath = self.fpath.parent / relpath
             self.po.load_time_series(name, fpath, self.reference_time, 1, id)
 
     def _load_rl_results(self) -> None:
@@ -223,19 +224,16 @@ class TPC(TimeSeriesResult):
         if rl_point_count:
             df = self._df[self._df.iloc[:,0].str.contains('Reporting Location Points')]
             for row in df.itertuples():
-                if 'Number' in row[1]:
+                name_, fpath = self._expand_property(row)
+                if 'Number' in name_:
                     continue
                 if not self.rl:
                     self.rl = TPCRL(None)
                     self.rl.nc = self.nc
-                _, name_, relpath = row
-                if relpath == 'NONE':
-                    continue
                 id = self._nc_id(name_, '0d')
-                if id is None:
+                if id is None or fpath is None:
                     continue
                 name = self._rl_result_name(name_)
-                fpath = self.fpath.parent / relpath
                 if name.lower() == 'maximum':
                     if not self.rl.maximums:
                         self.rl.maximums = TPCMaximums(fpath)
