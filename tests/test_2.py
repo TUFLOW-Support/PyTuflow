@@ -445,7 +445,7 @@ class Test_FM_TS(unittest.TestCase):
         dat = './fm/zzn/FMT_M01_001.dat'
         gxy = './fm/zzn/FMT_M01_001.gxy'
         res = FM_TS(p, gxy, dat)
-        self.assertEqual(['Bed Level', 'Water Level'], res.long_plot_result_types())
+        self.assertEqual(['Bed Level', 'Stage', 'Stage Max'], res.long_plot_result_types())
 
     def test_lp(self):
         p = './fm/zzn/FMT_M01_001.zzn'
@@ -454,3 +454,29 @@ class Test_FM_TS(unittest.TestCase):
         res = FM_TS(p, gxy, dat)
         df = res.long_plot('FC01.25', ['bed level', 'water level'], 1)
         self.assertEqual((8, 5), df.shape)
+
+    def test_maximums(self):
+        p = './fm/zzn/FMT_M01_001.zzn'
+        dat = './fm/zzn/FMT_M01_001.dat'
+        gxy = './fm/zzn/FMT_M01_001.gxy'
+        res = FM_TS(p, gxy, dat)
+        df = res.maximum('FC01.25', 'flow')
+        self.assertEqual((1, 2), df.shape)
+
+    def test_timeseries(self):
+        p = './fm/zzn/FMT_M01_001.zzn'
+        dat = './fm/zzn/FMT_M01_001.dat'
+        gxy = './fm/zzn/FMT_M01_001.gxy'
+        res = FM_TS(p, gxy, dat)
+        ts = res.time_series('FC01.25', 'h')
+        self.assertEqual((37, 1), ts.shape)
+
+    def test_timesteps(self):
+        p = './fm/zzn/FMT_M01_001.zzn'
+        dat = './fm/zzn/FMT_M01_001.dat'
+        gxy = './fm/zzn/FMT_M01_001.gxy'
+        res = FM_TS(p, gxy, dat)
+        ts = res.timesteps()
+        self.assertEqual(37, len(ts))
+        ts = res.timesteps(dtype='absolute')
+        self.assertEqual(37, len(ts))

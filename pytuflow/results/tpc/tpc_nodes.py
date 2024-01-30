@@ -18,7 +18,7 @@ class TPCNodes(TPCResultItem, Nodes):
 
     def long_plot_result_types(self) -> list[str]:
         result_types = ['Bed Level', 'Pit Level', 'Pipes'] + self.result_types(None)
-        if self.maximums:
+        if self.maximums is not None and self.maximums.df is not None:
             maxes = [x for x in self.maximums.df.columns if 'TMax' not in x]
             result_types.extend(maxes)
         return result_types

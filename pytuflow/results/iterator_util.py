@@ -266,8 +266,11 @@ class Iterator:
             if result_item.domain_2.lower() == domain_2.lower():
                 result_types = [result_item.conv_result_type_name(x) for x in result_types]
                 if type_.lower() == 'max':
-                    result_types = sum([[result_item.result_type_to_max(x), result_item.result_type_to_tmax(x)] for x in result_types],[])
-                    a = result_item.maximums.df.columns
+                    if result_item.maximums is not None and result_item.maximums.df is not None:
+                        result_types = sum([[result_item.result_type_to_max(x), result_item.result_type_to_tmax(x)] for x in result_types],[])
+                        a = result_item.maximums.df.columns
+                    else:
+                        a = []
                 else:
                     a = result_item.result_types(None)
 

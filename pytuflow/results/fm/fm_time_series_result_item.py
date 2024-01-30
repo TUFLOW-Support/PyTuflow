@@ -1,6 +1,8 @@
 from datetime import datetime
 from pathlib import Path
 from typing import Union
+
+from .fm_maximums import FMMaximums
 from ..types import PathLike
 
 import pandas as pd
@@ -22,6 +24,7 @@ class FMResultItem(TimeSeriesResultItem):
         self._ids = id_list
         self.gxy = gxy
         self.dat = dat
+        self.maximums = FMMaximums()
         super().__init__(fpath)
 
     def count(self) -> int:
@@ -33,6 +36,7 @@ class FMResultItem(TimeSeriesResultItem):
     def load_time_series(self, name: str, df: pd.DataFrame, reference_time: datetime, timesteps: list[float]) -> None:
         if name not in self.time_series or self.time_series[name].df.empty:
             self.time_series[name] = FMTimeSeries(name, df, reference_time, timesteps)
+            self.maximums.append(name, self.time_series[name].df)
 
     @staticmethod
     def conv_result_type_name(result_type: str) -> str:

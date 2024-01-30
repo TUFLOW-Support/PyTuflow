@@ -49,5 +49,7 @@ class FMNodes(FMResultItem, Nodes):
         if self.dat:
             result_types.append('Bed Level')
         if 'Stage' in self.result_types(None):
-            result_types.append('Water Level')
+            result_types.append('Stage')
+            if self.maximums is not None and self.maximums.df is not None:
+                result_types.append('Stage Max')
         return result_types

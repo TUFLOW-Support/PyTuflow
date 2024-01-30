@@ -23,7 +23,11 @@ class GPKGNodes(GPKGResultItem, Nodes):
         pass
 
     def long_plot_result_types(self) -> list[str]:
-        return ['Bed Level', 'Pit Level', 'Pipes'] + self.result_types(None)
+        result_types = ['Bed Level', 'Pit Level', 'Pipes'] + self.result_types(None)
+        if self.maximums is not None and self.maximums.df is not None:
+            maxes = [x for x in self.maximums.df.columns if 'TMax' not in x]
+            result_types.extend(maxes)
+        return result_types
 
     @property
     def df(self) -> pd.DataFrame:

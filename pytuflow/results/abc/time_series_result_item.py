@@ -40,7 +40,8 @@ class TimeSeriesResultItem(ABC):
             self.fpath = Path(fpath)
         else:
             self.fpath = None
-        self.maximums = None
+        if not hasattr(self, 'maximums'):
+            self.maximums = None
         self.time_series = {}
         self.load()
 
