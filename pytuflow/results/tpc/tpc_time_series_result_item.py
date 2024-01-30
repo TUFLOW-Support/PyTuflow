@@ -1,5 +1,5 @@
 from datetime import datetime
-from os import PathLike
+from ..types import PathLike
 
 from .tpc_time_series_csv import TPCTimeSeriesCSV
 from .tpc_time_series_nc import TPCTimeSeriesNC

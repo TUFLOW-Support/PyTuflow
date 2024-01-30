@@ -2,7 +2,7 @@ import importlib
 import re
 from pathlib import Path
 from typing import Union, TextIO
-from os import PathLike
+from ..types import PathLike
 
 from .unpack_fixed_field import unpack_fixed_field
 from .units._unit import Unit

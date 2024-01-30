@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 from typing import Union
-from os import PathLike
+from ..types import PathLike
 
 from .fm_channels import FMChannels
 from .fm_nodes import FMNodes

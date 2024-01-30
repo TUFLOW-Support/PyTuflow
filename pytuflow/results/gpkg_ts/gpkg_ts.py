@@ -1,7 +1,7 @@
 import re
 from datetime import datetime
 from pathlib import Path
-from os import PathLike
+from ..types import PathLike
 
 from .gpkg_nodes import GPKGNodes
 from .gpkg_channels import GPKGChannels

@@ -1,7 +1,7 @@
 from collections import OrderedDict
 from pathlib import Path
 from typing import TYPE_CHECKING
-from os import PathLike
+from ..types import PathLike
 
 import numpy as np
 import pandas as pd

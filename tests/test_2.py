@@ -365,6 +365,30 @@ class Test_Iterator(TestCase):
 
 class Test_FM_TS(unittest.TestCase):
 
+    def test_gxy(self):
+        p = './fm/zzn/FMT_M01_001.gxy'
+        gxy = GXY(p)
+        self.assertEqual((115, 2), gxy.node_df.shape)
+        self.assertEqual((122, 2), gxy.link_df.shape)
+
+    def test_import(self):
+        from pytuflow.results.fm.dat import Dat
+        from pytuflow.results.fm.dat import available_classes
+        from pytuflow.results.fm.dat import UNITS_DIR
+        self.assertEqual(len(list(UNITS_DIR.glob('*.py')))-2, len(available_classes))
+
+    def test_load(self):
+        from pytuflow.results.fm.dat import Dat
+        p = './fm/zzn/FMT_M01_001.dat'
+        dat = Dat(p)
+        self.assertEqual(67, len(dat._units_id))
+
+    def test_load_2(self):
+        from pytuflow.results.fm.dat import Dat
+        p = './fm/gui_csv/LBE_TBP3_10PC_350.dat'
+        dat = Dat(p)
+        self.assertEqual(161, len(dat._units_id))
+
     def test_load_python_csv(self):
         p = './fm/python_csv/FMT_M01_001.csv'
         res = FM_TS(p, None, None)
@@ -393,6 +417,15 @@ class Test_FM_TS(unittest.TestCase):
         self.assertEqual(6, len(res.nodes.time_series))
         self.assertEqual((37, 103), res.nodes.time_series['Flow'].df.shape)
 
+    def test_load_nodes_2(self):
+        from pytuflow.results.fm.dat import Dat
+        p = './dummy'
+        gxy = GXY('./fm/zzn/FMT_M01_001.gxy')
+        dat = Dat('./fm/zzn/FMT_M01_001.dat')
+        id_list = list(dat._units_id.keys())
+        fm_node = FMNodes(p, id_list, gxy, dat)
+        self.assertEqual((67, 4), fm_node.df.shape)
+
     def test_load_channels(self):
         p = './fm/zzn/FMT_M01_001.zzn'
         dat = './fm/zzn/FMT_M01_001.dat'
@@ -407,44 +440,9 @@ class Test_FM_TS(unittest.TestCase):
         res = FM_TS(p, gxy, dat)
         self.assertEqual(122, len(res.channel_ids()))
 
-
-class Test_GXY(unittest.TestCase):
-
-    def test_gxy(self):
-        p = './fm/zzn/FMT_M01_001.gxy'
-        gxy = GXY(p)
-        self.assertEqual((115, 2), gxy.node_df.shape)
-        self.assertEqual((122, 2), gxy.link_df.shape)
-
-
-class Test_Dat(unittest.TestCase):
-
-    def test_import(self):
-        from pytuflow.results.fm.dat import Dat
-        from pytuflow.results.fm.dat import available_classes
-        from pytuflow.results.fm.dat import UNITS_DIR
-        self.assertEqual(len(list(UNITS_DIR.glob('*.py')))-2, len(available_classes))
-
-    def test_load(self):
-        from pytuflow.results.fm.dat import Dat
-        p = './fm/zzn/FMT_M01_001.dat'
-        dat = Dat(p)
-        self.assertEqual(67, len(dat._units_id))
-
-    def test_load_2(self):
-        from pytuflow.results.fm.dat import Dat
-        p = './fm/gui_csv/LBE_TBP3_10PC_350.dat'
-        dat = Dat(p)
-        self.assertEqual(161, len(dat._units_id))
-
-
-class Test_FMNode(unittest.TestCase):
-
-    def test_load(self):
-        from pytuflow.results.fm.dat import Dat
-        p = './dummy'
-        gxy = GXY('./fm/zzn/FMT_M01_001.gxy')
-        dat = Dat('./fm/zzn/FMT_M01_001.dat')
-        id_list = list(dat._units_id.keys())
-        fm_node = FMNodes(p, id_list, gxy, dat)
-        self.assertEqual((67, 4), fm_node.df.shape)
+    def test_lp_types(self):
+        p = './fm/zzn/FMT_M01_001.zzn'
+        dat = './fm/zzn/FMT_M01_001.dat'
+        gxy = './fm/zzn/FMT_M01_001.gxy'
+        res = FM_TS(p, gxy, dat)
+        self.assertEqual(['Bed Level', 'Water Level'], res.long_plot_result_types())

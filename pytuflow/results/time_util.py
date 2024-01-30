@@ -1,7 +1,7 @@
 import re
 from datetime import datetime
 from typing import Union
-from os import PathLike
+from .types import PathLike
 
 import numpy as np
 try:

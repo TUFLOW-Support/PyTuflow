@@ -2,7 +2,7 @@ import re
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Union
-from os import PathLike
+from ..types import PathLike
 
 import pandas as pd
 

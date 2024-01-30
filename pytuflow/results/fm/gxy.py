@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TextIO
-from os import PathLike
+from ..types import PathLike
 
 import pandas as pd
 

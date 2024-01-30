@@ -41,3 +41,13 @@ class FMNodes(FMResultItem, Nodes):
 
         self.df = pd.DataFrame(d)
         self.df.set_index('Node', inplace=True)
+
+    def long_plot_result_types(self) -> list[str]:
+        result_types = []
+        if not self.gxy:
+            return []
+        if self.dat:
+            result_types.append('Bed Level')
+        if 'Stage' in self.result_types(None):
+            result_types.append('Water Level')
+        return result_types

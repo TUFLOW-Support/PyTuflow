@@ -2,7 +2,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Union
 from abc import ABC, abstractmethod
-from os import PathLike
+from ..types import PathLike
 
 import pandas as pd
 

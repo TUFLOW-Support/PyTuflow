@@ -1,7 +1,7 @@
 import re
 from datetime import datetime
 from typing import Any
-from os import PathLike
+from ..types import PathLike
 
 import pandas as pd
 

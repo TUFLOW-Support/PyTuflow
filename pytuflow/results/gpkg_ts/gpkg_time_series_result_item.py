@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import Union
-from os import PathLike
+from ..types import PathLike
 
 from .gpkg_time_series import GPKGTimeSeries
 from .gpkg_ts_base import GPKGBase
