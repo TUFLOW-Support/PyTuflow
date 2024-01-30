@@ -1,7 +1,7 @@
 import re
 from datetime import datetime
-from pathlib import Path
 from typing import Union
+from os import PathLike
 
 import numpy as np
 try:
@@ -42,7 +42,7 @@ def parse_time_units_string(string: str, regex: str, format: str) -> tuple[datet
     return default_reference_time, u
 
 
-def gpkg_time_series_reference_time(gpkg: Union[str, Path]) -> tuple[datetime, str]:
+def gpkg_time_series_reference_time(gpkg: PathLike) -> tuple[datetime, str]:
     """
     Returns the reference time and units from a GeoPackage time series result.
 
@@ -64,7 +64,7 @@ def gpkg_time_series_reference_time(gpkg: Union[str, Path]) -> tuple[datetime, s
         return rt, u
 
 
-def nc_time_series_reference_time(nc: Union[str, Path]) -> tuple[datetime, str]:
+def nc_time_series_reference_time(nc: PathLike) -> tuple[datetime, str]:
     """
     Returns the reference time and units from a netCDF time series result.
 

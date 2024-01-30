@@ -1,5 +1,7 @@
+import os
 from pathlib import Path
 from typing import Union
+from os import PathLike
 
 from .fm_channels import FMChannels
 from .fm_nodes import FMNodes
@@ -10,12 +12,10 @@ from ..abc.time_series_result import TimeSeriesResult
 from ..time_util import default_reference_time
 
 
-PathType = Union[str, Path, None]
-
 
 class FM_TS(TimeSeriesResult):
 
-    def __init__(self, fpath: Union[PathType, list[PathType]], gxy: PathType, dat: PathType) -> None:
+    def __init__(self, fpath: Union[PathLike, list[PathLike]], gxy: PathLike, dat: PathLike) -> None:
         self._df = None
         self._driver = []
         self._id_list = None

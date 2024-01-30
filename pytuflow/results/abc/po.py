@@ -1,5 +1,4 @@
-from pathlib import Path
-from typing import Union
+from os import PathLike
 
 from .time_series_result_item import TimeSeriesResultItem
 
@@ -7,7 +6,7 @@ from .time_series_result_item import TimeSeriesResultItem
 class PO(TimeSeriesResultItem):
     """Abstract base class for PO result item."""
 
-    def __init__(self, fpath: Union[str, Path]) -> None:
+    def __init__(self, fpath: PathLike) -> None:
         super().__init__(fpath)
         self.name = 'PO'
         self.domain = '2d'

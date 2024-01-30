@@ -2,6 +2,7 @@ import importlib
 import re
 from pathlib import Path
 from typing import Union, TextIO
+from os import PathLike
 
 from .unpack_fixed_field import unpack_fixed_field
 from .units._unit import Unit
@@ -26,7 +27,7 @@ for fpath in UNITS_DIR.glob('*.py'):
 
 class Dat:
 
-    def __init__(self, fpath: Union[str, Path]) -> None:
+    def __init__(self, fpath: PathLike) -> None:
         self.fpath = Path(fpath)
         self._units_id = {}
         self._units_uid = {}

@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Union, TextIO
+from typing import TextIO
+from os import PathLike
 
 import pandas as pd
 
@@ -18,7 +19,7 @@ class _Node:
 
 class GXY:
 
-    def __init__(self, fpath: Union[str, Path]) -> None:
+    def __init__(self, fpath: PathLike) -> None:
         self.fpath = Path(fpath)
         self.node_df = None
         self.link_df = None

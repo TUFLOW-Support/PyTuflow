@@ -1,7 +1,7 @@
 import re
 from datetime import datetime
-from pathlib import Path
-from typing import Union, Any
+from typing import Any
+from os import PathLike
 
 import pandas as pd
 
@@ -27,7 +27,7 @@ NC_MAP = {'1d channel losses': '1d losses', '1d node regime': None, '1d channel 
 
 class TPC(TimeSeriesResult):
 
-    def __init__(self, fpath: Union[str, Path]) -> None:
+    def __init__(self, fpath: PathLike) -> None:
         self._df = None
         self.format_version = -1
         super().__init__(fpath)

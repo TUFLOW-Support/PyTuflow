@@ -1,5 +1,6 @@
 from pathlib import Path
 from typing import Union
+from os import PathLike
 
 import pandas as pd
 
@@ -10,7 +11,7 @@ from ..abc.po import PO
 
 class TPCPO_Base(TPCResultItem):
 
-    def __init__(self, fpath: Union[str, Path]) -> None:
+    def __init__(self, fpath: PathLike) -> None:
         super().__init__(fpath)
         self._df = None
 
@@ -37,7 +38,7 @@ class TPCPO_Base(TPCResultItem):
 
 class TPCPO(PO, TPCPO_Base):
 
-    def __init__(self, fpath: Union[str, Path]) -> None:
+    def __init__(self, fpath: PathLike) -> None:
         super(TPCPO, self).__init__(fpath)
         self._maximums = None
 

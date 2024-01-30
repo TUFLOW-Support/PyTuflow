@@ -2,6 +2,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Union
 from abc import ABC, abstractmethod
+from os import PathLike
 
 import pandas as pd
 
@@ -29,13 +30,13 @@ class TimeSeriesResultItem(ABC):
     e.g. Nodes(TimeSeriesResultItem), Channels(TimeSeriesResultItem), etc.
     """
 
-    def __init__(self, fpath: Union[str, Path], *args, **kwargs) -> None:
+    def __init__(self, fpath: PathLike, *args, **kwargs) -> None:
         super().__init__()
         self.name = None
         self.domain = None
         self.domain_2 = None
         self.df = None
-        self.fpath = fpath
+        self.fpath = Path(fpath)
         self.maximums = None
         self.time_series = {}
         self.load()

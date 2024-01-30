@@ -1,8 +1,5 @@
 from datetime import datetime
-from pathlib import Path
-from typing import Union
-
-import pandas as pd
+from os import PathLike
 
 from .tpc_time_series_csv import TPCTimeSeriesCSV
 from .tpc_time_series_nc import TPCTimeSeriesNC
@@ -16,11 +13,11 @@ RESULT_SHORT_NAME = {'h': 'water level', 'q': 'flow', 'v': 'velocity', 'vel': 'v
 
 class TPCResultItem(TimeSeriesResultItem):
 
-    def __init__(self, fpath: Union[str, Path]) -> None:
+    def __init__(self, fpath: PathLike) -> None:
         self.nc = None
         super().__init__(fpath)
 
-    def load_time_series(self, name: str, fpath: Union[str, Path], reference_time: datetime, index_col=None, id: str = '') -> None:
+    def load_time_series(self, name: str, fpath: PathLike, reference_time: datetime, index_col=None, id: str = '') -> None:
         if self.nc is not None:
             self.time_series[name] = TPCTimeSeriesNC(self.nc, id)
         else:

@@ -2,6 +2,7 @@ import re
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Union
+from os import PathLike
 
 import pandas as pd
 
@@ -10,7 +11,7 @@ from ..abc.time_series import TimeSeries
 
 class TPCTimeSeriesCSV(TimeSeries):
 
-    def __init__(self, fpath: Union[str, Path], reference_time: datetime, index_col: Union[str, int]) -> None:
+    def __init__(self, fpath: PathLike, reference_time: datetime, index_col: Union[str, int]) -> None:
         super().__init__()
         self._index_col = index_col
         self.fpath = Path(fpath)

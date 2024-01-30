@@ -1,11 +1,11 @@
 from pathlib import Path
-from typing import Union
+from os import PathLike
 
 import numpy as np
 import pandas as pd
 
 
-def parse_node_csv(fpath: Union[str, Path]) -> pd.DataFrame:
+def parse_node_csv(fpath: PathLike) -> pd.DataFrame:
     """
     Returns 1d_Node.csv as dataframe
     - requires custom parsing due to last column which is a list of connected channels with same delim.

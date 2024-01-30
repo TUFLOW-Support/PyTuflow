@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Union
+from os import PathLike
 
 import numpy as np
 import pandas as pd
@@ -13,7 +13,7 @@ COLUMN_MAP = {'Hmax': 'Water Level Max', 'Emax': 'Energy Max', 'Time Hmax': 'Wat
 
 class TPCMaximums(Maximums):
 
-    def __init__(self, fpath: Union[str, Path]) -> None:
+    def __init__(self, fpath: PathLike) -> None:
         super().__init__(fpath)
         self.fpath = Path(fpath)
         self.load()
@@ -23,7 +23,8 @@ class TPCMaximums(Maximums):
             return f'<TPC Maximum: {self.fpath.stem}>'
         return '<TPC Maximum>'
 
-    def _load(self, fpath: Path) -> pd.DataFrame:
+    def _load(self, fpath: PathLike) -> pd.DataFrame:
+        fpath = Path(fpath)
         try:
             with self.fpath.open() as f:
                 ncol = len(f.readline().split(','))
@@ -40,6 +41,6 @@ class TPCMaximums(Maximums):
     def load(self):
         self.df = self._load(self.fpath)
 
-    def append(self, fpath: Union[str, Path]) -> None:
+    def append(self, fpath: PathLike) -> None:
         df = self._load(fpath)
         self.df = pd.concat([self.df, df], join="outer")

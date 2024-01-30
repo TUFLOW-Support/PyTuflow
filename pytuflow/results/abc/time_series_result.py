@@ -1,6 +1,7 @@
 from datetime import datetime
 from pathlib import Path
 from typing import Union
+from os import PathLike
 from abc import ABC, abstractmethod
 
 import numpy as np
@@ -26,7 +27,7 @@ class TimeSeriesResult(ABC):
     This class can also be used for other plot data such as 1d_ta_tables_check file and bc_check files.
     """
 
-    def __init__(self, fpath: Union[str, Path], *args, **kwargs) -> None:
+    def __init__(self, fpath: PathLike, *args, **kwargs) -> None:
         super().__init__()
         self.fpath = Path(fpath)
         self.units = ''

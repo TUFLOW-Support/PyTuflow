@@ -1,6 +1,6 @@
 from datetime import datetime
-from pathlib import Path
 from typing import Union
+from os import PathLike
 
 from .gpkg_time_series import GPKGTimeSeries
 from .gpkg_ts_base import GPKGBase
@@ -10,7 +10,7 @@ from ..abc.time_series_result_item import TimeSeriesResultItem
 
 class GPKGResultItem(GPKGBase, TimeSeriesResultItem):
 
-    def __init__(self, fpath: Union[str, Path], layer_name: str) -> None:
+    def __init__(self, fpath: PathLike, layer_name: str) -> None:
         self._df = None
         self._layer_name = layer_name
 

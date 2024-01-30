@@ -1,6 +1,7 @@
 from collections import OrderedDict
 from pathlib import Path
-from typing import Union, TYPE_CHECKING
+from typing import TYPE_CHECKING
+from os import PathLike
 
 import numpy as np
 import pandas as pd
@@ -14,7 +15,7 @@ if TYPE_CHECKING:
 
 class GPKGMaximums(GPKGBase, Maximums):
 
-    def __init__(self, fpath: Union[str, Path], layer_name: str, result_item: 'GPKGResultItem') -> None:
+    def __init__(self, fpath: PathLike, layer_name: str, result_item: 'GPKGResultItem') -> None:
         super(GPKGMaximums, self).__init__(fpath)
         self.fpath = Path(fpath)
         self.result_items = OrderedDict({})

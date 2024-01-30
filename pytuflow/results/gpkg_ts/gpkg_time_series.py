@@ -1,6 +1,7 @@
 from datetime import datetime
 from pathlib import Path
 from typing import Union, TYPE_CHECKING
+from os import PathLike
 
 import numpy as np
 import pandas as pd
@@ -14,9 +15,9 @@ if TYPE_CHECKING:
 
 class GPKGTimeSeries(GPKGBase, TimeSeries):
 
-    def __init__(self, fpath: Union[str, Path], id: str, parent: 'GPKGResultItem') -> None:
+    def __init__(self, fpath: PathLike, id: str, parent: 'GPKGResultItem') -> None:
         super(GPKGTimeSeries, self).__init__()
-        self.fpath = fpath
+        self.fpath = Path(fpath)
         self._df = None
         self._parent = parent
         self._id = id  # result type id

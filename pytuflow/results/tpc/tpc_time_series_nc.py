@@ -2,6 +2,7 @@ import re
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Union
+from os import PathLike
 
 import pandas as pd
 
@@ -19,7 +20,7 @@ ID = {'flows_1d': 'flow_1d'}
 
 class TPCTimeSeriesNC(TimeSeries):
 
-    def __init__(self, fpath: Union[str, Path], id: str) -> None:
+    def __init__(self, fpath: PathLike, id: str) -> None:
         super().__init__()
         self._df = None
         self._id = ID.get(id, id)

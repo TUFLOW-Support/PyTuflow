@@ -1,7 +1,7 @@
 import re
 from datetime import datetime
 from pathlib import Path
-from typing import Union
+from os import PathLike
 
 from .gpkg_nodes import GPKGNodes
 from .gpkg_channels import GPKGChannels
@@ -12,7 +12,7 @@ from ..time_util import gpkg_time_series_reference_time
 
 class GPKG_TS(GPKGBase, TimeSeriesResult):
 
-    def __init__(self, fpath: Union[str, Path]) -> None:
+    def __init__(self, fpath: PathLike) -> None:
         super(GPKG_TS, self).__init__(fpath)
 
         # properties
