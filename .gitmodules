@@ -1,0 +1,3 @@
+[submodule "pytuflow/tmf"]
+	path = pytuflow/tmf
+	url = git@gitlab.com:tuflow/public/tuflow-model-files.git

@@ -13,4 +13,8 @@ setuptools.setup(
     long_description=get_long_description(),
     long_description_content_type="text/markdown",
     packages=setuptools.find_packages(),
+    package_data={
+        'pytuflow.tmf.tmf.data': ['*.json'],
+        'pytuflow.tmf.tmf.convert_tuflow_model_gis_format.conv_tf_gis_format.data': ['*.json'],
+    },
 )
