@@ -142,8 +142,10 @@ class TimeSeriesResultItem(ABC):
                 df_ = self.time_series[rt].df[id].rename(columns={x: y for x, y in zip(id, alias_ids)})
                 if df.empty:
                     df = df_
+                    index_name = df.index.name
                 else:
                     df = pd.concat([df, df_], axis=1)
+                    df.index.name = df_.index.name
         return df
 
     def get_maximum(self, id: list[str], result_type: list[str]) -> pd.DataFrame:

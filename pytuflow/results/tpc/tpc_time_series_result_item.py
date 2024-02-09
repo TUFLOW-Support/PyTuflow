@@ -1,3 +1,4 @@
+import re
 from datetime import datetime
 from ..types import PathLike
 
@@ -22,6 +23,8 @@ class TPCResultItem(TimeSeriesResultItem):
             self.time_series[name] = TPCTimeSeriesNC(self.nc, id)
         else:
             self.time_series[name] = TPCTimeSeriesCSV(fpath, reference_time, index_col)
+        if name == 'Channel Losse':
+            self.time_series[name].df.columns = [re.sub(r'^LC ', '', x) for x in self.time_series[name].df.columns]
 
     def count(self) -> int:
         if self.df is None:
