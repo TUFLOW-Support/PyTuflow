@@ -5,6 +5,7 @@ from unittest import TestCase
 from pytuflow.results.fm.fm import FM_TS
 from pytuflow.results.fm.fm_nodes import FMNodes
 from pytuflow.results.fm.gxy import GXY
+from pytuflow.results.hyd_tables.hyd_tables import HydTables
 from pytuflow.results.info.info import Info
 from pytuflow.results.tpc.tpc import TPC
 from pytuflow.results.gpkg_ts.gpkg_ts import GPKG_TS
@@ -546,3 +547,51 @@ class Test_Info_2013(unittest.TestCase):
         res = Info(p)
         df = res.long_plot(['FC01.1_R', 'FC01.36'], ['bed level', 'water level', 'pipes'], 1)
         self.assertEqual((4, 6), df.shape)
+
+
+class Test_HydTables(unittest.TestCase):
+
+    def test_load(self):
+        p = './hyd_tables/EG14_001_1d_ta_tables_check.csv'
+        res = HydTables(p)
+        self.assertEqual(res.sim_id, 'EG14_001')
+        self.assertEqual((55, 3), res.cross_sections.df.shape)
+        self.assertEqual((52, 13), res.channels.df.shape)
+        self.assertEqual(52, len(res.channels.database))
+        self.assertEqual(res.cross_sections.df['Name'].loc['XS00001'], '1d_xs_M14_C99')
+
+    def test_load_2(self):  # all cross-sections are in one CSV file
+        p = './hyd_tables/EG14_CONCAT_001_1d_ta_tables_check.csv'
+        res = HydTables(p)
+        self.assertEqual(res.sim_id, 'EG14_CONCAT_001')
+        self.assertEqual((55, 3), res.cross_sections.df.shape)
+        self.assertEqual((52, 13), res.channels.df.shape)
+        self.assertEqual(52, len(res.channels.database))
+        self.assertEqual(res.cross_sections.df['Name'].loc['XS00001'], '1d_xs_M14_C99')
+
+    def test_load_3(self):  # HW table mingled in
+        p = './hyd_tables/EG14_CONCAT_HW_001_1d_ta_tables_check.csv'
+        res = HydTables(p)
+        self.assertEqual(res.sim_id, 'EG14_CONCAT_HW_001')
+        self.assertEqual((55, 3), res.cross_sections.df.shape)
+        self.assertEqual((52, 13), res.channels.df.shape)
+        self.assertEqual(52, len(res.channels.database))
+        self.assertEqual(res.cross_sections.df['Name'].loc['XS00043'], '1d_xs_M14_C143')
+        self.assertEqual(res.cross_sections.df['Type'].loc['XS00043'], 'HW')
+
+    def test_channel_count(self):
+        p = './hyd_tables/EG14_001_1d_ta_tables_check.csv'
+        res = HydTables(p)
+        self.assertEqual(52, res.channel_count())
+
+    def test_node_count(self):
+        p = './hyd_tables/EG14_001_1d_ta_tables_check.csv'
+        res = HydTables(p)
+        self.assertEqual(0, res.node_count())
+
+    def test_ids(self):
+        p = './hyd_tables/EG14_001_1d_ta_tables_check.csv'
+        res = HydTables(p)
+        res.ids()
+        self.assertEqual(52, len(res.ids()))
+
