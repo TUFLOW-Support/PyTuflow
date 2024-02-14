@@ -1,0 +1,78 @@
+from pathlib import Path
+from typing import TextIO
+
+import pandas as pd
+
+from .hyd_tables_result_item import HydTableResultItem
+from ..types import PathLike
+
+
+class CrossSectionEntry:
+
+    def __init__(self, xs_id: str, df_xs: pd.DataFrame, df_proc: pd.DataFrame) -> None:
+        self.xs_id = xs_id
+        self.df_xs = df_xs
+        self.df_proc = df_proc
+
+    def __repr__(self) -> str:
+        return f'<CrossSectionEntry: {self.xs_id}>'
+
+
+class HydTableCrossSection(HydTableResultItem):
+
+    def __init__(self, fpath: PathLike = None) -> None:
+        super().__init__(fpath)
+        self.name = 'Cross Section'
+        self.domain = '1d'
+        self.domain_2 = 'cross_section'
+        self.database = {}
+        self.df = pd.DataFrame([], columns=['Name', 'Type', 'Source'])
+        self.df.index.name = 'id'
+        self._result_types = ['Elevation', 'Manning n', 'Depth', 'Width', 'Eff Width', 'Eff Area', 'Eff Wet Per',
+                             'Radius', 'Vert Res Factor','K']
+
+    def __repr__(self) -> str:
+        if hasattr(self, 'fpath') and self.fpath is not None:
+            return f'<HydTableCrossSection: {self.fpath.stem}>'
+        return '<HydTableCrossSection>'
+
+    def load(self) -> None:
+        pass
+
+    def load_time_series(self) -> None:
+        """
+        Unlike abstract method which loads in individual time series results,
+        use this method to load all time series data at once.
+        """
+        if not self.database:
+            return
+
+        # echoed cross-section data
+        col_names = list(self.database.values())[0].df_xs.columns
+        dfs = [x.df_xs for x in self.database.values()]
+        self._load_time_series(dfs, col_names, col_names[1])
+
+        # processed cross-section data
+        col_names = list(self.database.values())[0].df_proc.columns
+        dfs = [x.df_proc for x in self.database.values()]
+        self._load_time_series(dfs, col_names, col_names[0])
+
+    def append(self, fo: TextIO, xs_id: str, xs_name: str, xs_source: Path, xs_type: str) -> None:
+        df = pd.read_csv(fo, index_col=False)
+        if xs_type == 'XZ':
+            df_xs = df[df.columns[:4]].dropna()
+            df_proc = df[df.columns[5:]].dropna()
+            df_proc.rename(columns={'Elevation.1': 'Elevation'}, inplace=True)
+        else:
+            df_xs = pd.DataFrame(columns=['Points', 'Distance', 'Elevation', 'Manning n'])
+            df_proc = df.dropna()
+        db_entry = CrossSectionEntry(xs_id, df_xs, df_proc)
+        self.database[xs_id] = db_entry
+        self.df = pd.concat([self.df, pd.DataFrame({'Name': [xs_name], 'Type': [xs_type], 'Source': [str(xs_source)]}, index=[xs_id])], axis=0)
+        self.df.index.name = 'id'
+
+    def conv_result_type_name(self, result_type: str) -> str:
+        if self.database:
+            col_names = list(self.database.values())[0].df_xs.columns
+            return self._in_col_names(result_type, col_names)
+        return result_type

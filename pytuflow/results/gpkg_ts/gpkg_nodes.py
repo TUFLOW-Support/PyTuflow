@@ -67,6 +67,5 @@ class GPKGNodes(GPKGResultItem, Nodes):
     def df(self, df: pd.DataFrame):
         return
 
-    @staticmethod
-    def conv_result_type_name(result_type: str) -> str:
+    def conv_result_type_name(self, result_type: str) -> str:
         return RESULT_SHORT_NAME.get(result_type.lower(), result_type.lower())

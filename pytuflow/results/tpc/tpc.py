@@ -62,9 +62,6 @@ class TPC(TimeSeriesResult):
         self._load_po_results()
         self._load_rl_results()
 
-    def conv_result_type_name(self, result_type: str) -> str:
-        return TPCResultItem.conv_result_type_name(result_type)
-
     def _get_property(self, name: str, default: any = None) -> Any:
         try:
             prop = self._df[self._df.iloc[:,0] == name].iloc[0,1]
