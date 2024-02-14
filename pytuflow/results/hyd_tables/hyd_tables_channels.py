@@ -65,6 +65,9 @@ class HydTableChannels(HydTableResultItem, Channels):
         self.df = pd.concat([self.df, df], axis=0)
         self.df.index.name = 'Channel'
 
-    @staticmethod
-    def conv_result_type_name(result_type: str) -> str:
+    def conv_result_type_name(self, result_type: str) -> str:
+        if self.database:
+            col_names = list(self.database.values())[0].columns
+            if self._in_col_names(result_type, col_names):
+                return self._in_col_names(result_type, col_names)
         return result_type

@@ -592,6 +592,33 @@ class Test_HydTables(unittest.TestCase):
     def test_ids(self):
         p = './tests/hyd_tables/EG14_001_1d_ta_tables_check.csv'
         res = HydTables(p)
-        res.ids()
-        self.assertEqual(52, len(res.ids()))
+        ids = res.ids()
+        self.assertEqual(107, len(ids))
+        self.assertEqual('1d_xs_M14_C99', ids[0])
+        ids = res.ids('Elevation')
+        self.assertEqual(55, len(ids))
+        self.assertEqual('1d_xs_M14_C99', ids[0])
+        ids = res.ids('area')
+        self.assertEqual(52, len(ids))
+        ids = res.ids('K')
+        self.assertEqual(107, len(ids))
 
+    def test_ids_2(self):
+        p = './tests/hyd_tables/EG14_CONCAT_001_1d_ta_tables_check.csv'
+        res = HydTables(p)
+        ids = res.ids()
+        self.assertEqual(107, len(ids))
+        self.assertEqual('1d_xs_M14_C99', ids[0])
+
+    def test_ids_3(self):
+        p = './tests/hyd_tables/EG14_CONCAT_HW_001_1d_ta_tables_check.csv'
+        res = HydTables(p)
+        ids = res.ids()
+        self.assertEqual(107, len(ids))
+        self.assertEqual('1d_xs_M14_C99', ids[0])
+
+    def test_result_types(self):
+        p = './tests/hyd_tables/EG14_001_1d_ta_tables_check.csv'
+        res = HydTables(p)
+        ids = res.result_types()
+        self.assertEqual(107, len(ids))
