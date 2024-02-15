@@ -1,6 +1,6 @@
 import io
 import re
-from typing import TextIO
+from typing import TextIO, Union
 from pathlib import Path
 
 from .hyd_tables_cross_sections import HydTableCrossSection
@@ -48,6 +48,26 @@ class HydTables(TimeSeriesResult):
         if args:
             return Iterator(*args)
         return Iterator(self.cross_sections, self.channels)
+
+    def result_types(self, id: Union[str, list[str]] = '', domain: str = '') -> list[str]:
+        if id and self.cross_sections:
+            if not isinstance(id, list):
+                id = [id]
+            for i, id_ in enumerate(id):
+                if id_.lower() in [x.lower() for x in self.cross_sections.ids(None)]:
+                    if self.cross_sections.has_unique_names:
+                        id[i] = self.cross_sections.name2xsid(id_)
+                    else:
+                        raise Exception('Cross section names are not unique. The id must instead: e.g. XS00001.')
+
+        result_types = super().result_types(id, domain)
+        for i, res_type in enumerate(result_types.copy()):
+            if res_type.startswith('K'):
+                if 'K' in result_types[:i]:
+                    result_types.remove(res_type)
+                else:
+                    result_types[i] = 'K'
+        return result_types
 
     def _read_cross_section(self, fo: TextIO) -> None:
         buffer = io.StringIO()

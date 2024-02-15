@@ -620,5 +620,9 @@ class Test_HydTables(unittest.TestCase):
     def test_result_types(self):
         p = './tests/hyd_tables/EG14_001_1d_ta_tables_check.csv'
         res = HydTables(p)
-        ids = res.result_types()
-        self.assertEqual(107, len(ids))
+        rts = res.result_types()
+        self.assertEqual(14, len(rts))
+        rts = res.result_types('1d_xs_M14_C99')
+        self.assertEqual(10, len(rts))
+        rts = res.result_types('FC01.39')
+        self.assertEqual(8, len(rts))

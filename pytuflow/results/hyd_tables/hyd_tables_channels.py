@@ -21,7 +21,7 @@ class HydTableChannels(HydTableResultItem, Channels):
                                                  'Cross Section 1', 'Cross Section 2'])
         self.df.index.name = 'Channel'
         self.database = {}
-        self._result_types = ['Elevation', 'Depth', 'Storage Width', 'Flow Width', 'Area', 'P', 'Radius',
+        self._result_types = ['Depth', 'Storage Width', 'Flow Width', 'Area', 'P', 'Radius',
                               'Vert Res Factor', 'K']
 
     def __repr__(self) -> str:

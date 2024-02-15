@@ -30,7 +30,7 @@ class HydTableCrossSection(HydTableResultItem):
         self.df.index.name = 'id'
         self._result_types = ['Elevation', 'Manning n', 'Depth', 'Width', 'Eff Width', 'Eff Area', 'Eff Wet Per',
                              'Radius', 'Vert Res Factor','K']
-        self._has_unique_names_ = None
+        self._has_unique_names = None
 
     def __repr__(self) -> str:
         if hasattr(self, 'fpath') and self.fpath is not None:
@@ -85,16 +85,19 @@ class HydTableCrossSection(HydTableResultItem):
     def xsid2name(self, xs_id: str) -> str:
         return self.df.loc[xs_id, 'Name']
 
+    def name2xsid(self, xs_name: str) -> str:
+        return self.df[self.df['Name'] == xs_name].index[0]
+
     def ids(self, result_type: str) -> list[str]:
         if self.df is None:
             return []
         if not result_type:
-            if self._has_unique_names():
+            if self.has_unique_names():
                 return self.df['Name'].tolist()
             else:
                 return self.df.index.tolist()
         if result_type in self.time_series:
-            if self._has_unique_names():
+            if self.has_unique_names():
                 return [self.xsid2name(x) for x in self.time_series[result_type].df.columns.tolist()]
             else:
                 return self.time_series[result_type].df.columns.tolist()
@@ -108,16 +111,16 @@ class HydTableCrossSection(HydTableResultItem):
         result_types = []
         for result_type, ts in self.time_series.items():
             ids = ts.df.columns
-            if self._has_unique_names():
-                ids = [self.xsid2name(x) for x in ids]
+            if self.has_unique_names() and id not in self.df.index:
+                ids = [self.xsid2name(x) for x in ids if x in self.df.index]
             if result_type not in result_types and id in ids:
                 result_types.append(result_type)
         return result_types
 
-    def _has_unique_names(self) -> bool:
-        if self._has_unique_names_ is None:
+    def has_unique_names(self) -> bool:
+        if self._has_unique_names is None:
             if self.df is None:
                 return True
             names = self.df['Name'].tolist()
-            self._has_unique_names_ = len(names) == len(set(names))
-        return self._has_unique_names_
+            self._has_unique_names = len(names) == len(set(names))
+        return self._has_unique_names
