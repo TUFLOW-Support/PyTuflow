@@ -3,6 +3,8 @@ import re
 from typing import TextIO, Union
 from pathlib import Path
 
+import pandas as pd
+
 from .hyd_tables_cross_sections import HydTableCrossSection
 from .hyd_tables_channels import HydTableChannels
 from ..abc.time_series_result import TimeSeriesResult
@@ -50,17 +52,10 @@ class HydTables(TimeSeriesResult):
         return Iterator(self.cross_sections, self.channels)
 
     def result_types(self, id: Union[str, list[str]] = '', domain: str = '') -> list[str]:
-        if id and self.cross_sections:
-            if not isinstance(id, list):
-                id = [id]
-            for i, id_ in enumerate(id):
-                if id_.lower() in [x.lower() for x in self.cross_sections.ids(None)]:
-                    if self.cross_sections.has_unique_names:
-                        id[i] = self.cross_sections.name2xsid(id_)
-                    else:
-                        raise Exception('Cross section names are not unique. The id must instead: e.g. XS00001.')
-
+        id = self._correct_id(id)  # need to convert cross-section names to their ids
         result_types = super().result_types(id, domain)
+
+        # don't pass back a bunch of different 'K' types, simply pass back one 'K' type (e.g. K (n=1.000))
         for i, res_type in enumerate(result_types.copy()):
             if res_type.startswith('K'):
                 if 'K' in result_types[:i]:
@@ -68,6 +63,39 @@ class HydTables(TimeSeriesResult):
                 else:
                     result_types[i] = 'K'
         return result_types
+
+    def time_series(self,
+                    id: Union[str, list[str]],
+                    result_type: Union[str, list[str]],
+                    domain: str = None
+                    ) -> pd.DataFrame:
+        id_ = id.copy()
+        id = self._correct_id(id)
+        correct_df_header = id_ != id
+        df = super().time_series(id, result_type, domain)
+        if correct_df_header:
+            ids = [x.split('::') for x in df.columns]
+            for xsid in ids:
+                name = self.cross_sections.xsid2name(xsid[2])
+                if name in id_:
+                    xsid[2] = name
+            df.columns = ['::'.join(x) for x in ids]
+
+        return df
+
+    def _correct_id(self, id: Union[str, list[str]] = '') -> list[str]:
+        """Convert cross-section names to their ids as they are stored in the 1d_ta_tables_check.csv file."""
+        if not id:
+            return []
+        if not isinstance(id, list):
+            id = [id]
+        for i, id_ in enumerate(id):
+            if id_.lower() in [x.lower() for x in self.cross_sections.ids(None)]:
+                if self.cross_sections.has_unique_names:
+                    id[i] = self.cross_sections.name2xsid(id_)
+                else:
+                    raise Exception('Cross section names are not unique. Use the id instead: e.g. XS00001.')
+        return id
 
     def _read_cross_section(self, fo: TextIO) -> None:
         buffer = io.StringIO()

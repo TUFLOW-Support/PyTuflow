@@ -626,3 +626,27 @@ class Test_HydTables(unittest.TestCase):
         self.assertEqual(10, len(rts))
         rts = res.result_types('FC01.39')
         self.assertEqual(8, len(rts))
+
+    def test_time_series(self):
+        p = './tests/hyd_tables/EG14_001_1d_ta_tables_check.csv'
+        res = HydTables(p)
+        df = res.time_series('1d_xs_M14_C99', 'Elevation')
+        self.assertEqual((29, 1), df.shape)
+
+    def test_time_series_2(self):
+        p = './tests/hyd_tables/EG14_001_1d_ta_tables_check.csv'
+        res = HydTables(p)
+        df = res.time_series('1d_xs_M14_C99', ['Elevation', 'Width'])
+        self.assertEqual((29, 4), df.shape)
+
+    def test_time_series_3(self):
+        p = './tests/hyd_tables/EG14_001_1d_ta_tables_check.csv'
+        res = HydTables(p)
+        df = res.time_series('1d_xs_M14_C99', ['Eff Width', 'Eff Area'])
+        self.assertEqual((27, 2), df.shape)
+
+    def test_time_series_4(self):
+        p = './tests/hyd_tables/EG14_001_1d_ta_tables_check.csv'
+        res = HydTables(p)
+        df = res.time_series(['1d_xs_M14_C99', '1d_xs_M14_C100'], ['Eff Width', 'Eff Area'])
+        self.assertEqual((30, 8), df.shape)
