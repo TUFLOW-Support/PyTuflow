@@ -650,3 +650,21 @@ class Test_HydTables(unittest.TestCase):
         res = HydTables(p)
         df = res.time_series(['1d_xs_M14_C99', '1d_xs_M14_C100'], ['Eff Width', 'Eff Area'])
         self.assertEqual((30, 8), df.shape)
+
+    def test_time_series_5(self):
+        p = './tests/hyd_tables/EG14_001_1d_ta_tables_check.csv'
+        res = HydTables(p)
+        df = res.time_series('FC01.39', 'area')
+        self.assertEqual((35, 1), df.shape)
+
+    def test_time_series_6(self):
+        p = './tests/hyd_tables/EG14_001_1d_ta_tables_check.csv'
+        res = HydTables(p)
+        df = res.time_series(['FC01.39', '1d_xs_M14_C99'], ['area', 'eff area'])
+        self.assertEqual((35, 4), df.shape)
+
+    def test_time_series_7(self):
+        p = './tests/hyd_tables/EG14_001_1d_ta_tables_check.csv'
+        res = HydTables(p)
+        df = res.time_series(['FC01.39', '1d_xs_M14_C99'], ['area', 'Eff Width', 'Eff Area', 'Radius'])
+        self.assertEqual((35, 10), df.shape)

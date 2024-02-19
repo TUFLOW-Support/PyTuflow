@@ -83,10 +83,14 @@ class HydTableCrossSection(HydTableResultItem):
         return result_type
 
     def xsid2name(self, xs_id: str) -> str:
-        return self.df.loc[xs_id, 'Name']
+        if xs_id in self.df.index:
+            return self.df.loc[xs_id, 'Name']
+        return xs_id
 
     def name2xsid(self, xs_name: str) -> str:
-        return self.df[self.df['Name'] == xs_name].index[0]
+        if xs_name in self.df['Name'].tolist():
+            return self.df[self.df['Name'] == xs_name].index[0]
+        return xs_name
 
     def ids(self, result_type: str) -> list[str]:
         if self.df is None:

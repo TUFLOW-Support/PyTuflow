@@ -16,7 +16,7 @@ class HydTableResultItem(TimeSeriesResultItem):
         for i, rt in enumerate(result_type):
             if rt in self.time_series:
                 rt_column_names = [f'{rt}::{x}' for x in id]
-                alias_ids = [f'{self.time_series[rt].index_name}::{x}::Index' for x in id]
+                alias_ids = [f'{self.time_series[rt].index_name}::{x}::Index::{rt}' for x in id]
                 column_names_in_order.extend(list(zip(alias_ids, rt_column_names)))
                 index_ = self.time_series[rt].index[id].rename(columns={x: y for x, y in zip(id, alias_ids)})
                 alias_ids_ = []

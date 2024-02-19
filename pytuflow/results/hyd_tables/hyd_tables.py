@@ -69,6 +69,8 @@ class HydTables(TimeSeriesResult):
                     result_type: Union[str, list[str]],
                     domain: str = None
                     ) -> pd.DataFrame:
+        if not isinstance(id, list):
+            id = [id] if id else []
         id_ = id.copy()
         id = self._correct_id(id)
         correct_df_header = id_ != id
