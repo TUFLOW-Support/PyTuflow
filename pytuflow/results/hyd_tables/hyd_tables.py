@@ -115,6 +115,10 @@ class HydTables(TimeSeriesResult):
                 xs_name = self._xs_name(xs_source, info[6])
                 while True:  # must use while loop as using for loop disables tell() which means we can't rewind a line
                     line_ = fo.readline()
+                    a = line_.split(',')
+                    if a[-1] != '""\n':
+                        a[-1] = a[-1].strip()
+                        a.append('"Message\n"')
                     if line_ == '\n' or not line_:
                         break
                     buffer.write(line_)
@@ -144,6 +148,10 @@ class HydTables(TimeSeriesResult):
                     xs2 = cross_sections[1]
                 while True:
                     line_ = fo.readline()
+                    a = line_.split(',')
+                    if a[-1] != '""\n':
+                        a[-1] = a[-1].strip()
+                        a.append('"Message\n"')
                     if line_ == '\n' or not line_:
                         break
                     buffer.write(line_)
