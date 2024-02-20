@@ -67,21 +67,22 @@ class HydTables(TimeSeriesResult):
     def time_series(self,
                     id: Union[str, list[str]],
                     result_type: Union[str, list[str]],
-                    domain: str = None
+                    domain: str = None,
+                    use_common_index: bool = True
                     ) -> pd.DataFrame:
         if not isinstance(id, list):
             id = [id] if id else []
         id_ = id.copy()
         id = self._correct_id(id)
         correct_df_header = id_ != id
-        df = super().time_series(id, result_type, domain)
-        if correct_df_header:
-            ids = [x.split('::') for x in df.columns]
+        df = super().time_series(id, result_type, domain, use_common_index)
+        if correct_df_header:  # convert cross-section ids (e.g. 'XS00001') back to name (e.g. '1d_xs_C109')
+            ids = [list(x) for x in df.columns.values.tolist()]
             for xsid in ids:
                 name = self.cross_sections.xsid2name(xsid[2])
                 if name in id_:
                     xsid[2] = name
-            df.columns = ['::'.join(x) for x in ids]
+            df.columns = pd.MultiIndex.from_tuples(ids, names=df.columns.names)
 
         return df
 

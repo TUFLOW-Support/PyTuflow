@@ -9,7 +9,7 @@ from ..abc.time_series_result_item import TimeSeriesResultItem
 
 RESULT_SHORT_NAME = {'h': 'water level', 'q': 'flow', 'v': 'velocity', 'vel': 'velocity', 'e': 'energy', 'vol': 'volume',
                      'mb': 'mass balance error', 'qa': 'flow area', 'nf': 'node regime', 'cf': 'channel regime',
-                     'loss': 'channel losse', 'losses': 'channel losse', 'l': 'channel losse', 'cl': 'channel losse'}
+                     'loss': 'channel losses', 'losses': 'channel losse', 'l': 'channel losse', 'cl': 'channel losse'}
 
 
 class TPCResultItem(TimeSeriesResultItem):

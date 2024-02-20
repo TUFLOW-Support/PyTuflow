@@ -268,7 +268,8 @@ class TimeSeriesResult(ABC):
     def time_series(self,
                     id: Union[str, list[str]],
                     result_type: Union[str, list[str]],
-                    domain: str = None
+                    domain: str = None,
+                    use_common_index: bool = True
                     ) -> pd.DataFrame:
         """
         Extract time series data for the given id(s), result type(s), and domain and returned as a DataFrame.
@@ -286,61 +287,36 @@ class TimeSeriesResult(ABC):
             A secondary domain option can be passed to further limit the ids
             e.g. '1d node' or '1d channel'.
             If no domain is provided, all domains will be searched.
+        :param use_common_index:
+            If True, the DataFrame will be returned with a single index column for all the result types (if a
+            common index exists). If set to False, each result type value will be returned with a preceding
+            index column.
         """
-
-        def expand_index(df: pd.DataFrame, column_names_in_order: list[list[str]]) -> pd.DataFrame:
-            """Expands common index of a dataframe such that every value column gets its own index column."""
-            requires_expanding = 'Index' not in df.columns.str.split('::')
-            if requires_expanding:
-                index_name = df.index.name
-                for col_name_ in df.columns:
-                    col_name = col_name_.split('::')
-                    res_type = col_name[1]
-                    col_name[1] = index_name
-                    col_name.append('Index')
-                    col_name.append(res_type)
-                    col_name = '::'.join(col_name)
-                    df[col_name] = df.index
-                    column_names_in_order.append([col_name, col_name_])
-                df = df.reset_index(drop=True)
-            else:
-                column_names_in_order.append(df.columns.tolist())
-            return df
-
+        # collect all time-series data into a single DataFrame
         df = pd.DataFrame()
-        x = []
-        dropped_index = False
-        column_names_in_order = []
         iter = self.init_iterator()
         for item in iter.id_result_type(id, result_type, domain, 'temporal'):
             df_ = item.result_item.get_time_series(item.ids, item.result_types)
-            df_.rename(columns={x: f'{item.result_item_name}::{x}' for x in df_.columns}, inplace=True)
+            df = pd.concat([df, df_.reset_index(drop=True)], axis=1)
 
-            # what happens if the index column is not the same?
-            # - create an x-column for every result type labelled with 'index' at end
-            if x and (dropped_index or len(x) != df_.index.shape[0] or not np.isclose(x, df_.index.tolist(), atol=0.001).all()):
-                if not dropped_index:  # first instance of not matching index column
-                    df = expand_index(df, column_names_in_order)
-                    dropped_index = True
-                df_ = expand_index(df_, column_names_in_order)
+        # if a common index exists (e.g. all result types share the same timesteps) then set this as index
+        # and remove all duplicate columns.
+        if use_common_index:
+            common_index_exists = True
+            df_ = df.xs('Index', level='Index/Value', axis=1)
+            a = df_.to_numpy()
+            for i in range(1, a.shape[1]):
+                if not np.isclose(a[:, 0], a[:, i], equal_nan=True, atol=0.001).all():  # allow for some tolerance
+                    common_index_exists = False
+                    break
+            if common_index_exists:
+                index_name = df.columns[0]
+                df.set_index(index_name, inplace=True)
+                df.index.name = index_name[-1]
+                df = df.xs('Value', level='Index/Value', axis=1)
+                df.columns = df.columns.droplevel('Index Name')
 
-            if df.empty:
-                df = df_
-                x = df_.index.tolist()
-            else:
-                if dropped_index:
-                    df = pd.concat([df, df_.reset_index(drop=True)], axis=1)
-                else:
-                    # join on integer index as when time column is read from different CSV files, time index maybe don't match exactly
-                    index_name = df.index.name
-                    df = pd.concat([df.reset_index(), df_.reset_index(drop=True)], axis=1)
-                    df.set_index(index_name, inplace=True)
-
-        if column_names_in_order:  # index has been dropped - need to shuffle columns back into order
-            column_names_in_order = sum([list(x) for x in column_names_in_order], [])
-            df = df[column_names_in_order]
-
-        return df
+        return df.dropna(how='all')
 
     def maximum(self,
                 id: Union[str, list[str]],

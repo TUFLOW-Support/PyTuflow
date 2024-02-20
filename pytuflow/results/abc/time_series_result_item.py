@@ -2,6 +2,10 @@ from datetime import datetime
 from pathlib import Path
 from typing import Union
 from abc import ABC, abstractmethod
+
+import numpy as np
+
+from ..misc_tools import make_one_dim
 from ..types import PathLike
 
 import pandas as pd
@@ -127,6 +131,15 @@ class TimeSeriesResultItem(ABC):
         """
         Returns the time series for the given id(s) and result type(s) and return as a DataFrame.
 
+        The returned dataframe will return with an index column for each result type
+        (i.e. will not be a single index column).
+        The returned dataframe uses 5 levels of column indexes for the following:
+            - Type (Node, Channel, PO, etc.)  - duplicate IDs can exist across different types, so this is needed
+            - Result Type
+            - ID
+            - Type (Index or Value)
+            - Index Name (if it is an index column e.g. Time (h))
+
         :param id:
             ID can be either a single value or list of values. The ID must be a valid ID (case-sensitive).
             i.e. case correction, short name to long name conversion should be done before calling this method.
@@ -136,17 +149,15 @@ class TimeSeriesResultItem(ABC):
             i.e. case correction, short name to long name conversion should be done before calling this method.
         """
         df = pd.DataFrame()
+        levels = ['Type', 'Result Type', 'ID', 'Index/Value', 'Index Name']
         for rt in result_type:
             if rt in self.time_series:
-                alias_ids = [f'{rt}::{x}' for x in id]
-                df_ = self.time_series[rt].df[id].rename(columns={x: y for x, y in zip(id, alias_ids)})
-                if df.empty:
-                    df = df_
-                    index_name = df.index.name
-                else:
-                    df = pd.concat([df, df_], axis=1)
-                    df.index.name = df_.index.name
-        return df
+                # get the data values
+                df_ = self.time_series[rt].df[id].reset_index()
+                df_ = self._expand_index_col(df_, rt, id, levels)  # add the index col in-front of every value col
+                df = pd.concat([df, df_], axis=1)
+
+        return df.dropna(how='all')
 
     def get_maximum(self, id: list[str], result_type: list[str]) -> pd.DataFrame:
         """
@@ -180,6 +191,18 @@ class TimeSeriesResultItem(ABC):
             return self.time_series[result_type].df[ids].iloc[timestep_index].to_frame().rename(
                 columns={time: result_type})
         return pd.DataFrame([], columns=[result_type])
+
+    def _expand_index_col(self,
+                          df: pd.DataFrame,
+                          result_type: str,
+                          id: list[str],
+                          levels: list[str]) -> pd.DataFrame:
+        index_name = self.time_series[result_type].df.index.name
+        df = df[make_one_dim([[index_name, x] for x in id])]  # add the index col in-front of every value col
+        index_alias = [(self.name, result_type, x, 'Index', index_name) for x in id]
+        col_alias = [(self.name, result_type, x, 'Value', '') for x in id]
+        df.columns = pd.MultiIndex.from_tuples(make_one_dim((zip(index_alias, col_alias))), names=levels)
+        return df
 
     @abstractmethod
     def conv_result_type_name(self, result_type: str) -> str:

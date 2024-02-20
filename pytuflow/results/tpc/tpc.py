@@ -109,7 +109,7 @@ class TPC(TimeSeriesResult):
         name = self._1d_name_extract(name)
         if name.lower() in NAME_MAP:
             name = NAME_MAP[name.lower()]
-        if name[-1] == 's':
+        if name[-1] == 's' and name.upper() != 'LOSSES':
             name = name[:-1]
         return name
 
