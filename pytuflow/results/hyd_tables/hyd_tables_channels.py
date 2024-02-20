@@ -45,7 +45,7 @@ class HydTableChannels(HydTableResultItem, Channels):
         self._load_time_series(dfs, col_names, col_names[0])
 
     def append(self, fo: TextIO, channel_id: str, xs1: str, xs2: str) -> None:
-        df = pd.read_csv(fo, index_col=False)
+        df = pd.read_csv(fo)
         self.database[channel_id] = df
         df = pd.DataFrame({
             'Type': None,

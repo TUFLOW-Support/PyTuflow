@@ -59,7 +59,10 @@ class HydTableCrossSection(HydTableResultItem):
         self._load_time_series(dfs, col_names, col_names[0])
 
     def append(self, fo: TextIO, xs_id: str, xs_name: str, xs_source: Path, xs_type: str) -> None:
-        df = pd.read_csv(fo, index_col=False)
+        try:
+            df = pd.read_csv(fo)
+        except:
+            print('here')
         if xs_type == 'XZ':
             df_xs = df[df.columns[:4]].dropna()
             df_proc = df[df.columns[5:]].dropna()

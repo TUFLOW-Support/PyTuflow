@@ -20,7 +20,7 @@ ID = {'flows_1d': 'flow_1d'}
 
 class TPCTimeSeriesNC(TimeSeries):
 
-    def __init__(self, fpath: PathLike, id: str) -> None:
+    def __init__(self, fpath: PathLike, id: str, loss_type: str = '') -> None:
         super().__init__()
         self._df = None
         self._id = ID.get(id, id)

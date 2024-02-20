@@ -11,11 +11,12 @@ from ..abc.time_series import TimeSeries
 
 class TPCTimeSeriesCSV(TimeSeries):
 
-    def __init__(self, fpath: PathLike, reference_time: datetime, index_col: Union[str, int]) -> None:
+    def __init__(self, fpath: PathLike, reference_time: datetime, index_col: Union[str, int], loss_type: str = '') -> None:
         super().__init__()
         self._index_col = index_col
         self.fpath = Path(fpath)
         self.reference_time = reference_time
+        self.loss_type = loss_type
         self.load()
 
     def __repr__(self) -> str:
@@ -27,7 +28,7 @@ class TPCTimeSeriesCSV(TimeSeries):
         try:
             with self.fpath.open() as f:
                 ncol = len(f.readline().split(','))
-            self.df = pd.read_csv(
+            df = pd.read_csv(
                 self.fpath,
                 index_col=self._index_col-1,
                 header=0,
@@ -35,7 +36,11 @@ class TPCTimeSeriesCSV(TimeSeries):
                 na_values='**********',
                 usecols=range(1,ncol)
             )
-            self.df.rename(columns={x: self._name(x) for x in self.df.columns}, inplace=True)
+            if self.loss_type:
+                df = df[df.columns[df.columns.str.contains(self.loss_type)]]
+                df.rename(columns={x: x.replace(self.loss_type, '').strip() for x in df.columns}, inplace=True)
+            df.rename(columns={x: self._name(x) for x in df.columns}, inplace=True)
+            self.df = df
         except Exception as e:
             raise Exception(f'Error loading CSV file: {e}')
 

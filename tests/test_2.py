@@ -231,7 +231,7 @@ class Test_TPC_2019(TestCase):
         p = './tests/2020/EG15_001.tpc'
         res = TPC(p)
         df = res.time_series(None, None)
-        self.assertEqual((37, 224), df.shape)
+        self.assertEqual((37, 212), df.shape)
 
 
 class Test_GPKG_TS_2023(TestCase):

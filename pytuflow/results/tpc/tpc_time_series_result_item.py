@@ -9,7 +9,9 @@ from ..abc.time_series_result_item import TimeSeriesResultItem
 
 RESULT_SHORT_NAME = {'h': 'water level', 'q': 'flow', 'v': 'velocity', 'vel': 'velocity', 'e': 'energy', 'vol': 'volume',
                      'mb': 'mass balance error', 'qa': 'flow area', 'nf': 'node regime', 'cf': 'channel regime',
-                     'loss': 'channel losses', 'losses': 'channel losse', 'l': 'channel losse', 'cl': 'channel losse'}
+                     'entry loss': 'entry channel losses', 'entry losses': 'entry channel losses',
+                     'exit loss': 'entry channel losses', 'exit losses': 'entry channel losses',
+                     'additional loss': 'entry channel losses', 'additional losses': 'entry channel losses'}
 
 
 class TPCResultItem(TimeSeriesResultItem):
@@ -18,13 +20,13 @@ class TPCResultItem(TimeSeriesResultItem):
         self.nc = None
         super().__init__(fpath)
 
-    def load_time_series(self, name: str, fpath: PathLike, reference_time: datetime, index_col=None, id: str = '') -> None:
+    def load_time_series(self, name: str, fpath: PathLike, reference_time: datetime, index_col=None, id: str = '', loss_type: str = '') -> None:
+        if loss_type:
+            name = f'{loss_type} {name}'
         if self.nc is not None:
-            self.time_series[name] = TPCTimeSeriesNC(self.nc, id)
+            self.time_series[name] = TPCTimeSeriesNC(self.nc, id, loss_type)
         else:
-            self.time_series[name] = TPCTimeSeriesCSV(fpath, reference_time, index_col)
-        if name == 'Channel Losse':
-            self.time_series[name].df.columns = [re.sub(r'^LC ', '', x) for x in self.time_series[name].df.columns]
+            self.time_series[name] = TPCTimeSeriesCSV(fpath, reference_time, index_col, loss_type)
 
     def count(self) -> int:
         if self.df is None:

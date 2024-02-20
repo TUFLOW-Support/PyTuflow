@@ -109,7 +109,7 @@ class TPC(TimeSeriesResult):
         name = self._1d_name_extract(name)
         if name.lower() in NAME_MAP:
             name = NAME_MAP[name.lower()]
-        if name[-1] == 's' and name.upper() != 'LOSSES':
+        if name[-1] == 's' and not name.endswith('Losses'):
             name = name[:-1]
         return name
 
@@ -197,7 +197,11 @@ class TPC(TimeSeriesResult):
                 if id is None or fpath is None:
                     continue
                 name = self._1d_result_name(name_)
-                self.channels.load_time_series(name, fpath, self.reference_time, 1, id)
+                if name == 'Channel Losses':
+                    for loss_type in ['Entry', 'Additional', 'Exit']:
+                        self.channels.load_time_series(name, fpath, self.reference_time, 1, id, loss_type)
+                else:
+                    self.channels.load_time_series(name, fpath, self.reference_time, 1, id)
 
     def _load_po_results(self) -> None:
         df = self._df[self._df.iloc[:,0].str.contains('2D')]
