@@ -115,12 +115,16 @@ class HydTables(TimeSeriesResult):
                 xs_name = self._xs_name(xs_source, info[6])
                 while True:  # must use while loop as using for loop disables tell() which means we can't rewind a line
                     line_ = fo.readline()
-                    a = line_.split(',')
-                    if a[-1] != '""\n':
-                        a[-1] = a[-1].strip()
-                        a.append('"Message\n"')
                     if line_ == '\n' or not line_:
                         break
+                    a = line_.split(',')
+                    try:
+                        float(a[0])
+                    except ValueError:
+                        if a[0] != '"Bed"' and a[0] != '' and a[0] != '""' and a[0] != '"Inactive"':
+                            a[-1] = a[-1].strip()
+                            a.append('"Message"\n')
+                            line_ = ','.join(a)
                     buffer.write(line_)
                 buffer.seek(0)
                 self.cross_sections.append(buffer, xs_id, xs_name, xs_source, xs_type)
@@ -148,12 +152,16 @@ class HydTables(TimeSeriesResult):
                     xs2 = cross_sections[1]
                 while True:
                     line_ = fo.readline()
-                    a = line_.split(',')
-                    if a[-1] != '""\n':
-                        a[-1] = a[-1].strip()
-                        a.append('"Message\n"')
                     if line_ == '\n' or not line_:
                         break
+                    a = line_.split(',')
+                    try:
+                        float(a[0])
+                    except ValueError:
+                        if a[0] != '"Bed"' and a[0] != '' and a[0] != '""' and a[0] != '"Inactive"':
+                            a[-1] = a[-1].strip()
+                            a.append('"Message"\n')
+                            line_ = ','.join(a)
                     buffer.write(line_)
                 buffer.seek(0)
                 self.channels.append(buffer, channel_id, xs1, xs2)

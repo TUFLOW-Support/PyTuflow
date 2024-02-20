@@ -59,17 +59,14 @@ class HydTableCrossSection(HydTableResultItem):
         self._load_time_series(dfs, col_names, col_names[0])
 
     def append(self, fo: TextIO, xs_id: str, xs_name: str, xs_source: Path, xs_type: str) -> None:
-        try:
-            df = pd.read_csv(fo)
-        except:
-            print('here')
+        df = pd.read_csv(fo)
         if xs_type == 'XZ':
             df_xs = df[df.columns[:4]].dropna()
-            df_proc = df[df.columns[5:]].dropna()
+            df_proc = df[df.columns[5:-1]].dropna(how='all')
             df_proc.rename(columns={'Elevation.1': 'Elevation'}, inplace=True)
         else:
             df_xs = pd.DataFrame(columns=['Points', 'Distance', 'Elevation', 'Manning n'])
-            df_proc = df.dropna()
+            df_proc = df[df.columns[:-1]].dropna(how='all')
         db_entry = CrossSectionEntry(xs_id, df_xs, df_proc)
         self.database[xs_id] = db_entry
         self.df = pd.concat([self.df, pd.DataFrame({'Name': [xs_name], 'Type': [xs_type], 'Source': [str(xs_source)]}, index=[xs_id])], axis=0)
