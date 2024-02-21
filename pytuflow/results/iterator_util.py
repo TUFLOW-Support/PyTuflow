@@ -330,9 +330,14 @@ class Iterator:
         if not result_types and cls is not None:
             result_types_ = []
             for id_ in ids_:
-                for rt in cls.result_types(id_):
-                    if rt not in result_types_:
-                        result_types_.append(rt)
+                if type_.lower() == 'max':
+                    for rt in cls.maximum_types(id_):
+                        if rt not in result_types_:
+                            result_types_.append(rt)
+                else:
+                    for rt in cls.result_types(id_):
+                        if rt not in result_types_:
+                            result_types_.append(rt)
             result_types = sum([[x, x] for x in result_types_], [])
             if type_.lower() == 'max':
                 result_types_ = sum([[cls.result_type_to_max(x), cls.result_type_to_tmax(x)] for x in result_types_], [])

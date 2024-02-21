@@ -114,6 +114,23 @@ class TimeSeriesResultItem(ABC):
                 result_types.append(result_type)
         return result_types
 
+    def maximum_types(self, id: str) -> list[str]:
+        """
+        Returns a list of maximum result_types for the given id.
+
+        :param id:
+            If no id is given, then return all result types.
+            The id must be a valid id (case-sensitive).
+            i.e. any case correction should be done before calling this method.
+        """
+        if not self.maximums:
+            return []
+        if not id:
+            df = self.maximums.df
+        else:
+            df = self.maximums.df.loc[[id]]
+        return [x.replace(' Max', '') for x in df.columns if 'TMax' not in x]
+
     def timesteps(self, dtype: str) -> list[Union[float, datetime]]:
         """
         Returns a list of time-steps for the given dtype.
@@ -172,7 +189,11 @@ class TimeSeriesResultItem(ABC):
             The result_type must match exactly the result type name in the time_series dictionary.
             i.e. case correction, short name to long name conversion should be done before calling this method.
         """
-        return self.maximums.df.loc[id, result_type]
+        levels = ['Type', 'Result Type']
+        col_names = [(self.name, x) for x in result_type]
+        df = self.maximums.df.loc[id, result_type]
+        df.columns = pd.MultiIndex.from_tuples(col_names, names=levels)
+        return df
 
     def val(self, ids: list[str], result_type: str, timestep_index: int) -> pd.DataFrame:
         """

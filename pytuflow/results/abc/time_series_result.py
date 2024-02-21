@@ -244,6 +244,19 @@ class TimeSeriesResult(ABC):
             return self.nodes.long_plot_result_types()
         return []
 
+    def maximum_result_types(self, id: Union[str, list[str]] = '', domain: str = '') -> list[str]:
+        """Returns a list of result types available for maximum extraction."""
+        iter = self.init_iterator()
+        result_types = []
+        for item in iter.id_result_type(id, [], domain, 'max'):
+            for rt in item.result_types:
+                if 'TMax' in rt:
+                    continue
+                rt = rt.replace(' Max', '')
+                if rt not in result_types:
+                    result_types.append(rt)
+        return result_types
+
     def timesteps(self, domain: str = '', dtype: str = 'relative') -> list[Union[float, datetime]]:
         """
         Returns a list of time-steps available for the given domain.
@@ -344,11 +357,7 @@ class TimeSeriesResult(ABC):
         iter = self.init_iterator()
         for item in iter.id_result_type(id, result_type, domain, 'max'):
             df_ = item.result_item.get_maximum(item.ids, item.result_types)
-            df_.rename(columns={x: f'{item.result_item_name}::{x}' for x in df_.columns}, inplace=True)
-            if df.empty:
-                df = df_
-            else:
-                df = pd.concat([df, df_], axis=1)
+            df = pd.concat([df, df_], axis=1)
         return df
 
     def long_plot(self,

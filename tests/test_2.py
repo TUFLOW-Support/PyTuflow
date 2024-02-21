@@ -103,7 +103,7 @@ class Test_TPC_2016(TestCase):
         df = res.rl.maximums.df
         self.assertEqual((3, 14), df.shape)
 
-    def test_maximums2(self):
+    def test_maximums_2(self):
         p = './tests/2016/M04_5m_001.tpc'
         res = TPC(p)
         self.assertEqual((1, 4), res.maximum('ds1', ['q', 'v']).shape)
@@ -114,7 +114,7 @@ class Test_TPC_2016(TestCase):
         df = res.po.maximums.df
         self.assertEqual((4, 16), df.shape)
 
-    def test_maximums_po2(self):
+    def test_maximums_po_2(self):
         p = './tests/2016/M04_5m_001.tpc'
         res = TPC(p)
         self.assertEqual((1, 4), res.maximum('test', 'flow').shape)
@@ -233,6 +233,24 @@ class Test_TPC_2019(TestCase):
         df = res.time_series(None, None)
         self.assertEqual((37, 212), df.shape)
 
+    def test_maximum_types(self):
+        p = './tests/2020/EG15_001.tpc'
+        res = TPC(p)
+        result_types = res.maximum_result_types()
+        self.assertEqual(3, len(result_types))
+
+    def test_maximum_types_2(self):
+        p = './tests/2020/EG15_001.tpc'
+        res = TPC(p)
+        result_types = res.maximum_result_types('FC01.1_R')
+        self.assertEqual(2, len(result_types))
+
+    def test_maximums(self):
+        p = './tests/2020/EG15_001.tpc'
+        res = TPC(p)
+        df = res.maximum(None, None)
+        self.assertEqual((52, 6), df.shape)
+
 
 class Test_GPKG_TS_2023(TestCase):
 
@@ -312,12 +330,17 @@ class Test_GPKG_TS_2023(TestCase):
         df = res.long_plot('pipe1', ['bed level', 'pipes', 'water level', 'max h'], 1)
         self.assertEqual((10, 8), df.shape)
 
-
     def test_long_plot4(self):
         p = './tests/2023/M06_5m_003_SWMM_swmm_ts.gpkg'
         res = GPKG_TS(p)
         df = res.long_plot('pipe1', ['bed level', 'pipes', 'water level', 'energy'], 1)
         self.assertEqual((10, 6), df.shape)
+
+    def test_maximum_types(self):
+        p = './tests/2023/M06_5m_003_SWMM_swmm_ts.gpkg'
+        res = GPKG_TS(p)
+        result_types = res.maximum_result_types()
+        self.assertEqual(12, len(result_types))
 
     def test_maximums(self):
         p = './tests/2023/M06_5m_003_SWMM_swmm_ts.gpkg'
