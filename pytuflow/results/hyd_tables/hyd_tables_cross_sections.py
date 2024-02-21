@@ -12,6 +12,9 @@ class CrossSectionEntry:
     def __init__(self, xs_id: str, df_xs: pd.DataFrame, df_proc: pd.DataFrame) -> None:
         self.xs_id = xs_id
         self.df_xs = df_xs
+        self.df_xs_exists = True
+        if self.df_xs.empty:  # HW tables for instance won't have a cross-section
+            self.df_xs_exists = False
         self.df_proc = df_proc
 
     def __repr__(self) -> str:
@@ -52,6 +55,11 @@ class HydTableCrossSection(HydTableResultItem):
         col_names = list(self.database.values())[0].df_xs.columns
         dfs = [x.df_xs for x in self.database.values()]
         self._load_time_series(dfs, col_names, col_names[1])
+        missing_xs = [x for x in self.database if not self.database[x].df_xs_exists]
+        if 'Elevation'in self.time_series:
+            self.time_series['Elevation'].empty_results = missing_xs
+        if 'Manning n' in self.time_series:
+            self.time_series['Manning n'].empty_results = missing_xs
 
         # processed cross-section data
         col_names = list(self.database.values())[0].df_proc.columns
@@ -102,7 +110,7 @@ class HydTableCrossSection(HydTableResultItem):
                 return self.df.index.tolist()
         if result_type in self.time_series:
             if self.has_unique_names():
-                return [self.xsid2name(x) for x in self.time_series[result_type].df.columns.tolist()]
+                return [self.xsid2name(x) for x in self.time_series[result_type].df.columns.tolist() if x not in self.time_series[result_type].empty_results]
             else:
                 return self.time_series[result_type].df.columns.tolist()
         return []

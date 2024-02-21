@@ -110,7 +110,7 @@ class TimeSeriesResultItem(ABC):
             return list(self.time_series.keys())
         result_types = []
         for result_type, ts in self.time_series.items():
-            if result_type not in result_types and id in [x for x in ts.df.columns]:
+            if result_type not in result_types and id in [x for x in ts.df.columns] and id not in ts.empty_results:
                 result_types.append(result_type)
         return result_types
 

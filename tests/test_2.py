@@ -691,3 +691,36 @@ class Test_HydTables(unittest.TestCase):
         res = HydTables(p)
         df = res.time_series(['FC01.39', '1d_xs_M14_C99'], ['area', 'Eff Width', 'Eff Area', 'Radius'])
         self.assertEqual((35, 10), df.shape)
+
+    def test_maximum_types(self):
+        p = './tests/hyd_tables/EG14_001_1d_ta_tables_check.csv'
+        res = HydTables(p)
+        result_types = res.maximum_result_types()
+        self.assertEqual(0, len(result_types))
+
+    def test_maximums(self):
+        p = './tests/hyd_tables/EG14_001_1d_ta_tables_check.csv'
+        res = HydTables(p)
+        df = res.maximum('1d_xs_M14_C99', 'Elevation')
+        self.assertEqual((0, 0), df.shape)
+
+    def test_long_plot(self):
+        p = './tests/hyd_tables/EG14_001_1d_ta_tables_check.csv'
+        res = HydTables(p)
+        try:
+            df = res.long_plot('1d_xs_M14_C99', ['Elevation', 'Width'], 1)
+            raise Exception('Should have raised a NotImplementedError')
+        except NotImplementedError as e:
+            pass
+
+    def test_cross_section_ids(self):
+        p = './tests/hyd_tables/EG14_001_1d_ta_tables_check.csv'
+        res = HydTables(p)
+        ids = res.cross_section_ids()
+        self.assertEqual(55, len(ids))
+
+    def test_cross_section_ids_2(self):
+        p = './tests/hyd_tables/EG14_CONCAT_HW_001_1d_ta_tables_check.csv'
+        res = HydTables(p)
+        ids = res.cross_section_ids('Elevation')
+        self.assertEqual(54, len(ids))
