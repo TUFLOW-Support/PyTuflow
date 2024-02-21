@@ -1,5 +1,6 @@
 import io
 import re
+from datetime import datetime
 from typing import TextIO, Union
 from pathlib import Path
 
@@ -64,6 +65,22 @@ class HydTables(TimeSeriesResult):
                     result_types[i] = 'K'
         return result_types
 
+    def cross_section_ids(self, result_type: Union[str, list[str]] = '') -> list[str]:
+        """
+        Returns the cross-section ids for the given result type(s).
+
+        :param result_type:
+            The result type can be a single value or a list of values and can be
+            the name of the result type (case in-sensitive) or be a well known short name
+            e.g. 'Flow' - 'q', 'Velocity' - 'v', etc.
+            If no result type is provided, all result types will be assumed to be all available.
+        """
+        if self.cross_sections:
+            if not result_type:
+                return self.cross_sections.ids(None)
+            return self.ids(result_type, '1d cross_section')
+        return []
+
     def time_series(self,
                     id: Union[str, list[str]],
                     result_type: Union[str, list[str]],
@@ -85,6 +102,13 @@ class HydTables(TimeSeriesResult):
             df.columns = pd.MultiIndex.from_tuples(ids, names=df.columns.names)
 
         return df
+
+    def long_plot(self,
+                  ids: Union[str, list[str]],
+                  result_type: Union[str, list[str]],
+                  time: Union[float, datetime]
+                  ) -> pd.DataFrame:
+        raise NotImplementedError('long_plot not available for HydTables.')
 
     def _correct_id(self, id: Union[str, list[str]] = '') -> list[str]:
         """Convert cross-section names to their ids as they are stored in the 1d_ta_tables_check.csv file."""
