@@ -203,6 +203,12 @@ class Test_TPC_2019(TestCase):
         res = TPC(p)
         self.assertEqual(3, len(res.channel_ids()))
 
+    def test_channel_ids_2(self):
+        p = './tests/2020/EG15_001.tpc'
+        res = TPC(p)
+        ids = res.channel_ids('entry loss')
+        self.assertEqual(18, len(ids))
+
     def test_node_ids(self):
         p = './tests/2019/M03_5m_001.tpc'
         res = TPC(p)
