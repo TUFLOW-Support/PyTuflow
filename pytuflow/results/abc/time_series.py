@@ -1,5 +1,6 @@
 from datetime import datetime
 from typing import Union
+from ..types import TimeLike
 
 
 class TimeSeries:
@@ -9,5 +10,5 @@ class TimeSeries:
         self.df = None
         self.empty_results = []
 
-    def timesteps(self, dtype: str) -> list[Union[float, datetime]]:
+    def timesteps(self, dtype: str) -> list[TimeLike]:
         raise NotImplementedError

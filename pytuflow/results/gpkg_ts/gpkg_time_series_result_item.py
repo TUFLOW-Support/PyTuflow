@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import Union
-from ..types import PathLike
+from ..types import PathLike, TimeLike
 
 from .gpkg_time_series import GPKGTimeSeries
 from .gpkg_ts_base import GPKGBase
@@ -78,7 +78,7 @@ class GPKGResultItem(GPKGBase, TimeSeriesResultItem):
                 self._close_db()
         return self._result_types
 
-    def timesteps(self, dtype: str) -> list[Union[float, datetime]]:
+    def timesteps(self, dtype: str) -> list[TimeLike]:
         if not self.time_series:
             return []
 

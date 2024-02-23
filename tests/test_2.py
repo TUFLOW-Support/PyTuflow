@@ -2,6 +2,7 @@ import unittest
 from datetime import datetime
 from unittest import TestCase
 
+from pytuflow.results.bc_tables.bc_tables import BCTables
 from pytuflow.results.fm.fm import FM_TS
 from pytuflow.results.fm.fm_nodes import FMNodes
 from pytuflow.results.fm.gxy import GXY
@@ -730,3 +731,16 @@ class Test_HydTables(unittest.TestCase):
         res = HydTables(p)
         ids = res.cross_section_ids('Elevation')
         self.assertEqual(54, len(ids))
+
+
+class Test_BC_Tables(unittest.TestCase):
+
+    def test_load_2d_bc_tables(self):
+        p = './tests/bc_tables/EG00_001_2d_bc_tables_check.csv'
+        res = BCTables(p)
+        self.assertIsNotNone(res.boundary)
+
+    def test_load_1d_bc_tables(self):
+        p = './tests/bc_tables/EG14_001_1d_bc_tables_check.csv'
+        res = BCTables(p)
+        self.assertIsNotNone(res.boundary)

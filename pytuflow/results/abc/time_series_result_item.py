@@ -6,7 +6,7 @@ from abc import ABC, abstractmethod
 import numpy as np
 
 from ..misc_tools import make_one_dim
-from ..types import PathLike
+from ..types import PathLike, TimeLike
 
 import pandas as pd
 
@@ -21,7 +21,7 @@ class TimeSeriesResultItem(ABC):
         count() -> int
         ids() -> list[str]
         result_types() -> list[str]
-        timesteps() -> list[Union[float, datetime]]
+        timesteps() -> list[TimeLike]
         conv_result_type_name() -> str
 
     e.g. time series result items that subclass this are:
@@ -131,7 +131,7 @@ class TimeSeriesResultItem(ABC):
             df = self.maximums.df.loc[[id]]
         return [x.replace(' Max', '') for x in df.columns if 'TMax' not in x]
 
-    def timesteps(self, dtype: str) -> list[Union[float, datetime]]:
+    def timesteps(self, dtype: str) -> list[TimeLike]:
         """
         Returns a list of time-steps for the given dtype.
 

@@ -2,7 +2,7 @@ import re
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Union
-from ..types import PathLike
+from ..types import PathLike, TimeLike
 
 import pandas as pd
 
@@ -44,7 +44,7 @@ class TPCTimeSeriesCSV(TimeSeries):
         except Exception as e:
             raise Exception(f'Error loading CSV file: {e}')
 
-    def timesteps(self, dtype: str) -> list[Union[float, datetime]]:
+    def timesteps(self, dtype: str) -> list[TimeLike]:
         if dtype == 'absolute':
             return [self.reference_time + timedelta(hours=x) for x in self.df.index]
         return self.df.index.tolist()

@@ -10,6 +10,7 @@ import pandas as pd
 from ..lp_1d import LP_1D
 from ..time_util import closest_time_index
 from ..iterator_util import Iterator
+from ..types import TimeLike
 
 
 class TimeSeriesResult(ABC):
@@ -257,7 +258,7 @@ class TimeSeriesResult(ABC):
                     result_types.append(rt)
         return result_types
 
-    def timesteps(self, domain: str = '', dtype: str = 'relative') -> list[Union[float, datetime]]:
+    def timesteps(self, domain: str = '', dtype: str = 'relative') -> list[TimeLike]:
         """
         Returns a list of time-steps available for the given domain.
 
@@ -363,7 +364,7 @@ class TimeSeriesResult(ABC):
     def long_plot(self,
                   ids: Union[str, list[str]],
                   result_type: Union[str, list[str]],
-                  time: Union[float, datetime]
+                  time: TimeLike
                   ) -> pd.DataFrame:
         """
         Extract long plot data for the given channel ids(s), node result type(s), and time and return as a DataFrame.

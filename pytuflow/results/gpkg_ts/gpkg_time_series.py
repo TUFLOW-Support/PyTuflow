@@ -1,7 +1,7 @@
 from datetime import datetime
 from pathlib import Path
-from typing import Union, TYPE_CHECKING
-from ..types import PathLike
+from typing import TYPE_CHECKING
+from ..types import PathLike, TimeLike
 
 import numpy as np
 import pandas as pd
@@ -32,7 +32,7 @@ class GPKGTimeSeries(GPKGBase, TimeSeries):
     def load(self) -> None:
         pass
 
-    def timesteps(self, dtype: str) -> list[Union[float, datetime]]:
+    def timesteps(self, dtype: str) -> list[TimeLike]:
         if self._timesteps_rel is None:
             try:
                 self._open_db()

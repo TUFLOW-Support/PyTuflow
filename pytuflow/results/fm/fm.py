@@ -5,7 +5,7 @@ from typing import Union
 
 import pandas as pd
 
-from ..types import PathLike
+from ..types import PathLike, TimeLike
 
 from .fm_channels import FMChannels
 from .fm_nodes import FMNodes
@@ -73,7 +73,7 @@ class FM_TS(TimeSeriesResult):
     def long_plot(self,
                   ids: Union[str, list[str]],
                   result_type: Union[str, list[str]],
-                  time: Union[float, datetime]
+                  time: TimeLike
                   ) -> pd.DataFrame:
         if not self.nodes or not self.channels:
             return Exception('GXY file required for long plotting')

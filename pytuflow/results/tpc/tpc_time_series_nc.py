@@ -1,8 +1,7 @@
 import re
-from datetime import datetime, timedelta
+from datetime import timedelta
 from pathlib import Path
-from typing import Union
-from ..types import PathLike
+from ..types import PathLike, TimeLike
 
 import pandas as pd
 
@@ -56,7 +55,7 @@ class TPCTimeSeriesNC(TimeSeries):
             raise ModuleNotFoundError('netCDF4 is not installed')
         self.reference_time, self.time_units = nc_time_series_reference_time(self.fpath)
 
-    def timesteps(self, dtype: str) -> list[Union[float, datetime]]:
+    def timesteps(self, dtype: str) -> list[TimeLike]:
         if dtype == 'absolute':
             if self.time_units == 'h':
                 return [self.reference_time + timedelta(hours=x) for x in self._timesteps()]

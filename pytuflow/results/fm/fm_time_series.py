@@ -4,6 +4,7 @@ from typing import Union
 import pandas as pd
 
 from ..abc.time_series import TimeSeries
+from ..types import TimeLike
 
 
 class FMTimeSeries(TimeSeries):
@@ -19,7 +20,7 @@ class FMTimeSeries(TimeSeries):
         self.df = df.iloc[:, df.columns.str.contains(rf'^{self._name}::')]
         self.df.columns = self.df.columns.map(lambda x: x.split('::')[-1])
 
-    def timesteps(self, dtype: str) -> list[Union[float, datetime]]:
+    def timesteps(self, dtype: str) -> list[TimeLike]:
         if dtype == 'absolute':
             return [self.reference_time + timedelta(hours=x) for x in self._timesteps]
         return self._timesteps

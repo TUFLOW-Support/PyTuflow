@@ -1,7 +1,7 @@
 import re
 from datetime import datetime
 from typing import Union
-from .types import PathLike
+from .types import PathLike, TimeLike
 
 import numpy as np
 try:
@@ -80,8 +80,8 @@ def nc_time_series_reference_time(nc: PathLike) -> tuple[datetime, str]:
 
 
 def closest_time_index(
-        timesteps: list[Union[float, datetime]],
-        time: Union[float, datetime],
+        timesteps: list[TimeLike],
+        time: TimeLike,
         method: str = 'previous',
         tol: float = 0.001
 ) -> int:
