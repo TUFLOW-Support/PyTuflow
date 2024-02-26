@@ -744,3 +744,33 @@ class Test_BC_Tables(unittest.TestCase):
         p = './tests/bc_tables/EG14_001_1d_bc_tables_check.csv'
         res = BCTables(p)
         self.assertIsNotNone(res.boundary)
+
+    def test_ids(self):
+        p = './tests/bc_tables/EG00_001_2d_bc_tables_check.csv'
+        res = BCTables(p)
+        ids = res.boundary_ids()
+        self.assertEqual(2, len(ids))
+
+    def test_ids_2(self):
+        p = './tests/bc_tables/EG00_001_2d_bc_tables_check.csv'
+        res = BCTables(p)
+        ids = res.boundary_ids('QT')
+        self.assertEqual(1, len(ids))
+
+    def test_ids_3(self):
+        p = './tests/bc_tables/EG00_001_2d_bc_tables_check.csv'
+        res = BCTables(p)
+        ids = res.ids()
+        self.assertEqual(2, len(ids))
+
+    def test_result_types(self):
+        p = './tests/bc_tables/EG00_001_2d_bc_tables_check.csv'
+        res = BCTables(p)
+        rts = res.result_types()
+        self.assertEqual(2, len(rts))
+
+    def test_result_types_2(self):
+        p = './tests/bc_tables/EG00_001_2d_bc_tables_check.csv'
+        res = BCTables(p)
+        rts = res.result_types('FC01')
+        self.assertEqual(1, len(rts))

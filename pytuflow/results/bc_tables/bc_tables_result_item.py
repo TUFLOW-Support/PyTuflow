@@ -1,6 +1,6 @@
 import re
 from pathlib import Path
-from typing import io
+from typing import TextIO
 
 import pandas as pd
 
@@ -17,6 +17,7 @@ class BCTablesResultItem(TimeSeriesResultItem):
         self.units = ''
         self._bndry = []
         super().__init__(fpath)
+
     def load(self) -> None:
         with self.fpath.open() as f:
             for line in f:
@@ -36,7 +37,7 @@ class BCTablesResultItem(TimeSeriesResultItem):
         self.df = pd.DataFrame(a, columns=['ID', 'Name', 'Type'])
         self.df.set_index('ID', inplace=True)
 
-    def load_time_series(self, line: str, fo: io.TextIO) -> None:
+    def load_time_series(self, line: str, fo: TextIO) -> None:
         bndry = BoundaryType(line)
         if not bndry.valid:
             return
@@ -50,6 +51,38 @@ class BCTablesResultItem(TimeSeriesResultItem):
 
     def conv_result_type_name(self, result_type: str) -> str:
         return result_type
+
+    def bcid2name(self, bcid: str) -> str:
+        if bcid not in self.df.index:
+            return bcid
+        return self.df.loc[bcid, 'Name']
+
+    def name2bcid(self, name: str) -> str:
+        if name not in self.df['Name'].tolist():
+            return name
+        return self.df[self.df['Name'] == name].index[0]
+
+    def ids(self, result_type: str) -> list[str]:
+        if self.df is None:
+            return []
+        if not result_type:
+            return self.df['Name'].tolist()
+        if result_type in self.time_series:
+            return [x for x in self.time_series[result_type].df.columns.tolist() if x not in self.time_series[result_type].empty_results]
+        return []
+
+    def result_types(self, id: str) -> list[str]:
+        if not self.time_series:
+            return []
+        if not id:
+            return list(self.time_series.keys())
+        result_types = []
+        for result_type, ts in self.time_series.items():
+            ids = ts.df.columns.tolist()
+            ids.extend([self.name2bcid(x) for x in ids if self.name2bcid(x)])
+            if result_type not in result_types and id in ids:
+                result_types.append(result_type)
+        return result_types
 
     def _extract_tcf(self, line: str) -> PathLike:
         tcf = re.findall(r'".*"', line)
