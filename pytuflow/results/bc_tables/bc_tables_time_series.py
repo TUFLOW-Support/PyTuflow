@@ -17,8 +17,8 @@ class BCTablesTimeSeries(TimeSeries):
 
     def append(self, bndry: BoundaryType) -> None:
         if bndry.valid:
-            df = pd.DataFrame(bndry.values[:,1], columns=[bndry.name])
-            df_index = pd.DataFrame(bndry.values[:,0], columns=[bndry.name])
+            df = pd.DataFrame(bndry.values[:,1], columns=[bndry.id])
+            df_index = pd.DataFrame(bndry.values[:,0], columns=[bndry.id])
             self.df = pd.concat([self.df, df], axis=1)
             self.df_index = pd.concat([self.df_index, df_index], axis=1)
 

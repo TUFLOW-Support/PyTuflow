@@ -110,7 +110,7 @@ class HydTableCrossSection(HydTableResultItem):
                 return self.df.index.tolist()
         if result_type in self.time_series:
             if self.has_unique_names():
-                return [self.xsid2name(x) for x in self.time_series[result_type].df.columns.tolist() if x not in self.time_series[result_type].empty_results]
+                return [self.xsid2name(x) for x in self.time_series[result_type].df.columns if x not in self.time_series[result_type].empty_results]
             else:
                 return self.time_series[result_type].df.columns.tolist()
         return []

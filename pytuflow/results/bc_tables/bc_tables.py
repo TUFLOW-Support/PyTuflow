@@ -1,6 +1,8 @@
 import re
 from typing import Union
 
+import pandas as pd
+
 from .bc_tables_boundary import Boundary
 from ..abc.time_series_result import TimeSeriesResult
 from ..types import PathLike
@@ -41,6 +43,30 @@ class BCTables(TimeSeriesResult):
                 return self.boundary.ids(None)
             return self.ids(boundary_type, f'{self.boundary.domain} boundary')
         return []
+
+    def time_series(self,
+                    id: Union[str, list[str]],
+                    result_type: Union[str, list[str]],
+                    domain: str = None,
+                    use_common_index: bool = True
+                    ) -> pd.DataFrame:
+        if not isinstance(id, list):
+            id = [id] if id else []
+        if not id:
+            id = self.boundary_ids(None)
+        id_ = id.copy()
+        id = self._correct_id(id)
+        correct_df_header = id_ != id
+        df = super().time_series(id, result_type, domain, use_common_index)
+        if correct_df_header:  # convert cross-section ids (e.g. 'XS00001') back to name (e.g. '1d_xs_C109')
+            ids = [list(x) for x in df.columns.values.tolist()]
+            for bcid in ids:
+                name = self.boundary.bcid2name(bcid[2])
+                if name in id_:
+                    bcid[2] = name
+            df.columns = pd.MultiIndex.from_tuples(ids, names=df.columns.names)
+
+        return df
 
     def _correct_id(self, id: Union[str, list[str]] = '') -> list[str]:
         """Convert cross-section names to their ids as they are stored in the 1d_ta_tables_check.csv file."""

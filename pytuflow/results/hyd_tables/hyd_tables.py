@@ -89,6 +89,8 @@ class HydTables(TimeSeriesResult):
                     ) -> pd.DataFrame:
         if not isinstance(id, list):
             id = [id] if id else []
+        if not id:
+            id = self.cross_section_ids(None) + self.channel_ids(None)
         id_ = id.copy()
         id = self._correct_id(id)
         correct_df_header = id_ != id

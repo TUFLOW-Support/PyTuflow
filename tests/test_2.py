@@ -699,6 +699,12 @@ class Test_HydTables(unittest.TestCase):
         df = res.time_series(['FC01.39', '1d_xs_M14_C99'], ['area', 'Eff Width', 'Eff Area', 'Radius'])
         self.assertEqual((35, 10), df.shape)
 
+    def test_time_series_8(self):
+        p = './tests/hyd_tables/EG14_001_1d_ta_tables_check.csv'
+        res = HydTables(p)
+        df = res.time_series(None, ['Eff Width'])
+        self.assertEqual((49, 110), df.shape)
+
     def test_maximum_types(self):
         p = './tests/hyd_tables/EG14_001_1d_ta_tables_check.csv'
         res = HydTables(p)
@@ -774,3 +780,15 @@ class Test_BC_Tables(unittest.TestCase):
         res = BCTables(p)
         rts = res.result_types('FC01')
         self.assertEqual(1, len(rts))
+
+    def test_time_series(self):
+        p = './tests/bc_tables/EG00_001_2d_bc_tables_check.csv'
+        res = BCTables(p)
+        df = res.time_series('FC01', 'QT')
+        self.assertEqual((41, 1), df.shape)
+
+    def test_time_series_2(self):
+        p = './tests/bc_tables/EG00_001_2d_bc_tables_check.csv'
+        res = BCTables(p)
+        df = res.time_series(None, ['HQ', 'QT'])
+        self.assertEqual((102, 4), df.shape)
