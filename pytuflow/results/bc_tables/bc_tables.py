@@ -5,7 +5,7 @@ import pandas as pd
 
 from .bc_tables_boundary import Boundary
 from ..abc.time_series_result import TimeSeriesResult
-from ..types import PathLike
+from ..types import PathLike, TimeLike
 from ..iterator_util import Iterator
 
 
@@ -67,6 +67,13 @@ class BCTables(TimeSeriesResult):
             df.columns = pd.MultiIndex.from_tuples(ids, names=df.columns.names)
 
         return df
+
+    def long_plot(self,
+                  ids: Union[str, list[str]],
+                  result_type: Union[str, list[str]],
+                  time: TimeLike
+                  ) -> pd.DataFrame:
+        raise NotImplementedError('long_plot not available for BCTables.')
 
     def _correct_id(self, id: Union[str, list[str]] = '') -> list[str]:
         """Convert cross-section names to their ids as they are stored in the 1d_ta_tables_check.csv file."""

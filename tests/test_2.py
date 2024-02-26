@@ -792,3 +792,18 @@ class Test_BC_Tables(unittest.TestCase):
         res = BCTables(p)
         df = res.time_series(None, ['HQ', 'QT'])
         self.assertEqual((102, 4), df.shape)
+
+    def test_maximums(self):
+        p = './tests/bc_tables/EG00_001_2d_bc_tables_check.csv'
+        res = BCTables(p)
+        df = res.maximum('FC01', 'HQ')
+        self.assertEqual((0, 0), df.shape)
+
+    def test_long_plot(self):
+        p = './tests/bc_tables/EG00_001_2d_bc_tables_check.csv'
+        res = BCTables(p)
+        try:
+            df = res.long_plot('FC01', ['HQ'], 1)
+            raise Exception('Should have raised a NotImplementedError')
+        except NotImplementedError as e:
+            pass
