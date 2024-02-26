@@ -39,7 +39,24 @@ class TimeSeriesResult(ABC):
         self.rl = None
         self.lp_1d = None
         self.reference_time = datetime(1990, 1, 1)
+        if not self.fpath.exists():
+            raise FileNotFoundError(f'File not found: {self.fpath}')
+        if not self.looks_like_self(self.fpath):
+            raise ValueError(f'File does not look like {self.__class__.__name__}')
+        if self.looks_empty(self.fpath):
+            raise ValueError(f'Empty results: {self.fpath}')
         self.load()
+
+    @staticmethod
+    @abstractmethod
+    def looks_like_self(fpath: Path) -> bool:
+        """Return True if the file looks like this class."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def looks_empty(self, fpath: Path) -> bool:
+        """Return True if the file looks empty."""
+        raise NotImplementedError
 
     @abstractmethod
     def load(self, *args, **kwargs) -> None:

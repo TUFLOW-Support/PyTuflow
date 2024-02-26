@@ -38,6 +38,42 @@ class TPC(TimeSeriesResult):
             return f'<TPC: {self.sim_id}>'
         return '<TPC>'
 
+    @staticmethod
+    def looks_like_self(fpath: Path) -> bool:
+        if fpath.suffix.upper() != '.TPC':
+            return  False
+        try:
+            with fpath.open() as f:
+                line = f.readline()
+                if not line.startswith('Format Version =='):
+                    return False
+        except Exception as e:
+            return False
+        return True
+
+    def looks_empty(self, fpath: Path) -> bool:
+        TARGET_LINE_COUNT = 10  # fairly arbitrary
+        try:
+            df = pd.read_csv(self.fpath, sep=' == ', engine='python', header=None)
+            if df.shape[0] < TARGET_LINE_COUNT:
+                return True
+            if df.shape[1] < 2:
+                return True
+            node_count = df[self._df.iloc[:,0] == 'Number 1D Nodes'].iloc[0,1]
+            channel_count = df[self._df.iloc[:,0] == 'Number 1D Channels'].iloc[0,1]
+            rlp_count = df[self._df.iloc[:,0] == 'Number Reporting Location Points'].iloc[0,1]
+            rll_count = df[self._df.iloc[:,0] == 'Number Reporting Location Lines'].iloc[0,1]
+            rlr_count = df[self._df.iloc[:,0] == 'Number Reporting Location Regions'].iloc[0,1]
+            po_count = 0
+            for row in df.itertuples():
+                if row[0].startswith('2D'):
+                    po_count += 1
+            if node_count + channel_count + rlp_count + rll_count + rlr_count + po_count == 0:
+                return True
+            return False
+        except Exception as e:
+            return True
+
     def load(self) -> None:
         try:
             self._df = pd.read_csv(self.fpath, sep=' == ', engine='python', header=None)

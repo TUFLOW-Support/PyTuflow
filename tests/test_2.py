@@ -20,6 +20,30 @@ class Test_TPC_2016(TestCase):
         res = TPC(p)
         self.assertEqual('M04_5m_001', res.sim_id)
 
+    def test_not_tpc(self):
+        p = './tests/2013/M04_5m_001_1d.info'
+        try:
+            tpc = TPC(p)
+            raise AssertionError('Should have raised an exception')
+        except ValueError:
+            pass
+
+    def test_blank_tpc(self):
+        p = './tests/2016/M04_5m_001_not_complete.tpc'
+        try:
+            tpc = TPC(p)
+            raise AssertionError('Should have raised an exception')
+        except ValueError:
+            pass
+
+    def test_empty_results(self):
+        p = './tests/2016/EG00_001.tpc'
+        try:
+            tpc = TPC(p)
+            raise AssertionError('Should have raised an exception')
+        except ValueError:
+            pass
+
     def test_channel_count(self):
         p = './tests/2016/M04_5m_001.tpc'
         res = TPC(p)
