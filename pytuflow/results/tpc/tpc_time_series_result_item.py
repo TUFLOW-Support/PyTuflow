@@ -11,7 +11,8 @@ RESULT_SHORT_NAME = {'h': 'water level', 'q': 'flow', 'v': 'velocity', 'vel': 'v
                      'mb': 'mass balance error', 'qa': 'flow area', 'nf': 'node regime', 'cf': 'channel regime',
                      'entry loss': 'entry channel losses', 'entry losses': 'entry channel losses',
                      'exit loss': 'entry channel losses', 'exit losses': 'entry channel losses',
-                     'additional loss': 'entry channel losses', 'additional losses': 'entry channel losses'}
+                     'additional loss': 'entry channel losses', 'additional losses': 'entry channel losses',
+                     'level': 'water level'}
 
 
 class TPCResultItem(TimeSeriesResultItem):

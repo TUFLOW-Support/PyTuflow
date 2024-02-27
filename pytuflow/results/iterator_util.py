@@ -84,6 +84,55 @@ class IDResultTypeItem:
         return bool(self.correct)
 
 
+class ErrorMessage:
+
+    def __init__(self, corr_items: list[Corrected], domain_2: str, user_comb: bool) -> None:
+        self.corr_items = corr_items
+        self.corr_item = None
+        self.valid_id_somewhere = any([x.id for x in corr_items])
+        self.valid_rt_somewhere = any([x.result_type for x in corr_items])
+        if self.valid_id_somewhere and self.valid_rt_somewhere:
+            self.corr_item = next(x for x in corr_items if x.result_type)
+        elif self.corr_items:
+            self.corr_item = corr_items[0]
+        self.domain_2 = domain_2
+        self.user_comb = user_comb
+
+    def build_err_msg(self) -> str:
+        if self.corr_item is None:
+            return 'No valid returns found in the given combination of IDs and result types.'  # shouldn't get here
+        not_found_id, not_found_type = self.not_found()
+        if not not_found_id:
+            return 'No valid returns found in the given combination of IDs and result types.'  # shouldn't get here
+        against_type = self.against_type()
+        if not against_type:
+            return f'{not_found_id} is not a valid {not_found_type}.'
+        elif self.user_comb:
+            return f'{not_found_id} {against_type}.'
+        return f'{not_found_id} {against_type} {not_found_type}.'
+
+    def not_found(self) -> tuple[str, str]:
+        if self.user_comb:
+            if not self.valid_id_somewhere:
+                return f'"{self.corr_item.id_orig}"', 'ID'
+            elif not self.valid_rt_somewhere:
+                return f'"{self.corr_item.result_type_orig}"', 'result type'
+        if self.corr_item.id is None:
+            return f'"{self.corr_item.id_orig}"', 'ID'
+        elif self.corr_item.result_type is None:
+            return f'"{self.corr_item.result_type_orig}"', 'result type'
+        return None, None
+
+    def against_type(self) -> str:
+        if self.user_comb and self.corr_item.result_type and self.valid_id_somewhere:
+            return f'does not have "{self.corr_item.result_type}" result type'
+        if self.user_comb and self.valid_id_somewhere and not self.valid_rt_somewhere:
+            return f'is not a valid result type'
+        if self.domain_2 != 'nothing yielded':
+            return f'is not a valid {self.corr_item.result_item.name}'
+
+
+
 class Iterator:
     """
     Class for helping iterate over valid IDs and result type combinations. This class will also correct IDs and
@@ -101,6 +150,17 @@ class Iterator:
         (e.g. shouldn't have 2 Node classes even if they contain unique data).
         """
         self._result_items = [x for x in result_items if x]
+
+    def raise_exception(self, corr_items: list[Corrected], domain_2: str, user_comb: bool = False) -> None:
+        """
+        Raises an exception with useful info if something is wrong
+        e.g. wrong result type for a given  domain_2 ('level' for a 'channel')
+        """
+        item = IDResultTypeItem('dummy', corr_items.copy(), True)
+        if domain_2 and corr_items and not item.valid:  # something is wrong
+            err_msg = ErrorMessage(corr_items, domain_2, user_comb).build_err_msg()
+            raise ValueError(err_msg)
+
 
     def id_result_type(self,
                        ids: Union[str, list[str]],
@@ -151,13 +211,25 @@ class Iterator:
                 domain, domain_2 = s
 
         # yield valid IDResultTypeItem classes
+        something_yielded = False
+        all_corr_items = []
         for result_item in self._result_items:
             if not domain or result_item.domain.lower() == domain.lower():
                 if not domain_2 or result_item.domain_2.lower() == domain_2.lower():
                     corr_items = self._corrected_items(ids, result_types, result_item.domain_2, type_, result_item)
+                    all_corr_items.extend(corr_items)
+
+                    # check if user has passed in something wrong (e.g. a channel ID that doesn't exist)
+                    # try and catch this and give a useful message
+                    self.raise_exception(corr_items, domain_2)  # only raises exception if something is wrong
+
                     item = IDResultTypeItem(result_item.name, corr_items, True)
                     if item.valid:
+                        something_yielded = True
                         yield item
+
+        if not something_yielded:
+            self.raise_exception(all_corr_items, 'nothing yielded', bool(ids) and bool(result_types))
 
     def lp_id_result_type(self,
                           ids: Union[str, list[str]],

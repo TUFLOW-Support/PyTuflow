@@ -69,6 +69,27 @@ class Test_TPC_2016(TestCase):
         res = TPC(p)
         self.assertEqual(54, len(res.channel_ids()))
 
+    def test_channel_ids_error(self):
+        p = './tests/2016/M04_5m_001.tpc'
+        res = TPC(p)
+        try:
+            ids = res.channel_ids('level')
+            raise AssertionError('Should have raised an exception')
+        except ValueError:
+            pass
+
+    def test_ids_error(self):
+        p = './tests/2016/M04_5m_001.tpc'
+        res = TPC(p)
+        # works
+        ids = res.ids('level', '1d')
+        # doesn't work
+        try:
+            ids = res.ids('levl', '1d')  # misspell
+            raise AssertionError('Should have raised an exception')
+        except ValueError:
+            pass
+
     def test_node_ids(self):
         p = './tests/2016/M04_5m_001.tpc'
         res = TPC(p)
@@ -93,6 +114,27 @@ class Test_TPC_2016(TestCase):
         p = './tests/2016/M04_5m_001.tpc'
         res = TPC(p)
         self.assertEqual(2, len(res.node_result_types()))
+
+    def test_node_result_types_error(self):
+        p = './tests/2016/M04_5m_001.tpc'
+        res = TPC(p)
+        try:
+            rts = res.node_result_types('ds1')
+            raise AssertionError('Should have raised an exception')
+        except ValueError:
+            pass
+
+    def test_result_types_error(self):
+        p = './tests/2016/M04_5m_001.tpc'
+        res = TPC(p)
+        # works
+        rts = res.result_types('ds1')
+        # doesn't work
+        try:
+            rts = res.result_types('ds0')  # doesn't exist in any result item
+            raise AssertionError('Should have raised an exception')
+        except ValueError:
+            pass
 
     def test_po_result_types(self):
         p = './tests/2016/M04_5m_001.tpc'
@@ -161,6 +203,15 @@ class Test_TPC_2016(TestCase):
         res = TPC(p)
         ts = res.time_series('ds1', 'Q')
         self.assertEqual((181, 1), ts.shape)
+
+    def test_time_series_error(self):
+        p = './tests/2016/M04_5m_001.tpc'
+        res = TPC(p)
+        try:
+            ts = res.time_series('ds0', 'Q')
+            raise AssertionError('Should have raised an exception')
+        except ValueError:
+            pass
 
     def test_connectivity(self):
         p = './tests/2016/M04_5m_001.tpc'
