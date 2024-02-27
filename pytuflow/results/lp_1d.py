@@ -211,6 +211,7 @@ class LP_1D:
         df = pd.DataFrame([])
         if result_types:
             df = self.nodes.get_maximum(nodes, result_types)
+            df.columns = df.columns.get_level_values('Result Type')
         return df.reset_index(drop=True)
 
     @staticmethod
