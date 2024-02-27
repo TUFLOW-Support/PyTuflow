@@ -1,3 +1,4 @@
+import itertools
 import re
 from typing import Generator, Union
 from dataclasses import dataclass, field
@@ -85,18 +86,57 @@ class IDResultTypeItem:
 
 
 class ErrorMessage:
+    """
+    TODO: check if this is slow for a dataset with a lot of channels/nodes
+    """
 
     def __init__(self, corr_items: list[Corrected], domain_2: str, user_comb: bool) -> None:
         self.corr_items = corr_items
-        self.corr_item = None
-        self.valid_id_somewhere = any([x.id for x in corr_items])
-        self.valid_rt_somewhere = any([x.result_type for x in corr_items])
-        if self.valid_id_somewhere and self.valid_rt_somewhere:
-            self.corr_item = next(x for x in corr_items if x.result_type)
-        elif self.corr_items:
-            self.corr_item = corr_items[0]
         self.domain_2 = domain_2
         self.user_comb = user_comb
+        self.item = IDResultTypeItem('dummy', corr_items.copy(), True)
+
+        # original ids (maybe passed by user - could be wrong case)
+        self.oids = set([x.id_orig for x in corr_items])
+        # original result types (maybe passed by user - could be wrong case or short name e.g. 'h')
+        self.orts = set([x.result_type_orig for x in corr_items])
+
+        # valid original ids (they have been found and corrected, so the id does exist somewhere in the results)
+        self.valid_oids = set([x.id_orig for x in corr_items if x.id])
+        # valid original result types (they have been found and corrected, so
+        # the result type does exist somewhere in the results)
+        self.valid_orts = set([x.result_type_orig for x in corr_items if x.result_type])
+
+        # unique ids (corrected) - if 'None' is in this set, that
+        # means an ID passed by the user does not exist in the results
+        self.uids = set([x.id for x in corr_items if x.id is not None or x.id_orig not in self.valid_oids])
+        # unique result types (corrected) - if 'None' is in this set, that means a
+        # result type passed by the user does not exist in the results
+        self.urts = set([x.result_type for x in corr_items if x.result_type is not None or x.result_type_orig not in self.valid_orts])
+
+        # if there is a valid id somewhere in the results
+        self.valid_id_somewhere = any([x.id for x in corr_items])
+        # if there is a valid result type somewhere in the results
+        self.valid_rt_somewhere = any([x.result_type for x in corr_items])
+
+        # get the first corrected item that is not valid (or just return the first if nothing is found)
+        self.corr_item = self.get_corr_item()
+
+    def get_corr_item(self):
+        if not self.item.valid:
+            if self.valid_id_somewhere and self.valid_rt_somewhere:
+                return next(x for x in self.corr_items if x.result_type)
+            elif self.corr_items:
+                return self.corr_items[0]
+        elif None in self.uids:
+            return next(x for x in self.corr_items if x.id is None and x.id_orig not in self.valid_oids)
+        elif None in self.urts:
+            return next(x for x in self.corr_items if x.result_type is None and x.result_type_orig not in self.valid_orts)
+        if self.corr_items:
+            return self.corr_items[0]
+
+    def is_err(self):
+        return self.corr_items and self.domain_2 and (not self.item.valid or None in self.uids or None in self.urts)
 
     def build_err_msg(self) -> str:
         if self.corr_item is None:
@@ -156,10 +196,9 @@ class Iterator:
         Raises an exception with useful info if something is wrong
         e.g. wrong result type for a given  domain_2 ('level' for a 'channel')
         """
-        item = IDResultTypeItem('dummy', corr_items.copy(), True)
-        if domain_2 and corr_items and not item.valid:  # something is wrong
-            err_msg = ErrorMessage(corr_items, domain_2, user_comb).build_err_msg()
-            raise ValueError(err_msg)
+        err_msg = ErrorMessage(corr_items, domain_2, user_comb)
+        if err_msg.is_err():
+            raise ValueError(err_msg.build_err_msg())
 
     def id_result_type(self,
                        ids: Union[str, list[str]],
@@ -210,7 +249,6 @@ class Iterator:
                 domain, domain_2 = s
 
         # yield valid IDResultTypeItem classes
-        something_yielded = False
         all_corr_items = []
         for result_item in self._result_items:
             if not domain or result_item.domain.lower() == domain.lower():
@@ -224,11 +262,9 @@ class Iterator:
 
                     item = IDResultTypeItem(result_item.name, corr_items, True)
                     if item.valid:
-                        something_yielded = True
                         yield item
 
-        if not something_yielded:
-            self.raise_exception(all_corr_items, 'nothing yielded', bool(ids) and bool(result_types))
+        self.raise_exception(all_corr_items, 'nothing yielded', bool(ids) and bool(result_types))
 
     def lp_id_result_type(self,
                           ids: Union[str, list[str]],
@@ -285,9 +321,15 @@ class Iterator:
         static_result_types, static_result_types_corr_names = LP_1D.extract_static_results(result_types)
         static_result_types = {x: y for x, y in zip(static_result_types, static_result_types_corr_names)}
 
-        # get corrected result types
+        # deal with maximums - initially remove them
+        max_result_types = {x: re.sub(r'max(imum)?', '', x, flags=re.IGNORECASE).strip() for x in result_types if 'max' in x.lower()}
+        for rt in result_types.copy():
+            if rt in max_result_types:
+                result_types.remove(rt)
+
+        # get corrected result types - temporal
         result_types_ = []
-        corr_items = self._corrected_items([], result_types, 'node', 'temporal', nodes)
+        corr_items = self._corrected_items([], result_types, 'node', 'temporal', nodes, valid_rts=static_result_types)
 
         # check if user has passed in something wrong (e.g. a channel ID that doesn't exist)
         # try and catch this and give a useful message
@@ -299,10 +341,11 @@ class Iterator:
             elif corr_item.result_type is not None and corr_item.result_type not in result_types_:
                 result_types_.append(corr_item.result_type)
 
-        # deal with maximums
-        max_result_types = [re.sub(r'max(imum)?', '', x, flags=re.IGNORECASE).strip() for x in result_types if 'max' in x.lower()]
+        # finish dealing with maximums
+        corr_items = self._corrected_items([], list(max_result_types.values()), 'node', 'max', nodes)
+        self.raise_exception(corr_items, 'node')  # only raises exception if something is wrong
         if max_result_types:
-            for corr_item in self._corrected_items([], max_result_types, 'node', 'max', nodes):
+            for corr_item in corr_items:
                 if corr_item.result_type is not None and corr_item.result_type not in result_types_:
                     result_types_.append(corr_item.result_type)
 
@@ -315,7 +358,7 @@ class Iterator:
 
         yield IDResultTypeItem('Node', corrected, False)
 
-    def _correct_id(self, ids: list[str], df: pd.DataFrame) -> list[str]:
+    def _correct_id(self, ids: list[str], df: pd.DataFrame, valid_ids: dict = None) -> list[str]:
         """
         Returns a list of corrected IDs (correct case) else None if ID is not found.
 
@@ -328,11 +371,13 @@ class Iterator:
         for id_ in ids:
             if str(id_).lower() in [str(x).lower() for x in df.index]:
                 ids_.append(df.index[[str(x).lower() for x in df.index].index(str(id_).lower())])
+            elif valid_ids and id_ in valid_ids:
+                ids_.append(valid_ids[id_])
             else:
                 ids_.append(None)
         return ids_
 
-    def _correct_result_type(self, result_types: list[str], domain_2: str, type_: str) -> list[str]:
+    def _correct_result_type(self, result_types: list[str], domain_2: str, type_: str, valid_rts: dict = None) -> list[str]:
         """
         Returns a list of corrected result types (correct case and convert short names to full names) else None if
         result type is not found.
@@ -363,6 +408,8 @@ class Iterator:
         for rt in result_types:
             if rt.lower() in [x.lower() for x in a]:
                 result_types_.append(a[[x.lower() for x in a].index(rt.lower())])
+            elif valid_rts and rt in valid_rts:
+                result_types_.append(valid_rts[rt])
             else:
                 result_types_.append(None)
 
@@ -373,7 +420,9 @@ class Iterator:
                          result_types: list[str],
                          domain_2: str,
                          type_: str,
-                         cls: TimeSeriesResultItem
+                         cls: TimeSeriesResultItem,
+                         valid_ids: dict = None,
+                         valid_rts: dict = None
                          ) -> list[Corrected]:
         """
         Returns a list of Corrected items for the given IDs, result types, and domain_2.
@@ -391,9 +440,9 @@ class Iterator:
         """
         ids_, result_types_, result_types_temp, = [], [], []
         if ids and cls is not None:
-            ids_ = self._correct_id(ids, cls.df)
+            ids_ = self._correct_id(ids, cls.df, valid_ids)
         if result_types and cls is not None:
-            result_types_ = self._correct_result_type(result_types, domain_2, type_)
+            result_types_ = self._correct_result_type(result_types, domain_2, type_, valid_rts)
             if type_.lower() == 'max':
                 result_types = sum([[x, x] for x in result_types], [])
                 result_types_temp = self._correct_result_type(result_types, domain_2, 'temporal')

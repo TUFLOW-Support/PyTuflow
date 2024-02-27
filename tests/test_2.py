@@ -78,6 +78,15 @@ class Test_TPC_2016(TestCase):
         except ValueError:
             pass
 
+    def test_channel_ids_error_2(self):
+        p = './tests/2016/M04_5m_001.tpc'
+        res = TPC(p)
+        try:
+            ids = res.channel_ids(['flow', 'level'])
+            raise AssertionError('Should have raised an exception')
+        except ValueError:
+            pass
+
     def test_ids_error(self):
         p = './tests/2016/M04_5m_001.tpc'
         res = TPC(p)
@@ -86,6 +95,18 @@ class Test_TPC_2016(TestCase):
         # doesn't work
         try:
             ids = res.ids('levl', '1d')  # misspell
+            raise AssertionError('Should have raised an exception')
+        except ValueError:
+            pass
+
+    def test_ids_error_2(self):
+        p = './tests/2016/M04_5m_001.tpc'
+        res = TPC(p)
+        # works
+        ids = res.ids(['flow', 'level'], '1d')
+        # doesn't work
+        try:
+            ids = res.ids(['e', 'g'], '1d')
             raise AssertionError('Should have raised an exception')
         except ValueError:
             pass
@@ -124,6 +145,15 @@ class Test_TPC_2016(TestCase):
         except ValueError:
             pass
 
+    def test_node_result_types_error_2(self):
+        p = './tests/2016/M04_5m_001.tpc'
+        res = TPC(p)
+        try:
+            rts = res.node_result_types(['ds1.1', 'ds1'])
+            raise AssertionError('Should have raised an exception')
+        except ValueError:
+            pass
+
     def test_result_types_error(self):
         p = './tests/2016/M04_5m_001.tpc'
         res = TPC(p)
@@ -132,6 +162,18 @@ class Test_TPC_2016(TestCase):
         # doesn't work
         try:
             rts = res.result_types('ds0')  # doesn't exist in any result item
+            raise AssertionError('Should have raised an exception')
+        except ValueError:
+            pass
+
+    def test_result_types_error_2(self):
+        p = './tests/2016/M04_5m_001.tpc'
+        res = TPC(p)
+        # works
+        rts = res.result_types(['ds1', 'ds1.1'])
+        # doesn't work
+        try:
+            rts = res.result_types(['ds1', 'ds0'])  # doesn't exist in any result item
             raise AssertionError('Should have raised an exception')
         except ValueError:
             pass
@@ -213,6 +255,15 @@ class Test_TPC_2016(TestCase):
         except ValueError:
             pass
 
+    def test_time_series_error_2(self):
+        p = './tests/2016/M04_5m_001.tpc'
+        res = TPC(p)
+        try:
+            ts = res.time_series('ds1', ['Q', 'flow regime'])
+            raise AssertionError('Should have raised an exception')
+        except ValueError:
+            pass
+
     def test_connectivity(self):
         p = './tests/2016/M04_5m_001.tpc'
         res = TPC(p)
@@ -256,6 +307,24 @@ class Test_TPC_2016(TestCase):
         res = TPC(p)
         try:
             df = res.long_plot('ds1', 'lvl', 1)
+            raise AssertionError('Should have raised an exception')
+        except ValueError:
+            pass
+
+    def test_long_plot_error_3(self):
+        p = './tests/2016/M04_5m_001.tpc'
+        res = TPC(p)
+        try:
+            df = res.long_plot('ds1', ['q', 'h'], 1)
+            raise AssertionError('Should have raised an exception')
+        except ValueError:
+            pass
+
+    def test_long_plot_error_4(self):
+        p = './tests/2016/M04_5m_001.tpc'
+        res = TPC(p)
+        try:
+            df = res.long_plot('ds1', ['h', 'max flow'], 1)
             raise AssertionError('Should have raised an exception')
         except ValueError:
             pass
@@ -441,7 +510,7 @@ class Test_GPKG_TS_2023(TestCase):
     def test_long_plot4(self):
         p = './tests/2023/M06_5m_003_SWMM_swmm_ts.gpkg'
         res = GPKG_TS(p)
-        df = res.long_plot('pipe1', ['bed level', 'pipes', 'water level', 'energy'], 1)
+        df = res.long_plot('pipe1', ['bed level', 'pipes', 'water level'], 1)
         self.assertEqual((10, 6), df.shape)
 
     def test_maximum_types(self):
@@ -847,8 +916,11 @@ class Test_HydTables(unittest.TestCase):
     def test_maximums(self):
         p = './tests/hyd_tables/EG14_001_1d_ta_tables_check.csv'
         res = HydTables(p)
-        df = res.maximum('1d_xs_M14_C99', 'Elevation')
-        self.assertEqual((0, 0), df.shape)
+        try:
+            df = res.maximum('1d_xs_M14_C99', 'Elevation')
+            raise AssertionError('Should have raised an exception')
+        except NotImplementedError:
+            pass
 
     def test_long_plot(self):
         p = './tests/hyd_tables/EG14_001_1d_ta_tables_check.csv'
@@ -945,8 +1017,11 @@ class Test_BC_Tables(unittest.TestCase):
     def test_maximums(self):
         p = './tests/bc_tables/EG00_001_2d_bc_tables_check.csv'
         res = BCTables(p)
-        df = res.maximum('FC01', 'HQ')
-        self.assertEqual((0, 0), df.shape)
+        try:
+            df = res.maximum('FC01', 'HQ')
+            raise AssertionError('Should have raised an exception')
+        except NotImplementedError:
+            pass
 
     def test_long_plot(self):
         p = './tests/bc_tables/EG00_001_2d_bc_tables_check.csv'

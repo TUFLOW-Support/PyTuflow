@@ -102,6 +102,9 @@ class BCTables(TimeSeriesResult):
                   ) -> pd.DataFrame:
         raise NotImplementedError('long_plot not available for BCTables.')
 
+    def maximum(self, id: Union[str, list[str]], result_type: Union[str, list[str]], domain: str = '') -> pd.DataFrame:
+        raise NotImplementedError('maximum not available for HydTables.')
+
     def _correct_id(self, id: Union[str, list[str]] = '') -> list[str]:
         """Convert cross-section names to their ids as they are stored in the 1d_ta_tables_check.csv file."""
         if not id:
