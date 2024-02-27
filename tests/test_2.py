@@ -799,6 +799,22 @@ class Test_BC_Tables(unittest.TestCase):
         res = BCTables(p)
         self.assertIsNotNone(res.boundary)
 
+    def test_not_bc_tables(self):
+        p = './tests/hyd_tables/EG14_001_1d_ta_tables_check.csv'
+        try:
+            res = BCTables(p)
+            raise AssertionError('Should have raised an exception')
+        except ValueError:
+            pass
+
+    def test_emtpy_bc_tables(self):
+        p = './tests/bc_tables/EG00_001_empty_2d_bc_tables_check.csv'
+        try:
+            res = BCTables(p)
+            raise AssertionError('Should have raised an exception')
+        except ValueError:
+            pass
+
     def test_ids(self):
         p = './tests/bc_tables/EG00_001_2d_bc_tables_check.csv'
         res = BCTables(p)
