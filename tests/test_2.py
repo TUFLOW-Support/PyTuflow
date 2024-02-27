@@ -657,6 +657,22 @@ class Test_HydTables(unittest.TestCase):
         self.assertEqual(res.cross_sections.df['Name'].loc['XS00043'], '1d_xs_M14_C143')
         self.assertEqual(res.cross_sections.df['Type'].loc['XS00043'], 'HW')
 
+    def test_not_hyd_tables(self):
+        p = './tests/bc_tables/EG14_001_1d_bc_tables_check.csv'
+        try:
+            res = HydTables(p)
+            raise AssertionError('Should have raised an exception')
+        except ValueError:
+            pass
+
+    def test_empty_hyd_tables(self):
+        p = './tests/hyd_tables/EG14_001_empty_1d_ta_tables_check.csv'
+        try:
+            res = HydTables(p)
+            raise AssertionError('Should have raised an exception')
+        except ValueError:
+            pass
+
     def test_channel_count(self):
         p = './tests/hyd_tables/EG14_001_1d_ta_tables_check.csv'
         res = HydTables(p)
