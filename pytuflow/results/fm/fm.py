@@ -36,11 +36,11 @@ class FM_TS(TimeSeriesResult):
     @staticmethod
     def looks_like_self(fpath: Path) -> bool:
         """Return True if the file looks like this class."""
-        return True  # TODO: implement a check
+        return True  # check is done when figuring out the driver
 
     def looks_empty(self, fpath: Path) -> bool:
         """Return True if the file looks empty."""
-        return False  # TODO: implement a check
+        return False
 
     def load(self) -> None:
         if not isinstance(self.fpath, list):
