@@ -161,7 +161,6 @@ class Iterator:
             err_msg = ErrorMessage(corr_items, domain_2, user_comb).build_err_msg()
             raise ValueError(err_msg)
 
-
     def id_result_type(self,
                        ids: Union[str, list[str]],
                        result_types: Union[str, list[str]],
@@ -270,10 +269,16 @@ class Iterator:
 
         # get corrected ids (from channels)
         ids_ = []
+        corr_items = self._corrected_items(ids, [], 'channel', 'temporal', channels)
+
+        # check if user has passed in something wrong (e.g. a channel ID that doesn't exist)
+        # try and catch this and give a useful message
+        self.raise_exception(corr_items, 'channel')  # only raises exception if something is wrong
+
         for corr_item in self._corrected_items(ids, [], 'channel', 'temporal', channels):
             if corr_item.id is not None and corr_item.id_orig in ids and corr_item.id not in ids_:
                 ids_.append(corr_item.id)
-        if not ids_ and ids and not channels.result_types(None):  # if channels has not result types (FM result)
+        if not ids_ and ids and not channels.result_types(None):  # if channels has no result types (FM result)
             ids_ = self._correct_id(ids, channels.df)
 
         # separate static result types (not including maximums)
@@ -282,6 +287,12 @@ class Iterator:
 
         # get corrected result types
         result_types_ = []
+        corr_items = self._corrected_items([], result_types, 'node', 'temporal', nodes)
+
+        # check if user has passed in something wrong (e.g. a channel ID that doesn't exist)
+        # try and catch this and give a useful message
+        self.raise_exception(corr_items, 'node')  # only raises exception if something is wrong
+
         for corr_item in self._corrected_items([], result_types, 'node', 'temporal', nodes):
             if corr_item.result_type_orig in static_result_types and static_result_types[corr_item.result_type_orig] not in result_types_:
                 result_types_.append(static_result_types[corr_item.result_type_orig])
@@ -301,6 +312,7 @@ class Iterator:
             for rt1, rt2 in zip(result_types_, result_types_):
                 corr = Corrected(id1, rt1, nodes, id2, rt2)
                 corrected.append(corr)
+
         yield IDResultTypeItem('Node', corrected, False)
 
     def _correct_id(self, ids: list[str], df: pd.DataFrame) -> list[str]:

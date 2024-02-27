@@ -242,6 +242,24 @@ class Test_TPC_2016(TestCase):
         df = res.long_plot('ds1', ['bed level', 'water level', 'max water level'], 1)
         self.assertEqual((12, 7), df.shape)
 
+    def test_long_plot_error(self):
+        p = './tests/2016/M04_5m_001.tpc'
+        res = TPC(p)
+        try:
+            df = res.long_plot('ds0', ['bed level', 'water level'], 1)
+            raise AssertionError('Should have raised an exception')
+        except ValueError:
+            pass
+
+    def test_long_plot_error_2(self):
+        p = './tests/2016/M04_5m_001.tpc'
+        res = TPC(p)
+        try:
+            df = res.long_plot('ds1', 'lvl', 1)
+            raise AssertionError('Should have raised an exception')
+        except ValueError:
+            pass
+
 
 class Test_TPC_2019(TestCase):
 
