@@ -1,4 +1,5 @@
 import re
+from pathlib import Path
 from typing import Union
 
 import pandas as pd
@@ -20,6 +21,15 @@ class BCTables(TimeSeriesResult):
         if hasattr(self, 'fpath') and self.fpath:
             return f'<BCTables: {self.fpath.stem}>'
         return '<BCTables>'
+
+    @staticmethod
+    def looks_like_self(fpath: Path) -> bool:
+        """Return True if the file looks like this class."""
+        return True  # TODO: implement a check
+
+    def looks_empty(self, fpath: Path) -> bool:
+        """Return True if the file looks empty."""
+        return False  # TODO: implement a check
 
     def load(self) -> None:
         self.boundary = Boundary(self.fpath)

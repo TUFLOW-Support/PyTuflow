@@ -59,14 +59,14 @@ class TPC(TimeSeriesResult):
                 return True
             if df.shape[1] < 2:
                 return True
-            node_count = df[self._df.iloc[:,0] == 'Number 1D Nodes'].iloc[0,1]
-            channel_count = df[self._df.iloc[:,0] == 'Number 1D Channels'].iloc[0,1]
-            rlp_count = df[self._df.iloc[:,0] == 'Number Reporting Location Points'].iloc[0,1]
-            rll_count = df[self._df.iloc[:,0] == 'Number Reporting Location Lines'].iloc[0,1]
-            rlr_count = df[self._df.iloc[:,0] == 'Number Reporting Location Regions'].iloc[0,1]
+            node_count = int(df[df.iloc[:,0] == 'Number 1D Nodes'].iloc[0,1])
+            channel_count = int(df[df.iloc[:,0] == 'Number 1D Channels'].iloc[0,1])
+            rlp_count = int(df[df.iloc[:,0] == 'Number Reporting Location Points'].iloc[0,1])
+            rll_count = int(df[df.iloc[:,0] == 'Number Reporting Location Lines'].iloc[0,1])
+            rlr_count = int(df[df.iloc[:,0] == 'Number Reporting Location Regions'].iloc[0,1])
             po_count = 0
             for row in df.itertuples():
-                if row[0].startswith('2D'):
+                if row[1].startswith('2D'):
                     po_count += 1
             if node_count + channel_count + rlp_count + rll_count + rlr_count + po_count == 0:
                 return True

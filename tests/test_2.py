@@ -557,6 +557,22 @@ class Test_Info_2013(unittest.TestCase):
         res = Info(p)
         self.assertEqual('M04_5m_001', res.sim_id)
 
+    def test_not_info(self):
+        p = './tests/2013/EG00_001_Scen_1+Scen_2.2dm.info'
+        try:
+            res = Info(p)
+            raise AssertionError('Should have raised an exception')
+        except ValueError:
+            pass
+
+    def test_blank_info(self):
+        p = './tests/2013/M04_5m_001_1d_blank.info'
+        try:
+            res = Info(p)
+            raise AssertionError('Should have raised an exception')
+        except ValueError:
+            pass
+
     def test_channels(self):
         p = './tests/2013/M04_5m_001_1d.info'
         res = Info(p)

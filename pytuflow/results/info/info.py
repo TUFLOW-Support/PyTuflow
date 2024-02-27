@@ -1,3 +1,7 @@
+from pathlib import Path
+
+import pandas as pd
+
 from ..tpc.tpc import TPC
 from .info_channels import InfoChannels
 from .info_nodes import InfoNodes
@@ -5,6 +9,35 @@ from .info_time_series_result_item import InfoResultItem
 
 
 class Info(TPC):
+
+    @staticmethod
+    def looks_like_self(fpath: Path) -> bool:
+        if fpath.suffix.upper() != '.INFO':
+            return False
+        try:
+            with fpath.open() as f:
+                line = f.readline()
+                if not line.startswith('Format Version == 1'):
+                    return False
+        except Exception as e:
+            return False
+        return True
+
+    def looks_empty(self, fpath: Path) -> bool:
+        TARGET_LINE_COUNT = 10  # fairly arbitrary
+        try:
+            df = pd.read_csv(self.fpath, sep=' == ', engine='python', header=None)
+            if df.shape[0] < TARGET_LINE_COUNT:
+                return True
+            if df.shape[1] < 2:
+                return True
+            node_count = int(df[df.iloc[:, 0] == 'Number Nodes'].iloc[0, 1])
+            channel_count = int(df[df.iloc[:, 0] == 'Number Channels'].iloc[0, 1])
+            if node_count + channel_count == 0:
+                return True
+            return False
+        except Exception as e:
+            return True
 
     def _load_1d_results(self) -> None:
         node_count = int(self._get_property('Number Nodes'))

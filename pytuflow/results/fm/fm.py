@@ -33,6 +33,15 @@ class FM_TS(TimeSeriesResult):
             return f'<FM TS: {self.sim_id}>'
         return '<TM TS>'
 
+    @staticmethod
+    def looks_like_self(fpath: Path) -> bool:
+        """Return True if the file looks like this class."""
+        return True  # TODO: implement a check
+
+    def looks_empty(self, fpath: Path) -> bool:
+        """Return True if the file looks empty."""
+        return False  # TODO: implement a check
+
     def load(self) -> None:
         if not isinstance(self.fpath, list):
             self.fpath = [self.fpath]
