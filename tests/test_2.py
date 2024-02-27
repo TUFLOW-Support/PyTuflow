@@ -290,6 +290,14 @@ class Test_GPKG_TS_2023(TestCase):
         res = GPKG_TS(p)
         self.assertEqual('M06_5m_003_SWMM', res.sim_id)
 
+    def test_not_gpkg(self):
+        p = './tests/2023/projection.gpkg'
+        try:
+            res = GPKG_TS(p)
+            raise AssertionError('Should have raised an exception')
+        except ValueError:
+            pass
+
     def test_channel_count(self):
         p = './tests/2023/M06_5m_003_SWMM_swmm_ts.gpkg'
         res = GPKG_TS(p)
