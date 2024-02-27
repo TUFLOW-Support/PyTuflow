@@ -33,11 +33,39 @@ class GPKG_TS(GPKGBase, TimeSeriesResult):
     @staticmethod
     def looks_like_self(fpath: Path) -> bool:
         """Return True if the file looks like this class."""
-        return True  # TODO: implement a check
+        import sqlite3
+        try:
+            conn = sqlite3.connect(fpath)
+        except Exception as e:
+            return False
+        try:
+            cur = conn.cursor()
+            cur.execute('SELECT Version FROM TUFLOW_timeseries_version;')
+            version = cur.fetchone()[0]
+            valid = True
+        except Exception as e:
+            valid = False
+        finally:
+            conn.close()
+        return valid
 
     def looks_empty(self, fpath: Path) -> bool:
         """Return True if the file looks empty."""
-        return False  # TODO: implement a check
+        import sqlite3
+        try:
+            conn = sqlite3.connect(fpath)
+        except Exception as e:
+            return True
+        try:
+            cur = conn.cursor()
+            cur.execute('SELECT DISTINCT Table_name, Count FROM Timeseries_info;')
+            count = sum([int(x[1]) for x in cur.fetchall()])
+            empty = count == 0
+        except Exception:
+            empty = True
+        finally:
+            conn.close()
+        return empty
 
     def load(self) -> None:
         if not self.fpath.exists():
