@@ -3,4 +3,4 @@ from pytuflow.results import *
 from pytuflow.tmf import *
 
 name = 'PyTuflow'
-__version__ = '0.0.27'
+__version__ = '0.0.28'
