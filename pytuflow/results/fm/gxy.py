@@ -41,6 +41,14 @@ class GXY:
                 return node.id
         return ''
 
+    def nodes(self) -> list[_Node]:
+        return self._nodes
+
+    def node(self, uid: str) -> _Node:
+        for node in self._nodes:
+            if node.uid == uid:
+                return node
+
     def _load(self) -> None:
         with self.fpath.open() as f:
             self._nodes_finished, self._links_finished = False, False

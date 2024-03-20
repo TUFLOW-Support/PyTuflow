@@ -20,7 +20,7 @@ RESULT_SHORT_NAME = {'h': 'stage', 'water level': 'stage', 'q': 'flow', 'v': 've
 class FMResultItem(TimeSeriesResultItem):
     """A class for FM result items."""
 
-    def __init__(self, fpath: PathLike, id_list: list[str], gxy: GXY, dat: Dat) -> None:
+    def __init__(self, fpath: PathLike, id_list: list[str], gxy: GXY, dat: Dat, **kwargs) -> None:
         self._ids = id_list
         self.gxy = gxy
         self.dat = dat

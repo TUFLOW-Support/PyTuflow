@@ -2,6 +2,7 @@ import os
 from datetime import datetime
 from pathlib import Path
 from typing import Union
+from collections import OrderedDict
 
 import pandas as pd
 
@@ -70,6 +71,7 @@ class FM_TS(TimeSeriesResult):
 
         if self.dat_fpath is not None:
             self.dat = Dat(self.dat_fpath)
+            self.dat.load()
 
         self.nodes = FMNodes(self.fpath[0], self._id_list, self.gxy, self.dat)
         for driver in self._driver:
@@ -77,7 +79,26 @@ class FM_TS(TimeSeriesResult):
                 self.nodes.load_time_series(res_type, driver.df, driver.reference_time, driver.timesteps)
 
         if self.gxy is not None:
-            self.channels = FMChannels(self.fpath[0], self.gxy.link_df.index.tolist(), self.gxy, self.dat)
+            self.channels = FMChannels(self.fpath[0], [], self.gxy, self.dat)
+
+    def connectivity(self, ids: Union[str, list[str]]) -> pd.DataFrame:
+        df = super().connectivity(ids)
+
+        # convert uid to id and remove junctions
+        df_ = df.copy()
+        df_['US Type'] = [self.dat.unit(x).type for x in df['US Node']]
+        df_['DS Type'] = [self.dat.unit(x).type for x in df['DS Node']]
+        df1 = df_[df_['US Type'] != 'junction']
+        df2 = df_[df_['DS Type'] != 'junction']
+        assert df1.shape == df2.shape, 'Should not be here - [FM Connectivity] df1.shape != df2.shape'
+        df1['DS Node'] = df2['DS Node'].tolist()
+        df1['DS Invert'] = df2['DS Invert'].tolist()
+        df = df1[df.columns]
+        for index, row in df.iterrows():
+            df.loc[index, 'US Node'] = self.dat.unit(row['US Node']).id
+            df.loc[index, 'DS Node'] = self.dat.unit(row['DS Node']).id
+        self.lp_1d.df = df
+        return df
 
     def long_plot(self,
                   ids: Union[str, list[str]],
@@ -85,7 +106,7 @@ class FM_TS(TimeSeriesResult):
                   time: TimeLike
                   ) -> pd.DataFrame:
         if not self.nodes or not self.channels:
-            return Exception('GXY file required for long plotting')
+            return Exception('DAT file required for long plotting')
 
         if not isinstance(ids, list):
             ids = [ids] if ids else []
@@ -94,8 +115,13 @@ class FM_TS(TimeSeriesResult):
         for id_ in ids:
             try:
                 dns_chans = self.nodes.df.loc[id_, 'Dns Channels']
-                if dns_chans:
-                    ids_.append(dns_chans[0])
+                if dns_chans.any():
+                    for chan in dns_chans:
+                        if len(chan) == 1:
+                            ids_.append(chan[0])
+                            break
+                    if not ids_:
+                        raise ValueError(f'Invalid ID {id_} - check id is not a junction')
             except KeyError:
                 continue
         return super().long_plot(ids_, result_type, time)

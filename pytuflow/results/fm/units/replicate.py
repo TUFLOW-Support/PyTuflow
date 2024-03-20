@@ -4,7 +4,7 @@ import io
 import numpy as np
 import pandas as pd
 
-from ._unit import Unit
+from ._unit import Handler
 from ..unpack_fixed_field import unpack_fixed_field
 
 if TYPE_CHECKING:
@@ -12,44 +12,48 @@ if TYPE_CHECKING:
     from ..dat import Dat
 
 
-SUB_UNIT_NAME = ''
+SUB_UNIT_NAME = 'REPLICATE'
 
 
-class Replicate(Unit):
+class Replicate(Handler):
 
-    def __init__(self, fo: TextIO, fixed_field_len: int) -> None:
-        self.headers = ['dx', 'dz'  'easting', 'northing']
-        super().__init__(fo, fixed_field_len)
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self.keyword = SUB_UNIT_NAME
+        self.headers = []
+        self.ncol = 0
+        self.dz = np.nan
+        self.easting = np.nan
+        self.northing = np.nan
+        self.spill_1 = None
+        self.spill_2 = None
+        self.valid = True
+        self.type = 'unit'
+        self.populated = False
 
     def __repr__(self) -> str:
-        return f'<Replicate {self._id}>'
+        return f'<Replicate {self.id}>'
 
-    @property
-    def id(self) -> str:
-        return f'REPLICATE__{self._id}'
+    def load(self, line: str, fo: TextIO, fixed_field_len: int) -> TextIO:
+        buf = super().load(line, fo, fixed_field_len)
+        ids = self.read_line(True)
+        self.id = ids[0]
+        self.uid = f'REPLICATE__{self.id}'
+        self._assign_other_labels(ids)
+        attrs = self.read_line()
+        for i, attr in enumerate(['dx', 'dz', 'easting', 'northing']):
+            try:
+                setattr(self, attr, float(attrs[i].strip()))
+            except (ValueError, IndexError):
+                if i < 2:
+                    self.errors.append(f'Error reading {attr} for {self.id}')
+        return buf
 
-    @property
-    def type(self) -> str:
-        return 'Replicate'
+    def _assign_other_labels(self, labels: list[str]) -> None:
+        for i, attr in enumerate(['spill_1', 'spill_2']):
+            j = i + 1  # first label is id
+            if j < len(labels):
+                setattr(self, attr, labels[j])
 
-    def bed_level(self, dat: 'Dat', gxy: 'GXY', *args, **kwargs) -> float:
-        if dat is not None and gxy is not None and self.id in gxy.node_df.index:
-            df = gxy.link_df[gxy.link_df['dns_node'] == self.id]
-            df = df[df['ups_node'].str.startswith('RIVER_SECTION_')]
-            if df.shape[0] > 0:
-                unit = dat.unit(df['ups_node'].values[0])
-                if unit:
-                    return unit.bed_level(dat, gxy) - df.loc[0, 'dz']
-        return np.nan
 
-    def upstream_defined(self, dist: float, *args, **kwargs) -> tuple['Unit', float]:
-        return self, dist
-
-    def downstream_defined(self, dist: float, *args, **kwargs) -> tuple['Unit', float]:
-        return self, dist
-
-    def _load(self, fo: TextIO, fixed_field_len: int) -> None:
-        self._id = unpack_fixed_field(fo.readline(), [fixed_field_len] * 3)[0].strip()
-        data = io.StringIO(fo.readline())  # otherwise pandas will read an extra line when nrows=1 !!!
-        self.df = pd.read_fwf(data, widths=[10] * 4, names=self.headers, nrows=1, header=None)
-        self.dx = self.df['dx'].values[0]
+AVAILABLE_CLASSES = [Replicate]
