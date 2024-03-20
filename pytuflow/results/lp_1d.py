@@ -127,9 +127,13 @@ class LP_1D:
         if self.df_static.empty:
             offset = 0.
             offsets = []
-            for i, length in enumerate(self.df['Length']):
+            branch_id = 0
+            for _, row in self.df[['Length', 'Branch ID']].iterrows():
+                if row['Branch ID'] != branch_id:
+                    offset = 0.
+                    branch_id = row['Branch ID']
                 offsets.append(offset)
-                offset += length
+                offset += row['Length']
                 offsets.append(offset)
             df['Offset'] = offsets
         else:
@@ -279,20 +283,17 @@ class Connectivity:
         one_connection = False
         for id_ in self.channels.downstream_channels(id1):
             one_connection = True
-            if id_ not in branch:
-                branch.append(id_)
+
             finished = id_ in branch[:-1] or id_ == id2
             if finished:
+                if id_ not in branch:
+                    branch.append(id_)
                 self.branches.append(branch)
             if not finished:
                 finished = self._connect(id_, id2, branch.copy())
-            if finished:
-                return finished
 
         if not one_connection and id2 is None:
             finished = True
-
-        if finished:
             self.branches.append(branch)
 
         return finished
