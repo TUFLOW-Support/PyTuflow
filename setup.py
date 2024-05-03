@@ -16,5 +16,7 @@ setuptools.setup(
     package_data={
         'pytuflow.tmf.tmf.data': ['*.json'],
         'pytuflow.tmf.tmf.convert_tuflow_model_gis_format.conv_tf_gis_format.data': ['*.json'],
+        'fm_to_estry.data': ['*.json'],
     },
+    include_package_data=True,
 )
