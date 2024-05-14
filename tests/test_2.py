@@ -945,7 +945,7 @@ class Test_HydTables(unittest.TestCase):
         p = './tests/hyd_tables/EG14_CONCAT_HW_001_1d_ta_tables_check.csv'
         res = HydTables(p)
         ids = res.cross_section_ids('Elevation')
-        self.assertEqual(54 , len(ids))
+        self.assertEqual(54, len(ids))
 
 
 class Test_BC_Tables(unittest.TestCase):
