@@ -243,14 +243,15 @@ class HydTables(TimeSeriesResult):
                     return line.split(',')[inds[1]].strip()
 
     def _find_header_index(self, fpath: Path, ind: int) -> int:
-        with fpath.open() as f:
-            for i, line in enumerate(f):
-                data = line.split(',')
-                if len(data) < ind + 1:
-                    continue
-                try:
-                    float(data[ind])
-                    return i - 1  # -1 because the header line will be the line before the data
-                except ValueError:
-                    continue
+        if fpath.exists():
+            with fpath.open() as f:
+                for i, line in enumerate(f):
+                    data = line.split(',')
+                    if len(data) < ind + 1:
+                        continue
+                    try:
+                        float(data[ind])
+                        return i - 1  # -1 because the header line will be the line before the data
+                    except ValueError:
+                        continue
         return -1

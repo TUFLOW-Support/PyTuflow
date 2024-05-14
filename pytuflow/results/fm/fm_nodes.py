@@ -5,7 +5,6 @@ import numpy as np
 import pandas as pd
 
 from .fm_time_series_result_item import FMResultItem
-from .dat import available_units
 from ..abc.nodes import Nodes
 
 
@@ -19,10 +18,10 @@ class FMNodes(FMResultItem, Nodes):
     def load(self) -> None:
         d = OrderedDict({'Unique ID': [], 'Node': [], 'Type': [], 'Bed Level': [], 'Length': [], 'nChannels': [], 'Ups Channels': [], 'Dns Channels': [], 'Ups Nodes': [], 'Dns Nodes': []})
         if self.dat:
-            for unit in self.dat.units():
+            for unit in self.dat.units:
                 d['Unique ID'].append(unit.uid)
                 d['Node'].append(unit.id)
-                d['Type'].append(f'{unit.keyword}_{unit.sub_name}'.strip('_'))
+                d['Type'].append(f'{unit.type}_{unit.sub_type}'.strip('_'))
                 d['Length'].append(unit.dx if hasattr(unit, 'dx') else 0.)
                 d['nChannels'].append(len(unit.ups_units) + len(unit.dns_units))
                 d['Ups Channels'].append(unit.ups_link_ids)

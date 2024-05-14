@@ -121,7 +121,11 @@ class LP_1D:
             self.df.reset_index(),
             id_vars=['Channel', 'index'],
             value_vars=['US Node', 'DS Node']
-        ).sort_values('index')[['Channel', 'value']].rename(columns={'value': 'Node'})
+        )
+        df[['index']] = df[['index']] * 2
+        # df.loc[df['variable'] == 'US Node', 'index'] = df[df['variable'] == 'US Node'][['index']] * 2
+        df.loc[df['variable'] == 'DS Node', 'index'] = df[df['variable'] == 'DS Node'][['index']] + 1
+        df = df.sort_values('index')[['Channel', 'value']].rename(columns={'value': 'Node'})
 
         # offsets - always required
         if self.df_static.empty:

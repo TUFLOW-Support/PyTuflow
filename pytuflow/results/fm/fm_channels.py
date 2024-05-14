@@ -6,7 +6,7 @@ import pandas as pd
 from .gxy import GXY
 from ..abc.channels import Channels
 from .fm_time_series_result_item import FMResultItem
-from .dat import available_units, Dat, Link
+from .dat import Dat
 from ..types import PathLike
 
 
@@ -24,7 +24,7 @@ class FMChannels(FMResultItem, Channels):
         if self.dat:
             for link in self.dat.links:
                 d['Channel'].append(link.id)
-                d['Type'].append(f'{link.ups_unit.keyword}_{link.ups_unit.sub_name}'.strip('_'))
+                d['Type'].append(f'{link.ups_unit.type}_{link.ups_unit.sub_type}'.strip('_'))
                 d['Flags'].append('')
                 length = 0.
                 if hasattr(link.ups_unit, 'dx') and not np.isnan(link.ups_unit.dx):

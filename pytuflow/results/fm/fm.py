@@ -71,7 +71,6 @@ class FM_TS(TimeSeriesResult):
 
         if self.dat_fpath is not None:
             self.dat = Dat(self.dat_fpath)
-            self.dat.load()
 
         self.nodes = FMNodes(self.fpath[0], self._id_list, self.gxy, self.dat)
         for driver in self._driver:

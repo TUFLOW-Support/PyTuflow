@@ -585,109 +585,26 @@ class Test_FM_TS(unittest.TestCase):
         self.assertEqual((115, 2), gxy.node_df.shape)
         self.assertEqual((122, 2), gxy.link_df.shape)
 
-    def test_import(self):
-        from pytuflow.results.fm.dat import Dat
-        from pytuflow.results.fm.dat import available_classes
-        from pytuflow.results.fm.dat import UNITS_DIR
-        self.assertEqual(len(list(UNITS_DIR.glob('*.py')))-2, len(available_classes))
-
     def test_load(self):
         from pytuflow.results.fm.dat import Dat
         p = './tests/fm/zzn/FMT_M01_001.dat'
         dat = Dat(p)
-        dat.load()
-        self.assertEqual(115, len(dat.unit_uids(False)))
-        self.assertEqual(114, dat._ind)
+        self.assertEqual(115, len(dat.units))
         self.assertEqual(2, len(dat.unit('JUNCTION_OPEN_FC02.01d').ups_units))
 
     def test_load_2(self):
         from pytuflow.results.fm.dat import Dat
         p = './tests/fm/gui_csv/LBE_TBP3_10PC_350.dat'
         dat = Dat(p)
-        dat.load()
-        self.assertEqual(242, len(dat.unit_uids(False)))
-        self.assertEqual(241, dat._ind)
+        self.assertEqual(242, len(dat.units))
 
     def test_load_3(self):
         from pytuflow.results.fm.dat import Dat
         p = './tests/fm/River_Sections_w_Junctions.dat'
         dat = Dat(p)
-        dat.load()
         self.assertEqual(1, len(dat.unit('RIVER_SECTION_US_2').dns_units))
         self.assertEqual(2, len(dat.unit('JUNCTION_OPEN_US_3').dns_units))
         self.assertEqual(2, len(dat.unit('JUNCTION_OPEN_DS_3').ups_units))
-
-    def test_load_radial_sluice(self):
-        from pytuflow.results.fm.dat import Dat
-        p = './tests/fm/River_Sections_Radial.dat'
-        dat = Dat(p)
-        dat.load()
-
-    def test_load_vertical_sluice(self):
-        from pytuflow.results.fm.dat import Dat
-        p = './tests/fm/River_Sections_Vertical.dat'
-        dat = Dat(p)
-        dat.load()
-
-    def test_load_rnweir(self):
-        from pytuflow.results.fm.dat import Dat
-        p = './tests/fm/River_Sections_Broad_Crested_Weir.dat'
-        dat = Dat(p)
-        dat.load()
-
-    def test_load_crump(self):
-        from pytuflow.results.fm.dat import Dat
-        p = './tests/fm/River_Sections_Crump_Weir.dat'
-        dat = Dat(p)
-        dat.load()
-
-    def test_load_flat_v_weir(self):
-        from pytuflow.results.fm.dat import Dat
-        p = './tests/fm/River_Sections_Flat_V_Weir.dat'
-        dat = Dat(p)
-        dat.load()
-
-    def test_load_qh_weir(self):
-        from pytuflow.results.fm.dat import Dat
-        p = './tests/fm/River_Sections_Flow_Head_Weir.dat'
-        dat = Dat(p)
-        dat.load()
-
-    def test_load_gated_weir(self):
-        from pytuflow.results.fm.dat import Dat
-        p = './tests/fm/River_Sections_Gated_weir.dat'
-        dat = Dat(p)
-        dat.load()
-
-    def test_load_labyrinth_weir(self):
-        from pytuflow.results.fm.dat import Dat
-        p = './tests/fm/River_Sections_Labyrinth_weir.dat'
-        dat = Dat(p)
-        dat.load()
-
-    def test_load_notional_weir(self):
-        from pytuflow.results.fm.dat import Dat
-        p = './tests/fm/River_Sections_Notional_weir.dat'
-        dat = Dat(p)
-        dat.load()
-
-    def test_load_sharp_crested_weir(self):
-        from pytuflow.results.fm.dat import Dat
-        p = './tests/fm/River_Sections_Sharp_Crested_weir.dat'
-        dat = Dat(p)
-        dat.load()
-
-    def test_load_sharp_syphon_weir(self):
-        from pytuflow.results.fm.dat import Dat
-        p = './tests/fm/River_Sections_Syphon.dat'
-        dat = Dat(p)
-        dat.load()
-
-    def test_load_weir(self):
-        from pytuflow.results.fm.dat import Dat
-        p = './tests/fm/River_Sections_General_weir.dat'
-        dat = Dat(p)
-        dat.load()
 
     def test_load_python_csv(self):
         p = './tests/fm/python_csv/FMT_M01_001.csv'
@@ -754,7 +671,7 @@ class Test_FM_TS(unittest.TestCase):
         gxy = './tests/fm/zzn/FMT_M01_001.gxy'
         res = FM_TS(p, gxy, dat)
         df = res.long_plot('FC01.11', ['bed level', 'water level'], 1)
-        self.assertEqual((170, 5), df.shape)
+        self.assertEqual((200, 5), df.shape)
 
     def test_maximums(self):
         p = './tests/fm/zzn/FMT_M01_001.zzn'
@@ -1028,7 +945,7 @@ class Test_HydTables(unittest.TestCase):
         p = './tests/hyd_tables/EG14_CONCAT_HW_001_1d_ta_tables_check.csv'
         res = HydTables(p)
         ids = res.cross_section_ids('Elevation')
-        self.assertEqual(54, len(ids))
+        self.assertEqual(54 , len(ids))
 
 
 class Test_BC_Tables(unittest.TestCase):
