@@ -375,7 +375,7 @@ class TimeSeriesResult(ABC):
         iter = self.init_iterator()
         for item in iter.id_result_type(id, result_type, domain, 'max'):
             df_ = item.result_item.get_maximum(item.ids, item.result_types)
-            df = pd.concat([df, df_], axis=1)
+            df = pd.concat([df, df_], axis=1) if not df.empty else df_
         return df
 
     def long_plot(self,

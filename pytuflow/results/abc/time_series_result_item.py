@@ -173,7 +173,7 @@ class TimeSeriesResultItem(ABC):
                 ids = [x for x in id if x in self.time_series[rt].df.columns]
                 df_ = self.time_series[rt].df[ids].reset_index()
                 df_ = self._expand_index_col(df_, rt, ids, levels)  # add the index col in-front of every value col
-                df = pd.concat([df, df_], axis=1)
+                df = pd.concat([df, df_], axis=1) if not df.empty else df_
 
         return df.dropna(how='all')
 
