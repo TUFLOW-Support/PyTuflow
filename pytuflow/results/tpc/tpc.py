@@ -35,7 +35,14 @@ class TPC(TimeSeriesResult):
         :type fpath: str | Path
         """
         self._df = None
-
+        #: TPCChannels: TPC Channels result class if 1D channels exist within the results
+        self.channels = None
+        #: TPCNodes: TPC Nodes result class if 1D nodes exist within the results
+        self.nodes = None
+        #: TPCPO: TPC PO result class if 2D points, lines, or regions exist within the results
+        self.po = None
+        #: TPCRL: TPC RL result class if reporting locations exist within the results
+        self.rl = None
         #: int: The format version of the TPC file.
         self.format_version = -1
 

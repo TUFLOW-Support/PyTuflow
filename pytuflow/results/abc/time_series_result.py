@@ -19,25 +19,32 @@ class TimeSeriesResult(ABC):
 
     Methods requiring implementation:
         load() -> None
-
-    e.g. time series results that subclass this:
-      - TPC
-      - GPKG_TS
-      - INFO
+        looks_like_self(fpath: Path) -> bool
+        looks_empty(fpath: Path) -> bool
 
     This class can also be used for other plot data such as 1d_ta_tables_check file and bc_check files.
+
     """
 
     def __init__(self, fpath: PathLike, *args, **kwargs) -> None:
         super().__init__()
+        #: Path: The path to the result file.
         self.fpath = Path(fpath)
+        #: str: The units of the result file, 'metric' or 'imperial'.
         self.units = ''
+        #: str: The simulation ID.
         self.sim_id = ''
+        #: Channels: Channels result class object if available.
         self.channels = None
+        #: Nodes: Nodes result class object if available.
         self.nodes = None
+        #: PO: 2D PO result class object if available.
         self.po = None
+        #: RL: RL result class object if available.
         self.rl = None
+        #: LP_1D: Long plot class object if available.
         self.lp_1d = None
+        #: datetime: Result reference time.
         self.reference_time = datetime(1990, 1, 1)
         if not self.fpath.exists():
             raise FileNotFoundError(f'File not found: {self.fpath}')
@@ -50,62 +57,105 @@ class TimeSeriesResult(ABC):
     @staticmethod
     @abstractmethod
     def looks_like_self(fpath: Path) -> bool:
-        """Return True if the file looks like this class."""
+        """Return True if the file looks like this class.
+
+        :meta private:
+        """
         raise NotImplementedError
 
     @abstractmethod
     def looks_empty(self, fpath: Path) -> bool:
-        """Return True if the file looks empty."""
+        """Return True if the file looks empty.
+
+        :meta private:
+        """
         raise NotImplementedError
 
     @abstractmethod
     def load(self, *args, **kwargs) -> None:
-        """Load the result file. Called by __init__."""
+        """Loads the file.
+
+        :meta private:
+        """
         raise NotImplementedError
 
     def init_iterator(self, *args) -> Iterator:
-        """Initialise the class iterator."""
+        """Initialise the class iterator.
+
+        :meta private:
+        """
         if args:
             return Iterator(*args)
         return Iterator(self.channels, self.nodes, self.po, self.rl)
 
     def channel_count(self) -> int:
-        """Return the number of channels in the result file."""
+        """
+        Return the number of channels in the result file.
+
+        Returns
+        -------
+        int
+        """
         if self.channels:
             return self.channels.count()
         return 0
 
     def node_count(self) -> int:
-        """Return the number of nodes in the result file."""
+        """Return the number of nodes in the result file.
+
+        Returns
+        -------
+        int
+        """
         if self.nodes:
             return self.nodes.count()
         return 0
 
     def po_count(self) -> int:
-        """Return the number of 2d PO objects in the result file."""
+        """Return the number of 2d PO objects in the result file.
+
+        Returns
+        -------
+        int
+        """
         if self.po:
             return self.po.count()
         return 0
 
     def rl_count(self) -> int:
-        """Return the number of 0d RL objects in the result file."""
+        """Return the number of 0d RL objects in the result file.
+
+        Returns
+        -------
+        int
+        """
         if self.rl:
             return self.rl.count()
         return 0
 
     def ids(self, result_type: Union[str, list[str]] = '', domain: str = '') -> list[str]:
-        """
-        Return a list ids for the given result type(s) and domain.
+        """Return a list IDs for the given result type(s) and domain.
 
-        :param result_type:
-            The result type can be a single value or a list of values and can be
-            the name of the result type (case in-sensitive) or be a well known short name
-            e.g. 'Flow' - 'q', 'Velocity' - 'v', etc.
-            If no result type is provided, all result types will be assumed to be all available.
-        :param domain:
-            Domain can be '1d', '2d', '0d' and will limit the returned ids by the domain. A secondary domain option
-            can be passed to further limit the ids e.g. '1d node' or '1d channel'. If no domain is provided, all domains
-            will be searched.
+        Domain can be '1d', '2d', or '0d'. A secondary domain option can also be added to the domain string using a
+        space delim to further limit the IDs. Secondary domain options are 'node', 'channel', 'po', 'rl', 'boundary', or
+        'cross_section'. If no domain is provided, all domains will be searched.
+
+        Parameters
+        ----------
+        result_type : Union[str, list[str]]
+            The result type can be a single value or a list of values. The result type can be the full name as
+            returned by :meth:`result_types() <pytuflow.results.TPC.result_types>` (not case sensitivte) or a
+            well known short name e.g. 'q', 'v', 'h' etc.  If no result type is provided, all result types will be
+            searched (within the provided domain).
+        domain : str
+            Domain can be '1d', '2d', or '0d'. A secondary domain option can also be added to the domain string using a
+            space to further limit the IDs. Secondary domain options are 'node', 'channel', 'po', 'rl', 'boundary', or
+            'cross_section'. If no domain is provided, all domains will be searched.
+
+        Returns
+        -------
+        list[str]
+            list of IDs
         """
         iter = self.init_iterator()
         ids = []
@@ -116,14 +166,23 @@ class TimeSeriesResult(ABC):
         return ids
 
     def channel_ids(self, result_type: Union[str, list[str]] = '') -> list[str]:
-        """
-        Returns the channel ids for the given result type(s).
+        """Returns the channel IDs for the given result type(s).
 
-        :param result_type:
-            The result type can be a single value or a list of values and can be
-            the name of the result type (case in-sensitive) or be a well known short name
-            e.g. 'Flow' - 'q', 'Velocity' - 'v', etc.
-            If no result type is provided, all result types will be assumed to be all available.
+        channel_ids() is equivalent to using '1d channel' as the domain in
+        :meth:`ids() <pytuflow.results.TPC.ids>`.
+
+        Parameters
+        ----------
+        result_type : Union[str, list[str]]
+            The result type can be a single value or a list of values. The result type can be the full name as
+            returned by :meth:`result_types() <pytuflow.results.TPC.result_types>` (not case sensitivte) or a
+            well known short name e.g. 'q', 'v', 'h' etc. If no result type is provided, all result types will be
+            searched.
+
+        Returns
+        -------
+        list[str]
+            list of IDs
         """
         if self.channels:
             if not result_type:
@@ -132,14 +191,23 @@ class TimeSeriesResult(ABC):
         return []
 
     def node_ids(self, result_type: Union[str, list[str]] = '') -> list[str]:
-        """
-        Returns the node ids for the given result type.
+        """Returns the node IDs for the given result type(s).
 
-        :param result_type:
-            The result type can be a single value or a list of values and can be
-            the name of the result type (case in-sensitive) or be a well known short name
-            e.g. 'Water Level' - 'h', 'Energy' - 'e', etc.
-            If no result type is provided, all result types will be assumed to be all available.
+        node_ids() is equivalent to using '1d node' as the domain in
+        :meth:`ids() <pytuflow.results.TPC.ids>`.
+
+        Parameters
+        ----------
+        result_type : Union[str, list[str]]
+            The result type can be a single value or a list of values. The result type can be the full name as
+            returned by :meth:`result_types() <pytuflow.results.TPC.result_types>` (not case sensitivte) or a
+            well known short name e.g. 'q', 'v', 'h' etc. If no result type is provided, all result types will be
+            searched.
+
+        Returns
+        -------
+        list[str]
+            list of IDs
         """
         if self.nodes:
             if not result_type:
@@ -148,14 +216,23 @@ class TimeSeriesResult(ABC):
         return []
 
     def po_ids(self, result_type: Union[str, list[str]] = '') -> list[str]:
-        """
-        Returns the PO ids for the given result type(s).
+        """Returns the PO IDs for the given result type(s).
 
-        :param result_type:
-            The result type can be a single value or a list of values and can be
-            the name of the result type (case in-sensitive) or be a well known short name
-            e.g. 'Flow' - 'q', 'Velocity' - 'v', etc.
-            If no result type is provided, all result types will be assumed to be all available.
+        po_ids() is equivalent to using '2d' as the domain in
+        :meth:`ids() <pytuflow.results.TPC.ids>`.
+
+        Parameters
+        ----------
+        result_type : Union[str, list[str]]
+            The result type can be a single value or a list of values. The result type can be the full name as
+            returned by :meth:`result_types() <pytuflow.results.TPC.result_types>` (not case sensitivte) or a
+            well known short name e.g. 'q', 'v', 'h' etc. If no result type is provided, all result types will be
+            searched.
+
+        Returns
+        -------
+        list[str]
+            list of IDs
         """
         if self.po:
             if not result_type:
@@ -164,14 +241,23 @@ class TimeSeriesResult(ABC):
         return []
 
     def rl_ids(self, result_type: Union[str, list[str]] = '') -> list[str]:
-        """
-        Returns the channel ids for the given result type(s).
+        """Returns the RL IDs for the given result type(s).
 
-        :param result_type:
-            The result type can be a single value or a list of values and can be
-            the name of the result type (case in-sensitive) or be a well known short name
-            e.g. 'Flow' - 'q', 'Volume' - 'vol', etc.
-            If no result type is provided, all result types will be assumed to be all available.
+        rl_ids() is equivalent to using '0d' as the domain in
+        :meth:`ids() <pytuflow.results.TPC.ids>`.
+
+        Parameters
+        ----------
+        result_type : Union[str, list[str]]
+            The result type can be a single value or a list of values. The result type can be the full name as
+            returned by :meth:`result_types() <pytuflow.results.TPC.result_types>` (not case sensitivte) or a
+            well known short name e.g. 'q', 'v', 'h' etc. If no result type is provided, all result types will be
+            searched.
+
+        Returns
+        -------
+        list[str]
+            list of IDs
         """
         if self.rl:
             if not result_type:
@@ -180,17 +266,26 @@ class TimeSeriesResult(ABC):
         return []
 
     def result_types(self, id: Union[str, list[str]] = '', domain: str = '') -> list[str]:
-        """
-        Returns a list of result types for the given id(s) and domain.
+        """Returns a list of result types for the given ID(s) and domain.
 
-        :param id:
-            The ID can be a single value or a list of values. The ID values are case in-sensitive.
+        Domain can be '1d', '2d', or '0d'. A secondary domain option can also be added to the domain string using a
+        space delim to further limit the IDs. Secondary domain options are 'node', 'channel', 'po', 'rl', 'boundary', or
+        'cross_section'. If no domain is provided, all domains will be searched.
+
+        Parameters
+        ----------
+        id : Union[str, list[str]]
+            The ID value can be a single value or a list of values. The ID value(s) are case in-sensitive.
             If no ID is provided, all IDs will be searched (within the provided domain).
-        :param domain:
-            The domain can be '1d', '2d', '0d' and will limit the returned result types by the domain.
-            A secondary domain option can be passed to further limit the ids
-            e.g. '1d node' or '1d channel'.
-            If no domain is provided, all domains will be searched.
+        domain : str
+            Domain can be '1d', '2d', or '0d'. A secondary domain option can also be added to the domain string using a
+            space to further limit the IDs. Secondary domain options are 'node', 'channel', 'po', 'rl', 'boundary', or
+            'cross_section'. If no domain is provided, all domains will be searched.
+
+        Returns
+        -------
+        list[str]
+            list of result types.
         """
         iter = self.init_iterator()
         result_types = []
@@ -201,12 +296,20 @@ class TimeSeriesResult(ABC):
         return result_types
 
     def channel_result_types(self, id: Union[str, list[str]] = '') -> list[str]:
-        """
-        Returns a list of the result types for the given channel id(s).
+        """Returns a list of the result types for the given channel ID(s).
 
-        :param id:
+        channel_result_types() is equivalent to using '1d channel' as the domain in
+        :meth:`result_types() <pytuflow.results.TPC.result_types>`.
+
+        Parameters
+        ----------
+        id : Union[str, list[str]]
             The ID value can be a single value or a list of values. The ID value(s) are case in-sensitive.
-            If no ID is provided, all IDs will be searched.
+
+        Returns
+        -------
+        list[str]
+            list of result types.
         """
         if self.channels:
             if not id:
@@ -215,12 +318,20 @@ class TimeSeriesResult(ABC):
         return []
 
     def node_result_types(self, id: Union[str, list[str]] = '') -> list[str]:
-        """
-        Returns a list of the result types for the given node id(s).
+        """Returns a list of the result types for the given channel ID(s).
 
-        :param id:
+        node_result_types() is equivalent to using '1d node' as the domain in
+        :meth:`result_types() <pytuflow.results.TPC.result_types>`.
+
+        Parameters
+        ----------
+        id : Union[str, list[str]]
             The ID value can be a single value or a list of values. The ID value(s) are case in-sensitive.
-            If no ID is provided, all IDs will be searched.
+
+        Returns
+        -------
+        list[str]
+            list of result types.
         """
         if self.nodes:
             if not id:
@@ -229,12 +340,20 @@ class TimeSeriesResult(ABC):
         return []
 
     def po_result_types(self, id: Union[str, list[str]] = '') -> list[str]:
-        """
-        Returns a list of the result types for the given 2d PO id(s).
+        """Returns a list of the result types for the given channel ID(s).
 
-        :param id:
+        po_result_types() is equivalent to using '2d' as the domain in
+        :meth:`result_types() <pytuflow.results.TPC.result_types>`.
+
+        Parameters
+        ----------
+        id : Union[str, list[str]]
             The ID value can be a single value or a list of values. The ID value(s) are case in-sensitive.
-            If no ID is provided, all IDs will be searched.
+
+        Returns
+        -------
+        list[str]
+            list of result types.
         """
         if self.po:
             if not id:
@@ -243,12 +362,20 @@ class TimeSeriesResult(ABC):
         return []
 
     def rl_result_types(self, id: Union[str, list[str]] = '') -> list[str]:
-        """
-        Returns a list of the result types for the given 0d RL id(s).
+        """Returns a list of the result types for the given channel ID(s).
 
-        :param id:
+        rl_result_types() is equivalent to using '0d' as the domain in
+        :meth:`result_types() <pytuflow.results.TPC.result_types>`.
+
+        Parameters
+        ----------
+        id : Union[str, list[str]]
             The ID value can be a single value or a list of values. The ID value(s) are case in-sensitive.
-            If no ID is provided, all IDs will be searched.
+
+        Returns
+        -------
+        list[str]
+            list of result types.
         """
         if self.rl:
             if not id:
@@ -257,13 +384,39 @@ class TimeSeriesResult(ABC):
         return []
 
     def long_plot_result_types(self) -> list[str]:
-        """Returns a list of result types available for long plotting."""
+        """Returns a list of result types available for long plotting.
+
+        Returns
+        -------
+        list[str]
+            list of result types.
+        """
         if self.nodes:
             return self.nodes.long_plot_result_types()
         return []
 
     def maximum_result_types(self, id: Union[str, list[str]] = '', domain: str = '') -> list[str]:
-        """Returns a list of result types available for maximum extraction."""
+        """Returns a list of result types available for maximum extraction.
+
+        Domain can be '1d', '2d', or '0d'. A secondary domain option can also be added to the domain string using a
+        space delim to further limit the IDs. Secondary domain options are 'node', 'channel', 'po', 'rl', 'boundary', or
+        'cross_section'. If no domain is provided, all domains will be searched.
+
+        Parameters
+        ----------
+        id : Union[str, list[str]]
+            The ID value can be a single value or a list of values. The ID value(s) are case in-sensitive.
+            If no ID is provided, all IDs will be searched (within the provided domain).
+        domain : str
+            Domain can be '1d', '2d', or '0d'. A secondary domain option can also be added to the domain string using a
+            space to further limit the IDs. Secondary domain options are 'node', 'channel', 'po', 'rl', 'boundary', or
+            'cross_section'. If no domain is provided, all domains will be searched.
+
+        Returns
+        -------
+        list[str]
+            list of result types.
+        """
         iter = self.init_iterator()
         result_types = []
         for item in iter.id_result_type(id, [], domain, 'max'):
@@ -276,14 +429,25 @@ class TimeSeriesResult(ABC):
         return result_types
 
     def timesteps(self, domain: str = '', dtype: str = 'relative') -> list[TimeLike]:
-        """
-        Returns a list of time-steps available for the given domain.
+        """Returns a list of time-steps available for the given domain.
 
-        :param domain:
-            The domain can be '1d', '2d', '0d' and will limit the returned time-steps by the domain.
-        :param dtype:
-            The return type can be either 'relative' e.g. hours or 'absolute' e.g. datetime.
-            Default is 'relative'.
+        Domain can be '1d', '2d', or '0d'. A secondary domain option can also be added to the domain string using a
+        space delim to further limit the IDs. Secondary domain options are 'node', 'channel', 'po', 'rl', 'boundary', or
+        'cross_section'. If no domain is provided, all domains will be searched.
+
+        Parameters
+        ----------
+        domain : str
+            Domain can be '1d', '2d', or '0d'. A secondary domain option can also be added to the domain string using a
+            space to further limit the IDs. Secondary domain options are 'node', 'channel', 'po', 'rl', 'boundary', or
+            'cross_section'. If no domain is provided, all domains will be searched.
+        dtype : str
+            Determines the return type which can be either 'relative' e.g. hours or 'absolute' e.g. datetime.
+
+        Returns
+        -------
+        list[TimeLike]
+            list of timesteps as either float or datetime.
         """
         iter = self.init_iterator()
         domains = []
@@ -302,26 +466,38 @@ class TimeSeriesResult(ABC):
                     domain: str = None,
                     use_common_index: bool = True
                     ) -> pd.DataFrame:
-        """
-        Extract time series data for the given id(s), result type(s), and domain and returned as a DataFrame.
+        """Extract time series data for the given ID(s), result type(s), and domain and returned as a pd.DataFrame.
 
-        :param id:
-            ID can be either a single value or list of values. The ID value(s) are case in-sensitive.
-            If no ID is provided, all IDs will be returned (within the provided domain).
-        :param result_type:
-            The result type can be a single value or a list of values and can be
-            the name of the result type (case in-sensitive) or be a well known short name
-            e.g. 'Water Level' - 'h', 'Energy' - 'e', etc.
-            If no result type is provided, all result types will be assumed to be all available.
-        :param domain:
-            The domain can be '1d', '2d', '0d' and will limit the returned time series by the domain.
-            A secondary domain option can be passed to further limit the ids
-            e.g. '1d node' or '1d channel'.
-            If no domain is provided, all domains will be searched.
-        :param use_common_index:
+        Parameters
+        ----------
+        id : Union[str, list[str]]
+            The ID value can be a single value or a list of values. The ID value(s) are case in-sensitive.
+            If no ID is provided, all IDs will be searched (within the provided domain).
+        result_type : Union[str, list[str]]
+            The result type can be a single value or a list of values. The result type can be the full name as
+            returned by :meth:`result_types() <pytuflow.results.TPC.result_types>` (not case sensitivte) or a
+            well known short name e.g. 'q', 'v', 'h' etc.  If no result type is provided, all result types will be
+            searched (within the provided domain).
+        domain : str
+            Domain can be '1d', '2d', or '0d'. A secondary domain option can also be added to the domain string using a
+            space to further limit the IDs. Secondary domain options are 'node', 'channel', 'po', 'rl', 'boundary', or
+            'cross_section'. If no domain is provided, all domains will be searched.
+        use_common_index : bool
             If True, the DataFrame will be returned with a single index column for all the result types (if a
             common index exists). If set to False, each result type value will be returned with a preceding
-            index column.
+            index column e.g. a time column will precede each result type value column.
+
+        Returns
+        -------
+        pd.DataFrame
+            The returned pd.DataFrame uses multi-index columns consisting of three or four levels
+            depending on whether a common time key exists (:code:`use_common_index=True` and result types are able
+            to share a common time key).
+
+            | Column Levels:
+            | :code:`Source/Result Type/ID` e.g. :code:`Channel/Flow/FC01.1_R`
+            | or if a common index does not exist, a fourth level will denote whether the column represents the index or value.
+            | e.g. :code:`Channel/Flow/FC01.1_R/Time`
         """
         # collect all time-series data into a single DataFrame
         df = pd.DataFrame()
@@ -354,22 +530,31 @@ class TimeSeriesResult(ABC):
                 result_type: Union[str, list[str]],
                 domain: str = None
                 ) -> pd.DataFrame:
-        """
-        Extract maximum, and time of max data for the given id(s) and result type(s) and return as a DataFrame.
+        """Extract maximum, and time of max data for the given ID(s) and result type(s) and return as a pd.DataFrame.
 
-        :param id:
-            ID can be either a single value or list of values. The ID value(s) are case in-sensitive.
-            If no ID is provided, all IDs will be returned (within the provided domain).
-        :param result_type:
-            The result type can be a single value or a list of values and can be
-            the name of the result type (case in-sensitive) or be a well known short name
-            e.g. 'Water Level' - 'h', 'Energy' - 'e', etc.
-            If no result type is provided, all result types will be assumed to be all available.
-        :param domain:
-            The domain can be '1d', '2d', '0d' and will limit the returned time series by the domain.
-            A secondary domain option can be passed to further limit the ids
-            e.g. '1d node' or '1d channel'.
-            If no domain is provided, all domains will be searched.
+        Parameters
+        ----------
+        id : Union[str, list[str]]
+            The ID value can be a single value or a list of values. The ID value(s) are case in-sensitive.
+            If no ID is provided, all IDs will be searched (within the provided domain).
+        result_type : Union[str, list[str]]
+            The result type can be a single value or a list of values. The result type can be the full name as
+            returned by :meth:`result_types() <pytuflow.results.TPC.result_types>` (not case sensitivte) or a
+            well known short name e.g. 'q', 'v', 'h' etc.  If no result type is provided, all result types will be
+            searched (within the provided domain).
+        domain : str
+            Domain can be '1d', '2d', or '0d'. A secondary domain option can also be added to the domain string using a
+            space to further limit the IDs. Secondary domain options are 'node', 'channel', 'po', 'rl', 'boundary', or
+            'cross_section'. If no domain is provided, all domains will be searched.
+
+        Returns
+        -------
+        pd.DataFrame
+            The returned DataFrame uses a multi-index column consisting of two levels:
+
+            :code:`Source/Result Type` e.g. :code:`Node/Water Level Max`
+
+            The row index will consist of the ID values.
         """
         df = pd.DataFrame()
         iter = self.init_iterator()
@@ -383,28 +568,36 @@ class TimeSeriesResult(ABC):
                   result_type: Union[str, list[str]],
                   time: TimeLike
                   ) -> pd.DataFrame:
-        """
-        Extract long plot data for the given channel ids(s), node result type(s), and time and return as a DataFrame.
+        """Extract long plot data for the given channel ID(s), node result type(s), and time and return as a DataFrame.
         At least one ID must be provided.
 
         If one ID is provided, the long plot will start from that channel ID and proceed downstream
-        to the outlet.
-        If multiple IDs are provided, the long plot will connect the IDs. The IDs are required to be connected.
-        e.g. if 2 IDs are provided one ID must be downstream of the other ID. If 3 IDs are provided, on ID must be
+        to the outlet. If multiple IDs are provided, the long plot will connect the IDs. The IDs are
+        required to be connected.
+        e.g. if 2 IDs are provided one ID must be downstream of the other ID. If 3 IDs are provided, one ID must be
         downstream of the other 2.
 
-        :param ids:
-            ID can be either a single value or list of values. The ID value(s) are case in-sensitive.
-        :param result_type:
-            The result type can be a single value or a list of values and can be
-            the name of the result type (case in-sensitive) or be a well known short name
-            e.g. 'Water Level' - 'h', 'Energy' - 'e', etc.
-            If no result type is provided, all result types will be assumed to be all available.
-        :param time:
+        Parameters
+        ----------
+        id : Union[str, list[str]]
+            The ID value can be a single value or a list of values. The ID value(s) are case in-sensitive.
+            If no ID is provided, all IDs will be searched (within the provided domain).
+        result_type : Union[str, list[str]]
+            The result type can be a single value or a list of values. The result type can be the full name as
+            returned by :meth:`result_types() <pytuflow.results.TPC.result_types>` (not case sensitivte) or a
+            well known short name e.g. 'q', 'v', 'h' etc.  If no result type is provided, all result types will be
+            searched (within the provided domain).
+        time : TimeLike
             The time-step to extract the long plot data for. The format can be either as a relative time-step (float)
             or as an absolute time-step (datetime).
             The time-step has a tolerance of 0.001 hrs and if no time-step is found,
-            the previous time-step will be used.
+            the closest previous time-step will be used.
+
+        Returns
+        -------
+        pd.DataFrame
+            The returned DataFrame containing channel and node IDs, offsets, and result types. Offset will reset
+            to zero at the start of each long plot branch.
         """
         if not ids:
             raise ValueError('No ids provided')
@@ -420,8 +613,7 @@ class TimeSeriesResult(ABC):
             return self.lp_1d.long_plot(item.result_types, timestep_index)
 
     def connectivity(self, ids: Union[str, list[str]]) -> pd.DataFrame:
-        """
-        Return the connectivity for the given channel ID(s) as a DataFrame with relevant information.
+        """Return the connectivity for the given channel ID(s) as a DataFrame with relevant information.
         At least one ID must be provided.
 
         If one ID is provided, the long plot will start from that channel ID and proceed downstream
@@ -430,8 +622,16 @@ class TimeSeriesResult(ABC):
         e.g. if 2 IDs are provided one ID must be downstream of the other ID. If 3 IDs are provided, on ID must be
         downstream of the other 2.
 
-        :param ids:
-            ID can be either a single value or list of values. The ID value(s) are case in-sensitive.
+        Parameters
+        ----------
+        ids : Union[str, list[str]]
+            The ID value can be a single value or a list of values. The ID value(s) are case in-sensitive.
+            If no ID is provided, all IDs will be searched (within the provided domain).
+
+        Returns
+        -------
+        pd.DataFrame
+            Information on the connectivity of the given channel ID(s).
         """
         if not isinstance(ids, list):
             ids = [ids] if ids is not None else []
