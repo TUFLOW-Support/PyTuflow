@@ -1,6 +1,9 @@
 import re
 from datetime import timedelta
 from pathlib import Path
+
+import numpy as np
+
 from ..types import PathLike, TimeLike
 
 import pandas as pd
@@ -15,6 +18,7 @@ from ..time_util import nc_time_series_reference_time
 
 
 ID = {'flows_1d': 'flow_1d'}
+IND = {'Entry': 0, 'Additional': 1, 'Exit': 2}
 
 
 class TPCTimeSeriesNC(TimeSeries):
@@ -23,6 +27,7 @@ class TPCTimeSeriesNC(TimeSeries):
         super().__init__()
         self._df = None
         self._id = ID.get(id, id)
+        self.loss_type = loss_type
         self.time_units = ''
         self.fpath = Path(fpath)
         self.load()
@@ -40,7 +45,12 @@ class TPCTimeSeriesNC(TimeSeries):
             self._df = pd.DataFrame(self.timesteps('relative'), columns=['Time (h)'])
             self._df.set_index('Time (h)', inplace=True)
             with Dataset(self.fpath) as nc:
-                df = pd.DataFrame(nc.variables[self._id][:].transpose(), columns=self._names())
+                a = nc.variables[self._id][:]
+                if len(a.shape) == 3:
+                    a = np.array([[''.join([x.decode('UTF-8') for x in a[y,x,:]]).strip() for x in range(a.shape[1])] for y in range(a.shape[0])], dtype='U16')
+                if self.loss_type:
+                    a = a[IND[self.loss_type]:a.shape[0]:3,:]
+                df = pd.DataFrame(a.transpose(), columns=self._names())
                 df['Time (h)'] = self.timesteps('relative')
                 df.set_index('Time (h)', inplace=True)
             self._df = pd.concat([self._df, df], axis=1)
@@ -49,6 +59,14 @@ class TPCTimeSeriesNC(TimeSeries):
     @df.setter
     def df(self, value: pd.DataFrame) -> None:
         return
+
+    @staticmethod
+    def exists(ncfpath, id: str) -> bool:
+        id_ = ID.get(id, id)
+        if Dataset is None:
+            raise ModuleNotFoundError('netCDF4 is not installed')
+        with Dataset(ncfpath) as nc:
+            return id_ in nc.variables
 
     def load(self):
         if Dataset is None:
@@ -84,7 +102,7 @@ class TPCTimeSeriesNC(TimeSeries):
             return nc.variables['time'][:]
 
     def _names(self) -> list[str]:
-        NODE_RES = ['water_levels_1d', 'energy_levels_1d']
+        NODE_RES = ['water_levels_1d', 'energy_levels_1d', 'mass_balance_error_1d', 'node_flow_regime_1d']
         if re.findall(r'_1d$', self._id):
             if self._id.lower() in NODE_RES:
                 return self._extract_nc_names('node_names')

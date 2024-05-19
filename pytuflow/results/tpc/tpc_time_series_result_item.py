@@ -25,7 +25,8 @@ class TPCResultItem(TimeSeriesResultItem):
         if loss_type:
             name = f'{loss_type} {name}'
         if self.nc is not None:
-            self.time_series[name] = TPCTimeSeriesNC(self.nc, id, loss_type)
+            if TPCTimeSeriesNC.exists(self.nc, id):
+                self.time_series[name] = TPCTimeSeriesNC(self.nc, id, loss_type)
         else:
             self.time_series[name] = TPCTimeSeriesCSV(fpath, reference_time, index_col, loss_type)
 

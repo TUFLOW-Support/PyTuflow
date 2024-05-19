@@ -22,15 +22,23 @@ from ..time_util import default_reference_time, nc_time_series_reference_time
 
 
 NAME_MAP = {'velocities': 'Velocity', 'energy levels': 'Energy'}
-NC_MAP = {'1d channel losses': '1d losses', '1d node regime': None, '1d channel regime': '1d flow regime',
+NC_MAP = {'1d channel losses': '1d losses', '1d node regime': '1d node flow regime', '1d channel regime': '1d channel flow regime',
           '1d mass balance errors': '1d mass balance error'}
 
 
 class TPC(TimeSeriesResult):
+    """Class to handle TUFLOW Time Series result file (.TPC)."""
 
     def __init__(self, fpath: PathLike) -> None:
+        """
+        :param fpath: Path to the TPC file.
+        :type fpath: str | Path
+        """
         self._df = None
+
+        #: int: The format version of the TPC file.
         self.format_version = -1
+
         super().__init__(fpath)
 
     def __repr__(self) -> str:
@@ -40,6 +48,7 @@ class TPC(TimeSeriesResult):
 
     @staticmethod
     def looks_like_self(fpath: Path) -> bool:
+        # inherited docstring
         if fpath.suffix.upper() != '.TPC':
             return  False
         try:
@@ -52,6 +61,7 @@ class TPC(TimeSeriesResult):
         return True
 
     def looks_empty(self, fpath: Path) -> bool:
+        # inherited docstring
         TARGET_LINE_COUNT = 10  # fairly arbitrary
         try:
             df = pd.read_csv(self.fpath, sep=' == ', engine='python', header=None)
@@ -75,6 +85,7 @@ class TPC(TimeSeriesResult):
             return True
 
     def load(self) -> None:
+        # inherited docstring
         try:
             self._df = pd.read_csv(self.fpath, sep=' == ', engine='python', header=None)
         except Exception as e:
@@ -209,7 +220,7 @@ class TPC(TimeSeriesResult):
                 elif '1D' not in name_:
                     break
                 id = self._nc_id(name_, '1d')
-                if id is None or fpath is None:
+                if id is None or (fpath is None and self.storage_format == 'CSV'):
                     continue
                 name = self._1d_result_name(name_)
                 self.nodes.load_time_series(name, fpath, self.reference_time, 1, id)
@@ -230,7 +241,7 @@ class TPC(TimeSeriesResult):
                     break
                 _, name_, relpath = row
                 id = self._nc_id(name_, '1d')
-                if id is None or fpath is None:
+                if id is None or (fpath is None and self.storage_format == 'CSV'):
                     continue
                 name = self._1d_result_name(name_)
                 if name == 'Channel Losses':
