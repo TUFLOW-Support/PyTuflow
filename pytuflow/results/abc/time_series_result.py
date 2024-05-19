@@ -34,13 +34,13 @@ class TimeSeriesResult(ABC):
         self.units = ''
         #: str: The simulation ID.
         self.sim_id = ''
-        #: Channels: Channels result class object if available.
+        #: :doc:`Channels<pytuflow.results.Channels>`: Channels result class object if available.
         self.channels = None
-        #: Nodes: Nodes result class object if available.
+        #: :doc:`Nodes<pytuflow.results.Nodes>`: Nodes result class object if available.
         self.nodes = None
-        #: PO: 2D PO result class object if available.
+        #: :doc:`PO<pytuflow.results.PO>`: 2D PO result class object if available.
         self.po = None
-        #: RL: RL result class object if available.
+        #: :doc:`RL<pytuflow.results.RL>`: RL result class object if available.
         self.rl = None
         #: LP_1D: Long plot class object if available.
         self.lp_1d = None

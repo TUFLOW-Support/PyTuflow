@@ -10,12 +10,14 @@ from ..abc.po import PO
 
 
 class TPCPO_Base(TPCResultItem):
+    """Abstract base class for TPC PO result item."""
 
     def __init__(self, fpath: PathLike) -> None:
         super().__init__(fpath)
         self._df = None
 
     def load(self) -> None:
+        # docstring inherited
         pass
 
     @property
@@ -37,6 +39,7 @@ class TPCPO_Base(TPCResultItem):
 
 
 class TPCPO(PO, TPCPO_Base):
+    """TPC PO class."""
 
     def __init__(self, fpath: PathLike) -> None:
         super(TPCPO, self).__init__(fpath)

@@ -8,6 +8,9 @@ class Nodes(TimeSeriesResultItem):
 
     def __init__(self, fpath: PathLike, *args, **kwargs) -> None:
         super().__init__(fpath)
+        #: str: Name or Source of the result item. Always 'Node'.
         self.name = 'Node'
+        #: str: Domain of the result item. Always '1d'.
         self.domain = '1d'
+        #: str: Domain of the result item. Always 'node'.
         self.domain_2 = 'node'

@@ -37,11 +37,11 @@ class TPC(TimeSeriesResult):
         self._df = None
         #: :doc:`TPCChannels<pytuflow.results.TPCChannels>`: TPC Channels result class if 1D channels exist within the results
         self.channels = None
-        #: TPCNodes: TPC Nodes result class if 1D nodes exist within the results
+        #: :doc:`TPCNodes<pytuflow.results.TPCNodes>`: TPC Nodes result class if 1D nodes exist within the results
         self.nodes = None
-        #: TPCPO: TPC PO result class if 2D points, lines, or regions exist within the results
+        #: :doc:`TPCPO<pytuflow.results.TPCPO>`: TPC PO result class if 2D points, lines, or regions exist within the results
         self.po = None
-        #: TPCRL: TPC RL result class if reporting locations exist within the results
+        #: :doc:`TPCRL<pytuflow.results.TPCRL>`: TPC RL result class if reporting locations exist within the results
         self.rl = None
         #: int: The format version of the TPC file.
         self.format_version = -1

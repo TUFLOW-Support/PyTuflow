@@ -8,6 +8,9 @@ class PO(TimeSeriesResultItem):
 
     def __init__(self, fpath: PathLike) -> None:
         super().__init__(fpath)
+        #: str: Name or Source of the result item. Always 'PO'.
         self.name = 'PO'
+        #: str: Domain of the result item. Always '2d'.
         self.domain = '2d'
+        #: str: Domain of the result item. Always 'po'.
         self.domain_2 = 'po'

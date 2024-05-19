@@ -8,6 +8,9 @@ class RL(TimeSeriesResultItem):
 
     def __init__(self, fpath: PathLike) -> None:
         super().__init__(fpath)
+        #: str: Name or Source of the result item. Always 'RL'.
         self.name = 'RL'
+        #: str: Domain of the result item. Always '0d'.
         self.domain = '0d'
+        #: str: Domain of the result item. Always 'rl'.
         self.domain_2 = 'rl'

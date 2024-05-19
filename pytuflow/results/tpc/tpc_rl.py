@@ -3,6 +3,7 @@ from ..abc.rl import RL
 
 
 class TPCRL(RL, TPCPO_Base):
+    """TPC RL class."""
 
     def __repr__(self) -> str:
         if hasattr(self, 'fpath'):
