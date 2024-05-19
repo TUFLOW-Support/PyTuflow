@@ -35,7 +35,7 @@ class TPC(TimeSeriesResult):
         :type fpath: str | Path
         """
         self._df = None
-        #: TPCChannels: TPC Channels result class if 1D channels exist within the results
+        #: :doc:`TPCChannels<pytuflow.results.TPCChannels>`: TPC Channels result class if 1D channels exist within the results
         self.channels = None
         #: TPCNodes: TPC Nodes result class if 1D nodes exist within the results
         self.nodes = None

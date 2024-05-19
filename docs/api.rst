@@ -8,4 +8,10 @@ API
    :nosignatures:
    :template: custom-class-template.rst
 
+    results.TimeSeriesResult
+    results.TimeSeriesResultItem
+    results.Channels
+    results.TPCResultItem
+    results.TPCChannels
     results.TPC
+

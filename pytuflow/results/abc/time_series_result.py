@@ -17,10 +17,10 @@ class TimeSeriesResult(ABC):
     """
     Abstract base class for TUFLOW time series results.
 
-    Methods requiring implementation:
-        load() -> None
-        looks_like_self(fpath: Path) -> bool
-        looks_empty(fpath: Path) -> bool
+    | Methods requiring overriding:
+    |    :code:`load() -> None`
+    |    :code:`looks_like_self(fpath: Path) -> bool`
+    |    :code:`looks_empty(fpath: Path) -> bool`
 
     This class can also be used for other plot data such as 1d_ta_tables_check file and bc_check files.
 
