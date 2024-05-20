@@ -13,4 +13,16 @@ class TimeSeries:
         self.empty_results = []
 
     def timesteps(self, dtype: str) -> list[TimeLike]:
+        """Returns the time steps for the time series.
+
+        Parameters
+        ----------
+        dtype : str
+            Data type of the time steps. Can be 'absolute' or 'relative'.
+
+        Returns
+        -------
+        list[TimeLike]
+            List of time steps.
+        """
         raise NotImplementedError

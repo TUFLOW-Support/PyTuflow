@@ -14,7 +14,7 @@ from pytuflow.tmf.tmf.tuflow_model_files.dataclasses.case_insensitive_dict impor
 @dataclass
 class Corrected:
     """Class for storing information on corrected IDs and result types returned as part of a collection from the
-    :doc:`Iterator<pytuflow.results.Iterator>` class.
+    :doc:`Iterator <pytuflow.results.Iterator>` class.
 
     | e.g.
     |    id_orig = 'case-insensitive' name
@@ -26,7 +26,7 @@ class Corrected:
     id_orig: str
     #: str: Short name or case-insensitive result type name
     result_type_orig: str
-    #: :doc:`TimeSeriesResultItem<pytuflow.results.TimeSeriesResultItem>`: Time series result item class (e.g. Nodes, Channels, PO, RL)
+    #: :doc:`TimeSeriesResultItem <pytuflow.results.TimeSeriesResultItem>`: Time series result item class (e.g. Nodes, Channels, PO, RL)
     result_item: TimeSeriesResultItem
     #: str: Corrected ID (case-sensitive)
     id: str
@@ -208,7 +208,7 @@ class ErrorMessage:
 
 
 class Iterator:
-    """Class for helping iterate over valid IDs and result type combinations. This class will also correct IDs and
+    """Class for helping iterate over valid IDs and result type combinations. This class will correct IDs and
     result type names so that they match the expected case correctly and convert result type short names to full names.
 
     In a lot of instances in the TimeSeriesResult class, the arguments are IDs, result types, and domain. This class

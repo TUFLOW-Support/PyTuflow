@@ -13,6 +13,18 @@ class TPCTimeSeriesCSV(TimeSeries):
     """TPC Time Series class for storing CSV format results."""
 
     def __init__(self, fpath: PathLike, reference_time: datetime, index_col: Union[str, int], loss_type: str = '') -> None:
+        """
+        Parameters
+        ----------
+        fpath : PathLike
+            Path to the CSV file.
+        reference_time : datetime
+            Reference time for the time series.
+        index_col : Union[str, int]
+            Column to use as the index.
+        loss_type : str, optional
+            Loss type - can be one of 'Entry', 'Additional', or 'Exit' (default is '').
+        """
         super().__init__()
         self._index_col = index_col
         self.fpath = Path(fpath)
@@ -26,7 +38,8 @@ class TPCTimeSeriesCSV(TimeSeries):
             return f'<TPC Time Series (CSV): {self.fpath.stem}>'
         return '<TPC Time Series (CSV)>'
 
-    def load(self):
+    def load(self) -> None:
+        """Loads the CSV file into a pandas DataFrame."""
         try:
             with self.fpath.open() as f:
                 ncol = len(f.readline().split(','))
@@ -47,6 +60,7 @@ class TPCTimeSeriesCSV(TimeSeries):
             raise Exception(f'Error loading CSV file: {e}')
 
     def timesteps(self, dtype: str) -> list[TimeLike]:
+        # inherit docstring
         if dtype == 'absolute':
             return [self.reference_time + timedelta(hours=x) for x in self.df.index]
         return self.df.index.tolist()

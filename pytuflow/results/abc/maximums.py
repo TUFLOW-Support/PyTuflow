@@ -12,6 +12,15 @@ class Maximums(ABC):
         self.df = None
 
     def append(self, result_type: str, df: pd.DataFrame) -> None:
+        """Append maximum result to the dataframe.
+
+        Parameters
+        ----------
+        result_type : str
+            Result type to append.
+        df : pd.DataFrame
+            DataFrame containing the maximum values.
+        """
         d = OrderedDict({'ID': [], f'{result_type} Max': [], f'{result_type} TMax': []})
         for id_ in df.columns:
             d['ID'].append(id_)

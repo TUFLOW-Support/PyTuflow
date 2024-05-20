@@ -41,8 +41,10 @@ class TPCMaximums(Maximums):
         return df
 
     def load(self):
+        """Load the first maximums file."""
         self.df = self._load(self.fpath)
 
     def append(self, fpath: PathLike) -> None:
+        # inherited docstring
         df = self._load(fpath)
         self.df = pd.concat([self.df, df], join="outer")

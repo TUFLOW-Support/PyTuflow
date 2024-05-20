@@ -12,6 +12,16 @@ class LP_1D:
     """Class for generating long profiles for 1D channels."""
 
     def __init__(self, channels: 'Channels', nodes: 'Nodes', ids: list[str] = ()) -> None:
+        """
+        Parameters
+        ----------
+        channels : Channels
+            Channels object
+        nodes : Nodes
+            Nodes object
+        ids : list[str], optional
+            List of channel IDs, by default []
+        """
         self._static_types = []
         self._temp_types = []
         self._utils = ResultUtil(channels, nodes)
@@ -117,8 +127,8 @@ class LP_1D:
 
         Parameters
         ----------
-        result_types : list[str]
-            Static result types (excluding maximums) that should be returned
+        result_types : list[str], optional
+            Static result types (excluding maximums) that should be returned. By default []
 
         Returns
         -------

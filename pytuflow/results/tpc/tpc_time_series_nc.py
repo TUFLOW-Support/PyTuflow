@@ -22,8 +22,24 @@ IND = {'Entry': 0, 'Additional': 1, 'Exit': 2}
 
 
 class TPCTimeSeriesNC(TimeSeries):
+    """Class to read time series results from a TUFLOW NetCDF TS file."""
 
     def __init__(self, fpath: PathLike, id: str, loss_type: str = '') -> None:
+        """
+        Parameters
+        ----------
+        fpath : PathLike
+            Path to the NetCDF file.
+        id : str
+            Identifier of the variable to read.
+        loss_type : str, optional
+            Loss type - can be one of 'Entry', 'Additional', or 'Exit' (default is '').
+
+        Raises
+        ------
+        ModuleNotFoundError
+            If the netCDF4 library is not installed.
+        """
         super().__init__()
         self._df = None
         self._id = ID.get(id, id)

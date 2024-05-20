@@ -190,7 +190,7 @@ class TimeSeriesResult(ABC):
 
         Parameters
         ----------
-        result_type : Union[str, list[str]]
+        result_type : Union[str, list[str]], optional
             The result type can be a single value or a list of values. The result type can be the full name as
             returned by :meth:`result_types() <pytuflow.results.TPC.result_types>` (not case sensitivte) or a
             well known short name e.g. 'q', 'v', 'h' etc. If no result type is provided, all result types will be
@@ -215,7 +215,7 @@ class TimeSeriesResult(ABC):
 
         Parameters
         ----------
-        result_type : Union[str, list[str]]
+        result_type : Union[str, list[str]], optional
             The result type can be a single value or a list of values. The result type can be the full name as
             returned by :meth:`result_types() <pytuflow.results.TPC.result_types>` (not case sensitivte) or a
             well known short name e.g. 'q', 'v', 'h' etc. If no result type is provided, all result types will be
@@ -240,7 +240,7 @@ class TimeSeriesResult(ABC):
 
         Parameters
         ----------
-        result_type : Union[str, list[str]]
+        result_type : Union[str, list[str]], optional
             The result type can be a single value or a list of values. The result type can be the full name as
             returned by :meth:`result_types() <pytuflow.results.TPC.result_types>` (not case sensitivte) or a
             well known short name e.g. 'q', 'v', 'h' etc. If no result type is provided, all result types will be
@@ -265,7 +265,7 @@ class TimeSeriesResult(ABC):
 
         Parameters
         ----------
-        result_type : Union[str, list[str]]
+        result_type : Union[str, list[str]], optional
             The result type can be a single value or a list of values. The result type can be the full name as
             returned by :meth:`result_types() <pytuflow.results.TPC.result_types>` (not case sensitivte) or a
             well known short name e.g. 'q', 'v', 'h' etc. If no result type is provided, all result types will be
@@ -291,10 +291,10 @@ class TimeSeriesResult(ABC):
 
         Parameters
         ----------
-        id : Union[str, list[str]]
+        id : Union[str, list[str]], optional
             The ID value can be a single value or a list of values. The ID value(s) are case in-sensitive.
             If no ID is provided, all IDs will be searched (within the provided domain).
-        domain : str
+        domain : str, optional
             Domain can be '1d', '2d', or '0d'. A secondary domain option can also be added to the domain string using a
             space to further limit the IDs. Secondary domain options are 'node', 'channel', 'po', 'rl', 'boundary', or
             'cross_section'. If no domain is provided, all domains will be searched.
@@ -320,7 +320,7 @@ class TimeSeriesResult(ABC):
 
         Parameters
         ----------
-        id : Union[str, list[str]]
+        id : Union[str, list[str]], optional
             The ID value can be a single value or a list of values. The ID value(s) are case in-sensitive.
 
         Returns
@@ -342,7 +342,7 @@ class TimeSeriesResult(ABC):
 
         Parameters
         ----------
-        id : Union[str, list[str]]
+        id : Union[str, list[str]], optional
             The ID value can be a single value or a list of values. The ID value(s) are case in-sensitive.
 
         Returns
@@ -364,7 +364,7 @@ class TimeSeriesResult(ABC):
 
         Parameters
         ----------
-        id : Union[str, list[str]]
+        id : Union[str, list[str]], optional
             The ID value can be a single value or a list of values. The ID value(s) are case in-sensitive.
 
         Returns
@@ -386,7 +386,7 @@ class TimeSeriesResult(ABC):
 
         Parameters
         ----------
-        id : Union[str, list[str]]
+        id : Union[str, list[str]], optional
             The ID value can be a single value or a list of values. The ID value(s) are case in-sensitive.
 
         Returns
@@ -421,10 +421,10 @@ class TimeSeriesResult(ABC):
 
         Parameters
         ----------
-        id : Union[str, list[str]]
+        id : Union[str, list[str]], optional
             The ID value can be a single value or a list of values. The ID value(s) are case in-sensitive.
             If no ID is provided, all IDs will be searched (within the provided domain).
-        domain : str
+        domain : str, optional
             Domain can be '1d', '2d', or '0d'. A secondary domain option can also be added to the domain string using a
             space to further limit the IDs. Secondary domain options are 'node', 'channel', 'po', 'rl', 'boundary', or
             'cross_section'. If no domain is provided, all domains will be searched.
@@ -454,11 +454,11 @@ class TimeSeriesResult(ABC):
 
         Parameters
         ----------
-        domain : str
+        domain : str, optional
             Domain can be '1d', '2d', or '0d'. A secondary domain option can also be added to the domain string using a
             space to further limit the IDs. Secondary domain options are 'node', 'channel', 'po', 'rl', 'boundary', or
             'cross_section'. If no domain is provided, all domains will be searched.
-        dtype : str
+        dtype : str, optional
             Determines the return type which can be either 'relative' e.g. hours or 'absolute' e.g. datetime.
 
         Returns
@@ -495,11 +495,11 @@ class TimeSeriesResult(ABC):
             returned by :meth:`result_types() <pytuflow.results.TPC.result_types>` (not case sensitivte) or a
             well known short name e.g. 'q', 'v', 'h' etc.  If no result type is provided, all result types will be
             searched (within the provided domain).
-        domain : str
+        domain : str, optional
             Domain can be '1d', '2d', or '0d'. A secondary domain option can also be added to the domain string using a
             space to further limit the IDs. Secondary domain options are 'node', 'channel', 'po', 'rl', 'boundary', or
             'cross_section'. If no domain is provided, all domains will be searched.
-        use_common_index : bool
+        use_common_index : bool, optional
             If True, the DataFrame will be returned with a single index column for all the result types (if a
             common index exists). If set to False, each result type value will be returned with a preceding
             index column e.g. a time column will precede each result type value column.
@@ -559,7 +559,7 @@ class TimeSeriesResult(ABC):
             returned by :meth:`result_types() <pytuflow.results.TPC.result_types>` (not case sensitivte) or a
             well known short name e.g. 'q', 'v', 'h' etc.  If no result type is provided, all result types will be
             searched (within the provided domain).
-        domain : str
+        domain : str, optional
             Domain can be '1d', '2d', or '0d'. A secondary domain option can also be added to the domain string using a
             space to further limit the IDs. Secondary domain options are 'node', 'channel', 'po', 'rl', 'boundary', or
             'cross_section'. If no domain is provided, all domains will be searched.
