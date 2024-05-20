@@ -37,10 +37,10 @@ please see the :doc:`results` page.
     results.TPCMaximums
     results.TPCMaximumsPO
     results.TPCResultUtil
-    results.InfoResultItem
-    results.InfoChannels
-    results.InfoNodes
-    results.InfoMaximums
+    results.INFOResultItem
+    results.INFOChannels
+    results.INFONodes
+    results.INFOMaximums
     results.GPKGResultItem
     results.GPKGTimeSeries
     results.GPKGChannels

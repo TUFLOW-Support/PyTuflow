@@ -1,8 +1,8 @@
 from ..tpc.tpc_channels import TPCChannels
-from .info_time_series_result_item import InfoResultItem
+from .info_time_series_result_item import INFOResultItem
 
 
-class InfoChannels(TPCChannels, InfoResultItem):
+class INFOChannels(TPCChannels, INFOResultItem):
     """Info Channel class."""
 
     def __repr__(self) -> str:

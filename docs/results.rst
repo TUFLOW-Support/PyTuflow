@@ -12,5 +12,5 @@ as entry points to load results. For more information on the underlying classes,
    :template: custom-class-template.rst
 
    results.TPC
-   results.Info
+   results.INFO
    results.GPKG_TS

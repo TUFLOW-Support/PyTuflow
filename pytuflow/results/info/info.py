@@ -3,12 +3,12 @@ from pathlib import Path
 import pandas as pd
 
 from ..tpc.tpc import TPC
-from .info_channels import InfoChannels
-from .info_nodes import InfoNodes
-from .info_time_series_result_item import InfoResultItem
+from .info_channels import INFOChannels
+from .info_nodes import INFONodes
+from .info_time_series_result_item import INFOResultItem
 
 
-class Info(TPC):
+class INFO(TPC):
     """Class for reading TUFLOW info time series results (.info). These are text files with a '.info' extension
     (not '.2dm.info') that are output by the 2013 TUFLOW release. The format is similar to the TPC format, however
     does not include 2D or RL results.
@@ -68,18 +68,18 @@ class Info(TPC):
     def _load_rl_results(self) -> None:
         self.rl = None
 
-    def _load_nodes(self) -> InfoNodes:
+    def _load_nodes(self) -> INFONodes:
         relpath = self._get_property('Node Info')
         relpath = relpath.replace('_1d_','_1d_1d_')
         node_info = self.fpath.parent / relpath
-        return InfoNodes(node_info)
+        return INFONodes(node_info)
 
-    def _load_channels(self) -> InfoChannels:
+    def _load_channels(self) -> INFOChannels:
         relpath = self._get_property('Channel Info')
         relpath = relpath.replace('_1d_','_1d_1d_')
         chan_info = self.fpath.parent / relpath
-        return InfoChannels(chan_info)
+        return INFOChannels(chan_info)
 
-    def _load_result(self, cls: InfoResultItem, result_type: str, relpath: str) -> None:
+    def _load_result(self, cls: INFOResultItem, result_type: str, relpath: str) -> None:
         p = self.fpath.parent / relpath
         cls.load_time_series(result_type, p, self.reference_time, 1, result_type)

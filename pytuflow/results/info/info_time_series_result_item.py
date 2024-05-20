@@ -1,16 +1,16 @@
 from datetime import datetime
 
-from .info_maximums import InfoMaximums
+from .info_maximums import INFOMaximums
 from ..tpc.tpc_time_series_result_item import TPCResultItem
 from pytuflow.types import PathLike
 
 
-class InfoResultItem(TPCResultItem):
+class INFOResultItem(TPCResultItem):
     """Base class for Info result items Channels, Nodes, etc."""
 
     def __init__(self, fpath: PathLike) -> None:
         # docstring inherited
-        self.maximums = InfoMaximums()
+        self.maximums = INFOMaximums()
         super().__init__(fpath)
 
     def load_time_series(self, name: str, fpath: PathLike, reference_time: datetime, index_col=None, id: str = '') -> None:

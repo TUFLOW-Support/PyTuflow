@@ -7,7 +7,7 @@ from pytuflow.results.fm.fm import FM_TS
 from pytuflow.results.fm.fm_nodes import FMNodes
 from pytuflow.results.fm.gxy import GXY
 from pytuflow.results.hyd_tables.hyd_tables import HydTables
-from pytuflow.results.info.info import Info
+from pytuflow.results.info.info import INFO
 from pytuflow.results.tpc.tpc import TPC
 from pytuflow.results.gpkg_ts.gpkg_ts import GPKG_TS
 from pytuflow.results.iterator_util import Iterator
@@ -704,13 +704,13 @@ class Test_Info_2013(unittest.TestCase):
 
     def test_load(self):
         p = './tests/2013/M04_5m_001_1d.info'
-        res = Info(p)
+        res = INFO(p)
         self.assertEqual('M04_5m_001', res.sim_id)
 
     def test_not_info(self):
         p = './tests/2013/EG00_001_Scen_1+Scen_2.2dm.info'
         try:
-            res = Info(p)
+            res = INFO(p)
             raise AssertionError('Should have raised an exception')
         except ValueError:
             pass
@@ -718,26 +718,26 @@ class Test_Info_2013(unittest.TestCase):
     def test_blank_info(self):
         p = './tests/2013/M04_5m_001_1d_blank.info'
         try:
-            res = Info(p)
+            res = INFO(p)
             raise AssertionError('Should have raised an exception')
         except ValueError:
             pass
 
     def test_channels(self):
         p = './tests/2013/M04_5m_001_1d.info'
-        res = Info(p)
+        res = INFO(p)
         self.assertEqual(54, res.channel_count())
         self.assertEqual(54, len(res.channel_ids()))
 
     def test_nodes(self):
         p = './tests/2013/M04_5m_001_1d.info'
-        res = Info(p)
+        res = INFO(p)
         self.assertEqual(55, res.node_count())
         self.assertEqual(55, len(res.node_ids()))
 
     def test_time_series(self):
         p = './tests/2013/M04_5m_001_1d.info'
-        res = Info(p)
+        res = INFO(p)
         ts = res.time_series('ds1', 'q')
         self.assertEqual((181, 1), ts.shape)
         ts = res.time_series(['FC01.24.1', 'FC01.25.1'], 'h')
@@ -745,7 +745,7 @@ class Test_Info_2013(unittest.TestCase):
 
     def test_maximums(self):
         p = './tests/2013/M04_5m_001_1d.info'
-        res = Info(p)
+        res = INFO(p)
         df = res.maximum(['ds1', 'ds2'], ['flow', 'velocity'])
         self.assertEqual((2, 4), df.shape)
         df = res.maximum(['FC01.24.1', 'FC01.25.1'], ['h'])
@@ -753,18 +753,18 @@ class Test_Info_2013(unittest.TestCase):
 
     def test_long_plot_result_types(self):
         p = './tests/2013/M04_5m_001_1d.info'
-        res = Info(p)
+        res = INFO(p)
         self.assertEqual(5, len(res.long_plot_result_types()))
 
     def test_long_plot(self):
         p = './tests/2013/M04_5m_001_1d.info'
-        res = Info(p)
+        res = INFO(p)
         df = res.long_plot('ds1', ['bed level', 'water level', 'max water level'], 1)
         self.assertEqual((12, 7), df.shape)
 
     def test_long_plot_2(self):
         p = './tests/2013/M04_5m_001_1d.info'
-        res = Info(p)
+        res = INFO(p)
         df = res.long_plot(['FC01.1_R', 'FC01.36'], ['bed level', 'water level', 'pipes'], 1)
         self.assertEqual((4, 6), df.shape)
 
