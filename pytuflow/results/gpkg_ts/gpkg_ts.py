@@ -15,7 +15,7 @@ class GPKG_TS(GPKGBase, TimeSeriesResult):
     """Class for handling GeoPackage time series results. The GPKG time series format is a specific format published
      by TUFLOW built on the GeoPackage standard. The format specification is published here:
 
-     `https://wiki.tuflow.com/GPKG_Time_Series_Format_Specification`
+     `https://wiki.tuflow.com/GPKG_Time_Series_Format_Specification <https://wiki.tuflow.com/GPKG_Time_Series_Format_Specification>`_
      """
 
     def __init__(self, fpath: PathLike) -> None:
