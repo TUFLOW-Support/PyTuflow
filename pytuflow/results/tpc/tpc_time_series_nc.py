@@ -78,18 +78,34 @@ class TPCTimeSeriesNC(TimeSeries):
 
     @staticmethod
     def exists(ncfpath, id: str) -> bool:
+        """Check if a given variable exists in the NetCDF file.
+
+        Parameters
+        ----------
+        ncfpath : PathLike
+            Path to the NetCDF file.
+        id : str
+            Identifier of the variable to check.
+
+        Returns
+        -------
+        bool
+            True if the variable exists, False otherwise.
+        """
         id_ = ID.get(id, id)
         if Dataset is None:
             raise ModuleNotFoundError('netCDF4 is not installed')
         with Dataset(ncfpath) as nc:
             return id_ in nc.variables
 
-    def load(self):
+    def load(self) -> None:
+        """Loads the NetCDF file and sets the reference time and time units. Called during initialization."""
         if Dataset is None:
             raise ModuleNotFoundError('netCDF4 is not installed')
         self.reference_time, self.time_units = nc_time_series_reference_time(self.fpath)
 
     def timesteps(self, dtype: str) -> list[TimeLike]:
+        # docstring inherited
         if dtype == 'absolute':
             if self.time_units == 'h':
                 return [self.reference_time + timedelta(hours=x) for x in self._timesteps()]
