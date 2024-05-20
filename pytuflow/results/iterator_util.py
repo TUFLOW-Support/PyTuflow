@@ -8,6 +8,7 @@ import pandas as pd
 from .abc.channels import Channels
 from .abc.nodes import Nodes
 from .abc.time_series_result_item import TimeSeriesResultItem
+from pytuflow.tmf.tmf.tuflow_model_files.dataclasses.case_insensitive_dict import CaseInsDict
 
 
 @dataclass
@@ -441,6 +442,8 @@ class Iterator:
                     a = result_item.result_types(None)
 
         # correct result type case if available else return None
+        if valid_rts:
+            valid_rts = CaseInsDict(valid_rts)
         result_types_ = []
         for rt in result_types:
             if rt.lower() in [x.lower() for x in a]:

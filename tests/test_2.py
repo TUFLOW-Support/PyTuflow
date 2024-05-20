@@ -492,7 +492,7 @@ class Test_GPKG_TS_2023(TestCase):
     def test_long_plot(self):
         p = './tests/2023/M06_5m_003_SWMM_swmm_ts.gpkg'
         res = GPKG_TS(p)
-        df = res.long_plot('pipe1', ['bed level', 'water level'], 1)
+        df = res.long_plot('pipe1', ['Bed Level', 'water level'], 1)
         self.assertEqual((10, 5), df.shape)
 
     def test_long_plot2(self):
