@@ -1,4 +1,5 @@
 class GPKGBase:
+    """Base class for all GPKG classes. Handles i/o and database connections."""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

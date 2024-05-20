@@ -34,5 +34,14 @@ from .info.info_channels import InfoChannels
 from .info.info_nodes import InfoNodes
 from .info.info_maximums import InfoMaximums
 
+# GPKG TS
 from .gpkg_ts.gpkg_ts import GPKG_TS
+from .gpkg_ts.gpkg_time_series_result_item import GPKGResultItem
+from .gpkg_ts.gpkg_time_series import GPKGTimeSeries
+from .gpkg_ts.gpkg_channels import GPKGChannels
+from .gpkg_ts.gpkg_nodes import GPKGNodes
+from .gpkg_ts.gpkg_maximums import GPKGMaximums
+from .gpkg_ts.gpkg_ts_utils import GPKG_TSResultUtil
+from .gpkg_ts.gpkg_ts_base import GPKGBase
+
 from .fm.fm import FM_TS

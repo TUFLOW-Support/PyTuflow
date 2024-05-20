@@ -41,3 +41,10 @@ please see the :doc:`results` page.
     results.InfoChannels
     results.InfoNodes
     results.InfoMaximums
+    results.GPKGResultItem
+    results.GPKGTimeSeries
+    results.GPKGChannels
+    results.GPKGNodes
+    results.GPKGMaximums
+    results.GPKG_TSResultUtil
+    results.GPKGBase

@@ -159,12 +159,12 @@ class TimeSeriesResult(ABC):
 
         Parameters
         ----------
-        result_type : Union[str, list[str]]
+        result_type : Union[str, list[str]], optional
             The result type can be a single value or a list of values. The result type can be the full name as
             returned by :meth:`result_types() <pytuflow.results.TPC.result_types>` (not case sensitivte) or a
             well known short name e.g. 'q', 'v', 'h' etc.  If no result type is provided, all result types will be
             searched (within the provided domain).
-        domain : str
+        domain : str, optional
             Domain can be '1d', '2d', or '0d'. A secondary domain option can also be added to the domain string using a
             space to further limit the IDs. Secondary domain options are 'node', 'channel', 'po', 'rl', 'boundary', or
             'cross_section'. If no domain is provided, all domains will be searched.

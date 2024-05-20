@@ -14,8 +14,19 @@ if TYPE_CHECKING:
 
 
 class GPKGMaximums(GPKGBase, Maximums):
+    """Class for handling GeoPackage time series Maximums."""
 
     def __init__(self, fpath: PathLike, layer_name: str, result_item: 'GPKGResultItem') -> None:
+        """
+        Parameters
+        ----------
+        fpath : PathLike
+            Path to the GeoPackage file.
+        layer_name : str
+            Name of the layer in the GeoPackage.
+        result_item : GPKGResultItem
+            Result item to get maximums from.
+        """
         super(GPKGMaximums, self).__init__(fpath)
         self.fpath = Path(fpath)
         self.result_items = OrderedDict({})
@@ -27,6 +38,7 @@ class GPKGMaximums(GPKGBase, Maximums):
         self._df = None
 
     def append(self, layer_name: str, result_item: 'GPKGResultItem') -> None:
+        # docstring inherited
         self.result_items[layer_name] = result_item
 
     @property

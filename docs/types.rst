@@ -14,3 +14,4 @@ Custom types available in the :code:`pytuflow` library.
    types.PathLike
    types.TimeLike
    types.CaseInsDict
+   types.TuflowPath

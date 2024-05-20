@@ -14,8 +14,19 @@ if TYPE_CHECKING:
 
 
 class GPKGTimeSeries(GPKGBase, TimeSeries):
+    """Class to handle individual GPKG result time series data. e.g. Flow."""
 
     def __init__(self, fpath: PathLike, id: str, parent: 'GPKGResultItem') -> None:
+        """
+        Parameters
+        ----------
+        fpath : PathLike
+            Path to the GeoPackage file.
+        id : str
+            ID of the result type.
+        parent : GPKGResultItem
+            Parent object. e.g. GPKGNodes, GPKGChannels.
+        """
         super(GPKGTimeSeries, self).__init__()
         self.fpath = Path(fpath)
         self._df = None
@@ -30,9 +41,11 @@ class GPKGTimeSeries(GPKGBase, TimeSeries):
         return '<GPKG TS Time Series>'
 
     def load(self) -> None:
+        # docstring inherited
         pass
 
     def timesteps(self, dtype: str) -> list[TimeLike]:
+        # docstring inherited
         if self._timesteps_rel is None:
             try:
                 self._open_db()

@@ -9,8 +9,17 @@ from ..abc.time_series_result_item import TimeSeriesResultItem
 
 
 class GPKGResultItem(GPKGBase, TimeSeriesResultItem):
+    """Base class for GPKG time series result items Channels, Nodes, etc."""
 
     def __init__(self, fpath: PathLike, layer_name: str) -> None:
+        """
+        Parameters
+        ----------
+        fpath : PathLike
+            Path to the GeoPackage file.
+        layer_name : str
+            Name of the layer in the GeoPackage file.
+        """
         self._df = None
         self._layer_name = layer_name
 
@@ -24,9 +33,11 @@ class GPKGResultItem(GPKGBase, TimeSeriesResultItem):
         super(GPKGResultItem, self).__init__(fpath)
 
     def load_time_series(self, name: str, id: str):
+        # docstring inherited
         self.time_series[name] = GPKGTimeSeries(self.fpath, id, self)
 
     def count(self) -> int:
+        # docstring inherited
         if self._count is None:
             try:
                 self._open_db()
@@ -45,6 +56,7 @@ class GPKGResultItem(GPKGBase, TimeSeriesResultItem):
         return self._count
 
     def ids(self, result_type: Union[str, None]) -> list[str]:
+        # docstring inherited
         if self._ids is None:
             try:
                 self._open_db()
@@ -61,6 +73,7 @@ class GPKGResultItem(GPKGBase, TimeSeriesResultItem):
         return self._ids
 
     def result_types(self, id: Union[str, None]) -> list[str]:
+        # docstring inherited
         if self._result_types is None:
             try:
                 self._open_db()
@@ -79,6 +92,7 @@ class GPKGResultItem(GPKGBase, TimeSeriesResultItem):
         return self._result_types
 
     def timesteps(self, dtype: str) -> list[TimeLike]:
+        # docstring inherited
         if not self.time_series:
             return []
 

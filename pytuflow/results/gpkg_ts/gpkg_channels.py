@@ -16,6 +16,7 @@ RESULT_SHORT_NAME = {'h': 'water level', 'q': 'flow', 'v': 'velocity', 'vel': 'v
 
 
 class GPKGChannels(GPKGResultItem, Channels):
+    """Class for handling GeoPackage time series Channels."""
 
     def __repr__(self) -> str:
         if hasattr(self, 'fpath'):
@@ -23,6 +24,7 @@ class GPKGChannels(GPKGResultItem, Channels):
         return '<GPKG TS Channel>'
 
     def load(self) -> None:
+        # docstring inherited
         pass
 
     @property
@@ -76,4 +78,5 @@ class GPKGChannels(GPKGResultItem, Channels):
 
 
     def conv_result_type_name(self, result_type: str) -> str:
+        # docstring inherited
         return RESULT_SHORT_NAME.get(result_type.lower(), result_type.lower())

@@ -13,6 +13,7 @@ RESULT_SHORT_NAME = {'h': 'water level', 'q': 'total inflow', 'v': 'velocity', '
 
 
 class GPKGNodes(GPKGResultItem, Nodes):
+    """Class for handling GeoPackage time series node results."""
 
     def __repr__(self) -> str:
         if hasattr(self, 'fpath'):
@@ -20,9 +21,11 @@ class GPKGNodes(GPKGResultItem, Nodes):
         return '<GPKG TS Node>'
 
     def load(self) -> None:
+        # docstring inherited
         pass
 
     def long_plot_result_types(self) -> list[str]:
+        # docstring inherited
         result_types = ['Bed Level', 'Pit Level', 'Pipes'] + self.result_types(None)
         if self.maximums is not None and self.maximums.df is not None:
             maxes = [x for x in self.maximums.df.columns if 'TMax' not in x]
@@ -68,4 +71,5 @@ class GPKGNodes(GPKGResultItem, Nodes):
         return
 
     def conv_result_type_name(self, result_type: str) -> str:
+        # docstring inherited
         return RESULT_SHORT_NAME.get(result_type.lower(), result_type.lower())

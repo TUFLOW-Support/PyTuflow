@@ -2,7 +2,7 @@ import re
 from datetime import datetime
 from pathlib import Path
 from typing import Any
-from pytuflow.types import PathLike
+from pytuflow.types import PathLike, TuflowPath
 
 import pandas as pd
 
@@ -47,6 +47,16 @@ class TPC(TimeSeriesResult):
         self.rl = None
         #: int: The format version of the TPC file.
         self.format_version = -1
+        #: str: The storage format of the results. Options are 'CSV' or 'NC'
+        self.storage_format = None
+        #: Path: The path to the NetCDF file if the storage format is 'NC'
+        self.nc = None
+        #: TuflowPath: The path to the GIS point layer.
+        self.gis_point_layer = None
+        #: TuflowPath: The path to the GIS line layer.
+        self.gis_line_layer = None
+        #: TuflowPath: The path to the GIS region layer.
+        self.gis_region_layer = None
 
         super().__init__(fpath)
 
@@ -114,9 +124,18 @@ class TPC(TimeSeriesResult):
             self.nc = self.fpath.parent / self._get_property('NetCDF Time Series')
         self.reference_time = self._get_reference_time()
 
+        self.gis_point_layer = self._gis_path(self._get_property('GIS Plot Layer Points'))
+        self.gis_line_layer = self._gis_path(self._get_property('GIS Plot Layer Lines'))
+        self.gis_region_layer = self._gis_path(self._get_property('GIS Plot Layer Regions'))
+
         self._load_1d_results()
         self._load_po_results()
         self._load_rl_results()
+
+    def _gis_path(self, relref: str) -> TuflowPath:
+        if relref not in ['NONE', None]:
+            return (TuflowPath(self.fpath.parent) / relref).resolve()
+
 
     def _get_property(self, name: str, default: any = None) -> Any:
         try:

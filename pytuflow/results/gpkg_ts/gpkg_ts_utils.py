@@ -5,8 +5,10 @@ from ..result_util import ResultUtil
 
 
 class GPKG_TSResultUtil(ResultUtil):
+    """GPKG time series result Utility class for helping extract data from GPKG results."""
 
     def extract_culvert_obvert(self, inp_df: pd.DataFrame) -> list[float]:
+        # docstring inherited
         y = []
         for row in inp_df.iterrows():
             y.append(row[1]['LBUS Obvert'])
@@ -14,6 +16,7 @@ class GPKG_TSResultUtil(ResultUtil):
         return y
 
     def extract_pit_levels(self, inp_df: pd.DataFrame) -> list[float]:
+        # docstring inherited
         y = []
         for i, row in enumerate(inp_df.iterrows()):
             us_node = row[1]['US Node']
