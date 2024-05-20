@@ -9,9 +9,14 @@ from .info_time_series_result_item import InfoResultItem
 
 
 class Info(TPC):
+    """Class for reading TUFLOW info time series results (.info). These are text files with a '.info' extension
+    (not '.2dm.info') that are output by the 2013 TUFLOW release. The format is similar to the TPC format, however
+    does not include 2D or RL results.
+    """
 
     @staticmethod
     def looks_like_self(fpath: Path) -> bool:
+        # docstring inherited
         if fpath.suffix.upper() != '.INFO':
             return False
         try:
@@ -24,6 +29,7 @@ class Info(TPC):
         return True
 
     def looks_empty(self, fpath: Path) -> bool:
+        # docstring inherited
         TARGET_LINE_COUNT = 10  # fairly arbitrary
         try:
             df = pd.read_csv(self.fpath, sep=' == ', engine='python', header=None)

@@ -27,7 +27,7 @@ NC_MAP = {'1d channel losses': '1d losses', '1d node regime': '1d node flow regi
 
 
 class TPC(TimeSeriesResult):
-    """Class to handle TUFLOW Time Series result file (.TPC)."""
+    """Class to handle the standard TUFLOW Time Series result file (.tpc)."""
 
     def __init__(self, fpath: PathLike) -> None:
         """

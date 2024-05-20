@@ -28,6 +28,12 @@ from .tpc.tpc_maximums_po import TPCMaximumsPO
 from .tpc.tpc_utils import TPCResultUtil
 from .tpc.node_csv_parser import parse_node_csv
 
+# INFO
 from .info.info import Info
+from .info.info_time_series_result_item import InfoResultItem
+from .info.info_channels import InfoChannels
+from .info.info_nodes import InfoNodes
+from .info.info_maximums import InfoMaximums
+
 from .gpkg_ts.gpkg_ts import GPKG_TS
 from .fm.fm import FM_TS

@@ -3,6 +3,7 @@ from .info_time_series_result_item import InfoResultItem
 
 
 class InfoChannels(TPCChannels, InfoResultItem):
+    """Info Channel class."""
 
     def __repr__(self) -> str:
         if hasattr(self, 'fpath'):
