@@ -3,7 +3,7 @@ import pandas as pd
 
 from .hyd_tables_time_series import HydTableTimeSeries
 from ..abc.time_series_result_item import TimeSeriesResultItem
-from ..misc_tools import make_one_dim
+from pytuflow.util.misc_tools import flatten
 
 
 class HydTableResultItem(TimeSeriesResultItem):
@@ -16,10 +16,10 @@ class HydTableResultItem(TimeSeriesResultItem):
         index_name = self.time_series[result_type].index_name
         ind_df = self.time_series[result_type].index[id].rename(columns={x: f'{x}::index' for x in id})
         df = pd.concat([ind_df, df], axis=1)
-        df = df[make_one_dim([[f'{x}::index', x] for x in id])]  # correct column order
+        df = df[flatten([[f'{x}::index', x] for x in id])]  # correct column order
         index_alias = [(self.name, result_type, x, 'Index', index_name) for x in id]
         col_alias = [(self.name, result_type, x, 'Value', '') for x in id]
-        df.columns = pd.MultiIndex.from_tuples(make_one_dim((zip(index_alias, col_alias))), names=levels)
+        df.columns = pd.MultiIndex.from_tuples(flatten((zip(index_alias, col_alias))), names=levels)
         return df
 
     def _in_col_names(self, name: str, col_names: list[str]) -> str:

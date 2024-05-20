@@ -15,12 +15,19 @@ class LP_1D:
         self._static_types = []
         self._temp_types = []
         self._utils = ResultUtil(channels, nodes)
+        self._columns = ['US Node', 'DS Node', 'Flags', 'Length', 'US Invert', 'DS Invert', 'LBUS Obvert',
+                         'LBDS Obvert']
+        #: :doc:`Channels <pytuflow.results.Channels>`: Channels object
         self.channels = channels
+        #: :doc:`Nodes <pytuflow.results.Nodes>`: Nodes object
         self.nodes = nodes
+        #: list[str]: List of channel IDs
         self.ids = ids
-        self.columns = ['US Node', 'DS Node', 'Flags', 'Length', 'US Invert', 'DS Invert', 'LBUS Obvert', 'LBDS Obvert']
-        self.df = pd.DataFrame([], columns=['Channel'] + self.columns + ['Branch ID'])
+        #: pd.DataFrame: DataFrame to store the long profile data
+        self.df = pd.DataFrame([], columns=['Channel'] + self._columns + ['Branch ID'])
+        #: pd.DataFrame: DataFrame to store the static data
         self.df_static = pd.DataFrame([], columns=['Offset'])
+        #: pd.DataFrame: DataFrame to store the temporal data
         self.df_temp = pd.DataFrame([])
 
     def __repr__(self) -> str:
@@ -32,10 +39,8 @@ class LP_1D:
         return sorted([x.lower() for x in self.ids]) == sorted([x.lower() for x in other.ids])
 
     def connectivity(self) -> None:
-        """
-        Calculate connectivity between channels.
-
-        More than one ID is allowed, but all channels must connect to a common downstream channel.
+        """Calculate connectivity between channels. More than one ID is allowed, but all channels
+        must connect to a common downstream channel.
         """
         branches = []
         if len(self.ids) == 1:
@@ -68,10 +73,10 @@ class LP_1D:
                     branches.extend(conn.branches)
 
         # merge branches
-        df = pd.DataFrame([], columns=['Channel'] + self.columns + ['Branch ID'])
+        df = pd.DataFrame([], columns=['Channel'] + self._columns + ['Branch ID'])
         df['Branch ID'] = df['Branch ID'].astype(int)
         for i, branch in enumerate(branches):
-            df_ = self.channels.df.loc[branch, self.columns]
+            df_ = self.channels.df.loc[branch, self._columns]
             df_['Branch ID'] = [i for _ in range(df_.shape[0])]
             df_.reset_index(inplace=True)
             df = pd.concat([df, df_], ignore_index=True, axis=0) if not df.empty else df_
@@ -79,15 +84,21 @@ class LP_1D:
         self.df = df
 
     def long_plot(self, result_type: list[str], timestep_index: int) -> pd.DataFrame:
-        """
-        Generate a long plot for the given result types and timestep index.
+        """Generate a long plot for the given result types and timestep index.
         Returns a DataFrame with the connected channel IDs, node IDs, offsets and requested result types.
 
-        :param result_type:
+        Parameters
+        ----------
+        result_type : list[str]
             List of result types to plot
             Result types can be static, temporal or maximum values
-        :param timestep_index:
+        timestep_index : int
             Time-step index to plot. Must be valid.
+
+        Returns
+        -------
+        pd.DataFrame
+            Long plot results.
         """
         # work out different result types
         _, static_types = self.extract_static_results(result_type)
@@ -100,13 +111,19 @@ class LP_1D:
         return pd.concat([df, self.max_data(max_types)], axis=1)
 
     def static_data(self, result_types: list[str] = ()) -> pd.DataFrame:
-        """
-        Routine to extract static data (excluding maximums).
+        """Routine to extract static data (excluding maximums).
         Returns a DataFrame with the connected channel IDs, node IDs, offsets and requested result types.
         Can be called with an empty result_type list to return the channel IDs, node IDs and offsets only.
 
-        :param result_types:
+        Parameters
+        ----------
+        result_types : list[str]
             Static result types (excluding maximums) that should be returned
+
+        Returns
+        -------
+        pd.DataFrame
+            Static long plot data.
         """
         if self.df.empty:
             raise ValueError('Connectivity must be calculated before static data, or connection between ids not found')
@@ -162,14 +179,20 @@ class LP_1D:
         return self.df_static
 
     def temporal_data(self, result_types: list[str], timestep_index: int) -> pd.DataFrame:
-        """
-        Routine to extract temporal data at the given timestep index.
+        """Routine to extract temporal data at the given timestep index.
         Returns a DataFrame with the extracted data, however does not include static data such as offsets or channel ID.
 
-        :param result_types:
+        Parameters
+        ----------
+        result_types : list[str]
             List of temporal result types to extract
-        :param timestep_index:
+        timestep_index : int
             Time-step index to extract. Must be valid.
+
+        Returns
+        -------
+        pd.DataFrame
+            Temporal long plot data.
         """
         if self.df.empty:
             raise ValueError('Connectivity must be calculated before static data, or connection between ids not found')
@@ -199,12 +222,18 @@ class LP_1D:
         return df.reset_index(drop=True)
 
     def max_data(self, result_types: list[str]) -> pd.DataFrame:
-        """
-        Routine to extract maximum data.
+        """Routine to extract maximum data.
         Returns a DataFrame with the extracted data, however does not include static data such as offsets or channel ID.
 
-        :param result_types:
+        Parameters
+        ----------
+        result_types : list[str]
             List of maximum result types to extract
+
+        Returns
+        -------
+        pd.DataFrame
+            Maximum long plot data.
         """
         if self.df.empty:
             raise ValueError('Connectivity must be calculated before static data, or connection between ids not found')
@@ -224,13 +253,19 @@ class LP_1D:
 
     @staticmethod
     def extract_static_results(result_types: list[str]) -> tuple[list[str], list[str]]:
-        """
-        Extract static result types from the given list.
+        """Extract static result types from the given list.
         Returns two lists, one with the original list of result types (but only the static types), and the
         other is a list of the static types but with corrected names.
 
-        :param result_types:
+        Parameters
+        ----------
+        result_types : list[str]
             List of result types to extract static types from
+
+        Returns
+        -------
+        tuple[list[str], list[str]]
+            static result types - original names, corrected names
         """
         STATIC_TYPE_KEYWORDS = ['bed', 'pit', 'pipe']
         STATIC_TYPES = ['Bed Level', 'Pit Ground Elevation', 'Pipe Obvert']
@@ -243,16 +278,20 @@ class Connectivity:
     """Class to help calculate connectivity between channels."""
 
     def __init__(self, channels: 'Channels', id1: str, id2: Union[str, None]) -> None:
+        #: :doc:`Channels <pytuflow.results.Channels>`: Channels object
         self.channels = channels
+        #: str: Upstream channel ID
         self.id1 = id1
+        #: str: Downstream channel ID
         self.id2 = id2
+        #: list[list[str]]: List of branches
         self.branches = []
+        #: bool: True if connected
         self.connected = False
         self.connect()
 
     def connect(self) -> None:
-        """
-        Calculate connectivity between channels given two IDS.
+        """Calculate connectivity between channels given two IDS.
         If id2 is None, then connectivity will be calculated all the way to the outlet.
         """
         connected = self._connect(self.id1, self.id2, [])
@@ -268,8 +307,7 @@ class Connectivity:
             self.id1, self.id2 = id1, id2
 
     def _connect(self, id1: str, id2: Union[str, None], branch: list[str]) -> bool:
-        """
-        Private routine to calculate connectivity between 2 channels. Uses binary tree type search so that
+        """Private routine to calculate connectivity between 2 channels. Uses binary tree type search so that
         multiple branches can be found/searched.
         Returns True/False depending on whether a connection was found.
 

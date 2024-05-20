@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import Union
-from ..types import PathLike, TimeLike
+from pytuflow.types import PathLike, TimeLike
 
 from .gpkg_time_series import GPKGTimeSeries
 from .gpkg_ts_base import GPKGBase

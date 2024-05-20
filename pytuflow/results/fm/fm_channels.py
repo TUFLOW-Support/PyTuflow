@@ -7,7 +7,7 @@ from .gxy import GXY
 from ..abc.channels import Channels
 from .fm_time_series_result_item import FMResultItem
 from .dat import Dat
-from ..types import PathLike
+from pytuflow.types import PathLike
 
 
 class FMChannels(FMResultItem, Channels):

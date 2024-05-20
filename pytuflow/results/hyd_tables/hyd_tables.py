@@ -10,7 +10,7 @@ from .hyd_tables_cross_sections import HydTableCrossSection
 from .hyd_tables_channels import HydTableChannels
 from ..abc.time_series_result import TimeSeriesResult
 from ..iterator_util import Iterator
-from ..types import PathLike, TimeLike
+from pytuflow.types import PathLike, TimeLike
 
 
 class HydTables(TimeSeriesResult):

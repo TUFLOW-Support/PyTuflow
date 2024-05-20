@@ -2,7 +2,7 @@ import pandas as pd
 
 from .boudary_type import BoundaryType
 from ..abc.time_series import TimeSeries
-from ..types import TimeLike
+from pytuflow.types import TimeLike
 
 
 class BCTablesTimeSeries(TimeSeries):

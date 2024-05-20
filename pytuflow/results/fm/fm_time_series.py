@@ -4,7 +4,7 @@ from typing import Union
 import pandas as pd
 
 from ..abc.time_series import TimeSeries
-from ..types import TimeLike
+from pytuflow.types import TimeLike
 
 
 class FMTimeSeries(TimeSeries):

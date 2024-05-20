@@ -1,16 +1,16 @@
 from datetime import datetime
 from pathlib import Path
 from typing import Union
-from ..types import PathLike
+from pytuflow.types import PathLike
 from abc import ABC, abstractmethod
 
 import numpy as np
 import pandas as pd
 
 from ..lp_1d import LP_1D
-from ..time_util import closest_time_index
+from pytuflow.util.time_util import closest_time_index
 from ..iterator_util import Iterator
-from ..types import TimeLike
+from pytuflow.types import TimeLike
 
 
 class TimeSeriesResult(ABC):
@@ -59,7 +59,15 @@ class TimeSeriesResult(ABC):
     def looks_like_self(fpath: Path) -> bool:
         """Return True if the file looks like this class.
 
-        :meta private:
+        Parameters
+        ----------
+        fpath : Path
+            The file path to check.
+
+        Returns
+        -------
+        bool
+            True if the file looks like this class.
         """
         raise NotImplementedError
 
@@ -67,22 +75,31 @@ class TimeSeriesResult(ABC):
     def looks_empty(self, fpath: Path) -> bool:
         """Return True if the file looks empty.
 
-        :meta private:
+        Parameters
+        ----------
+        fpath : Path
+            The file path to check.
+
+        Returns
+        -------
+        bool
+            True if the file looks empty.
         """
         raise NotImplementedError
 
     @abstractmethod
     def load(self, *args, **kwargs) -> None:
-        """Loads the file.
-
-        :meta private:
-        """
+        """Loads the file. Automatically called on initialisation."""
         raise NotImplementedError
 
     def init_iterator(self, *args) -> Iterator:
-        """Initialise the class iterator.
+        """Initialise the result iterator class. The iterator is used to extract results given a set of IDs,
+        result types, and domain.
 
-        :meta private:
+        Returns
+        -------
+        Iterator
+            Generator class for extracting results.
         """
         if args:
             return Iterator(*args)

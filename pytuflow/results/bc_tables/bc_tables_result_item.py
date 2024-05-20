@@ -7,8 +7,8 @@ import pandas as pd
 from .bc_tables_time_series import BCTablesTimeSeries
 from .boudary_type import BoundaryType
 from ..abc.time_series_result_item import TimeSeriesResultItem
-from ..misc_tools import make_one_dim
-from ..types import PathLike
+from pytuflow.util.misc_tools import flatten
+from pytuflow.types import PathLike
 
 
 class BCTablesResultItem(TimeSeriesResultItem):
@@ -106,8 +106,8 @@ class BCTablesResultItem(TimeSeriesResultItem):
             df_ = pd.DataFrame(bndry.values[:,0], columns=[f'{id_}::index'])
             df_idx = pd.concat([df_idx, df_], axis=1)
         df = pd.concat([df_idx, df], axis=1)
-        df = df[make_one_dim([[f'{x}::index', x] for x in id])]  # correct column order
+        df = df[flatten([[f'{x}::index', x] for x in id])]  # correct column order
         index_alias = [(self.name, result_type, x, 'Index', idx) for x, idx in zip(id, index_names)]
         col_alias = [(self.name, result_type, x, 'Value', '') for x in id]
-        df.columns = pd.MultiIndex.from_tuples(make_one_dim((zip(index_alias, col_alias))), names=levels)
+        df.columns = pd.MultiIndex.from_tuples(flatten((zip(index_alias, col_alias))), names=levels)
         return df

@@ -10,8 +10,10 @@ if TYPE_CHECKING:
 
 
 class TPCResultUtil(ResultUtil):
+    """TPC Result Utility class for helping extract data from TPC results."""
 
     def extract_culvert_obvert(self, inp_df: pd.DataFrame) -> list[float]:
+        # inherited docstring
         y = []
         for row in inp_df.iterrows():
             us_inv = row[1]['US Invert']
@@ -27,6 +29,7 @@ class TPCResultUtil(ResultUtil):
         return y
 
     def extract_pit_levels(self, inp_df: pd.DataFrame) -> list[float]:
+        # inherited docstring
         y = []
         for i, row in enumerate(inp_df.iterrows()):
             pits = self.channels.connected_pit_channels(row[1]['US Node'])

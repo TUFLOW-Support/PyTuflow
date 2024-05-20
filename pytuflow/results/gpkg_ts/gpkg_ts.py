@@ -1,13 +1,13 @@
 import re
 from datetime import datetime
 from pathlib import Path
-from ..types import PathLike
+from pytuflow.types import PathLike
 
 from .gpkg_nodes import GPKGNodes
 from .gpkg_channels import GPKGChannels
 from .gpkg_ts_base import GPKGBase
 from ..abc.time_series_result import TimeSeriesResult
-from ..time_util import gpkg_time_series_reference_time
+from pytuflow.util.time_util import gpkg_time_series_reference_time
 
 
 class GPKG_TS(GPKGBase, TimeSeriesResult):

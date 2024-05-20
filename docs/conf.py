@@ -50,7 +50,7 @@ def skip_member(app: Sphinx, what: str, name: str, obj, skip, options):
         'looks_empty',
         'looks_like_self',
     ]
-    return name in skip_methods
+    return False
 
 def setup(app: Sphinx):
     app.connect(event='autodoc-skip-member', callback=skip_member)

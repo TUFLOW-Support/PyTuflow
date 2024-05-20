@@ -5,6 +5,7 @@ from ..abc.time_series_result_item import TimeSeriesResultItem
 
 
 class TPCMaximumsPO(Maximums):
+    """TPC Maximums for the PO results."""
 
     def __init__(self, result_item: TimeSeriesResultItem) -> None:
         self._df = None

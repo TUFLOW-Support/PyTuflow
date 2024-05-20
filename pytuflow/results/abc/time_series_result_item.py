@@ -5,8 +5,8 @@ from abc import ABC, abstractmethod
 
 import numpy as np
 
-from ..misc_tools import make_one_dim
-from ..types import PathLike, TimeLike
+from pytuflow.util.misc_tools import flatten
+from pytuflow.types import PathLike, TimeLike
 
 import pandas as pd
 
@@ -267,10 +267,10 @@ class TimeSeriesResultItem(ABC):
                           id: list[str],
                           levels: list[str]) -> pd.DataFrame:
         index_name = self.time_series[result_type].df.index.name
-        df = df[make_one_dim([[index_name, x] for x in id])]  # add the index col in-front of every value col
+        df = df[flatten([[index_name, x] for x in id])]  # add the index col in-front of every value col
         index_alias = [(self.name, result_type, x, 'Index', index_name) for x in id]
         col_alias = [(self.name, result_type, x, 'Value', '') for x in id]
-        df.columns = pd.MultiIndex.from_tuples(make_one_dim((zip(index_alias, col_alias))), names=levels)
+        df.columns = pd.MultiIndex.from_tuples(flatten((zip(index_alias, col_alias))), names=levels)
         return df
 
     @abstractmethod

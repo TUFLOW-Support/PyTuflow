@@ -6,7 +6,7 @@ from collections import OrderedDict
 
 import pandas as pd
 
-from ..types import PathLike, TimeLike
+from pytuflow.types import PathLike, TimeLike
 
 from .fm_channels import FMChannels
 from .fm_nodes import FMNodes
@@ -14,7 +14,7 @@ from .fm_res_driver import FM_ResultDriver
 from .gxy import GXY
 from .dat import Dat
 from ..abc.time_series_result import TimeSeriesResult
-from ..time_util import default_reference_time, closest_time_index
+from pytuflow.util.time_util import default_reference_time, closest_time_index
 
 
 class FM_TS(TimeSeriesResult):

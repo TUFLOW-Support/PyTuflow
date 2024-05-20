@@ -4,7 +4,7 @@ from pathlib import Path
 
 import numpy as np
 
-from ..types import PathLike, TimeLike
+from pytuflow.types import PathLike, TimeLike
 
 import pandas as pd
 
@@ -14,7 +14,7 @@ except ImportError:
     Dataset = None
 
 from ..abc.time_series import TimeSeries
-from ..time_util import nc_time_series_reference_time
+from pytuflow.util.time_util import nc_time_series_reference_time
 
 
 ID = {'flows_1d': 'flow_1d'}

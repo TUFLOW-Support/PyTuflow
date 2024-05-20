@@ -8,6 +8,7 @@ class Maximums(ABC):
     """Abstract base class for maximums."""
 
     def __init__(self, *args, **kwargs):
+        #: pd.DataFrame: Dataframe containing maximum and time of maximum values.
         self.df = None
 
     def append(self, result_type: str, df: pd.DataFrame) -> None:

@@ -1,7 +1,7 @@
 from collections import OrderedDict
 from pathlib import Path
 from typing import TYPE_CHECKING
-from ..types import PathLike
+from pytuflow.types import PathLike
 
 import numpy as np
 import pandas as pd

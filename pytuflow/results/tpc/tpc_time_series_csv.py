@@ -2,7 +2,7 @@ import re
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Union
-from ..types import PathLike, TimeLike
+from pytuflow.types import PathLike, TimeLike
 
 import pandas as pd
 
@@ -10,12 +10,14 @@ from ..abc.time_series import TimeSeries
 
 
 class TPCTimeSeriesCSV(TimeSeries):
+    """TPC Time Series class for storing CSV format results."""
 
     def __init__(self, fpath: PathLike, reference_time: datetime, index_col: Union[str, int], loss_type: str = '') -> None:
         super().__init__()
         self._index_col = index_col
         self.fpath = Path(fpath)
         self.reference_time = reference_time
+        #: str: Loss type - can be one of 'Entry', 'Additional', or 'Exit' (default is '').
         self.loss_type = loss_type
         self.load()
 

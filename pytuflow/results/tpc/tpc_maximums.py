@@ -1,5 +1,5 @@
 from pathlib import Path
-from ..types import PathLike
+from pytuflow.types import PathLike
 
 import numpy as np
 import pandas as pd
@@ -12,9 +12,11 @@ COLUMN_MAP = {'Hmax': 'Water Level Max', 'Emax': 'Energy Max', 'Time Hmax': 'Wat
 
 
 class TPCMaximums(Maximums):
+    """TPC Maximums class."""
 
     def __init__(self, fpath: PathLike) -> None:
         super().__init__(fpath)
+        #: Path: Path to maximums file
         self.fpath = Path(fpath)
         self.load()
 

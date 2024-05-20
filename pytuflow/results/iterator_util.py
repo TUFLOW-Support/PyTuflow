@@ -12,50 +12,50 @@ from .abc.time_series_result_item import TimeSeriesResultItem
 
 @dataclass
 class Corrected:
-    """
-    Class for storing information on corrected IDs and result types.
+    """Class for storing information on corrected IDs and result types returned as part of a collection from the
+    :doc:`Iterator<pytuflow.results.Iterator>` class.
 
-    e.g.
-        id_orig = 'case-insensitive' name
-        id = 'Case Sensitive' name (corrected to match id case exactly)
-        result_type_orig = 'short name' or 'case-insensitive' name
-        result_type = 'Full Name' (corrected to match result type exactly)
-
-    :param id_orig: Original ID (case-insensitive)
-    :param result_type_orig: Original result type (case-insensitive)
-    :param result_item: Time series result item class (e.g. Nodes, Channels, PO, RL)
-    :param id: Corrected ID (case-sensitive)
-    :param result_type: Corrected result type (case-sensitive)
+    | e.g.
+    |    id_orig = 'case-insensitive' name
+    |    id = 'Case Sensitive' name (corrected to match id case exactly)
+    |    result_type_orig = 'short name' or 'case-insensitive' name
+    |    result_type = 'Full Name' (corrected to match result type exactly)
     """
+    #: str: Original ID (case-insensitive)
     id_orig: str
+    #: str: Short name or case-insensitive result type name
     result_type_orig: str
+    #: :doc:`TimeSeriesResultItem<pytuflow.results.TimeSeriesResultItem>`: Time series result item class (e.g. Nodes, Channels, PO, RL)
     result_item: TimeSeriesResultItem
+    #: str: Corrected ID (case-sensitive)
     id: str
+    #: str: Corrected result type (case-sensitive)
     result_type: str
 
     @property
     def valid(self) -> bool:
-        """Class is valid if a correct ID and result type have been found."""
+        """: bool: Class is valid if a correct ID and result type have been found."""
         return self.id is not None and self.result_type is not None
 
 
 @dataclass
 class IDResultTypeItem:
-    """
-    Class for storing information on a collection of corrected IDs and result types.
+    """Class for storing information on a collection of corrected IDs and result types.
 
-    The corrected items should be grouped by the same time series result items e.g.  ids and result types
+    The corrected items are grouped by the same time series result items e.g. IDs and result types
     contained in the Nodes class will be grouped into one IDResultTypeItem class.
-
-    :param: result_item_name: Name of the time series result item class (e.g. Nodes, Channels, PO, RL)
-    :param: correct: List of Corrected items
-    :param: remove_invalid: If True, remove invalid Corrected items (i.e. Corrected items where valid is False)
     """
+    #: str: Name of the time series result item class (e.g. Nodes)
     result_item_name: str
+    #: list[Corrected]: List of Corrected items
     correct: list[Corrected]
+    #: bool: If True, remove invalid Corrected items (i.e. Corrected items where valid is False)
     remove_invalid: bool
+    #: list[str]: List of corrected IDs
     ids: list[str] = field(init=False)
+    #: list[str]: List of corrected result types
     result_types: list[str] = field(init=False)
+    #: :doc:`TimeSeriesResultItem <pytuflow.results.TimeSeriesResultItem>`: Time series result item class (e.g. Nodes)
     result_item: TimeSeriesResultItem = field(init=False)
 
     def __post_init__(self) -> None:
@@ -81,48 +81,57 @@ class IDResultTypeItem:
 
     @property
     def valid(self) -> bool:
-        """Class is valid if there are any Corrected items."""
+        """: bool: Class is valid if there are any Corrected items."""
         return bool(self.correct)
 
 
 class ErrorMessage:
-    """
+    """Class to build error messages for the Iterator class. This class will check if the user has passed in something
+    incorrect (e.g. a channel ID that doesn't exist) and give a useful message.
+
     TODO: check if this is slow for a dataset with a lot of channels/nodes
     """
 
     def __init__(self, corr_items: list[Corrected], domain_2: str, user_comb: bool) -> None:
+        #: list[Corrected]: List of Corrected items
         self.corr_items = corr_items
+        #: str: subdomain name (e.g. 'node', 'channel', 'po', 'rl')
         self.domain_2 = domain_2
+        #: bool: If True, user has passed in a combination of both IDs and result types
         self.user_comb = user_comb
+        #: :doc:`IDResultTypeItem<pytuflow.results.IDResultTypeItem>`: copy of corrected items argument
         self.item = IDResultTypeItem('dummy', corr_items.copy(), True)
 
-        # original ids (maybe passed by user - could be wrong case)
+        #: list[str]: original ids (maybe passed by user - could be wrong case)
         self.oids = set([x.id_orig for x in corr_items])
-        # original result types (maybe passed by user - could be wrong case or short name e.g. 'h')
+        #: list[str]: original result types (maybe passed by user - could be wrong case or short name e.g. 'h')
         self.orts = set([x.result_type_orig for x in corr_items])
 
-        # valid original ids (they have been found and corrected, so the id does exist somewhere in the results)
+        #: list[str]: valid original ids (they have been found and corrected, so the id does exist somewhere in the results)
         self.valid_oids = set([x.id_orig for x in corr_items if x.id])
-        # valid original result types (they have been found and corrected, so
-        # the result type does exist somewhere in the results)
+        #: list[str]: valid original result types (they have been found and corrected, so the result type does exist somewhere in the results)
         self.valid_orts = set([x.result_type_orig for x in corr_items if x.result_type])
 
-        # unique ids (corrected) - if 'None' is in this set, that
-        # means an ID passed by the user does not exist in the results
+        #: list[str]: unique ids (corrected) - if 'None' is in this set, that means an ID passed by the user does not exist in the results
         self.uids = set([x.id for x in corr_items if x.id is not None or x.id_orig not in self.valid_oids])
-        # unique result types (corrected) - if 'None' is in this set, that means a
-        # result type passed by the user does not exist in the results
+        #: list[str]: unique result types (corrected) - if 'None' is in this set, that means a result type passed by the user does not exist in the results
         self.urts = set([x.result_type for x in corr_items if x.result_type is not None or x.result_type_orig not in self.valid_orts])
 
-        # if there is a valid id somewhere in the results
+        #: bool: if there is a valid id somewhere in the results
         self.valid_id_somewhere = any([x.id for x in corr_items])
-        # if there is a valid result type somewhere in the results
+        #: bool: if there is a valid result type somewhere in the results
         self.valid_rt_somewhere = any([x.result_type for x in corr_items])
 
-        # get the first corrected item that is not valid (or just return the first if nothing is found)
+        #: Corrected: get the first corrected item that is not valid (or just return the first if nothing is found)
         self.corr_item = self.get_corr_item()
 
-    def get_corr_item(self):
+    def get_corr_item(self) -> Corrected:
+        """Returns the first corrected item that is not valid.
+
+        Returns
+        -------
+        Corrected
+        """
         if not self.item.valid:
             if self.valid_id_somewhere and self.valid_rt_somewhere:
                 return next(x for x in self.corr_items if x.result_type)
@@ -135,10 +144,22 @@ class ErrorMessage:
         if self.corr_items:
             return self.corr_items[0]
 
-    def is_err(self):
+    def is_err(self) -> bool:
+        """Returns True if there is a user error in the corrected items.
+
+        Returns
+        -------
+        bool
+        """
         return self.corr_items and self.domain_2 and (not self.item.valid or None in self.uids or None in self.urts)
 
     def build_err_msg(self) -> str:
+        """Builds an error message for the user. Should only be called if is_err() returns True.
+
+        Returns
+        -------
+        str
+        """
         if self.corr_item is None:
             return 'No valid returns found in the given combination of IDs and result types.'  # shouldn't get here
         not_found_id, not_found_type = self.not_found()
@@ -152,6 +173,13 @@ class ErrorMessage:
         return f'{not_found_id} {against_type} {not_found_type}.'
 
     def not_found(self) -> tuple[str, str]:
+        """Returns the ID and result type that are not found in the results.
+
+        Returns
+        -------
+        tuple[str, str]
+            not_found_id, not_found_type
+        """
         if self.user_comb:
             if not self.valid_id_somewhere:
                 return f'"{self.corr_item.id_orig}"', 'ID'
@@ -164,6 +192,12 @@ class ErrorMessage:
         return None, None
 
     def against_type(self) -> str:
+        """Returns a string that describes the error.
+
+        Returns
+        -------
+        str
+        """
         if self.user_comb and self.corr_item.result_type and self.valid_id_somewhere:
             return f'does not have "{self.corr_item.result_type}" result type'
         if self.user_comb and self.valid_id_somewhere and not self.valid_rt_somewhere:
@@ -172,10 +206,8 @@ class ErrorMessage:
             return f'is not a valid {self.corr_item.result_item.name}'
 
 
-
 class Iterator:
-    """
-    Class for helping iterate over valid IDs and result type combinations. This class will also correct IDs and
+    """Class for helping iterate over valid IDs and result type combinations. This class will also correct IDs and
     result type names so that they match the expected case correctly and convert result type short names to full names.
 
     In a lot of instances in the TimeSeriesResult class, the arguments are IDs, result types, and domain. This class
@@ -184,17 +216,29 @@ class Iterator:
     """
 
     def __init__(self, *result_items: TimeSeriesResultItem) -> None:
-        """
-        Initialise with all available result items. e.g. Nodes, Channels, PO, RL
+        """Initialise with all available result items. e.g. Nodes, Channels, PO, RL
         List should only contain one instance of each type of result item class
         (e.g. shouldn't have 2 Node classes even if they contain unique data).
+
+        Parameters
+        ----------
+        *result_items : TimeSeriesResultItem
+            All available result items (e.g. Nodes, Channels, PO, RL)
         """
         self._result_items = [x for x in result_items if x]
 
     def raise_exception(self, corr_items: list[Corrected], domain_2: str, user_comb: bool = False) -> None:
-        """
-        Raises an exception with useful info if something is wrong
+        """Raises an exception with useful info if something is wrong
         e.g. wrong result type for a given  domain_2 ('level' for a 'channel')
+
+        Parameters
+        ----------
+        corr_items : list[Corrected]
+            List of Corrected items
+        domain_2 : str
+            subdomain name (e.g. 'node', 'channel', 'po', 'rl')
+        user_comb : bool, optional
+            If True, user has passed in a combination of both IDs and result types
         """
         err_msg = ErrorMessage(corr_items, domain_2, user_comb)
         if err_msg.is_err():
@@ -206,34 +250,26 @@ class Iterator:
                        domain: str,
                        type_: str,
                        ) -> Generator[IDResultTypeItem, None, None]:
-        """
-        Yields valid IDResultTypeItem class that contains valid ID and result type combinations for the given domain.
+        """Yields valid IDResultTypeItem class that contains valid ID and result type combinations for the given domain.
 
-        e.g.
-            input ids: ['node1', 'node2']
-            result_types = ['h']
-            domain = '1d'
-            type_ = 'temporal'
-
-            This will yield one IDResultTypeItem class that contains corrected IDs and result types contained within
-            the Node class (since all ids are nodes).
-            i.e.
-            yield IDResultTypeItem(
-                       result_item_name='Node', ids=['Node1', 'Node2'], result_types=['Water Level'], result_item=Nodes
-            )
-
-        :param ids:
+        Parameters
+        ----------
+        ids : Union[str, list[str]]
             Single ID value or list of IDs. IDs do not need to be case-sensitive.
             If no IDs are given, all available IDs will be used.
-        :param result_types:
+        result_types : Union[str, list[str]]
             Single result type name or list of result types. Result types do not need to be case-sensitive
             and can be short names.
             If no result types are given, all available result types will be used.
-        :param domain:
+        domain : str
             Can be '1d', '2d', '0d', or None. Can also include a space and a second domain e.g. '1d node'.
             If None, all domains will be used.
-        :param type_:
+        type_ : str
             Can be 'temporal', 'max'. If 'max' then the maximum result name and time of max name will be provided.
+
+        Yields
+        ------
+        IDResultTypeItem
         """
         # convert to lists
         if not isinstance(ids, list):
@@ -270,22 +306,23 @@ class Iterator:
                           ids: Union[str, list[str]],
                           result_types: Union[str, list[str]]
                           ) -> Generator[IDResultTypeItem, None, None]:
-        """
-        Yields valid IDResultTypeItem class that contains valid ID and result type combinations for the given domain.
-        Similar to id_result_type_comb(), but for long profile results where the ids are channels and the result types
+        """Yields valid IDResultTypeItem class that contains valid ID and result type combinations for the given domain.
+        Similar to id_result_type(), but for long profile results where the ids are channels and the result types
         are from node results.
 
-        Domain is not required as it is always '1d channel' for ids and '1d node' for result types.
-        type_ is also not required since it will deal with both temporal and max within this routine.
-        This class always only yields 1 IDResultTypeItem class since it is only extracting results from one domain.
-
-        :param ids:
+        Parameters
+        ----------
+        ids : Union[str, list[str]]
             Single ID value or list of IDs. IDs do not need to be case-sensitive.
             Require at least one ID.
-        :param result_types:
+        result_types : Union[str, list[str]]
             Single result type name or list of result types. Result types do not need to be case-sensitive
             and can be short names.
             If no result types are given, all available result types will be used.
+
+        Yields
+        ------
+        IDResultTypeItem
         """
         from .lp_1d import LP_1D  # import here to prevent circular import
 

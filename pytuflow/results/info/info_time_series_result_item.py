@@ -2,7 +2,7 @@ from datetime import datetime
 
 from .info_maximums import InfoMaximums
 from ..tpc.tpc_time_series_result_item import TPCResultItem
-from ..types import PathLike
+from pytuflow.types import PathLike
 
 
 class InfoResultItem(TPCResultItem):

@@ -2,7 +2,7 @@ import re
 from datetime import datetime
 from pathlib import Path
 from typing import Any
-from ..types import PathLike
+from pytuflow.types import PathLike
 
 import pandas as pd
 
@@ -18,7 +18,7 @@ from .tpc_channels import TPCChannels
 from .tpc_maximums import TPCMaximums
 from .tpc_po import TPCPO
 from .tpc_rl import TPCRL
-from ..time_util import default_reference_time, nc_time_series_reference_time
+from pytuflow.util.time_util import default_reference_time, nc_time_series_reference_time
 
 
 NAME_MAP = {'velocities': 'Velocity', 'energy levels': 'Energy'}
@@ -31,8 +31,10 @@ class TPC(TimeSeriesResult):
 
     def __init__(self, fpath: PathLike) -> None:
         """
-        :param fpath: Path to the TPC file.
-        :type fpath: str | Path
+        Parameters
+        ----------
+        fpath : PathLike
+            The path to the TPC file.
         """
         self._df = None
         #: :doc:`TPCChannels<pytuflow.results.TPCChannels>`: TPC Channels result class if 1D channels exist within the results

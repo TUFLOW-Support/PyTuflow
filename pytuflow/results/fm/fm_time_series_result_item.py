@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import Union
 
 from .fm_maximums import FMMaximums
-from ..types import PathLike
+from pytuflow.types import PathLike
 
 import pandas as pd
 

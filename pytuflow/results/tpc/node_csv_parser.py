@@ -1,14 +1,23 @@
 from pathlib import Path
-from ..types import PathLike
+from pytuflow.types import PathLike
 
 import numpy as np
 import pandas as pd
 
 
 def parse_node_csv(fpath: PathLike) -> pd.DataFrame:
-    """
-    Returns 1d_Node.csv as dataframe
-    - requires custom parsing due to last column which is a list of connected channels with same delim.
+    """Returns 1d_Node.csv as a DataFrame. Node CSV requires custom parsing due to last column
+    which is a list of connected channels with same delimiter.
+
+    Parameters
+    ----------
+    fpath : PathLike
+        Path to 1d_Node.csv file.
+
+    Returns
+    -------
+    pd.DataFrame
+        Node dataframe.
     """
     DTYPE_MAP = [int, str, float, float, int]
     p = Path(fpath)
