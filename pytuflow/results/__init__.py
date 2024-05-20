@@ -12,7 +12,6 @@ from .result_util import ResultUtil
 # common
 from .iterator_util import Iterator, Corrected, IDResultTypeItem, ErrorMessage
 from .lp_1d import LP_1D, Connectivity
-from pytuflow.util.misc_tools import flatten
 
 # TPC
 from .tpc.tpc import TPC

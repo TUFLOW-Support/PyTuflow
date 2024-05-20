@@ -103,7 +103,7 @@ def closest_time_index(
         method: str = 'previous',
         tol: float = 0.001
 ) -> int:
-    """Returns the index of the closest time in timesteps to time.
+    """Returns the index of the closest time in the provided timesteps.
     It will try and find any matching time within the given tolerance, otherwise will return the index of the
     previous or next time depending on the method.
 
@@ -113,10 +113,11 @@ def closest_time_index(
          List of time-steps as either float or datetime
     time : TimeLike
         Time to find the closest time-step to.
-    method: str
-        Method to use if no matching time-step is found within the tolerance. Options are 'previous', or 'next'.
-    tol : float
-        Tolerance to use when comparing the time-steps.
+    method: str, optional
+        Method to use if no matching time-step is found within the tolerance. Options are 'previous', or 'next'. The
+        default is 'previous'.
+    tol : float, optional
+        Tolerance to use when comparing the time-steps. Default is 0.001.
 
     Returns
     -------
