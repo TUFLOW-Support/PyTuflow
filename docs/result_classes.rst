@@ -57,3 +57,8 @@ please see the :doc:`results` page.
     results.FM_GuiCSVResult
     results.FM_PythonCSVResult
     results.FM_ZZNResult
+    results.HydTableResultItem
+    results.HydTableTimeSeries
+    results.HydTableChannels
+    results.HydTableCrossSection
+    results.CrossSectionEntry

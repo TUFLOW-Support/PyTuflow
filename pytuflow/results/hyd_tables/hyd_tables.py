@@ -14,15 +14,13 @@ from pytuflow.types import PathLike, TimeLike
 
 
 class HydTables(TimeSeriesResult):
-    """
-    1d_ta_tables_check.csv
-
-    Subclasses TimeSeriesResult so that it can be called using the same
-    methods.
-    """
+    """Class for handling 1d_ta_tables_check.csv"""
 
     def __init__(self, fpath: PathLike):
+        # docstring inherited
+        #: HydTableCrossSection: Cross-section data
         self.cross_sections = None
+        #: Path: Path to the .tcf file
         self.tcf = None
         self._cross_sections_finished = False
         self._channels_finished = False
@@ -35,7 +33,7 @@ class HydTables(TimeSeriesResult):
 
     @staticmethod
     def looks_like_self(fpath: Path) -> bool:
-        """Return True if the file looks like this class."""
+        # docstring inherited
         try:
             if not re.findall(r'_1d_ta_tables_check$', fpath.stem):
                 return False
@@ -48,7 +46,7 @@ class HydTables(TimeSeriesResult):
         return True
 
     def looks_empty(self, fpath: Path) -> bool:
-        """Return True if the file looks empty."""
+        # docstring inherited
         try:
             with fpath.open() as f:
                 for _ in range(3):
@@ -59,7 +57,8 @@ class HydTables(TimeSeriesResult):
             return True
         return False
 
-    def load(self):
+    def load(self) -> None:
+        # docstring inherited
         self.cross_sections = HydTableCrossSection()
         self.channels = HydTableChannels()
         self.sim_id = re.sub(r"_1d_ta_tables_check$", '', self.fpath.stem)
@@ -73,12 +72,13 @@ class HydTables(TimeSeriesResult):
             self.channels.load_time_series()
 
     def init_iterator(self, *args) -> Iterator:
-        """Initialise the class iterator."""
+        # docstring inherited
         if args:
             return Iterator(*args)
         return Iterator(self.cross_sections, self.channels)
 
     def result_types(self, id: Union[str, list[str]] = '', domain: str = '') -> list[str]:
+        # docstring inherited
         id = self._correct_id(id)  # need to convert cross-section names to their ids
         result_types = super().result_types(id, domain)
 
@@ -95,7 +95,9 @@ class HydTables(TimeSeriesResult):
         """
         Returns the cross-section ids for the given result type(s).
 
-        :param result_type:
+        Parameters
+        ----------
+        result_type : str or list[str], optional
             The result type can be a single value or a list of values and can be
             the name of the result type (case in-sensitive) or be a well known short name
             e.g. 'Flow' - 'q', 'Velocity' - 'v', etc.
@@ -104,8 +106,25 @@ class HydTables(TimeSeriesResult):
         if self.cross_sections:
             if not result_type:
                 return self.cross_sections.ids(None)
-            return self.ids(result_type, '1d cross_section')
+            return self.result_types(result_type, '1d cross_section')
         return []
+
+    def cross_section_result_types(self, id: Union[str, list[str]] = '') -> list[str]:
+        """Returns a list of the result types for the given cross-section ID(s).
+
+        cross_section_result_types() is equivalent to using '1d cross_section' as the domain in
+        :meth:`result_types() <pytuflow.results.TPC.result_types>`.
+
+        Parameters
+        ----------
+        id : Union[str, list[str]], optional
+            The ID value can be a single value or a list of values. The ID value(s) are case in-sensitive.
+
+        Returns
+        -------
+        list[str]
+            list of result types.
+        """
 
     def time_series(self,
                     id: Union[str, list[str]],
@@ -113,6 +132,45 @@ class HydTables(TimeSeriesResult):
                     domain: str = None,
                     use_common_index: bool = True
                     ) -> pd.DataFrame:
+        """:code:`time_series()` method acts as the plotting method for HydTables, although the plot types
+        are more similar to a call for plotting cross-sections than time series.
+
+        The extracted plot data can either be for :code:`cross-secitions` (domain = '1d cross_section') or
+        :code:`channels` (domain = '1d channel'). The available result types can be found using
+        :meth:`cross_section_result_types() <pyuflow.results.HydTables.cross_section_result_types>` and
+        :meth:`channel_result_types() <pytuflow.results.HydTables.channel_result_types>` respectively.
+
+        Parameters
+        ----------
+        id : Union[str, list[str]]
+            The ID value can be a single value or a list of values. The ID value(s) are case in-sensitive.
+            If no ID is provided, all IDs will be searched (within the provided domain).
+        result_type : Union[str, list[str]]
+            The result type can be a single value or a list of values. The result type can be the full name as
+            returned by :meth:`result_types() <pytuflow.results.TPC.result_types>` (not case sensitivte) or a
+            well known short name e.g. 'q', 'v', 'h' etc.  If no result type is provided, all result types will be
+            searched (within the provided domain).
+        domain : str, optional
+            Domain can be '1d', '2d', or '0d'. A secondary domain option can also be added to the domain string using a
+            space to further limit the IDs. Secondary domain options are 'node', 'channel', 'po', 'rl', 'boundary', or
+            'cross_section'. If no domain is provided, all domains will be searched.
+        use_common_index : bool, optional
+            If True, the DataFrame will be returned with a single index column for all the result types (if a
+            common index exists). If set to False, each result type value will be returned with a preceding
+            index column e.g. a time column will precede each result type value column.
+
+        Returns
+        -------
+        pd.DataFrame
+            The returned pd.DataFrame uses multi-index columns consisting of three or four levels
+            depending on whether a common time key exists (:code:`use_common_index=True` and result types are able
+            to share a common time key).
+
+            | Column Levels:
+            | :code:`Source/Result Type/ID` e.g. :code:`Channel/Flow/FC01.1_R`
+            | or if a common index does not exist, a fourth level will denote whether the column represents the index or value.
+            | e.g. :code:`Channel/Flow/FC01.1_R/Time`
+        """
         if not isinstance(id, list):
             id = [id] if id else []
         if not id:
@@ -136,9 +194,11 @@ class HydTables(TimeSeriesResult):
                   result_type: Union[str, list[str]],
                   time: TimeLike
                   ) -> pd.DataFrame:
+        """Not implemented for HydTables."""
         raise NotImplementedError('long_plot not available for HydTables.')
 
     def maximum(self, id: Union[str, list[str]], result_type: Union[str, list[str]], domain: str = '') -> pd.DataFrame:
+        """Not implemented for HydTables."""
         raise NotImplementedError('maximum not available for HydTables.')
 
     def _correct_id(self, id: Union[str, list[str]] = '') -> list[str]:

@@ -8,8 +8,19 @@ from pytuflow.types import PathLike
 
 
 class CrossSectionEntry:
+    """Class for handling individual cross-section entries in HydTableCrossSection."""
 
     def __init__(self, xs_id: str, df_xs: pd.DataFrame, df_proc: pd.DataFrame) -> None:
+        """
+        Parameters
+        ----------
+        xs_id : str
+            Cross-section ID (typically XS00001, XS00002, etc.).
+        df_xs : pd.DataFrame
+            Cross-section data.
+        df_proc : pd.DataFrame
+            Processed cross-section data.
+        """
         self.xs_id = xs_id
         self.df_xs = df_xs
         self.df_xs_exists = True
@@ -22,6 +33,7 @@ class CrossSectionEntry:
 
 
 class HydTableCrossSection(HydTableResultItem):
+    """Hydraulic table Channels class."""
 
     def __init__(self, fpath: PathLike = None) -> None:
         super().__init__(fpath)
@@ -44,8 +56,7 @@ class HydTableCrossSection(HydTableResultItem):
         pass
 
     def load_time_series(self) -> None:
-        """
-        Unlike abstract method which loads in individual time series results,
+        """Unlike abstract method which loads in individual time series results,
         use this method to load all time series data at once.
         """
         if not self.database:
@@ -67,6 +78,19 @@ class HydTableCrossSection(HydTableResultItem):
         self._load_time_series(dfs, col_names, col_names[0])
 
     def append(self, fo: TextIO, xs_id: str, xs_name: str, xs_source: Path, xs_type: str) -> None:
+        """Append a cross-section to the database.
+
+        Parameters
+        ----------
+        fo : TextIO
+            File object containing the channel data.
+        xs_id : str
+            Cross-Section ID (XS00001, XS00001, etc).
+        xs_name : str
+            Name of the cross-section - usually the source file name.
+        xs_type : str
+            Type attribute of the cross-section (XZ, HW, etc).
+        """
         df = pd.read_csv(fo)
         if xs_type == 'XZ':
             df_xs = df[df.columns[:4]].dropna()
@@ -81,6 +105,7 @@ class HydTableCrossSection(HydTableResultItem):
         self.df.index.name = 'id'
 
     def conv_result_type_name(self, result_type: str) -> str:
+        # docstring inherited
         if self.database:
             col_names = list(self.database.values())[0].df_xs.columns
             if self._in_col_names(result_type, col_names):
@@ -91,16 +116,41 @@ class HydTableCrossSection(HydTableResultItem):
         return result_type
 
     def xsid2name(self, xs_id: str) -> str:
+        """Return the name of a cross-section given its ID.
+
+        Parameters
+        ----------
+        xs_id : str
+            Cross-section ID.
+
+        Returns
+        -------
+        str
+            Cross-section name.
+        """
         if xs_id in self.df.index:
             return self.df.loc[xs_id, 'Name']
         return xs_id
 
     def name2xsid(self, xs_name: str) -> str:
+        """Returns the ID of the cross-section given its name.
+
+        Parameters
+        ----------
+        xs_name : str
+            Cross-section name.
+
+        Returns
+        -------
+        str
+            Cross-section ID.
+        """
         if xs_name in self.df['Name'].tolist():
             return self.df[self.df['Name'] == xs_name].index[0]
         return xs_name
 
     def ids(self, result_type: str) -> list[str]:
+        # docstring inherited
         if self.df is None:
             return []
         if not result_type:
@@ -116,6 +166,7 @@ class HydTableCrossSection(HydTableResultItem):
         return []
 
     def result_types(self, id: str) -> list[str]:
+        # docstring inherited
         if not self.time_series:
             return []
         if not id:
@@ -130,6 +181,14 @@ class HydTableCrossSection(HydTableResultItem):
         return result_types
 
     def has_unique_names(self) -> bool:
+        """Returns True if all the cross-sections have unique names. This is used to determine whether the ID or
+        name is used in the return DataFrame of certain methods.
+
+        Returns
+        -------
+        bool
+            True if all cross-sections have unique names.
+        """
         if self._has_unique_names is None:
             if self.df is None:
                 return True

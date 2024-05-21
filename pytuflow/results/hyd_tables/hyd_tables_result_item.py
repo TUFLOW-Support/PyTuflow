@@ -7,6 +7,7 @@ from pytuflow.util.misc_tools import flatten
 
 
 class HydTableResultItem(TimeSeriesResultItem):
+    """Base class for HydTable result items Channels, Cross-Sections, etc."""
 
     def _expand_index_col(self,
                           df: pd.DataFrame,

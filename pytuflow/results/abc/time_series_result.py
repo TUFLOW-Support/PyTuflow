@@ -27,6 +27,12 @@ class TimeSeriesResult(ABC):
     """
 
     def __init__(self, fpath: PathLike, *args, **kwargs) -> None:
+        """
+        Parameters
+        ----------
+        fpath : PathLike
+            The path to the result file.
+        """
         super().__init__()
         #: Path: The path to the result file.
         self.fpath = Path(fpath)

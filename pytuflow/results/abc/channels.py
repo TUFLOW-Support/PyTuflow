@@ -7,6 +7,12 @@ class Channels(TimeSeriesResultItem):
     """Abstract base class for channel result item."""
 
     def __init__(self, fpath: PathLike, *args, **kwargs) -> None:
+        """
+        Parameters
+        ----------
+        fpath : PathLike
+            Path to the Channel result file.
+        """
         super().__init__(fpath)
         #: str: Name or Source of the result item. Always 'Channel'.
         self.name = 'Channel'

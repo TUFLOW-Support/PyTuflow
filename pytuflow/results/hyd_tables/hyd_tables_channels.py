@@ -9,8 +9,10 @@ from pytuflow.types import PathLike
 
 
 class HydTableChannels(HydTableResultItem, Channels):
+    """Hydraulic table Channels class."""
 
     def __init__(self, fpath: PathLike = None) -> None:
+        # docstring inherited
         super(HydTableChannels, self).__init__(fpath)
         self.name = 'Channel'
         self.domain = '1d'
@@ -30,11 +32,11 @@ class HydTableChannels(HydTableResultItem, Channels):
         return '<HydTableChannels>'
 
     def load(self) -> None:
+        # docstring inherited
         pass
 
     def load_time_series(self) -> None:
-        """
-        Unlike abstract method which loads in individual time series results,
+        """Unlike the abstract method which loads in individual time series results,
         use this method to load all time series data at once.
         """
         if not self.database:
@@ -45,6 +47,19 @@ class HydTableChannels(HydTableResultItem, Channels):
         self._load_time_series(dfs, col_names, col_names[0])
 
     def append(self, fo: TextIO, channel_id: str, xs1: str, xs2: str) -> None:
+        """Append a channel to the database.
+
+        Parameters
+        ----------
+        fo : TextIO
+            File object containing the channel data.
+        channel_id : str
+            Channel ID.
+        xs1 : str
+            ID of first cross-section used to determine the channel hydraulic properties
+        xs2 : str
+            ID of second cross-section used to determine the channel hydraulic properties
+        """
         df = pd.read_csv(fo)
         self.database[channel_id] = df
         df = pd.DataFrame({
@@ -66,6 +81,7 @@ class HydTableChannels(HydTableResultItem, Channels):
         self.df.index.name = 'Channel'
 
     def conv_result_type_name(self, result_type: str) -> str:
+        # docstring inherited
         if self.database:
             col_names = list(self.database.values())[0].columns
             if self._in_col_names(result_type, col_names):
