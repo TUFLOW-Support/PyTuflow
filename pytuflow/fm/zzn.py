@@ -36,18 +36,20 @@ def byte2str(b: bytes) -> str:
 class ZZL:
     """Class for reading ZZL files."""
 
-    def __init__(self, zzl_path: PathLike) -> None:
+    def __init__(self, fpath: PathLike) -> None:
         """
         Parameters
         ----------
-        zzl_path: PathLike
+        fpath: PathLike
             Path to the ZZL file.
         """
+        #: Path: Path to the ZZL file.
+        self.fpath = Path(fpath)
         #: list[str]: Node labels.
         self.labels = []
         #: int: Number of result types.
         self.nvars = 6
-        with zzl_path.open('rb') as f:
+        with self.fpath.open('rb') as f:
             self._model_title = byte2str(struct.unpack('c'*128, f.read(128)))
             #: str: Model name
             self.model_title = self._model_title.split('FILE=')[0].strip()
@@ -90,18 +92,21 @@ class ZZL:
 class ZZN:
     """Class for reading Flood Modeller ZZN files."""
 
-    def __init__(self, file_path: PathLike) -> None:
+    def __init__(self, fpath: PathLike) -> None:
         """
         Parameters
         ----------
-        file_path: PathLike
+        fpath: PathLike
             Path to the ZZN file.
         """
-        self._zzn_path = Path(file_path)
+        #: Path: Path to the ZZN file.
+        self.fpath = Path(fpath)
+        self._zzn_path = Path(fpath)
         self._zzl_path = self._zzn_path.with_suffix('.zzl')
         if not self._zzl_path.exists():
             raise FileNotFoundError(f'zzl file not found: {self._zzl_path}')
-        self._zzl = ZZL(self._zzl_path)
+        #: ZZL: Associated ZZL object.
+        self.zzl = ZZL(self._zzl_path)
         self._a = np.fromfile(str(self._zzn_path), dtype=np.float32, count=self.timestep_count()*self.node_count()*self.result_type_count())
         self._a = np.reshape(self._a, (self.timestep_count(), self.node_count()*self.result_type_count()))
         self._h = np.array(sum([['Flow', 'Stage', 'Froude', 'Velocity', 'Mode', 'State'] for _ in range(self.node_count())], []))
@@ -129,7 +134,7 @@ class ZZN:
         list[str]
             Node labels.
         """
-        return self._zzl.labels[:]
+        return self.zzl.labels[:]
 
     def output_interval(self) -> float:
         """Return output interval.
@@ -139,7 +144,7 @@ class ZZN:
         float
             Output interval.
         """
-        return self._zzl.output_interval
+        return self.zzl.output_interval
 
     def node_count(self) -> int:
         """Returns node count.
@@ -149,7 +154,7 @@ class ZZN:
         int
             Node count.
         """
-        return self._zzl.nnodes
+        return self.zzl.nnodes
 
     def floodmodeller_version(self) -> str:
         """Return Flood Modeller version.
@@ -159,7 +164,7 @@ class ZZN:
         str
             Flood Modeller version.
         """
-        return self._zzl.fm_version
+        return self.zzl.fm_version
 
     def result_name(self) -> str:
         """Return result name.
@@ -169,7 +174,7 @@ class ZZN:
         str
             Result name.
         """
-        return self._zzl.model_title
+        return self.zzl.model_title
 
     def first_timestep(self) -> float:
         """Return first timestep.
@@ -179,7 +184,7 @@ class ZZN:
         float
             First timestep.
         """
-        return self._zzl.timestep_first
+        return self.zzl.timestep_first
 
     def last_timestep(self) -> float:
         """Return last timestep.
@@ -189,7 +194,7 @@ class ZZN:
         float
             Last timestep.
         """
-        return self._zzl.timestep_last
+        return self.zzl.timestep_last
 
     def timestep_count(self) -> int:
         """Return timestep count.
@@ -199,7 +204,7 @@ class ZZN:
         int
             Timestep count.
         """
-        return int((self._zzl.timestep_last - self._zzl.timestep_first) / self._zzl.output_interval) + 1
+        return int((self.zzl.timestep_last - self.zzl.timestep_first) / self.zzl.output_interval) + 1
 
     def result_type_count(self) -> int:
         """Return result type count.
@@ -209,7 +214,7 @@ class ZZN:
         int
             Result type count.
         """
-        return self._zzl.nvars
+        return self.zzl.nvars
 
     def reference_time(self) -> datetime:
         """Return reference time.
@@ -219,4 +224,4 @@ class ZZN:
         datetime
             Reference time.
         """
-        return self._zzl.reference_time
+        return self.zzl.reference_time

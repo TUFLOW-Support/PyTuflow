@@ -3,7 +3,7 @@ from collections import OrderedDict
 import numpy as np
 import pandas as pd
 
-from pytuflow.fm import GXY, Dat
+from pytuflow.fm import GXY, DAT
 from ..abc.channels import Channels
 from .fm_time_series_result_item import FMResultItem
 from pytuflow.types import PathLike

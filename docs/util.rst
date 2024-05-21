@@ -3,6 +3,8 @@ Util
 
 A collection of useful utilities.
 
+.. currentmodule:: pytuflow
+
 .. autosummary::
    :toctree: generated
    :nosignatures:

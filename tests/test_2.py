@@ -586,22 +586,22 @@ class Test_FM_TS(unittest.TestCase):
         self.assertEqual((122, 2), gxy.link_df.shape)
 
     def test_load(self):
-        from pytuflow.fm import Dat
+        from pytuflow.fm import DAT
         p = './tests/fm/zzn/FMT_M01_001.dat'
-        dat = Dat(p)
+        dat = DAT(p)
         self.assertEqual(115, len(dat.units))
         self.assertEqual(2, len(dat.unit('JUNCTION_OPEN_FC02.01d').ups_units))
 
     def test_load_2(self):
-        from pytuflow.fm import Dat
+        from pytuflow.fm import DAT
         p = './tests/fm/gui_csv/LBE_TBP3_10PC_350.dat'
-        dat = Dat(p)
+        dat = DAT(p)
         self.assertEqual(242, len(dat.units))
 
     def test_load_3(self):
-        from pytuflow.fm import Dat
+        from pytuflow.fm import DAT
         p = './tests/fm/River_Sections_w_Junctions.dat'
-        dat = Dat(p)
+        dat = DAT(p)
         self.assertEqual(1, len(dat.unit('RIVER_SECTION_US_2').dns_units))
         self.assertEqual(2, len(dat.unit('JUNCTION_OPEN_US_3').dns_units))
         self.assertEqual(2, len(dat.unit('JUNCTION_OPEN_DS_3').ups_units))
@@ -635,10 +635,10 @@ class Test_FM_TS(unittest.TestCase):
         self.assertEqual((37, 103), res.nodes.time_series['Flow'].df.shape)
 
     def test_load_nodes_2(self):
-        from pytuflow.fm import Dat
+        from pytuflow.fm import DAT
         p = './tests/dummy'
         gxy = GXY('./tests/fm/zzn/FMT_M01_001.gxy')
-        dat = Dat('./tests/fm/zzn/FMT_M01_001.dat')
+        dat = DAT('./tests/fm/zzn/FMT_M01_001.dat')
         dat.load()
         id_list = list(dat._units_id.keys())
         fm_node = FMNodes(p, id_list, gxy, dat)

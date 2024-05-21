@@ -9,7 +9,7 @@ import pandas as pd
 
 from .fm_time_series import FMTimeSeries
 from ..abc.time_series_result_item import TimeSeriesResultItem
-from pytuflow.fm import Dat, GXY
+from pytuflow.fm import DAT, GXY
 
 
 RESULT_SHORT_NAME = {'h': 'stage', 'water level': 'stage', 'q': 'flow', 'v': 'velocity', 'vel': 'velocity',
@@ -19,7 +19,7 @@ RESULT_SHORT_NAME = {'h': 'stage', 'water level': 'stage', 'q': 'flow', 'v': 've
 class FMResultItem(TimeSeriesResultItem):
     """A class for FM result items."""
 
-    def __init__(self, fpath: PathLike, id_list: list[str], gxy: GXY, dat: Dat, **kwargs) -> None:
+    def __init__(self, fpath: PathLike, id_list: list[str], gxy: GXY, dat: DAT, **kwargs) -> None:
         """
         Parameters
         ----------

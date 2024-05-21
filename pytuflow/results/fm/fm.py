@@ -12,7 +12,7 @@ from .fm_channels import FMChannels
 from .fm_nodes import FMNodes
 from .fm_res_driver import FM_ResultDriver
 from pytuflow.fm import GXY
-from pytuflow.fm import Dat
+from pytuflow.fm import DAT
 from ..abc.time_series_result import TimeSeriesResult
 from pytuflow.util.time_util import default_reference_time, closest_time_index
 
@@ -87,7 +87,7 @@ class FM_TS(TimeSeriesResult):
             self.gxy = GXY(self.gxy_fpath)
 
         if self.dat_fpath is not None:
-            self.dat = Dat(self.dat_fpath)
+            self.dat = DAT(self.dat_fpath)
 
         self.nodes = FMNodes(self.fpath[0], self._id_list, self.gxy, self.dat)
         for driver in self._driver:
