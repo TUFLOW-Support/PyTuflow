@@ -7,6 +7,7 @@ Module to handle some of the Flood Modeller classes.
 
 .. autosummary::
    :toctree: generated
+   :template: custom-class-template.rst
    :nosignatures:
 
    fm.DAT
