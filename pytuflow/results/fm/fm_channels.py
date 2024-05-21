@@ -3,14 +3,14 @@ from collections import OrderedDict
 import numpy as np
 import pandas as pd
 
-from .gxy import GXY
+from pytuflow.fm import GXY, Dat
 from ..abc.channels import Channels
 from .fm_time_series_result_item import FMResultItem
-from .dat import Dat
 from pytuflow.types import PathLike
 
 
 class FMChannels(FMResultItem, Channels):
+    """Flood Modeller Channels class."""
 
     def __repr__(self) -> str:
         if hasattr(self, 'fpath'):
@@ -18,6 +18,7 @@ class FMChannels(FMResultItem, Channels):
         return '<FM Channels>'
 
     def load(self) -> None:
+        # docstring inherited
         d = OrderedDict({'Channel': [], 'Type': [], 'Flags': [], 'Length': [], 'US Node': [], 'DS Node': [],
                          'US Invert': [], 'DS Invert': [], 'LBUS Obvert': [], 'RBUS Obvert': [], 'LBDS Obvert': [],
                          'RBDS Obvert': []})

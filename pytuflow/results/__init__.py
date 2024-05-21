@@ -44,4 +44,11 @@ from .gpkg_ts.gpkg_maximums import GPKGMaximums
 from .gpkg_ts.gpkg_ts_utils import GPKG_TSResultUtil
 from .gpkg_ts.gpkg_ts_base import GPKGBase
 
+# FM TS
 from .fm.fm import FM_TS
+from .fm.fm_time_series_result_item import FMResultItem
+from .fm.fm_time_series import FMTimeSeries
+from .fm.fm_channels import FMChannels
+from .fm.fm_nodes import FMNodes
+from .fm.fm_maximums import FMMaximums
+from .fm.fm_res_driver import FM_ResultDriver, FM_GuiCSVResult, FM_ZZNResult, FM_PythonCSVResult

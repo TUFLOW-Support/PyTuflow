@@ -5,7 +5,7 @@ from unittest import TestCase
 from pytuflow.results.bc_tables.bc_tables import BCTables
 from pytuflow.results.fm.fm import FM_TS
 from pytuflow.results.fm.fm_nodes import FMNodes
-from pytuflow.results.fm.gxy import GXY
+from pytuflow.fm import GXY
 from pytuflow.results.hyd_tables.hyd_tables import HydTables
 from pytuflow.results.info.info import INFO
 from pytuflow.results.tpc.tpc import TPC
@@ -586,20 +586,20 @@ class Test_FM_TS(unittest.TestCase):
         self.assertEqual((122, 2), gxy.link_df.shape)
 
     def test_load(self):
-        from pytuflow.results.fm.dat import Dat
+        from pytuflow.fm import Dat
         p = './tests/fm/zzn/FMT_M01_001.dat'
         dat = Dat(p)
         self.assertEqual(115, len(dat.units))
         self.assertEqual(2, len(dat.unit('JUNCTION_OPEN_FC02.01d').ups_units))
 
     def test_load_2(self):
-        from pytuflow.results.fm.dat import Dat
+        from pytuflow.fm import Dat
         p = './tests/fm/gui_csv/LBE_TBP3_10PC_350.dat'
         dat = Dat(p)
         self.assertEqual(242, len(dat.units))
 
     def test_load_3(self):
-        from pytuflow.results.fm.dat import Dat
+        from pytuflow.fm import Dat
         p = './tests/fm/River_Sections_w_Junctions.dat'
         dat = Dat(p)
         self.assertEqual(1, len(dat.unit('RIVER_SECTION_US_2').dns_units))
@@ -635,7 +635,7 @@ class Test_FM_TS(unittest.TestCase):
         self.assertEqual((37, 103), res.nodes.time_series['Flow'].df.shape)
 
     def test_load_nodes_2(self):
-        from pytuflow.results.fm.dat import Dat
+        from pytuflow.fm import Dat
         p = './tests/dummy'
         gxy = GXY('./tests/fm/zzn/FMT_M01_001.gxy')
         dat = Dat('./tests/fm/zzn/FMT_M01_001.dat')

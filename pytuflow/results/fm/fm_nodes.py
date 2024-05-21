@@ -9,6 +9,7 @@ from ..abc.nodes import Nodes
 
 
 class FMNodes(FMResultItem, Nodes):
+    """Flood Modeller Nodes class."""
 
     def __repr__(self) -> str:
         if hasattr(self, 'fpath'):
@@ -16,6 +17,7 @@ class FMNodes(FMResultItem, Nodes):
         return '<FM Nodes>'
 
     def load(self) -> None:
+        # docstring inherited
         d = OrderedDict({'Unique ID': [], 'Node': [], 'Type': [], 'Bed Level': [], 'Length': [], 'nChannels': [], 'Ups Channels': [], 'Dns Channels': [], 'Ups Nodes': [], 'Dns Nodes': []})
         if self.dat:
             for unit in self.dat.units:
@@ -60,6 +62,7 @@ class FMNodes(FMResultItem, Nodes):
         self.df.set_index('Node', inplace=True)
 
     def long_plot_result_types(self) -> list[str]:
+        # docstring inherited
         result_types = []
         if not self.gxy:
             return []

@@ -11,21 +11,37 @@ from pytuflow.types import PathLike, TimeLike
 from .fm_channels import FMChannels
 from .fm_nodes import FMNodes
 from .fm_res_driver import FM_ResultDriver
-from .gxy import GXY
-from .dat import Dat
+from pytuflow.fm import GXY
+from pytuflow.fm import Dat
 from ..abc.time_series_result import TimeSeriesResult
 from pytuflow.util.time_util import default_reference_time, closest_time_index
 
 
 class FM_TS(TimeSeriesResult):
+    """Flood Modeller Time Series Result."""
 
     def __init__(self, fpath: Union[PathLike, list[PathLike]], gxy: PathLike, dat: PathLike) -> None:
+        """
+        Parameters
+        ----------
+        fpath: Union[PathLike, list[PathLike]]
+            Flood modeller result file path(s). The file paths can be CSVs exported via the Flood Modeller GUI,
+            the python flood modeller-api, or the raw ZZN files.
+        gxy: PathLike
+            Path to the GXY file.
+        dat: PathLike
+            Path to the DAT file.
+        """
         self._df = None
         self._driver = []
         self._id_list = None
+        #: Path: Path to the GXY file.
         self.gxy_fpath = Path(gxy) if gxy is not None else None
+        #: Path: Path to the DAT file.
         self.dat_fpath = Path(dat) if dat is not None else None
+        #: GXY: GXY object.
         self.gxy = None
+        #: DAT: DAT object.
         self.dat = None
         super().__init__(fpath)
 
@@ -36,14 +52,15 @@ class FM_TS(TimeSeriesResult):
 
     @staticmethod
     def looks_like_self(fpath: Path) -> bool:
-        """Return True if the file looks like this class."""
+        # docstring inherited
         return True  # check is done when figuring out the driver
 
     def looks_empty(self, fpath: Path) -> bool:
-        """Return True if the file looks empty."""
+        # docstring inherited
         return False
 
     def load(self) -> None:
+        # docstring inherited
         if not isinstance(self.fpath, list):
             self.fpath = [self.fpath]
 
@@ -81,6 +98,7 @@ class FM_TS(TimeSeriesResult):
             self.channels = FMChannels(self.fpath[0], [], self.gxy, self.dat)
 
     def connectivity(self, ids: Union[str, list[str]]) -> pd.DataFrame:
+        # docstring inherited
         df = super().connectivity(ids)
 
         # convert uid to id and remove junctions
@@ -104,6 +122,7 @@ class FM_TS(TimeSeriesResult):
                   result_type: Union[str, list[str]],
                   time: TimeLike
                   ) -> pd.DataFrame:
+        # docstring inherited
         if not self.nodes or not self.channels:
             return Exception('DAT file required for long plotting')
 

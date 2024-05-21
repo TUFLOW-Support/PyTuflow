@@ -48,3 +48,12 @@ please see the :doc:`results` page.
     results.GPKGMaximums
     results.GPKG_TSResultUtil
     results.GPKGBase
+    results.FMResultItem
+    results.FMTimeSeries
+    results.FMChannels
+    results.FMNodes
+    results.FMMaximums
+    results.FM_ResultDriver
+    results.FM_GuiCSVResult
+    results.FM_PythonCSVResult
+    results.FM_ZZNResult

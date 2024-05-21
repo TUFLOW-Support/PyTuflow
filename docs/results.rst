@@ -14,3 +14,4 @@ as entry points to load results. For more information on the underlying classes,
    results.TPC
    results.INFO
    results.GPKG_TS
+   results.FM_TS
