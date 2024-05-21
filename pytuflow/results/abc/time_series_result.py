@@ -95,7 +95,7 @@ class TimeSeriesResult(ABC):
 
     @abstractmethod
     def load(self, *args, **kwargs) -> None:
-        """Loads the file. Automatically called on initialisation."""
+        """Loads the file - automatically called on initialisation."""
         raise NotImplementedError
 
     def init_iterator(self, *args) -> Iterator:
