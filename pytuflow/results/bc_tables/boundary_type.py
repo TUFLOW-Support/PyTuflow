@@ -6,6 +6,7 @@ import numpy as np
 
 
 class BoundaryType:
+    """Base class for handling Boundary Type data."""
 
     def __new__(cls, line: str):
         line = line.strip('\n\t "')
@@ -25,6 +26,12 @@ class BoundaryType:
         return self
 
     def __init__(self, line: str) -> None:
+        """
+        Parameters
+        ----------
+        line : str
+            Line from file.
+        """
         self.line = line
         self.id = ''
         self.name = ''
@@ -47,12 +54,21 @@ class BoundaryType:
         return '<{0} Invalid>'.format(self.__class__.__name__)
 
     def read(self, fo: io.TextIO) -> None:
+        """Read the boundary data from file.
+
+        Parameters
+        ----------
+        fo : io.TextIO
+            File object.
+        """
         pass
 
 
 class BoundaryTypeBC(BoundaryType):
+    """Base class for handling Boundary Type data coming from BC files."""
 
     def __init__(self, line: str) -> None:
+        # docstring inherited
         super().__init__(line)
         self.id = re.findall(r'^"?BC\d{6}', line)[0]
         self.id = self.id.strip('"')
@@ -83,6 +99,7 @@ class BoundaryTypeBC(BoundaryType):
             self.valid = True
 
     def read(self, fo: io.TextIO) -> None:
+        # docstring inherited
         _, self.col1_header, self.col2_header = [x.strip('\n\t "') for x in fo.readline().split(',')]
         if 'm' in self.col2_header:
             self.units = 'metric'
@@ -104,6 +121,7 @@ class BoundaryTypeBC(BoundaryType):
 
 
 class BoundaryTypeQT(BoundaryTypeBC):
+    """Class for handling QT type boundary data."""
 
     def __init__(self, line: str) -> None:
         super().__init__(line)
@@ -111,6 +129,7 @@ class BoundaryTypeQT(BoundaryTypeBC):
 
 
 class BoundaryTypeHT(BoundaryTypeBC):
+    """Class for handling HT type boundary data."""
 
     def __init__(self, line: str) -> None:
         super().__init__(line)
@@ -118,18 +137,20 @@ class BoundaryTypeHT(BoundaryTypeBC):
 
 
 class BoundaryTypeHQ(BoundaryTypeBC):
+    """Base class for handling HQ type boundary data."""
 
     def __init__(self, line: str) -> None:
         super().__init__(line)
         self.header_line_count = 1
         self.type = 'HQ'
-        self.index_name = 'Level'
+        self.index_name = 'Flow'
         if not self.name:
             self.name = self.id
             self.valid = True
 
 
 class BoundaryTypeSA(BoundaryTypeBC):
+    """Base class for handling SA type boundary data."""
 
     def __init__(self, line: str) -> None:
         super().__init__(line)
@@ -137,6 +158,7 @@ class BoundaryTypeSA(BoundaryTypeBC):
 
 
 class BoundaryTypeRF(BoundaryTypeBC):
+    """Base class for handling RF type boundary data."""
 
     def __init__(self, line: str) -> None:
         super().__init__(line)

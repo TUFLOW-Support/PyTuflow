@@ -62,3 +62,13 @@ please see the :doc:`results` page.
     results.HydTableChannels
     results.HydTableCrossSection
     results.CrossSectionEntry
+    results.BCTablesResultItem
+    results.BCTablesTimeSeries
+    results.Boundary
+    results.BoundaryType
+    results.BoundaryTypeBC
+    results.BoundaryTypeQT
+    results.BoundaryTypeHT
+    results.BoundaryTypeHQ
+    results.BoundaryTypeSA
+    results.BoundaryTypeRF

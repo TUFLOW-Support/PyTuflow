@@ -16,3 +16,4 @@ as entry points to load results. For more information on the underlying classes,
    results.GPKG_TS
    results.FM_TS
    results.HydTables
+   results.BCTables

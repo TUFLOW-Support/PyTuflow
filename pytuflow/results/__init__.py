@@ -59,3 +59,11 @@ from .hyd_tables.hyd_tables_result_item import HydTableResultItem
 from .hyd_tables.hyd_tables_time_series import HydTableTimeSeries
 from .hyd_tables.hyd_tables_channels import HydTableChannels
 from .hyd_tables.hyd_tables_cross_sections import HydTableCrossSection, CrossSectionEntry
+
+# BCTables
+from .bc_tables.bc_tables import BCTables
+from .bc_tables.bc_tables_result_item import BCTablesResultItem
+from .bc_tables.bc_tables_time_series import BCTablesTimeSeries
+from .bc_tables.bc_tables_boundary import Boundary
+from .bc_tables.boundary_type import (BoundaryType, BoundaryTypeBC, BoundaryTypeQT, BoundaryTypeHT, BoundaryTypeHQ,
+                                      BoundaryTypeSA, BoundaryTypeRF)

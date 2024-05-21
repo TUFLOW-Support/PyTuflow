@@ -95,6 +95,9 @@ class HydTables(TimeSeriesResult):
         """
         Returns the cross-section ids for the given result type(s).
 
+        :code:`cross_section_ids()` is equivalent to using '1d cross_section' as the domain in
+        :meth:`ids() <pytuflow.results.HydTables.ids>`.
+
         Parameters
         ----------
         result_type : str or list[str], optional
@@ -102,11 +105,16 @@ class HydTables(TimeSeriesResult):
             the name of the result type (case in-sensitive) or be a well known short name
             e.g. 'Flow' - 'q', 'Velocity' - 'v', etc.
             If no result type is provided, all result types will be assumed to be all available.
+
+        Returns
+        -------
+        list[str]
+            list of cross-section ids.
         """
         if self.cross_sections:
             if not result_type:
                 return self.cross_sections.ids(None)
-            return self.result_types(result_type, '1d cross_section')
+            return self.ids(result_type, '1d cross_section')
         return []
 
     def cross_section_result_types(self, id: Union[str, list[str]] = '') -> list[str]:
@@ -125,6 +133,11 @@ class HydTables(TimeSeriesResult):
         list[str]
             list of result types.
         """
+        if self.cross_sections:
+            if not id:
+                return self.cross_sections.result_types(None)
+            return self.ids(id, '1d cross_section')
+        return []
 
     def time_series(self,
                     id: Union[str, list[str]],

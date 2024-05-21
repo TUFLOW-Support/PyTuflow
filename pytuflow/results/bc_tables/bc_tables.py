@@ -11,8 +11,11 @@ from ..iterator_util import Iterator
 
 
 class BCTables(TimeSeriesResult):
+    """Class for handling 2d_bc_tables_check.csv and 1d_bc_tables_check.csv"""
 
     def __init__(self, fpath: PathLike) -> None:
+        # docstring inherited
+        #: Boundary: Boundary object
         self.boundary = None
         super().__init__(fpath)
         self.sim_id = re.sub(r'_[12]d_bc_tables_check', '', self.fpath.stem)
@@ -24,7 +27,7 @@ class BCTables(TimeSeriesResult):
 
     @staticmethod
     def looks_like_self(fpath: Path) -> bool:
-        """Return True if the file looks like this class."""
+        # docstring inherited
         try:
             if not re.findall(r'_[12]d_bc_tables_check$', fpath.stem):
                 return False
@@ -37,7 +40,7 @@ class BCTables(TimeSeriesResult):
         return True
 
     def looks_empty(self, fpath: Path) -> bool:
-        """Return True if the file looks empty."""
+        # docstring inherited
         try:
             with fpath.open() as f:
                 for _ in range(3):
@@ -49,26 +52,69 @@ class BCTables(TimeSeriesResult):
         return False
 
     def load(self) -> None:
+        # docstring inherited
         self.boundary = Boundary(self.fpath)
         if self.boundary.units:
             self.units = self.boundary.units
 
     def init_iterator(self, *args) -> Iterator:
-        """Initialise the class iterator."""
+        # docstring inherited
         if args:
             return Iterator(*args)
         return Iterator(self.boundary)
 
     def result_types(self, id: Union[str, list[str]] = '', domain: str = '') -> list[str]:
+        # docstring inherited
         id = self._correct_id(id)  # need to convert cross-section names to their ids
         result_types = super().result_types(id, domain)
         return result_types
 
     def boundary_ids(self, boundary_type: Union[str, list[str]] = '') -> list[str]:
+        """Return the ids of the boundary type(s) specified.
+
+        :code:`boundary_ids()` is equivalent to using '[1/2]d cross_section' as the domain in
+        :meth:`ids() <pytuflow.results.BcTables.ids>` (domain = 1d or 2d depending on whether bc_tables is a
+        1d or 2d check file).
+
+        Parameters
+        ----------
+        boundary_type : str or list[str], optional
+            The boundary type can be a single value or a list of values.
+            If no boundary type is provided, all result types will be assumed to be all available.
+
+        Returns
+        -------
+        list[str]
+            List of boundary ids.
+        """
         if self.boundary:
             if not boundary_type:
                 return self.boundary.ids(None)
             return self.ids(boundary_type, f'{self.boundary.domain} boundary')
+        return []
+
+    def boundary_types(self, id: Union[str, list[str]] = '') -> list[str]:
+        """Return the boundary types of the specified ID(s).
+
+        :code:`boundary_types()` is equivalent to using '[1/2]d cross_section' as the domain in
+        :meth:`result_types() <pytuflow.results.BcTables.result_types>`
+        (domain = 1d or 2d depending on whether bc_tables is a 1d or 2d check file).
+
+        Parameters
+        ----------
+        id : str or list[str], optional
+            The ID can be a single value or a list of values.
+            If no ID is provided, all boundary types will be assumed to be all available.
+
+        Returns
+        -------
+        list[str]
+            List of boundary types.
+        """
+        if self.boundary:
+            if not id:
+                return self.boundary.result_types(None)
+            return self.ids(id, f'{self.boundary.domain} boundary')
         return []
 
     def time_series(self,
@@ -77,6 +123,7 @@ class BCTables(TimeSeriesResult):
                     domain: str = None,
                     use_common_index: bool = True
                     ) -> pd.DataFrame:
+        # docstring inherited
         if not isinstance(id, list):
             id = [id] if id else []
         if not id:
@@ -100,9 +147,11 @@ class BCTables(TimeSeriesResult):
                   result_type: Union[str, list[str]],
                   time: TimeLike
                   ) -> pd.DataFrame:
+        """Not implemented for BCTables."""
         raise NotImplementedError('long_plot not available for BCTables.')
 
     def maximum(self, id: Union[str, list[str]], result_type: Union[str, list[str]], domain: str = '') -> pd.DataFrame:
+        """Not implemented for HydTables."""
         raise NotImplementedError('maximum not available for HydTables.')
 
     def _correct_id(self, id: Union[str, list[str]] = '') -> list[str]:
