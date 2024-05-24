@@ -16,6 +16,7 @@ A collection of useful utilities.
    util.cf
    util.time_util
    util.gis
+   util.geom
    util.logging
    util.patterns
 
