@@ -1,4 +1,4 @@
-Result Classes
+result classes
 ==============
 
 This module contains information on all the underlying result classes. For information on the user entry points,

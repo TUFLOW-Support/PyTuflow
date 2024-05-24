@@ -1,3 +1,23 @@
+"""time_util
+
+A collection of utilities for working with time and date objects and extracting reference time from
+TUFLOW formats.
+
+Examples
+--------
+How to get the reference time and units from a GeoPackage time series result:
+
+>>> from pytuflow.util.time_util import gpkg_time_series_reference_time
+>>> gpkg_time_series_reference_time('path/to/timeseries_TS.gpkg')
+(datetime.datetime(1990, 1, 1, 0, 0), 'h')
+
+How to get the reference time and units from a netCDF time series result:
+
+>>> from pytuflow.util.time_util import nc_time_series_reference_time
+>>> nc_time_series_reference_time('path/to/timeseries_TS.nc')
+(datetime.datetime(1990, 1, 1, 0, 0), 'h')
+"""
+
 import re
 from datetime import datetime
 from typing import Union

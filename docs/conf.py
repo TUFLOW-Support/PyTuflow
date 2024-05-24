@@ -42,15 +42,7 @@ html_theme = 'sphinx_book_theme'
 html_static_path = ['_static']
 
 def skip_member(app: Sphinx, what: str, name: str, obj, skip, options):
-    if name.startswith('_'):
-        return True
-    skip_methods = [
-        'init_iterator',
-        'load',
-        'looks_empty',
-        'looks_like_self',
-    ]
-    return False
+    pass
 
 def setup(app: Sphinx):
     app.connect(event='autodoc-skip-member', callback=skip_member)

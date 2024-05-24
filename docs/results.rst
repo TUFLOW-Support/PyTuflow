@@ -1,4 +1,4 @@
-Results
+results
 =======
 
 Result classes for various time series output from TUFLOW. The classes listed below are the top level classes that act

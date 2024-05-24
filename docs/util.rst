@@ -1,16 +1,30 @@
-Util
+util
 ====
 
 A collection of useful utilities.
 
 .. currentmodule:: pytuflow
 
+.. rubric:: Modules
+
 .. autosummary::
    :toctree: generated
+   :template: custom-module-template.rst
+   :recursive:
+
+   util.tf
+   util.cf
+   util.time_util
+   util.gis
+   util.logging
+   util.patterns
+
+.. rubric:: Functions
+
+.. autosummary::
+   :toctree: generated
+   :template: function.rst, class.rst
    :nosignatures:
 
    util.flatten
-   util.parse_time_units_string
-   util.gpkg_time_series_reference_time
-   util.nc_time_series_reference_time
-   util.closest_time_index
+   util.unpack_fixed_field
