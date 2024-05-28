@@ -259,6 +259,8 @@ class ResData():
                     rtypes.append('A')
                 elif '1D Velocities' in rtype:
                     rtypes.append('V')
+                elif '1D Flow Integral' in rtype:
+                    rtypes.append('QI')
                 elif '1D Flow' in rtype:
                     rtypes.append('Q')
                 elif '1D CHANNEL FLOW REGIME' in rtype.upper():
@@ -284,6 +286,8 @@ class ResData():
             for rtype in self._res.Types:
                 if '1D Water Levels' in rtype:
                     rtypes.append('H')
+                if '1D Volume' in rtype:
+                    rtypes.append('Vol')
                 elif '1D Energy Levels' in rtype:
                     rtypes.append('E')
                 elif '1D MASS BALANCE ERROR' in rtype.upper():
