@@ -16,12 +16,15 @@ tmf base classes
    RunState
    ControlFile
    Database
+   TCFBase
    Input
    GisInput_
    ControlFileBuildState
+   TCFBuildState
    DatabaseBuildState
    InputBuildState
    ControlFileRunState
+   TCFRunState
    DatabaseRunState
    InputRunState
    CrossSectionRunState
