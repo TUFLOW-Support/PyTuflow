@@ -40,8 +40,9 @@ class FMChannels(FMResultItem, Channels):
                 d['LBDS Obvert'].append(np.nan)
                 d['RBDS Obvert'].append(np.nan)
         elif self.gxy:
+            nodes = {node.uid: node for node in self.gxy._nodes}
             for index, row in self.gxy.link_df.iterrows():
-                node = self.gxy.node(row['ups_node'])
+                node = nodes[row['ups_node']]
                 d['Channel'].append(index)
                 if node:
                     d['Type'].append(node.type)

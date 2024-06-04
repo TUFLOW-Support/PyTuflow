@@ -32,7 +32,7 @@ class FMNodes(FMResultItem, Nodes):
                 d['Ups Nodes'].append([x.uid for x in unit.ups_units if x.valid])
                 d['Dns Nodes'].append([x.uid for x in unit.dns_units if x.valid])
         elif self.gxy:
-            for node in self.gxy.nodes():
+            for node in self.gxy._nodes:
                 d['Unique ID'].append(node.uid)
                 d['Node'].append(node.id)
                 d['Type'].append(node.type)

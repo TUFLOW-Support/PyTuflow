@@ -20,16 +20,16 @@ from pytuflow.util.time_util import default_reference_time, closest_time_index
 class FM_TS(TimeSeriesResult):
     """Flood Modeller Time Series Result."""
 
-    def __init__(self, fpath: Union[PathLike, list[PathLike]], gxy: PathLike, dat: PathLike) -> None:
+    def __init__(self, fpath: Union[PathLike, list[PathLike]], gxy: PathLike = None, dat: PathLike = None) -> None:
         """
         Parameters
         ----------
         fpath: Union[PathLike, list[PathLike]]
             Flood modeller result file path(s). The file paths can be CSVs exported via the Flood Modeller GUI,
             the python flood modeller-api, or the raw ZZN files.
-        gxy: PathLike
+        gxy: PathLike, optional
             Path to the GXY file.
-        dat: PathLike
+        dat: PathLike, optional
             Path to the DAT file.
         """
         self._df = None
@@ -83,18 +83,18 @@ class FM_TS(TimeSeriesResult):
         for driver in self._driver:
             driver.reference_time = default_reference_time
 
-        if self.gxy_fpath is not None:
-            self.gxy = GXY(self.gxy_fpath)
-
         if self.dat_fpath is not None:
             self.dat = DAT(self.dat_fpath)
+
+        if self.gxy_fpath is not None:
+            self.gxy = GXY(self.gxy_fpath)
 
         self.nodes = FMNodes(self.fpath[0], self._id_list, self.gxy, self.dat)
         for driver in self._driver:
             for res_type in driver.result_types:
                 self.nodes.load_time_series(res_type, driver.df, driver.reference_time, driver.timesteps)
 
-        if self.gxy is not None:
+        if self.gxy is not None or self.dat is not None:
             self.channels = FMChannels(self.fpath[0], [], self.gxy, self.dat)
 
     def connectivity(self, ids: Union[str, list[str]]) -> pd.DataFrame:
@@ -123,8 +123,8 @@ class FM_TS(TimeSeriesResult):
                   time: TimeLike
                   ) -> pd.DataFrame:
         # docstring inherited
-        if not self.nodes or not self.channels:
-            return Exception('DAT file required for long plotting')
+        if self.dat is None:
+            raise Exception('DAT file required for long plotting')
 
         if not isinstance(ids, list):
             ids = [ids] if ids else []
@@ -132,7 +132,7 @@ class FM_TS(TimeSeriesResult):
         ids_ = []
         for id_ in ids:
             try:
-                dns_chans = self.nodes.df.loc[id_, 'Dns Channels']
+                dns_chans = self.nodes.df.loc[[id_], 'Dns Channels']
                 if dns_chans.any():
                     for chan in dns_chans:
                         if len(chan) == 1:
