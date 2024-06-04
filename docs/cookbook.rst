@@ -507,8 +507,43 @@ Databases are not currently supported for editing. The process of editing them s
 Load Time Series Results
 ------------------------
 
-The below are examples of interacting with time series results in :code:`pytuflow`. The examples use
-the :code:`TPC` class, however similar functionality exists for other time series classes.
+The below are examples of interacting with :class:`time series results <pytuflow.results.TimeSeriesResults>`.
+This includes:
+
+* :class:`TPC <pytuflow.results.TPC>`
+* :class:`GPKG Time Series <pytuflow.results.GPKG_TS>`
+* :class:`INFO <pytuflow.results.INFO>`
+* :class:`Flood Modeller <pytuflow.results.FM_TS>`
+
+.. code-block:: python
+
+   from pytuflow.results import TPC
+
+
+   # to load a TPC result file
+   res = TPC('path/to/model.tpc')
+
+   # the tpc file path can also be obtained from the TCF class
+   from pytuflow.tmf import TCF
+   tcf = TCF('path/to/model.tcf')
+   tpc = tcf.context().tpc()  # file path
+   res = TPC(tpc)
+
+   # GPKG time series results (written by TUFLOW-SWMM simulations)
+   from pytuflow.results import GPKG_TS
+   res = GPKG_TS('path/to/model.gpkg')
+
+   # Flood modeller results requires results (.ZZN or .CSV) and
+   # preferably as well as the DAT file
+   from pytuflow.results import FM_TS
+   res = FM_TS('path/to/model.zzn')
+   # providing a dat file will provide node connectivity - allows for long plotting
+   res = FM_TS('path/to/model.csv', dat='path/to/model.dat')
+
+   # providing a GXY is optional provides GIS coordinate information
+   res = FM_TS('path/to/model.csv', dat='path/to/model.dat', gxy='path/to/model.gxy')
+
+
 
 Plot Time Series Results
 ~~~~~~~~~~~~~~~~~~~~~~~~
