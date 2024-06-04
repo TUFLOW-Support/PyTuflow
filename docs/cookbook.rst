@@ -365,7 +365,7 @@ The below are examples on how to edit an :doc:`input <inp>` in TUFLOW and save t
    # >>> False
 
    # the input can also have the left-hand side updated using 'update_command()'
-   inp = tcf.find_input('solution scheme')[0]
+   inp = tcf.find_input('gpu solver')[0]
    print(inp)
    # >>> GPU Solver == ON
    # This is an old command that invokes the old GPU Solver
@@ -377,7 +377,7 @@ The below are examples on how to edit an :doc:`input <inp>` in TUFLOW and save t
 
    # The entire input can also be updated by setting the underlying 'Command' object.
    # users should be careful when using this as certain settings may be lost
-   # and can't be reversed using the undo() or reset() methods.
+   # if not done properly and can't be reversed using the undo() or reset() methods.
    from pytuflow.tmf import Command
    # get the original input settings - this settings object may contain
    # contextual information which is important to retain
@@ -387,17 +387,122 @@ The below are examples on how to edit an :doc:`input <inp>` in TUFLOW and save t
    print(inp)
    # >>> Solution Scheme == Classic
 
+   # it is also possible to comment out or uncomment commands
+   # e.g. to comment out a given input
+   inp = tcf.find_input('hardware')[0]
+   print(inp)
+   # >>> Hardware == GPU
+   inp = tcf.comment_out(inp)
+   print(inp)
+   # >>> ! Hardware == GPU
+   # in reverse, to find a commented out command, comments parameter must be set to True
+   inp = tcf.find_input('hardware', comments=True)[0]
+   print(inp)
+   # >>> ! Hardware == GPU
+   inp = tcf.uncomment(inp)
+   print(inp)
+   # >>> Hardware == GPU
+
 
 Add a New Input
 ~~~~~~~~~~~~~~~
 
+The below are examples of how to add a new :doc:`input <inp>` to a TUFLOW control file.
+
+.. code-block:: python
+
+   from pytuflow.tmf import TCF
 
 
-Edit a Database
-~~~~~~~~~~~~~~~
+   tcf = TCF('path/to/model.tcf')
+
+   # to add a new input to the end of the control file
+   inp = tcf.append_input('Model Scenarios == DEV | 5m')
+   print(inp)
+   # >>> Model Scenarios == DEV | 5m
+
+   # to add a new input next to an existing input
+   inp = tcf.find_input('solution scheme')[0]
+   new_inp = tcf.insert_input(inp, 'Hardware == GPU', after=True)
+
+   # GIS inputs can simply reference the GIS file path (relative or absolute path)
+   # and the command will be auto generated
+   inp = tcf.find_input('set code')[0]
+   new_inp = tcf.insert_input(inp, 'path/to/2d_code_R.shp', after=True)
+   print(new_inp)
+   # >>> Read GIS Code == gis\2d_code_R.shp
+
+   # in this case, the input will be inserted after the 'set code' input
+   # in the TGC (even though the method is being called from the TCF)
+   # because this is where the reference input is located.
+   # append_input() will always add to the control file being called from
+   # since there is no reference input.
+   # Reference GPKG layers should be done in a similar way as they
+   # are done in TUFLOW "database.gpkg >> lyrname" and the command
+   # reference will simplify it accordingly. They can also be added
+   # by just using they layer name, however it is then up to the user
+   # to ensure a spatial database command is present.
+
+   # A list of GIS inputs can also be used
+   inp = tcf.find_input('read grid zpts')[0]
+   new_inp = tcf.insert_input(inp, ['path/to/2d_zsh_rd_L.shp', 'path/to/2d_zsh_rd_P.shp'], after=True)
+   print(new_inp)
+   # >>> Read GIS Z Shape == gis\2d_zsh_rd_L.shp | gis\2d_zsh_rd_P.shp
+
+   # An input can be added inside a 'If Scenario' block by giving the input
+   # a scope. e.g.
+   inp = tcf.find_input('read grid zpts')[0]
+   new_inp = tcf.insert_input(inp, 'path/to/2d_zsh_DEV_R.shp', after=True)
+   new_inp.set_scope([('Scenario', 'DEV')])
+
+   # the required argument for set_scope() is a list of tuples
+   # the second item in the tuple can use a pipe symbol '|'
+   # in the same way that TUFLOW uses it to denote multiple options
+   # e.g. ('Scenario', 'DEV | EXG')
+   # passing in multiple tuples will add nested IF statements
+
+   # when this new input is written to file (or cf.preview() called to print to the console)
+   # it will be placed inside the 'If Scenario == DEV' block
+   tcf.tgc().preview()
 
 
+Querying a Database
+~~~~~~~~~~~~~~~~~~~
 
+The below are examples of how to query a :class:`database <pytuflow.tmf.Database>` in a TUFLOW control file. For example
+getting the boundary time series from a :class:`bc_dbase <pytuflow.tmf.BCDatabase>`
+
+.. code-block:: python
+
+   from pytuflow.tmf import TCF
+
+
+   tcf = TCF('path/to/model.tcf')
+   bc_dbase = tcf.bc_dbase()
+   df = bc_dbase.db()  # database.db() returns the Pandas DataFrame
+
+   # if there are no event variables
+   bndry = bc_dbase.value('FC01')
+
+   # most likely there will be event variables in the bc_dbase
+   # multiple combinations of events can be obtained
+   events = {'e1' ['Q100'], 'e2': ['2hr']}
+   bndries = bc_dbase.value('FC01', event_db=tcf.event_database(), event_groups=events)
+
+   # if event groups are passed in, then the event_db argument must also be provided
+   # the return in this case will be a dictionary containing all event combinations
+   # the key is the event name (space delimited event name combinations)
+   q100_2hr = bndries['Q100 2hr']
+
+   # alternatively, the inputs can be resolved using context() first
+   bc_dbase = tcf.context('-e1 Q100 -e2 2hr').bc_dbase()
+   q100_2hr = bc_dbase.value('FC01')
+
+
+Editing a Database
+~~~~~~~~~~~~~~~~~~
+
+Databases are not currently supported for editing. The process of editing them should be done manually via Pandas.
 
 Load Time Series Results
 ------------------------
