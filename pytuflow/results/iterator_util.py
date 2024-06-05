@@ -182,7 +182,10 @@ class ErrorMessage:
             not_found_id, not_found_type
         """
         if self.user_comb:
-            if not self.valid_id_somewhere:
+            if None in self.uids or None:
+                invalid = [x.id_orig for x in self.corr_items if not x.id][0]
+                return f'"{invalid}"', 'ID'
+            elif not self.valid_id_somewhere:
                 return f'"{self.corr_item.id_orig}"', 'ID'
             elif not self.valid_rt_somewhere:
                 return f'"{self.corr_item.result_type_orig}"', 'result type'
@@ -199,6 +202,8 @@ class ErrorMessage:
         -------
         str
         """
+        if self.user_comb and None in self.uids:
+            return
         if self.user_comb and self.corr_item.result_type and self.valid_id_somewhere:
             return f'does not have "{self.corr_item.result_type}" result type'
         if self.user_comb and self.valid_id_somewhere and not self.valid_rt_somewhere:
