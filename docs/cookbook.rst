@@ -507,7 +507,7 @@ Databases are not currently supported for editing. The process of editing them s
 Load Time Series Results
 ------------------------
 
-The below are examples of interacting with :class:`time series results <pytuflow.results.TimeSeriesResults>`.
+The below are examples of loading results with :class:`time series results <pytuflow.results.TimeSeriesResults>`.
 This includes:
 
 * :class:`TPC <pytuflow.results.TPC>`
@@ -517,36 +517,186 @@ This includes:
 
 .. code-block:: python
 
-   from pytuflow.results import TPC
-
-
    # to load a TPC result file
-   res = TPC('path/to/model.tpc')
+   from pytuflow.results import TPC
+   res = TPC('path/to/results.tpc')
 
    # the tpc file path can also be obtained from the TCF class
    from pytuflow.tmf import TCF
    tcf = TCF('path/to/model.tcf')
-   tpc = tcf.context().tpc()  # file path
+   tpc = tcf.context().tpc()  # returns file path
    res = TPC(tpc)
 
    # GPKG time series results (written by TUFLOW-SWMM simulations)
    from pytuflow.results import GPKG_TS
-   res = GPKG_TS('path/to/model.gpkg')
+   res = GPKG_TS('path/to/results_TS.gpkg')
 
    # Flood modeller results requires results (.ZZN or .CSV) and
    # preferably as well as the DAT file
    from pytuflow.results import FM_TS
    res = FM_TS('path/to/model.zzn')
    # providing a dat file will provide node connectivity - allows for long plotting
-   res = FM_TS('path/to/model.csv', dat='path/to/model.dat')
+   res = FM_TS('path/to/exported_model_results.csv', dat='path/to/model.dat')
 
-   # providing a GXY is optional provides GIS coordinate information
-   res = FM_TS('path/to/model.csv', dat='path/to/model.dat', gxy='path/to/model.gxy')
+   # providing a GXY is optional and provides GIS coordinate information
+   res = FM_TS('path/to/model.zzn', dat='path/to/model.dat', gxy='path/to/model.gxy')
 
 
 
 Plot Time Series Results
 ~~~~~~~~~~~~~~~~~~~~~~~~
+
+The below are examples of extracting time series results for a given channel/node(s) and result type(s).
+The examples below use the :class:`TPC <pytuflow.results.TPC>` class, but the same methods can also be used
+for the other result formats.
+
+.. code-block:: python
+
+   from pytuflow.results import TPC
+   import matplotlib.pyplot as plt
+
+
+   res = TPC('path/to/results.tpc')
+   df = res.time_series('FC01.34', 'Flow')
+   print(df.head())
+   # Type        Channel
+   # Result Type    Flow
+   # ID          FC01.34
+   # Time (h)
+   # 0.000000        0.0
+   # 0.016667        0.0
+   # 0.033333        0.0
+   # 0.050000        0.0
+   # 0.066667        0.0
+
+   # Note that the returned pandas DataFrame uses a multi-index column name:
+   # Type / Result Type / ID
+
+   # the simplest way to plot the dataframe is to use the built-in plot method
+   df.plot()
+   plt.show()
+
+   # it's possible to drop column levels to make the DataFrame and plot more readable
+   # to drop the 'Channel' level
+   df.columns = df.columns.droplevel('Type')
+   df.plot()
+   plt.show()
+
+   # or to drop the 'Result Type' level as well
+   df.columns = df.columns.droplevel(['Type', 'Result Type'])
+   df.plot()
+   plt.show()
+
+   # the time_series() method is not case sensitive and in a lot of cases
+   # short hand versions of the result type is supported
+   df = res.time_series('fc01.34', 'q')
+
+   # multiple channels can be queried at once
+   df = res.time_series(['FC01.34', 'FC01.33'], 'v')
+   print(df.head())
+   # Type        Channel
+   # Result Type    Flow
+   # ID          FC01.34 FC01.33
+   # Time (h)
+   # 0.000000        0.0     0.0
+   # 0.016667        0.0     0.0
+   # 0.033333        0.0     0.0
+   # 0.050000        0.0     0.0
+   # 0.066667        0.0     0.0
+
+   # likewise, multiple result types can be queried at once
+   df = res.time_series(['FC01.34', 'FC01.33'], ['v', 'q'])
+   print(df.head())
+   # Type        Channel
+   # Result Type    Flow         Velocity
+   # ID          FC01.34 FC01.33  FC01.34 FC01.33
+   # Time (h)
+   # 0.000000        0.0     0.0      0.0     0.0
+   # 0.016667        0.0     0.0      0.0     0.0
+   # 0.033333        0.0     0.0      0.0     0.0
+   # 0.050000        0.0     0.0      0.0     0.0
+   # 0.066667        0.0     0.0      0.0     0.0
+
+   # it's possible to get results across different 'Types'
+   # e.g. get the flow in a channel and a level in a node
+   df = res.time_series(['FC01.33', 'FC01.33.1'], ['q', 'h'])
+   print(df.head())
+   # Type        Channel        Node
+   # Result Type    Flow Water Level
+   # ID          FC01.33   FC01.33.1
+   # Time (h)
+   # 0.000000        0.0     43.6368
+   # 0.016667        0.0     43.6368
+   # 0.033333        0.0     43.6368
+   # 0.050000        0.0     43.6368
+   # 0.066667        0.0     43.6368
+
+   # sometimes the same ID is used across domains
+   # e.g.
+   # a channel called 'test' and a PO line called 'test'
+   df = res.time_series('test', 'q')
+   print(df.head())
+   # Type        Channel   PO
+   # Result Type    Flow Flow
+   # ID             test test
+   # Time (h)
+   # 0.000000        0.0  0.0
+   # 0.016667        0.0  0.0
+   # 0.033333        0.0  0.0
+   # 0.050000        0.0  0.0
+   # 0.066667        0.0  0.0
+
+   # it's possible to query a specific instance of 'test' by using the 'domain' argument
+   # domain can be '1d', '2d', or '0d' (0d is for reporting locations)
+   df = res.time_series('test', 'q', domain='1d')
+   print(df.head())
+   # Type        Channel
+   # Result Type    Flow
+   # ID             test
+   # Time (h)
+   # 0.000000        0.0
+   # 0.016667        0.0
+   # 0.033333        0.0
+   # 0.050000        0.0
+   # 0.066667        0.0
+
+   # it's also possible to get all result types and/or all elements
+   # by passing in None to the respective arguments
+   df = res.time_series('test', None)  # all results for elements with ID 'test'
+   print(df.head())
+   # Type        Channel                           PO
+   # Result Type    Flow Velocity Channel Regime Flow
+   # ID             test     test           test test
+   # Time (h)
+   # 0.000000        0.0      0.0              E  0.0
+   # 0.016667        0.0      0.0              E  0.0
+   # 0.033333        0.0      0.0              E  0.0
+   # 0.050000        0.0      0.0              E  0.0
+   # 0.066667        0.0      0.0              E  0.0
+
+   df = res.time_series(None, 'q')  # all flow results
+   print(df.head())
+   # Type        Channel                                      ...                                                 PO
+   # Result Type    Flow                                      ...                                               Flow
+   # ID              ds1  ds2  ds3  ds4  ds5 ds_weir FC01.01  ... FC02.04 FC02.05 FC02.06 FC_weir1 RD_weir test test
+   # Time (h)                                                 ...
+   # 0.000000        0.0  0.0  0.0  0.0  0.0     0.0     0.0  ...     0.0     0.0     0.0      0.0     0.0  0.0  0.0
+   # 0.016667        0.0  0.0  0.0  0.0  0.0     0.0     0.0  ...     0.0     0.0     0.0      0.0     0.0  0.0  0.0
+   # 0.033333        0.0  0.0  0.0  0.0  0.0     0.0     0.0  ...     0.0     0.0     0.0      0.0     0.0  0.0  0.0
+   # 0.050000        0.0  0.0  0.0  0.0  0.0     0.0     0.0  ...     0.0     0.0     0.0      0.0     0.0  0.0  0.0
+   # 0.066667        0.0  0.0  0.0  0.0  0.0     0.0     0.0  ...     0.0     0.0     0.0      0.0     0.0  0.0  0.0
+
+   df = res.time_series(None, None)  # everything
+   print(df.head())
+   # Type        Channel                              ...        Node                                           PO
+   # Result Type    Flow                              ... Node Regime                                         Flow
+   # ID              ds1  ds2  ds3  ds4  ds5 ds_weir  ...   FC02.02.1 FC02.03.1 FC02.04.1 FC02.05.1 FC02.06.1 test
+   # Time (h)                                         ...
+   # 0.000000        0.0  0.0  0.0  0.0  0.0     0.0  ...           E         E         E         E         E  0.0
+   # 0.016667        0.0  0.0  0.0  0.0  0.0     0.0  ...           E         E         E         E         E  0.0
+   # 0.033333        0.0  0.0  0.0  0.0  0.0     0.0  ...           E         E         E         E         E  0.0
+   # 0.050000        0.0  0.0  0.0  0.0  0.0     0.0  ...           E         E         E         E         E  0.0
+   # 0.066667        0.0  0.0  0.0  0.0  0.0     0.0  ...           E         E         E         E         E  0.0
 
 
 Plot Long Profile Results
