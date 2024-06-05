@@ -217,7 +217,10 @@ class LP_1D:
             self.df.reset_index(),
             id_vars=['index'],
             value_vars=['US Node', 'DS Node']
-        ).sort_values('index')['value'].tolist()
+        )
+        nodes[['index']] = nodes[['index']] * 2
+        nodes.loc[nodes['variable'] == 'DS Node', 'index'] = nodes[nodes['variable'] == 'DS Node'][['index']] + 1
+        nodes = nodes.sort_values('index')['value'].tolist()
 
         df = pd.DataFrame([])
         for result_type in result_types:
