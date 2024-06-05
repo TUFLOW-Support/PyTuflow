@@ -279,19 +279,19 @@ class Test_TPC_2016(TestCase):
         p = './tests/2016/M04_5m_001.tpc'
         res = TPC(p)
         df = res.long_plot('ds1', ['bed level', 'water level'], 1)
-        self.assertEqual((12, 5), df.shape)
+        self.assertEqual((12, 2), df.shape)
 
     def test_long_plot_2(self):
         p = './tests/2016/M04_5m_001.tpc'
         res = TPC(p)
         df = res.long_plot('ds1', ['bed level', 'pipes', 'pits', 'water level'], 1)
-        self.assertEqual((12, 7), df.shape)
+        self.assertEqual((12, 4), df.shape)
 
     def test_long_plot_3(self):
         p = './tests/2016/M04_5m_001.tpc'
         res = TPC(p)
         df = res.long_plot('ds1', ['bed level', 'water level', 'max water level'], 1)
-        self.assertEqual((12, 7), df.shape)
+        self.assertEqual((12, 4), df.shape)
 
     def test_long_plot_error(self):
         p = './tests/2016/M04_5m_001.tpc'
@@ -394,7 +394,7 @@ class Test_TPC_2019(TestCase):
         p = './tests/2020/EG15_001.tpc'
         res = TPC(p)
         df = res.long_plot('pipe1', ['bed elevation', 'water level', 'pipes', 'pits'], 1)
-        self.assertEqual((10, 7), df.shape)
+        self.assertEqual((10, 4), df.shape)
 
     def test_all_results(self):
         p = './tests/2020/EG15_001.tpc'
@@ -493,25 +493,25 @@ class Test_GPKG_TS_2023(TestCase):
         p = './tests/2023/M06_5m_003_SWMM_swmm_ts.gpkg'
         res = GPKG_TS(p)
         df = res.long_plot('pipe1', ['Bed Level', 'water level'], 1)
-        self.assertEqual((10, 5), df.shape)
+        self.assertEqual((10, 2), df.shape)
 
     def test_long_plot2(self):
         p = './tests/2023/M06_5m_003_SWMM_swmm_ts.gpkg'
         res = GPKG_TS(p)
         df = res.long_plot('pipe1', ['bed level', 'pipes', 'pits'], 1)
-        self.assertEqual((10, 6), df.shape)
+        self.assertEqual((10, 3), df.shape)
 
     def test_long_plot3(self):
         p = './tests/2023/M06_5m_003_SWMM_swmm_ts.gpkg'
         res = GPKG_TS(p)
         df = res.long_plot('pipe1', ['bed level', 'pipes', 'water level', 'max h'], 1)
-        self.assertEqual((10, 8), df.shape)
+        self.assertEqual((10, 5), df.shape)
 
     def test_long_plot4(self):
         p = './tests/2023/M06_5m_003_SWMM_swmm_ts.gpkg'
         res = GPKG_TS(p)
         df = res.long_plot('pipe1', ['bed level', 'pipes', 'water level'], 1)
-        self.assertEqual((10, 6), df.shape)
+        self.assertEqual((10, 3), df.shape)
 
     def test_maximum_types(self):
         p = './tests/2023/M06_5m_003_SWMM_swmm_ts.gpkg'
@@ -671,7 +671,7 @@ class Test_FM_TS(unittest.TestCase):
         gxy = './tests/fm/zzn/FMT_M01_001.gxy'
         res = FM_TS(p, gxy, dat)
         df = res.long_plot('FC01.11', ['bed level', 'water level'], 1)
-        self.assertEqual((200, 5), df.shape)
+        self.assertEqual((200, 2), df.shape)
 
     def test_maximums(self):
         p = './tests/fm/zzn/FMT_M01_001.zzn'
@@ -760,13 +760,13 @@ class Test_Info_2013(unittest.TestCase):
         p = './tests/2013/M04_5m_001_1d.info'
         res = INFO(p)
         df = res.long_plot('ds1', ['bed level', 'water level', 'max water level'], 1)
-        self.assertEqual((12, 7), df.shape)
+        self.assertEqual((12, 4), df.shape)
 
     def test_long_plot_2(self):
         p = './tests/2013/M04_5m_001_1d.info'
         res = INFO(p)
         df = res.long_plot(['FC01.1_R', 'FC01.36'], ['bed level', 'water level', 'pipes'], 1)
-        self.assertEqual((4, 6), df.shape)
+        self.assertEqual((4, 3), df.shape)
 
 
 class Test_HydTables(unittest.TestCase):

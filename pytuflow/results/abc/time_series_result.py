@@ -600,6 +600,10 @@ class TimeSeriesResult(ABC):
         e.g. if 2 IDs are provided one ID must be downstream of the other ID. If 3 IDs are provided, one ID must be
         downstream of the other 2.
 
+        The returned DataFrame uses a 4 level multi-level row index:
+
+        :code:`Branch ID / Node ID / Channel ID / Offset`
+
         Parameters
         ----------
         id : Union[str, list[str]]

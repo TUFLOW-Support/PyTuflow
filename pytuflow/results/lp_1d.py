@@ -97,6 +97,10 @@ class LP_1D:
         """Generate a long plot for the given result types and timestep index.
         Returns a DataFrame with the connected channel IDs, node IDs, offsets and requested result types.
 
+        The returned DataFrame uses a 4 level multi-level row index:
+
+        :code:`Branch ID / Node ID / Channel ID / Offset`
+
         Parameters
         ----------
         result_type : list[str]
@@ -146,13 +150,12 @@ class LP_1D:
         # initialise df with channel and node ids
         df = pd.melt(
             self.df.reset_index(),
-            id_vars=['Channel', 'index'],
+            id_vars=[ 'Branch ID', 'Channel', 'index'],
             value_vars=['US Node', 'DS Node']
         )
         df[['index']] = df[['index']] * 2
-        # df.loc[df['variable'] == 'US Node', 'index'] = df[df['variable'] == 'US Node'][['index']] * 2
         df.loc[df['variable'] == 'DS Node', 'index'] = df[df['variable'] == 'DS Node'][['index']] + 1
-        df = df.sort_values('index')[['Channel', 'value']].rename(columns={'value': 'Node'})
+        df = df.sort_values('index')[['Branch ID', 'Channel', 'value']].rename(columns={'value': 'Node'})
 
         # offsets - always required
         if self.df_static.empty:
@@ -186,6 +189,7 @@ class LP_1D:
                 df[result_type] = self._utils.extract_culvert_obvert(self.df)
 
         self.df_static = df.reset_index(drop=True)
+        self.df_static.set_index(['Branch ID', 'Node', 'Channel', 'Offset'], inplace=True)
         return self.df_static
 
     def temporal_data(self, result_types: list[str], timestep_index: int) -> pd.DataFrame:
@@ -215,24 +219,27 @@ class LP_1D:
         # convert connected channels into a node list
         nodes = pd.melt(
             self.df.reset_index(),
-            id_vars=['index'],
+            id_vars=['Branch ID', 'Channel', 'index'],
             value_vars=['US Node', 'DS Node']
         )
         nodes[['index']] = nodes[['index']] * 2
         nodes.loc[nodes['variable'] == 'DS Node', 'index'] = nodes[nodes['variable'] == 'DS Node'][['index']] + 1
-        nodes = nodes.sort_values('index')['value'].tolist()
+        nodes = nodes.sort_values('index')[['Branch ID', 'Channel', 'value']].rename(columns={'value': 'Node'})
 
-        df = pd.DataFrame([])
+        nodes['Offset'] = self.df_static.reset_index()['Offset'].tolist()
+        nodes.reset_index(drop=True, inplace=True)
         for result_type in result_types:
             if result_type.lower() in [x.lower() for x in self.df_static.columns]:
                 i = [x.lower() for x in self.df_static.columns].index(result_type.lower())
-                df[result_type] = self.df_temp.iloc[:, i]
+                nodes[result_type] = self.df_temp.iloc[:, i]
             else:
-                y = self.nodes.val(nodes, result_type, timestep_index)
+                y = self.nodes.val(nodes['Node'], result_type, timestep_index)
                 if not y.empty:
-                    df[result_type] = y
+                    nodes[result_type] = y[result_type].tolist()
 
-        return df.reset_index(drop=True)
+        nodes.reset_index(drop=True, inplace=True)
+        nodes.set_index(['Branch ID', 'Node', 'Channel', 'Offset'], inplace=True)
+        return nodes
 
     def max_data(self, result_types: list[str]) -> pd.DataFrame:
         """Routine to extract maximum data.
@@ -254,15 +261,23 @@ class LP_1D:
         # convert connected channels into a node list
         nodes = pd.melt(
             self.df.reset_index(),
-            id_vars=['index'],
+            id_vars=['Branch ID', 'Channel', 'index'],
             value_vars=['US Node', 'DS Node']
-        ).sort_values('index')['value'].tolist()
+        )
+        nodes[['index']] = nodes[['index']] * 2
+        nodes.loc[nodes['variable'] == 'DS Node', 'index'] = nodes[nodes['variable'] == 'DS Node'][['index']] + 1
+        nodes = nodes.sort_values('index')[['Branch ID', 'Channel', 'value']].rename(columns={'value': 'Node'})
 
-        df = pd.DataFrame([])
+        nodes['Offset'] = self.df_static.reset_index()['Offset'].tolist()
+        nodes.reset_index(drop=True, inplace=True)
         if result_types:
-            df = self.nodes.get_maximum(nodes, result_types)
+            df = self.nodes.get_maximum(nodes['Node'], result_types)
             df.columns = df.columns.get_level_values('Result Type')
-        return df.reset_index(drop=True)
+            df.reset_index(drop=True, inplace=True)
+            nodes = pd.concat([nodes, df], axis=1)
+
+        nodes.set_index(['Branch ID', 'Node', 'Channel', 'Offset'], inplace=True)
+        return nodes
 
     @staticmethod
     def extract_static_results(result_types: list[str]) -> tuple[list[str], list[str]]:
