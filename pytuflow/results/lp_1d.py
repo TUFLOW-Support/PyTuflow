@@ -176,7 +176,7 @@ class LP_1D:
         # other static result types
         for result_type in result_types:
             if result_type in self.df_static.columns:
-                df[result_type] = self.df_static[result_type]
+                df[result_type] = self.df_static[result_type].tolist()
             elif 'bed' in result_type.lower():
                 y = []
                 for row in self.df.iterrows():
