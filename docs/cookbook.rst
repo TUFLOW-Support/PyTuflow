@@ -722,40 +722,41 @@ from the `TUFLOW example model dataset <https://wiki.tuflow.com/TUFLOW_Example_M
    res = TPC('path/to/results/plot/EG15_001.tpc')
    df = res.long_plot('pipe1', 'h', 1.0)  # starting at pipe1, plot water level at timestep 1.0 hrs
    print(df.head())
-   #                                 Water Level
-   # Branch ID Node  Channel Offset
-   # 0         Pit2  Pipe1   0.0         42.5029
-   #           Pit3  Pipe1   24.7        42.4952
-   #                 Pipe4   24.7        42.4952
-   #           Pit15 Pipe4   94.2        42.3310
-   #                 Pipe6   94.2        42.3310
+   #           Channel   Node  Offset  Water Level
+   # Branch ID
+   # 0           Pipe1   Pit2     0.0      42.5029
+   # 0           Pipe1   Pit3    24.7      42.4952
+   # 0           Pipe4   Pit3    24.7      42.4952
+   # 0           Pipe4  Pit15    94.2      42.3310
+   # 0           Pipe6  Pit15    94.2      42.3310
 
-   # long_plot() returns a pandas DataFrame with 4 levels of indexing
-   # Branch ID / Node / Channel / Offset
+   # long_plot() returns a pandas DataFrame indexes by Branch ID
+   # a branch is a path from the start point to the end point
+   # if the channel splits in the downstream direction, then
+   # multiple branches will be returned which can contain duplicate
+   # channels as other branches.
 
    # the branches use a zero indexing
    # to get the number of branches
-   nbranch = df.index.get_level_values('Branch ID').nunique()
+   nbranch = df.index.nunique()
    print(nbranch)
    # >>> 1
 
-   # to focus on a single branch, we can use the DataFrame.xs() method
-   df = df.xs(0, level='Branch ID')  # get branch 0 (the first branch)
-   print(df.head())
-   #                       Water Level
-   # Node  Channel Offset
-   # Pit2  Pipe1   0.0         42.5029
-   # Pit3  Pipe1   24.7        42.4952
-   #       Pipe4   24.7        42.4952
-   # Pit15 Pipe4   94.2        42.3310
-   #       Pipe6   94.2        42.3310
+   # to focus on a single branch (if multiple branches)
+   df = df.loc[0]  # get branch 0 (the first branch)
 
    # plot the water level at time 1.0
-   df.reset_index().plot(x='Offset', y='Water Level')
+   df.plot(x='Offset', y='Water Level')
    plt.show()
 
-   # because the index contains the pit, pipe, and offset information,
-   # it's possible to perform custom slicing
-   idx = pd.IndexSlice
-   df1 = df.loc[idx[:,('Pipe4', 'Pipe15')], :]
+   # another example plotting static results
+   df = res.long_plot('pipe1', ['bed level', 'water level max'], -1)  # -1 to denote that static data does not require a timestep
+   print(df.head())
+   #           Channel   Node  Offset  Water Level Max  Water Level TMax
+   # Branch ID
+   # 0           Pipe1   Pit2     0.0          42.5066            0.9198
+   # 0           Pipe1   Pit3    24.7          42.4988            0.9461
+   # 0           Pipe4   Pit3    24.7          42.4988            0.9461
+   # 0           Pipe4  Pit15    94.2          42.3356            0.9509
+   # 0           Pipe6  Pit15    94.2          42.3356            0.9509
 

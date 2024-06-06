@@ -171,7 +171,7 @@ class LP_1D:
                 offsets.append(offset)
             df['Offset'] = offsets
         else:
-            df['Offset'] = self.df_static[['Offset']]
+            df['Offset'] = self.df_static['Offset'].tolist()
 
         # other static result types
         for result_type in result_types:
