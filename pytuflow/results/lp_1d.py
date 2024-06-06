@@ -188,8 +188,7 @@ class LP_1D:
             elif 'culvert' in result_type.lower() or 'pipe' in result_type.lower():
                 df[result_type] = self._utils.extract_culvert_obvert(self.df)
 
-        self.df_static = df.reset_index(drop=True)
-        self.df_static.set_index(['Branch ID', 'Node', 'Channel', 'Offset'], inplace=True)
+        self.df_static = df.set_index('Branch ID')
         return self.df_static
 
     def temporal_data(self, result_types: list[str], timestep_index: int) -> pd.DataFrame:
@@ -219,14 +218,13 @@ class LP_1D:
         # convert connected channels into a node list
         nodes = pd.melt(
             self.df.reset_index(),
-            id_vars=['Branch ID', 'Channel', 'index'],
+            id_vars=['Branch ID', 'index'],
             value_vars=['US Node', 'DS Node']
         )
         nodes[['index']] = nodes[['index']] * 2
         nodes.loc[nodes['variable'] == 'DS Node', 'index'] = nodes[nodes['variable'] == 'DS Node'][['index']] + 1
-        nodes = nodes.sort_values('index')[['Branch ID', 'Channel', 'value']].rename(columns={'value': 'Node'})
+        nodes = nodes.sort_values('index')[['Branch ID', 'value']].rename(columns={'value': 'Node'})
 
-        nodes['Offset'] = self.df_static.reset_index()['Offset'].tolist()
         nodes.reset_index(drop=True, inplace=True)
         for result_type in result_types:
             if result_type.lower() in [x.lower() for x in self.df_static.columns]:
@@ -237,8 +235,8 @@ class LP_1D:
                 if not y.empty:
                     nodes[result_type] = y[result_type].tolist()
 
-        nodes.reset_index(drop=True, inplace=True)
-        nodes.set_index(['Branch ID', 'Node', 'Channel', 'Offset'], inplace=True)
+        nodes.set_index(['Branch ID'], inplace=True)
+        nodes.drop(columns=['Node'], inplace=True)
         return nodes
 
     def max_data(self, result_types: list[str]) -> pd.DataFrame:
@@ -261,14 +259,13 @@ class LP_1D:
         # convert connected channels into a node list
         nodes = pd.melt(
             self.df.reset_index(),
-            id_vars=['Branch ID', 'Channel', 'index'],
+            id_vars=['Branch ID', 'index'],
             value_vars=['US Node', 'DS Node']
         )
         nodes[['index']] = nodes[['index']] * 2
         nodes.loc[nodes['variable'] == 'DS Node', 'index'] = nodes[nodes['variable'] == 'DS Node'][['index']] + 1
-        nodes = nodes.sort_values('index')[['Branch ID', 'Channel', 'value']].rename(columns={'value': 'Node'})
+        nodes = nodes.sort_values('index')[['Branch ID', 'value']].rename(columns={'value': 'Node'})
 
-        nodes['Offset'] = self.df_static.reset_index()['Offset'].tolist()
         nodes.reset_index(drop=True, inplace=True)
         if result_types:
             df = self.nodes.get_maximum(nodes['Node'], result_types)
@@ -276,7 +273,8 @@ class LP_1D:
             df.reset_index(drop=True, inplace=True)
             nodes = pd.concat([nodes, df], axis=1)
 
-        nodes.set_index(['Branch ID', 'Node', 'Channel', 'Offset'], inplace=True)
+        nodes.set_index(['Branch ID'], inplace=True)
+        nodes.drop(columns=['Node'], inplace=True)
         return nodes
 
     @staticmethod
