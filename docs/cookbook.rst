@@ -752,11 +752,43 @@ from the `TUFLOW example model dataset <https://wiki.tuflow.com/TUFLOW_Example_M
    # another example plotting static results
    df = res.long_plot('pipe1', ['bed level', 'water level max'], -1)  # -1 to denote that static data does not require a timestep
    print(df.head())
-   #           Channel   Node  Offset  Water Level Max  Water Level TMax
+   #           Channel   Node  Offset  Bed Level  Water Level Max  Water Level TMax
    # Branch ID
-   # 0           Pipe1   Pit2     0.0          42.5066            0.9198
-   # 0           Pipe1   Pit3    24.7          42.4988            0.9461
-   # 0           Pipe4   Pit3    24.7          42.4988            0.9461
-   # 0           Pipe4  Pit15    94.2          42.3356            0.9509
-   # 0           Pipe6  Pit15    94.2          42.3356            0.9509
+   # 0           Pipe1   Pit2     0.0     41.968          42.5066            0.9198
+   # 0           Pipe1   Pit3    24.7     41.849          42.4988            0.9461
+   # 0           Pipe4   Pit3    24.7     41.849          42.4988            0.9461
+   # 0           Pipe4  Pit15    94.2     41.474          42.3356            0.9509
+   # 0           Pipe6  Pit15    94.2     41.474          42.3356            0.9509
+
+   df.plot(x='Offset', y=['Bed Level', 'Water Level Max'])
+   plt.show()
+
+   # add pipes
+   df = res.long_plot('pipe1', ['bed level', 'pipes', 'water level max'], -1)
+   print(df.head())
+   #           Channel    Node  Offset  Bed Level  Pipe Obvert  Water Level Max  Water Level TMax
+   # Branch ID
+   # 0           Pipe1    Pit2     0.0     41.968       42.868          42.5066            0.9198
+   # 0           Pipe1    Pit3    24.7     41.849       42.749          42.4988            0.9461
+   # 0           Pipe4    Pit3    24.7     41.849       42.749          42.4988            0.9461
+   # 0           Pipe4   Pit15    94.2     41.474       42.374          42.3356            0.9509
+   # 0           Pipe6   Pit15    94.2     41.474       42.374          42.3356            0.9509
+   # 0           Pipe6   Pit14   124.9     41.369       42.269          42.2036            0.9526
+   # 0          Pipe15   Pit14   124.9     41.369       42.269          42.2036            0.9526
+   # 0          Pipe15   Pit13   135.7     40.500       41.400          41.5868            0.8879
+   # 0          Pipe16   Pit13   135.7     40.500       41.400          41.5868            0.8879
+   # 0          Pipe16  Node20   208.7     40.050       40.950          40.5982            1.2944
+
+   # to plot the pipes, we'll use the Polygon class from matplotlib
+   # this requires a list of (x,y) coordinates to plot the pipe.
+   # pytuflow offers a utility to do this conversion from bed level and
+   # pipe obverts to a DataFrame containing the pipe coordinates
+   from matplotlib.patches import Polygon
+   from pytuflow.utils.plotting import long_plot_pipes
+
+   ax = df.plot(x= 'Offset', y=['Bed Level', 'Water Level Max'])
+   for pipeid, pipe in long_plot_pipes(df).items():
+       ax.add_patch(Polygon(pipe.to_numpy(), facecolor='0.9', edgecolor='0.5', label=pipeid))
+   plt.ylim(39.5, 43.5)  # polygons don't affect the auto axis limits so this is required
+   plt.show()
 
