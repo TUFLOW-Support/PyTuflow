@@ -784,11 +784,61 @@ from the `TUFLOW example model dataset <https://wiki.tuflow.com/TUFLOW_Example_M
    # pytuflow offers a utility to do this conversion from bed level and
    # pipe obverts to a DataFrame containing the pipe coordinates
    from matplotlib.patches import Polygon
-   from pytuflow.utils.plotting import long_plot_pipes
+   from pytuflow.util.plot_util import long_plot_pipes
 
    ax = df.plot(x= 'Offset', y=['Bed Level', 'Water Level Max'])
    for pipeid, pipe in long_plot_pipes(df).items():
        ax.add_patch(Polygon(pipe.to_numpy(), facecolor='0.9', edgecolor='0.5', label=pipeid))
    plt.ylim(39.5, 43.5)  # polygons don't affect the auto axis limits so this is required
+   plt.show()
+
+   # multiple pipes can be passed in to specify the reach to plot
+   df = res.long_plot(['pipe4', 'pipe16'], ['bed level', 'pipes', 'water level max'], -1)
+   ax = df.plot(x= 'Offset', y=['Bed Level', 'Water Level Max'])
+   for pipeid, pipe in long_plot_pipes(df).items():
+        ax.add_patch(Polygon(pipe.to_numpy(), facecolor='0.9', edgecolor='0.5', label=pipeid))
+   plt.ylim(39.5, 43.5)  # polygons don't affect the auto axis limits so this is required
+   plt.show()
+
+   # and to plot multiple branches
+   # pipe16 is downstream of both pipe4 and pipe10
+   df = res.long_plot(['pipe10', 'pipe4', 'pipe16'], ['bed level', 'pipes', 'h max'], -1)
+   print(df)
+   #           Channel    Node  Offset  Bed Level  Pipe Obvert  Water Level Max  Water Level TMax
+   # Branch ID
+   # 0          Pipe10    Pit7     0.0     41.655       42.555          43.1141            0.8924
+   # 0          Pipe10    Pit9    58.4     41.308       42.208          42.9768            0.9083
+   # 0          Pipe11    Pit9    58.4     41.308       42.208          42.9768            0.9083
+   # 0          Pipe11   Pit10    91.1     41.266       42.166          42.8009            0.9147
+   # 0          Pipe13   Pit10    91.1     41.266       42.166          42.8009            0.9147
+   # 0          Pipe13   Pit11   112.4     41.160       42.060          42.4539            0.9272
+   # 0          Pipe14   Pit11   112.4     41.160       42.060          42.4539            0.9272
+   # 0          Pipe14   Pit13   157.4     40.500       41.400          41.5868            0.8879
+   # 0          Pipe16   Pit13   157.4     40.500       41.400          41.5868            0.8879
+   # 0          Pipe16  Node20   230.4     40.050       40.950          40.5982            1.2944
+   # 1           Pipe4    Pit3     0.0     41.849       42.749          42.4988            0.9461
+   # 1           Pipe4   Pit15    69.5     41.474       42.374          42.3356            0.9509
+   # 1           Pipe6   Pit15    69.5     41.474       42.374          42.3356            0.9509
+   # 1           Pipe6   Pit14   100.2     41.369       42.269          42.2036            0.9526
+   # 1          Pipe15   Pit14   100.2     41.369       42.269          42.2036            0.9526
+   # 1          Pipe15   Pit13   111.0     40.500       41.400          41.5868            0.8879
+   # 1          Pipe16   Pit13   111.0     40.500       41.400          41.5868            0.8879
+   # 1          Pipe16  Node20   184.0     40.050       40.950          40.5982            1.2944
+
+   ax = None
+   end = df['Offset'].max()
+   for bid in df.index.unique():
+       dfb = df.loc[bid]
+       # align branch ends
+       dif = end - dfb['Offset'].max()
+       dfb.loc[:,'Offset'] = dfb['Offset'] + dif
+       # plot
+       if ax is None:
+           ax = dfb.plot(x='Offset', y=['Bed Level', 'Water Level Max'])
+       else:
+           dfb.plot(x='Offset', y=['Bed Level', 'Water Level Max'], ax=ax)
+       # pipes
+       for pipeid, pipe in long_plot_pipes(dfb).items():
+           ax.add_patch(Polygon(pipe.to_numpy(), facecolor='0.9', edgecolor='0.5', label=pipeid))
    plt.show()
 

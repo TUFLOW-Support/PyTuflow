@@ -1,10 +1,16 @@
+"""Plotting Utility Module.
+
+This module contains functions that help with plotting data from TUFLOW models. The module tries not to use
+any plotting libraries directly, but rather return data in a format that can be used by plotting libraries.
+"""
+
 from collections import OrderedDict
 
 import pandas as pd
 
 
 def long_plot_pipes(df: pd.DataFrame) -> OrderedDict:
-    """Takes the DataFrame from TPC.long_plot and returns a dictionary of culverts.
+    """Takes the DataFrame from :meth:`long_plot() <long_plot>` and returns a dictionary of culverts.
 
     The DataFrame must have the following columns:
 

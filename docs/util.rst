@@ -19,7 +19,7 @@ A collection of useful utilities.
    util.geom
    util.logging
    util.patterns
-   util.plotting
+   util.plot_util
 
 .. rubric:: Functions
 
