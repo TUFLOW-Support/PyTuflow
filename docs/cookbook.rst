@@ -829,16 +829,32 @@ from the `TUFLOW example model dataset <https://wiki.tuflow.com/TUFLOW_Example_M
    end = df['Offset'].max()
    for bid in df.index.unique():
        dfb = df.loc[bid]
-       # align branch ends
+       # alter offsets so that the last offsets for each branch aligns
        dif = end - dfb['Offset'].max()
        dfb.loc[:,'Offset'] = dfb['Offset'] + dif
        # plot
-       if ax is None:
-           ax = dfb.plot(x='Offset', y=['Bed Level', 'Water Level Max'])
-       else:
-           dfb.plot(x='Offset', y=['Bed Level', 'Water Level Max'], ax=ax)
+       ax = dfb.plot(x='Offset', y=['Bed Level', 'Water Level Max'], ax=ax)
        # pipes
        for pipeid, pipe in long_plot_pipes(dfb).items():
            ax.add_patch(Polygon(pipe.to_numpy(), facecolor='0.9', edgecolor='0.5', label=pipeid))
    plt.show()
+
+   # An example of adding pits to the plot
+   df = res.long_plot('pipe1', ['bed level', 'pipes', 'pits'], -1)
+   print(df.head())
+   #           Channel   Node  Offset  Bed Level  Pipe Obvert  Pit Ground Elevation
+   # Branch ID
+   # 0           Pipe1   Pit2     0.0     41.968       42.868                43.266
+   # 0           Pipe1   Pit3    24.7     41.849       42.749                   NaN
+   # 0           Pipe4   Pit3    24.7     41.849       42.749                   NaN
+   # 0           Pipe4  Pit15    94.2     41.474       42.374                   NaN
+   # 0           Pipe6  Pit15    94.2     41.474       42.374                43.019
+
+   ax = None
+   ax = df.plot(x='Offset', y='Bed Level', ax=ax)
+   ax = df.plot(x='Offset', y='Pit Ground Elevation', ax=ax, linestyle='none', marker='o')
+   for pipeid, pipe in long_plot_pipes(df).items():
+        ax.add_patch(Polygon(pipe.to_numpy(), facecolor='0.9', edgecolor='0.5', label=pipeid))
+   plt.show()
+
 
