@@ -12,6 +12,7 @@ from sphinx.application import Sphinx
 
 
 sys.path.append((Path(__file__).resolve().parents[1]).as_posix())
+sys.path.append((Path(__file__).resolve().parent / '_ext').as_posix())
 
 project = 'pytuflow'
 copyright = '2024, Ellis Symons'
@@ -25,7 +26,8 @@ extensions = [
     'sphinx.ext.doctest',
     'sphinx.ext.autodoc',
     'sphinx.ext.autosummary',
-    'sphinx.ext.napoleon'
+    'sphinx.ext.napoleon',
+    'tuflowlexer',
 ]
 autosummary_generate = True
 autodoc_typehints = 'description'

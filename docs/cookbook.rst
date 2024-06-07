@@ -18,7 +18,7 @@ control files.
 The example below uses the example model :code:`EG00_001`
 from the `TUFLOW example model dataset <https://wiki.tuflow.com/TUFLOW_Example_Models#Multiple_Domain_Model_Design>`_.
 
-.. code-block:: python
+.. code-block:: pycon
 
    from pytuflow.tmf import TCF
 
@@ -37,7 +37,7 @@ Inputs can be accessed using the :meth:`get_inputs() <pytuflow.tmf.TCF.get_input
 :class:`Input <pytuflow.tmf.Input>` objects. By default the :meth:`get_inputs() <pytuflow.tmf.TCF.get_inputs>` method
 is recursive by default, meaning that it will also return inputs from any control files that are read in from the TCF.
 
-.. code-block:: python
+.. code-block:: pycon
 
    >>> for inp in tcf.get_inputs():
    ...    inp
@@ -75,7 +75,7 @@ is recursive by default, meaning that it will also return inputs from any contro
 
 Recursion can be turned off by setting the :code:`recursive` argument to :code:`False`.
 
-.. code-block:: python
+.. code-block:: pycon
 
    >>> for inp in tcf.get_inputs(recursive=False):
    ...     inp
@@ -109,7 +109,7 @@ doesn't make much difference since no control files are read in from anything ot
    :code:`TRD` files are included in whatever control file they are referenced in and recursion make
    no difference when retrieving them.
 
-.. code-block:: python
+.. code-block:: pycon
 
    >>> for inp in tcf.tgc().get_inputs():
    ...     inp
@@ -129,7 +129,7 @@ a list of inputs found in the TCF (recursive by default) that match the search p
 The simplest method is to pass in a string and that string will be matched against the entire input string
 (left-hand side and right-hand side of the command). The search is case insensitive.
 
-.. code-block:: python
+.. code-block:: pycon
 
    >>> for inp in tcf.find_input('read grid zpts'):
    ...     inp
@@ -138,7 +138,7 @@ The simplest method is to pass in a string and that string will be matched again
 The search string can be specific to a given side of the input by using the :code:`command` or :code:`value` arguments
 for the left-hand side and right-hand side of the command respectively.
 
-.. code-block:: python
+.. code-block:: pycon
 
    >>> for inp in tcf.find_input(command='code'):
    ...     inp
@@ -159,7 +159,7 @@ of an input and also include inputs that are purely comment lines in the control
 (and this can be uncommented as shown in :ref:`Update an Input <updating_an_input>`). Searching comments can also be useful if key
 searchable strings have been added to the comments.
 
-.. code-block:: python
+.. code-block:: pycon
 
    >>> for inp in tcf.find_input('Sub-Grid Sampling', comments=True):
    ...     inp
@@ -171,7 +171,7 @@ When using regex, the :code:`command` and :code:`value` arguments can still be u
 
 Example, finding all inputs that have :code:`1d_` or :code:`2d_` in the right-hand side of the command.
 
-.. code-block:: python
+.. code-block:: pycon
 
    >>> import re
    >>> for inp in tcf.find_input(value=r'[12]d_', regex=True, regex_flags=re.IGNORECASE):
@@ -192,14 +192,14 @@ argument is a list of tuples with a :code:`key` and :code:`value` pair. The :cod
 Example, using the :code:`tags` argument, we can find all inputs that are missing files (i.e. the file does not exist).
 In this case, nothing is printed as all files exist.
 
-.. code-block:: python
+.. code-block:: pycon
 
    >>> for inp in tcf.find_input(tags=[('missing_files', True)]):
    ...     inp
 
 For basic filtering, the :code:`tags` argument can be simplified:
 
-.. code-block:: python
+.. code-block:: pycon
 
    >>> for inp in tcf.find_input(tags='missing_files'):
    ...     inp
@@ -215,7 +215,7 @@ to be populated.
 
 For the following examples, we'll switch to using :code:`EG07_001.tcf` from the example model dataset.
 
-.. code-block:: python
+.. code-block:: pycon
 
    >>> tcf = TCF('path/to/EG07_001.tcf')
    >>> for inp in tcf.find_input(tags=('geoms', [2])):
@@ -228,7 +228,7 @@ to contain a combination of geometry types. We can expand the :code:`tags` value
 than exact value. The callable function should take one input (the property value) and return a boolean. In this case
 the callable will take a list argument, so we can check whether the value 2 is in the list.
 
-.. code-block:: python
+.. code-block:: pycon
 
    >>> for inp in tcf.find_input(tags=('geoms', lambda x: 2 in x)):
    ...     inp
@@ -247,7 +247,7 @@ way of finding inputs for a given scenario due to the way :code:`Else If/Else` l
 is to use :meth:`context() <pytuflow.tmf.TCF.context>` and check the available inputs. However this is just a
 demonstration on the :code:`callback` argument.
 
-.. code-block:: python
+.. code-block:: pycon
 
    >>> from pytuflow.tmf import Scope
    >>> tcf = TCF('path/to/EG16_~s1~_~s2~_002.tcf')
@@ -266,7 +266,7 @@ groups:
 
 Starting with :code:`-s1 5m -s2 D01`:
 
-.. code-block:: python
+.. code-block:: pycon
 
    >>> tcf = TCF(r'path/to/EG16_~s1~_~s2~_002.tcf')
    >>> for inp in tcf.context('-s1 5m -s2 D01').tgc().get_inputs():
@@ -288,7 +288,7 @@ has been resolved to :code:`Read GIS Z Shape == gis\\2d_zsh_EG07_006_R.shp`.
 
 Trying now with :code:`-s1 2.5m -s2 D02`:
 
-.. code-block:: python
+.. code-block:: pycon
 
    >>> for inp in tcf.context('-s1 2.5m -s2 D02').tgc().get_inputs():
    ...     inp
@@ -323,7 +323,7 @@ Continuing from the previous example using :code:`EG16_~s1~_~s2~_002.tcf`, we ca
 different scenario combinations. In this case, we expect that the :code:`Create TIN Zpts` input is only present in
 when scenario :code:`D02` is active.
 
-.. code-block:: python
+.. code-block:: pycon
 
    >>> inp = tcf.find_input('create tin zpts')[0]
    >>> print(inp.uuid)
@@ -344,63 +344,64 @@ of doing this without requiring custom coding (e.g. using the package model func
 The purpose of this example is to showcase the process and can be expanded on with more complex logic for custom tasks.
 
 .. code-block:: python
+   :linenos:
 
-   from pytuflow.tmf import TCF
-   from shutil import copy, copyfile
-   from pathlib import Path
+    from pytuflow.tmf import TCF
+    from shutil import copy, copyfile
+    from pathlib import Path
 
 
-   DEST = Path('path/to/destination/folder')
+    DEST = Path('path/to/destination/folder')
 
-   tcf = TCF('path/to/model.tcf')
-   root = tcf.path.parents[1]  # assumes standard directory structure e.g. 'TUFLOW/runs/EG00_001.tcf'
+    tcf = TCF('path/to/model.tcf')
+    root = tcf.path.parents[1]  # assumes standard directory structure e.g. 'TUFLOW/runs/EG00_001.tcf'
 
-   copied_files = []  # record copied files so don't copy the same file twice
+    copied_files = []  # record copied files so don't copy the same file twice
 
-   # copy the TCF itself
-   relpath = tcf.path.relative_to(root)
-   dest = DEST / relpath
-   if not dest.parent.exists():
-       dest.parent.mkdir(parents=True)
-   _ = copyfile(tcf.path, dest)
-   copied_files.append(dest)
+    # copy the TCF itself
+    relpath = tcf.path.relative_to(root)
+    dest = DEST / relpath
+    if not dest.parent.exists():
+        dest.parent.mkdir(parents=True)
+    _ = copyfile(tcf.path, dest)
+    copied_files.append(dest)
 
-   for file in tcf.get_files():
-       # get_files() will expand any wildcards/variables
-       # found in any input references
-       # e.g. Read GIS Code == 2d_code_<<~s1~>>_R.shp
-       # will find all files that match the pattern
-       # likewise, in the bc_dbase, event variables are expanded
-       # if a TEF is found.
+    for file in tcf.get_files():
+        # get_files() will expand any wildcards/variables
+        # found in any input references
+        # e.g. Read GIS Code == 2d_code_<<~s1~>>_R.shp
+        # will find all files that match the pattern
+        # likewise, in the bc_dbase, event variables are expanded
+        # if a TEF is found.
 
-       # The return from get_files() are TuflowPath objects
-       # which is an extension of the Path class to handle GPKG inputs
-       # GIS files returned from this method are always
-       # shown as 'db >> lyr' regardless of GIS format
-       # To get the file without the 'lyr' part we can use the 'dbpath' property
-       fpath = file.dbpath
+        # The return from get_files() are TuflowPath objects
+        # which is an extension of the Path class to handle GPKG inputs
+        # GIS files returned from this method are always
+        # shown as 'db >> lyr' regardless of GIS format
+        # To get the file without the 'lyr' part we can use the 'dbpath' property
+        fpath = file.dbpath
 
-       # replicate folder structure
-       relpath = fpath.relative_to(root)
-       dest = DEST / relpath
-       if not dest.parent.exists():
-           dest.parent.mkdir(parents=True)
+        # replicate folder structure
+        relpath = fpath.relative_to(root)
+        dest = DEST / relpath
+        if not dest.parent.exists():
+            dest.parent.mkdir(parents=True)
 
-       # check if the file has already been copied
-       if dest in copied_files:
-           continue
-       copied_files.append(dest)
+        # check if the file has already been copied
+        if dest in copied_files:
+            continue
+        copied_files.append(dest)
 
-       if not fpath.exists():
-           print('File does not exist:', fpath)  # log this
-           continue
+        if not fpath.exists():
+            print('File does not exist:', fpath)  # log this
+            continue
 
-       if fpath.suffix.upper() == '.SHP':
-           # make sure to copy all associated files with a shapefile
-           for assoc_file in fpath.parent.glob(f'{fpath.stem}.*'):
-               _ = copy(assoc_file, dest.parent)
-       else:
-           _ = copyfile(fpath, dest)
+        if fpath.suffix.upper() == '.SHP':
+            # make sure to copy all associated files with a shapefile
+            for assoc_file in fpath.parent.glob(f'{fpath.stem}.*'):
+                _ = copy(assoc_file, dest.parent)
+        else:
+            _ = copyfile(fpath, dest)
 
 It can be useful to copy specific files from a model, which can be done by filtering the inputs and using
 :meth:`find_input() <pytuflow.tmf.TCF.find_input>` rather than :meth:`get_files() <pytuflow.tmf.TCF.get_files>`.
@@ -413,6 +414,74 @@ to resolve the inputs first e.g. :code:`for file in tcf.context('-s1 5m -s2 D01'
 
 Check Input Scope
 ~~~~~~~~~~~~~~~~~
+
+Scope is a key concept in the :doc:`tmf` module. Certain commands in the TUFLOW control files are not recorded
+as inputs, namely commands that define blocks within the control file. Examples of these include:
+
+* :code:`If Scenario == ...`
+* :code:`If Event == ...`
+* :code:`Start 1D Domain`
+* :code:`Define Event ==`
+* :code:`...`
+
+These commands are instead recorded as :class:`Scope <pytuflow.tmf.Scope>` objects and attached to the inputs
+that fall within the scope of the block.
+
+For example, using :code:`EG16_~s1~_~s2~_002.tcf`, the :code:`2d_code` input has a :code:`Global` scope
+(i.e. it is not within a defined block) whereas the :code:`2d_zsh` input is within the scope of the
+:code:`Scenario == D01`:
+
+.. code-block:: pycon
+
+   >>> from pytuflow.tmf import TCF
+   >>> tcf = TCF('path/to/EG16_~s1~_~s2~_002.tcf')
+   >>> code = tcf.find_input('Read GIS Code')[0]
+   >>> print(code)
+   Read GIS Code == gis\2d_code_EG00_001_R.shp
+   >>> print(code.scope())
+   [<GlobalScope>]
+   >>> zsh = tcf.find_input('Read GIS Z Shape')[1]
+   >>> print(zsh)
+   Read GIS Z Shape == gis\2d_zsh_EG07_006_R.shp
+   >>> print(zsh.scope())
+   [<ScenarioScope> D01]
+
+The return from the :meth:`scope() <pytuflow.tmf.GisInput.scope>` method is a :class:`ScopeList <pytuflow.tmf.ScopeList>`.
+Additional items in the list are associated with nested blocks.
+
+For example, consider the following command in the TGC.
+
+.. code-block:: tuflow
+   :linenos:
+
+    If Scenario == D01
+        If Scenario == D02
+            Read GIS Z Shape == gis\2d_zsh_EG07_006_R.shp
+        End If
+    End If
+
+The :code:`Read GIS Z Shape` command (on line 3) would result in the following scopes:
+
+.. code-block:: pycon
+
+   >>> print(zsh.scope())
+   [<ScenarioScope> D01, <ScenarioScope> D02]
+
+Whereas the the following command:
+
+.. code-block:: tuflow
+   :linenos:
+
+    If Scenario == D01 | D02
+        Read GIS Z Shape == gis\2d_zsh_EG07_006_R.shp
+    End If
+
+Would result in the following scope:
+
+.. code-block:: pycon
+
+   >>> print(zsh.scope())
+   [<ScenarioScope> D01 | D02]
 
 This example shows how to inspect and check input scope. Scope is assigned to an input depending on where it is
 in the control file. For example, inputs within an :code:`If Scenario/Event` block will have a :code:`Scenario` or
