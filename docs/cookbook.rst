@@ -7,20 +7,23 @@ The below are a series of examples to demonstrate how to use the :code:`pytuflow
 TUFLOW Model Files
 ------------------
 
-The below are examples of using the TUFLOW Model Files module (tmf) to read, write, and run TUFLOW model files.
+The below are examples of using the TUFLOW Model Files module (tmf) to read, write, and run TUFLOW models.
 
-Read a TUFLOW Control File
-~~~~~~~~~~~~~~~~~~~~~~~~~~
+Reading and Querying a TUFLOW Model
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-This example shows off a simple case of viewing all the inputs (i.e. commands) in a TUFLOW model and in individual
+The below examples show off a simple case of viewing all the inputs (i.e. commands) in a TUFLOW model and in individual
 control files.
+
+The example below uses the example model :code:`EG00_001`
+from the `TUFLOW example model dataset <https://wiki.tuflow.com/TUFLOW_Example_Models#Multiple_Domain_Model_Design>`_.
 
 .. code-block:: python
 
    from pytuflow.tmf import TCF
 
 
-   tcf = TCF('path/to/model.tcf')
+   tcf = TCF('path/to/EG00_001.tcf')
 
    # convenience methods to get other control files
    tgc = tcf.tgc()
@@ -28,104 +31,385 @@ control files.
    ecf = tcf.ecf()
    bc_dbase = tcf.bc_dbase()
    mat = tcf.mat()
+   # ... etc
 
-   # see all inputs
-   for inp in tcf.get_inputs():  # by default, get_inputs() is recursive and will step into other control files
-       print(inp)
+Inputs can be accessed using the :meth:`get_inputs() <pytuflow.tmf.TCF.get_inputs>` method. This method returns a list of
+:class:`Input <pytuflow.tmf.Input>` objects. By default the :meth:`get_inputs() <pytuflow.tmf.TCF.get_inputs>` method
+is recursive by default, meaning that it will also return inputs from any control files that are read in from the TCF.
 
-   # see inputs only the the TCF
-   for inp in tcf.get_inputs(recursive=False):
-       print(inp)
+.. code-block:: python
 
-   # see all TGC inputs
-   # recursive doesn't make much difference here since no control files are read in from the TGC
-   # Note: TRD files will be included in whatever control file they are referenced in and
-   #       recursive makes no difference when retrieving them
-   for inp in tgc.get_inputs():
-       print(inp)
+   >>> for inp in tcf.get_inputs():
+   ...    inp
+   <SettingInput> GIS Format == GPKG
+   <FileInput> SHP Projection == ..\model\gis\projection.prj
+   <FileInput> TIF Projection == ..\model\grid\DEM_SI_Unit_01.tif
+   <SettingInput> Solution Scheme == HPC
+   <SettingInput> Hardware == GPU
+   <ControlFileInput> Geometry Control File == ..\model\EG00_001.tgc
+   <GisInput> Read GIS Location == gis\2d_loc_EG00_001_L.shp
+   <SettingInput> Cell Size == 5.0
+   <SettingInput> Grid Size (X,Y) == (850.0, 1000.0)
+   <SettingInput> Set Code == 0
+   <GisInput> Read GIS Code == gis\2d_code_EG00_001_R.shp
+   <SettingInput> Set Zpts == 100.0
+   <GridInput> Read GRID Zpts == grid\DEM_SI_Unit_01.tif
+   <SettingInput> Set Mat == 1
+   <GisInput> Read GIS Mat == gis\2d_mat_EG00_001_R.shp
+   <ControlFileInput> BC Control File == ..\model\EG00_001.tbc
+   <GisInput> Read GIS BC == gis\2d_bc_EG00_001_L.shp
+   <DatabaseInput> BC Database == ..\bc_dbase\bc_dbase_EG00_001.csv
+   <DatabaseInput> Read Materials File == ..\model\materials.csv
+   <SettingInput> Set IWL == 36.5
+   <SettingInput> Timestep == 1.0
+   <SettingInput> Timestep Maximum == 2.5
+   <SettingInput> Start Time == 0.0
+   <SettingInput> End Time == 3.0
+   <SettingInput> Log Folder == log
+   <SettingInput> Output Folder == ..\results\EG00\
+   <SettingInput> Write Check Files == ..\check\EG00\
+   <SettingInput> Map Output Format == XMDF TIF
+   <SettingInput> Map Output Data Types == d h V
+   <SettingInput> Map Output Interval == 300.0
+   <SettingInput> TIF Map Output Interval == 0.0
 
-   # to view the inputs in a given scenario/event, use the context() method to resolve the inputs first
-   for inp in tcf.context('-s EXG -e 1AEP').get_inputs():
-       print(inp)
+Recursion can be turned off by setting the :code:`recursive` argument to :code:`False`.
 
-   # each input is given a unique ID and can be tracked using this ID
-   inp = tcf.find_input('Read GIS Network == network.shp')[0]
-   print(inp.uuid)
-   # >>> UUID('5ee25899-76f4-4909-8b5d-14060260e28e')
-   tcf_run = tcf.context('-s EXG -e 1AEP')
-   inp_run = tcf_run.input(inp.uuid)
-   print(inp_run)
-   # >>> Read GIS Network == network.shp
+.. code-block:: python
 
-   # check if input is in context
-   if not inp_run:  # no input was found with that UUID
-       print(f'"{inp}" is not in run context using scenarios -s EXG -e 1AEP')
+   >>> for inp in tcf.get_inputs(recursive=False):
+   ...     inp
+   <SettingInput> GIS Format == GPKG
+   <FileInput> SHP Projection == ..\model\gis\projection.prj
+   <FileInput> TIF Projection == ..\model\grid\DEM_SI_Unit_01.tif
+   <SettingInput> Solution Scheme == HPC
+   <SettingInput> Hardware == GPU
+   <ControlFileInput> Geometry Control File == ..\model\EG00_001.tgc
+   <ControlFileInput> BC Control File == ..\model\EG00_001.tbc
+   <DatabaseInput> BC Database == ..\bc_dbase\bc_dbase_EG00_001.csv
+   <DatabaseInput> Read Materials File == ..\model\materials.csv
+   <SettingInput> Set IWL == 36.5
+   <SettingInput> Timestep == 1.0
+   <SettingInput> Timestep Maximum == 2.5
+   <SettingInput> Start Time == 0.0
+   <SettingInput> End Time == 3.0
+   <SettingInput> Log Folder == log
+   <SettingInput> Output Folder == ..\results\EG00\
+   <SettingInput> Write Check Files == ..\check\EG00\
+   <SettingInput> Map Output Format == XMDF TIF
+   <SettingInput> Map Output Data Types == d h V
+   <SettingInput> Map Output Interval == 300.0
+   <SettingInput> TIF Map Output Interval == 0.0
 
+The same method can be used to get the inputs from other control files. In these cases, the :code:`recursive` argument
+doesn't make much difference since no control files are read in from anything other than the :code:`TCF`.
+
+.. note::
+
+   :code:`TRD` files are included in whatever control file they are referenced in and recursion make
+   no difference when retrieving them.
+
+.. code-block:: python
+
+   >>> for inp in tcf.tgc().get_inputs():
+   ...     inp
+   <GisInput> Read GIS Location == gis\2d_loc_EG00_001_L.shp
+   <SettingInput> Cell Size == 5.0
+   <SettingInput> Grid Size (X,Y) == (850.0, 1000.0)
+   <SettingInput> Set Code == 0
+   <GisInput> Read GIS Code == gis\2d_code_EG00_001_R.shp
+   <SettingInput> Set Zpts == 100.0
+   <GridInput> Read GRID Zpts == grid\DEM_SI_Unit_01.tif
+   <SettingInput> Set Mat == 1
+   <GisInput> Read GIS Mat == gis\2d_mat_EG00_001_R.shp
+
+To find specific inputs, the :meth:`find_input() <pytuflow.tmf.TCF.find_input>` method can be used. This method returns
+a list of inputs found in the TCF (recursive by default) that match the search parameters.
+
+The simplest method is to pass in a string and that string will be matched against the entire input string
+(left-hand side and right-hand side of the command). The search is case insensitive.
+
+.. code-block:: python
+
+   >>> for inp in tcf.find_input('read grid zpts'):
+   ...     inp
+   <GridInput> Read GRID Zpts == grid\DEM_SI_Unit_01.tif
+
+The search string can be specific to a given side of the input by using the :code:`command` or :code:`value` arguments
+for the left-hand side and right-hand side of the command respectively.
+
+.. code-block:: python
+
+   >>> for inp in tcf.find_input(command='code'):
+   ...     inp
+   <SettingInput> Set Code == 0
+   <GisInput> Read GIS Code == gis\2d_code_EG00_001_R.shp
+   >>> for inp in tcf.find_input(value='001'):
+   ...     inp
+   <ControlFileInput> Geometry Control File == ..\model\EG00_001.tgc
+   <GisInput> Read GIS Location == gis\2d_loc_EG00_001_L.shp
+   <GisInput> Read GIS Code == gis\2d_code_EG00_001_R.shp
+   <GisInput> Read GIS Mat == gis\2d_mat_EG00_001_R.shp
+   <ControlFileInput> BC Control File == ..\model\EG00_001.tbc
+   <GisInput> Read GIS BC == gis\2d_bc_EG00_001_L.shp
+   <DatabaseInput> BC Database == ..\bc_dbase\bc_dbase_EG00_001.csv
+
+The comments of an input can also be searched by setting the :code:`comments` argument to :code:`True`. This will search the comment
+of an input and also include inputs that are purely comment lines in the control file. This allows for finding inputs that have been commented out
+(and this can be uncommented as shown in :ref:`Update an Input <updating_an_input>`). Searching comments can also be useful if key
+searchable strings have been added to the comments.
+
+.. code-block:: python
+
+   >>> for inp in tcf.find_input('Sub-Grid Sampling', comments=True):
+   ...     inp
+   <SettingInput> SGS == ON
+
+The search can also use regular expressions by setting the :code:`regex` argument to :code:`True`. If regex is used,
+the search string must be a valid regex string and regex flags can be passed in using the :code:`regex_flags` argument.
+When using regex, the :code:`command` and :code:`value` arguments can still be used to search specific sides of the input.
+
+Example, finding all inputs that have :code:`1d_` or :code:`2d_` in the right-hand side of the command.
+
+.. code-block:: python
+
+   >>> import re
+   >>> for inp in tcf.find_input(value=r'[12]d_', regex=True, regex_flags=re.IGNORECASE):
+   ...     inp
+   <GisInput> Read GIS Location == gis\2d_loc_EG00_001_L.shp
+   <GisInput> Read GIS Code == gis\2d_code_EG00_001_R.shp
+   <GisInput> Read GIS Mat == gis\2d_mat_EG00_001_R.shp
+   <GisInput> Read GIS BC == gis\2d_bc_EG00_001_L.shp
+
+Inputs have various properties such as associated files, GIS geometry types, scope, and whether any files are missing.
+The available properties are dependent on the input type. E.g. a :class:`FileInput <pytuflow.tmf.FileInput>` will have
+a :code:`files` property but a :class:`SettingInput <pytuflow.tmf.SettingInput>` will not.
+
+It's possible to use search the inputs and filter by their properties using the :code:`tags` argument. The :code:`tags`
+argument is a list of tuples with a :code:`key` and :code:`value` pair. The :code:`key` is the property name and the
+:code:`value` is the value to compare against.
+
+Example, using the :code:`tags` argument, we can find all inputs that are missing files (i.e. the file does not exist).
+In this case, nothing is printed as all files exist.
+
+.. code-block:: python
+
+   >>> for inp in tcf.find_input(tags=[('missing_files', True)]):
+   ...     inp
+
+For basic filtering, the :code:`tags` argument can be simplified:
+
+.. code-block:: python
+
+   >>> for inp in tcf.find_input(tags='missing_files'):
+   ...     inp
+
+When just the tag :code:`key` is passed in, the value is assumed to be :code:`True`. If just one tag is passed in, it
+does not require to be in a list. If multiple tags are passed in, then it must be provided in a list of tuples.
+
+Another example of using tags is to find all GIS inputs that use (only) a line geometry type. In this example, the
+:code:`geoms` property is used, which is a list of geometry types found in the GIS file(s). The geometry types
+are recorded as their OGR type e.g. line = ogr.wkbLineString (which is an enumerator which equals 2). The geometries are
+found by opening the GIS file(s) and reading the geometry types so GDAL is required to be present for this property
+to be populated.
+
+For the following examples, we'll switch to using :code:`EG07_001.tcf` from the example model dataset.
+
+.. code-block:: python
+
+   >>> tcf = TCF('path/to/EG07_001.tcf')
+   >>> for inp in tcf.find_input(tags=('geoms', [2])):
+   ...     inp
+   <GisInput> Read GIS Location == gis\2d_loc_EG00_001_L.shp
+   <GisInput> Read GIS BC == gis\2d_bc_EG00_001_L.shp
+
+The above example is limited to GIS inputs that only have line geometries. But it's possible for certain inputs
+to contain a combination of geometry types. We can expand the :code:`tags` value to use a callable function rather
+than exact value. The callable function should take one input (the property value) and return a boolean. In this case
+the callable will take a list argument, so we can check whether the value 2 is in the list.
+
+.. code-block:: python
+
+   >>> for inp in tcf.find_input(tags=('geoms', lambda x: 2 in x)):
+   ...     inp
+   <GisInput> Read GIS Location == gis\2d_loc_EG00_001_L.shp
+   <GisInput> Read GIS Z Shape == gis\2d_zsh_EG00_Rd_Crest_001_L.shp | gis\2d_zsh_EG00_Rd_Crest_001_P.shp
+   <GisInput> Read GIS BC == gis\2d_bc_EG00_001_L.shp
+
+A callable function can also be passed in via the :code:`callback` argument. This is useful when wanting to apply
+more complex logic to the filtering, or calling methods that are not directly available as a property. A simple
+example is to query an inputs scope which can be done via the :meth:`scope() <pytuflow.tmf.Input.scope>` method.
+For more information on scope checking, see the section below :ref:`Check Input Scope <checking_scope>`.
+
+Using the following example model: :code:`EG16_~s1~_~s2~_002.tcf`, we can find all inputs that are used within a
+:code:`If Scenario == D01` block. As discussed later in the :ref:`Check Input Scope <checking_scope>` section, this isn't a perfect
+way of finding inputs for a given scenario due to the way :code:`Else If/Else` logic works and a more robust method
+is to use :meth:`context() <pytuflow.tmf.TCF.context>` and check the available inputs. However this is just a
+demonstration on the :code:`callback` argument.
+
+.. code-block:: python
+
+   >>> from pytuflow.tmf import Scope
+   >>> tcf = TCF('path/to/EG16_~s1~_~s2~_002.tcf')
+   >>> for inp in tcf.find_input(callback=lambda x: Scope('scenario', 'D01') in x.scope()):
+   ...     inp
+   <GisInput> Read GIS Z Shape == gis\2d_zsh_EG07_006_R.shp
+
+To view the inputs in a given scenario/event, use the :meth:`context() <pytuflow.tmf.TCF.context>` method to
+resolve the inputs first.
+
+Continuing on from the previous example using :code:`EG16_~s1~_~s2~_002.tcf`, there are two scenario
+groups:
+
+* :code:`s1` could be :code:`2.5m` or :code:`5m`
+* :code:`s2` could be :code:`EXG`, :code:`D01` or :code:`D02`
+
+Starting with :code:`-s1 5m -s2 D01`:
+
+.. code-block:: python
+
+   >>> tcf = TCF(r'path/to/EG16_~s1~_~s2~_002.tcf')
+   >>> for inp in tcf.context('-s1 5m -s2 D01').tgc().get_inputs():
+   ...     inp
+   <GisInputContext> Read GIS Location == gis\2d_loc_EG00_001_L.shp
+   <SettingInputContext> Grid Size (X,Y) == 850, 1000
+   <SettingInputContext> Cell Size == 5.0
+   <SettingInputContext> Set Code == 0
+   <GisInputContext> Read GIS Code == gis\2d_code_EG00_001_R.shp
+   <SettingInputContext> Set Zpts == 100.0
+   <GridInputContext> Read GRID Zpts == grid\DEM_SI_Unit_01.tif
+   <GisInputContext> Read GIS Z Shape == gis\2d_zsh_EG00_Rd_Crest_001_L.shp | gis\2d_zsh_EG00_Rd_Crest_001_P.shp
+   <SettingInputContext> Set Mat == 1
+   <GisInputContext> Read GIS Mat == gis\2d_mat_EG00_001_R.shp
+   <GisInputContext> Read GIS Z Shape == gis\2d_zsh_EG07_006_R.shp
+
+The output above shows that the :code:`Cell Size` input is resolved to :code:`Cell Size == 5.0`. And the last input
+has been resolved to :code:`Read GIS Z Shape == gis\\2d_zsh_EG07_006_R.shp`.
+
+Trying now with :code:`-s1 2.5m -s2 D02`:
+
+.. code-block:: python
+
+   >>> for inp in tcf.context('-s1 2.5m -s2 D02').tgc().get_inputs():
+   ...     inp
+   <GisInputContext> Read GIS Location == gis\2d_loc_EG00_001_L.shp
+   <SettingInputContext> Grid Size (X,Y) == 850, 1000
+   <SettingInputContext> Cell Size == 2.5
+   <SettingInputContext> Set Code == 0
+   <GisInputContext> Read GIS Code == gis\2d_code_EG00_001_R.shp
+   <SettingInputContext> Set Zpts == 100.0
+   <GridInputContext> Read GRID Zpts == grid\DEM_SI_Unit_01.tif
+   <GisInputContext> Read GIS Z Shape == gis\2d_zsh_EG00_Rd_Crest_001_L.shp | gis\2d_zsh_EG00_Rd_Crest_001_P.shp
+   <SettingInputContext> Set Mat == 1
+   <GisInputContext> Read GIS Mat == gis\2d_mat_EG00_001_R.shp
+   <GisInputContext> Create TIN Zpts == gis\2d_ztin_EG07_010_R.shp | gis\2d_ztin_EG07_011_L.shp | gis\2d_ztin_EG07_011_P.shp
+
+This time :code:`Cell Size` input is resolved to :code:`Cell Size == 2.5`. And the last input has been resolved to
+:code:`Read GIS Z Shape == gis\\2d_ztin_EG07_010_R.shp | gis\\2d_ztin_EG07_011_L.shp | gis\\2d_ztin_EG07_011_P.shp`.
+
+.. note::
+
+   It's possible to call the :meth:`context() <pytuflow.tmf.TCF.context>` method on the :class:`TGC <pytuflow.tmf.TGC>`
+   class to resolve inputs in the TGC file
+   e.g. :code:`tcf.tgc().context('-s1 5m -s2 D01').get_inputs()`
+   however this could skip important steps that are required to resolve
+   the scope that need to be obtained from the TCF (e.g. event definitions found in the TEF and any other variables set from
+   the TCF using :code:`Set Variable ==`).
+
+Each input has a unique ID which can be used to track the input through the model using
+the :meth:`input() <pytuflow.tmf.TCF.input>` method.
+
+Continuing from the previous example using :code:`EG16_~s1~_~s2~_002.tcf`, we can check if an input is present in
+different scenario combinations. In this case, we expect that the :code:`Create TIN Zpts` input is only present in
+when scenario :code:`D02` is active.
+
+.. code-block:: python
+
+   >>> inp = tcf.find_input('create tin zpts')[0]
+   >>> print(inp.uuid)
+   5ee25899-76f4-4909-8b5d-14060260e28e
+   >>> tcf_run = tcf.context('-s1 5m -s2 D02')
+   >>> inp_run = tcf_run.input(inp.uuid)
+   >>> print(inp_run)
+   Create TIN Zpts == gis\2d_ztin_EG07_010_R.shp | gis\2d_ztin_EG07_011_L.shp | gis\2d_ztin_EG07_011_P.shp
+   >>> tcf_run = tcf.context('-s1 5m -s2 D01')
+   >>> inp_run = tcf_run.input(inp.uuid)
+   None
 
 Copy TUFLOW Input Files
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-The example below shows various ways to copy model input files to a new location.
+The below example shows off how to copy all the files from a model into a given location. There are already methods
+of doing this without requiring custom coding (e.g. using the package model functionality that TUFLOW provides).
+The purpose of this example is to showcase the process and can be expanded on with more complex logic for custom tasks.
 
 .. code-block:: python
 
-   from shutil import copy
    from pytuflow.tmf import TCF
+   from shutil import copy, copyfile
+   from pathlib import Path
 
 
-   DEST_FOLDER = 'path/to/destination'
+   DEST = Path('path/to/destination/folder')
 
    tcf = TCF('path/to/model.tcf')
+   root = tcf.path.parents[1]  # assumes standard directory structure e.g. 'TUFLOW/runs/EG00_001.tcf'
 
-   # copy all files to a new location - this snippet will not maintain the model directory structure
-   copied_files = []
-   for file in tcf.get_files():  # this method is recursive by default
-       # The file variable is a TuflowPath object which is an extension of the Path class to handle GPKG inputs
-       # GIS files returned from this method are always shown as 'db >> lyr' regardless of GIS format
-       # To get the file without the 'lyr' part we can use the dbpath property
+   copied_files = []  # record copied files so don't copy the same file twice
+
+   # copy the TCF itself
+   relpath = tcf.path.relative_to(root)
+   dest = DEST / relpath
+   if not dest.parent.exists():
+       dest.parent.mkdir(parents=True)
+   _ = copyfile(tcf.path, dest)
+   copied_files.append(dest)
+
+   for file in tcf.get_files():
+       # get_files() will expand any wildcards/variables
+       # found in any input references
+       # e.g. Read GIS Code == 2d_code_<<~s1~>>_R.shp
+       # will find all files that match the pattern
+       # likewise, in the bc_dbase, event variables are expanded
+       # if a TEF is found.
+
+       # The return from get_files() are TuflowPath objects
+       # which is an extension of the Path class to handle GPKG inputs
+       # GIS files returned from this method are always
+       # shown as 'db >> lyr' regardless of GIS format
+       # To get the file without the 'lyr' part we can use the 'dbpath' property
        fpath = file.dbpath
 
-       if fpath in copied_files:  # don't copy files twice
+       # replicate folder structure
+       relpath = fpath.relative_to(root)
+       dest = DEST / relpath
+       if not dest.parent.exists():
+           dest.parent.mkdir(parents=True)
+
+       # check if the file has already been copied
+       if dest in copied_files:
            continue
-       copied_files.append(fpath)
+       copied_files.append(dest)
 
        if not fpath.exists():
            print('File does not exist:', fpath)  # log this
+           continue
 
        if fpath.suffix.upper() == '.SHP':
            # make sure to copy all associated files with a shapefile
            for assoc_file in fpath.parent.glob(f'{fpath.stem}.*'):
-               copy(assoc_file, DEST_FOLDER)
+               _ = copy(assoc_file, dest.parent)
        else:
-           copy(fpath, DEST_FOLDER)
+           _ = copyfile(fpath, dest)
+
+It can be useful to copy specific files from a model, which can be done by filtering the inputs and using
+:meth:`find_input() <pytuflow.tmf.TCF.find_input>` rather than :meth:`get_files() <pytuflow.tmf.TCF.get_files>`.
+
+A specific scenario/event combination can also be copied using the :meth:`context() <pytuflow.tmf.TCF.context>` method
+to resolve the inputs first e.g. :code:`for file in tcf.context('-s1 5m -s2 D01').get_files():...`.
 
 
-   # copy files of a specific input type
-   copied_files = []
-   for inp in tcf.find_input(command='read gis network'):  # find all inputs that have 'read gis network' on the left-hand side of the command
-       for file in inp.files:  # loop through files associated with the input
-           fpath = file.dbpath
-           if fpath in copied_files:
-               continue
-           copied_files.append(fpath)
-
-           if not fpath.exists():
-               print('File does not exist:', fpath)
-
-           if fpath.suffix.upper() == '.SHP':
-               for assoc_file in fpath.parent.glob(f'{fpath.stem}.*'):
-                   copy(assoc_file, DEST_FOLDER)
-           else:
-               copy(fpath, DEST_FOLDER)
-
-
-   # the above routines could also be used for a specific scenario/event combination by using context()
-   copied_files = []
-   for file in tcf.context('-s EXG -e 1AEP').get_files():
-       ...
-
-
-
+.. _checking_scope:
 
 Check Input Scope
 ~~~~~~~~~~~~~~~~~
@@ -324,7 +608,7 @@ to register TUFLOW executables can be used when running the :meth:`run_test() <p
    for line in out.split('\r\n'):
        print(line)
 
-
+.. _updating_an_input:
 
 Update an Input
 ~~~~~~~~~~~~~~~
@@ -855,6 +1139,29 @@ from the `TUFLOW example model dataset <https://wiki.tuflow.com/TUFLOW_Example_M
    ax = df.plot(x='Offset', y='Pit Ground Elevation', ax=ax, linestyle='none', marker='o')
    for pipeid, pipe in long_plot_pipes(df).items():
         ax.add_patch(Polygon(pipe.to_numpy(), facecolor='0.9', edgecolor='0.5', label=pipeid))
+   plt.show()
+
+   # If you want to add labels to the plot
+   df = res.long_plot('pipe1', ['bed level', 'pipes', 'pits'], -1)
+   ax = None
+   ax = df.plot(x='Offset', y='Bed Level', ax=ax, legend=False)
+   ax = df.plot(x='Offset', y='Pit Ground Elevation', ax=ax, linestyle='none', marker='o', legend=False)
+
+   # label pits
+   pits = df[['Node', 'Offset', 'Pit Ground Elevation']].dropna(how='any')
+   for _, pit in pits.iterrows():
+       ax.annotate(pit['Node'], xy=pit[['Offset', 'Pit Ground Elevation']].to_numpy(), xytext=(7, 7), textcoords='offset pixels')
+
+   for pipeid, pipe in long_plot_pipes(df).items():
+       ax.add_patch(Polygon(pipe, facecolor='0.9', edgecolor='0.5', label=pipeid))
+
+       # label pipe
+       x = pipe['x'].mean()
+       y = pipe['y'].iloc[:2].mean()
+       ax.annotate(pipeid, xy=(x, y), xytext=(0, -50), textcoords='offset pixels',
+                   horizontalalignment='center', arrowprops=dict(arrowstyle='->'))
+
+   plt.ylim(39.5, 44)
    plt.show()
 
 
