@@ -4,7 +4,7 @@ from pathlib import Path
 
 import numpy as np
 
-from pytuflow.types import PathLike, TimeLike
+from pytuflow.pytuflow_types import PathLike, TimeLike
 
 import pandas as pd
 

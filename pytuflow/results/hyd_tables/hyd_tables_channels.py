@@ -5,7 +5,7 @@ import pandas as pd
 
 from .hyd_tables_result_item import HydTableResultItem
 from ..abc.channels import Channels
-from pytuflow.types import PathLike
+from pytuflow.pytuflow_types import PathLike
 
 
 class HydTableChannels(HydTableResultItem, Channels):

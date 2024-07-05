@@ -6,7 +6,7 @@ from abc import ABC, abstractmethod
 import numpy as np
 
 from pytuflow.util.misc_tools import flatten
-from pytuflow.types import PathLike, TimeLike
+from pytuflow.pytuflow_types import PathLike, TimeLike
 
 import pandas as pd
 

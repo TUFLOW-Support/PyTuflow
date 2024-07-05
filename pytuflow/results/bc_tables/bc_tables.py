@@ -6,7 +6,7 @@ import pandas as pd
 
 from .bc_tables_boundary import Boundary
 from ..abc.time_series_result import TimeSeriesResult
-from pytuflow.types import PathLike, TimeLike
+from pytuflow.pytuflow_types import PathLike, TimeLike
 from ..iterator_util import Iterator
 
 

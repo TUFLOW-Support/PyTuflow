@@ -6,7 +6,7 @@ import pandas as pd
 from pytuflow.fm import GXY, DAT
 from ..abc.channels import Channels
 from .fm_time_series_result_item import FMResultItem
-from pytuflow.types import PathLike
+from pytuflow.pytuflow_types import PathLike
 
 
 class FMChannels(FMResultItem, Channels):

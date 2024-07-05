@@ -4,7 +4,7 @@ from datetime import datetime
 import numpy as np
 from pathlib import Path
 
-from pytuflow.types import PathLike
+from pytuflow.pytuflow_types import PathLike
 
 
 pNNODES = 129

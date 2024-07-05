@@ -8,7 +8,7 @@ from .bc_tables_time_series import BCTablesTimeSeries
 from .boundary_type import BoundaryType
 from ..abc.time_series_result_item import TimeSeriesResultItem
 from pytuflow.util.misc_tools import flatten
-from pytuflow.types import PathLike
+from pytuflow.pytuflow_types import PathLike
 
 
 class BCTablesResultItem(TimeSeriesResultItem):

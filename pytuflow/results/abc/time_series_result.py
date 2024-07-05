@@ -1,7 +1,7 @@
 from datetime import datetime
 from pathlib import Path
 from typing import Union
-from pytuflow.types import PathLike
+from pytuflow.pytuflow_types import PathLike
 from abc import ABC, abstractmethod
 
 import numpy as np
@@ -10,7 +10,7 @@ import pandas as pd
 from ..lp_1d import LP_1D
 from pytuflow.util.time_util import closest_time_index
 from ..iterator_util import Iterator
-from pytuflow.types import TimeLike
+from pytuflow.pytuflow_types import TimeLike
 
 
 class TimeSeriesResult(ABC):

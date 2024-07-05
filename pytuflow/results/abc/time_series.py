@@ -1,4 +1,4 @@
-from pytuflow.types import TimeLike
+from pytuflow.pytuflow_types import TimeLike
 
 
 class TimeSeries:

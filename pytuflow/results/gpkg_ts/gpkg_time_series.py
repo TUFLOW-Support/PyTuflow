@@ -1,7 +1,7 @@
 from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
-from pytuflow.types import PathLike, TimeLike
+from pytuflow.pytuflow_types import PathLike, TimeLike
 
 import numpy as np
 import pandas as pd

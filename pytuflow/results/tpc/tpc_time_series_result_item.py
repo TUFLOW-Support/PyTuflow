@@ -1,6 +1,6 @@
 import re
 from datetime import datetime
-from pytuflow.types import PathLike
+from pytuflow.pytuflow_types import PathLike
 
 from .tpc_time_series_csv import TPCTimeSeriesCSV
 from .tpc_time_series_nc import TPCTimeSeriesNC

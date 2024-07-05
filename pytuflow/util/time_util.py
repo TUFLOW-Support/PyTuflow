@@ -21,7 +21,7 @@ How to get the reference time and units from a netCDF time series result:
 import re
 from datetime import datetime
 from typing import Union
-from pytuflow.types import PathLike, TimeLike
+from pytuflow.pytuflow_types import PathLike, TimeLike
 
 import numpy as np
 try:

@@ -4,7 +4,7 @@ from typing import TextIO
 import pandas as pd
 
 from .hyd_tables_result_item import HydTableResultItem
-from pytuflow.types import PathLike
+from pytuflow.pytuflow_types import PathLike
 
 
 class CrossSectionEntry:

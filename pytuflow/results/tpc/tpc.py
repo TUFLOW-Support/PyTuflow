@@ -2,7 +2,7 @@ import re
 from datetime import datetime
 from pathlib import Path
 from typing import Any
-from pytuflow.types import PathLike, TuflowPath
+from pytuflow.pytuflow_types import PathLike, TuflowPath
 
 import pandas as pd
 

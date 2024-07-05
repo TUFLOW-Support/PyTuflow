@@ -2,7 +2,7 @@ import re
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Union
-from pytuflow.types import PathLike, TimeLike
+from pytuflow.pytuflow_types import PathLike, TimeLike
 
 import pandas as pd
 

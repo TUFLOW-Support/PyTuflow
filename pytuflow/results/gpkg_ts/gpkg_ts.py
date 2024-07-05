@@ -1,7 +1,7 @@
 import re
 from datetime import datetime
 from pathlib import Path
-from pytuflow.types import PathLike, TuflowPath
+from pytuflow.pytuflow_types import PathLike, TuflowPath
 
 from .gpkg_nodes import GPKGNodes
 from .gpkg_channels import GPKGChannels

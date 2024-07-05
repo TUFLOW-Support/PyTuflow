@@ -6,7 +6,7 @@ from collections import OrderedDict
 
 import pandas as pd
 
-from pytuflow.types import PathLike, TimeLike
+from pytuflow.pytuflow_types import PathLike, TimeLike
 
 from .fm_channels import FMChannels
 from .fm_nodes import FMNodes

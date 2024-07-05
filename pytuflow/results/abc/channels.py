@@ -1,4 +1,4 @@
-from pytuflow.types import PathLike
+from pytuflow.pytuflow_types import PathLike
 
 from .time_series_result_item import TimeSeriesResultItem
 

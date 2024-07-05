@@ -1,5 +1,5 @@
 from pathlib import Path
-from pytuflow.types import PathLike
+from pytuflow.pytuflow_types import PathLike
 
 import numpy as np
 import pandas as pd
