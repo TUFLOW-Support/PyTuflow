@@ -12,10 +12,10 @@ Custom types available in the :code:`pytuflow` library.
    :template: custom-class-template.rst
    :nosignatures:
 
-   types.CaseInsDict
-   types.TuflowPath
-   types.PathLike
-   types.TimeLike
-   types.ContextLike
-   types.VariableMap
-   types.SearchTagLike
+   pytuflow_types.CaseInsDict
+   pytuflow_types.TuflowPath
+   pytuflow_types.PathLike
+   pytuflow_types.TimeLike
+   pytuflow_types.ContextLike
+   pytuflow_types.VariableMap
+   pytuflow_types.SearchTagLike

@@ -35,7 +35,7 @@ from the `TUFLOW example model dataset <https://wiki.tuflow.com/TUFLOW_Example_M
 
 Inputs can be accessed using the :meth:`get_inputs() <pytuflow.tmf.TCF.get_inputs>` method. This method returns a list of
 :class:`Input <pytuflow.tmf.Input>` objects. By default the :meth:`get_inputs() <pytuflow.tmf.TCF.get_inputs>` method
-is recursive by default, meaning that it will also return inputs from any control files that are read in from the TCF.
+is recursive, meaning that it will also return inputs from any control files that are read in from the TCF.
 
 .. code-block:: pycon
 
