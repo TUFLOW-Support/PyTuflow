@@ -1,6 +1,6 @@
 [submodule "pytuflow/tmf"]
 	path = pytuflow/tmf
-	url = git@gitlab.com:tuflow/public/tuflow-model-files.git
+	url = https://gitlab.com/tuflow/public/tuflow-model-files.git 
 [submodule "pytuflow/fm_to_estry"]
 	path = pytuflow/fm_to_estry
-	url = git@gitlab.com:tuflow-user-group/tuflow/model-conversions/fm-to-estry.git
+	url = https://gitlab.com/tuflow-user-group/tuflow/model-conversions/fm-to-estry.git 
