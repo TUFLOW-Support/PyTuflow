@@ -1,3 +1,4 @@
+import os
 import re
 from datetime import datetime
 from pathlib import Path
@@ -140,6 +141,8 @@ class TPC(TimeSeriesResult):
     def _get_property(self, name: str, default: any = None) -> Any:
         try:
             prop = self._df[self._df.iloc[:,0] == name].iloc[0,1]
+            if os.name != 'nt' and '\\' in prop:
+                prop = prop.replace('\\', '/')
         except Exception as e:
             prop = default
         return prop
@@ -229,6 +232,8 @@ class TPC(TimeSeriesResult):
         if relpath == 'NONE':
             p = None
         else:
+            if os.name != 'nt' and '\\' in relpath:
+                relpath = relpath.replace('\\', '/')
             p = self.fpath.parent / relpath
         return name_, p
 
@@ -326,6 +331,7 @@ class TPC(TimeSeriesResult):
         if rl_line_count:
             df = self._df[self._df.iloc[:, 0].str.contains('Reporting Location Lines')]
             for row in df.itertuples():
+                name_, fpath = self._expand_property(row)
                 if 'Number' in row[1]:
                     continue
                 if not self.rl:
@@ -337,7 +343,6 @@ class TPC(TimeSeriesResult):
                 if id is None:
                     continue
                 name = self._rl_result_name(name_)
-                fpath = self.fpath.parent / relpath
                 if name.lower() == 'maximum':
                     if not self.rl.maximums:
                         self.rl.maximums = TPCMaximums(fpath)
@@ -354,6 +359,7 @@ class TPC(TimeSeriesResult):
         if rl_region_count:
             df = self._df[self._df.iloc[:, 0].str.contains('Reporting Location Regions')]
             for row in df.itertuples():
+                name_, fpath = self._expand_property(row)
                 if 'Number' in row[1]:
                     continue
                 if not self.rl:
@@ -365,7 +371,6 @@ class TPC(TimeSeriesResult):
                 if id is None:
                     continue
                 name = self._rl_result_name(name_)
-                fpath = self.fpath.parent / relpath
                 if name.lower() == 'maximum':
                     if not self.rl.maximums:
                         self.rl.maximums = TPCMaximums(fpath)
