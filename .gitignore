@@ -1,9 +1,11 @@
 .idea*
 pytuflow.egg-info*
 venv*
+.venv*
 build*
 dist*
 tests/_test.py
 docs/_build*
 docs/_static*
 docs/generated*
+*.gz
