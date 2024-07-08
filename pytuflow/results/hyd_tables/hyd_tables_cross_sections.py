@@ -94,7 +94,7 @@ class HydTableCrossSection(HydTableResultItem):
         df = pd.read_csv(fo)
         if xs_type == 'XZ':
             df_xs = df[df.columns[:4]].dropna()
-            df_proc = df[df.columns[5:-1]].dropna(how='all')
+            df_proc = df[df.columns[5:-1]].dropna(how='all').copy()
             df_proc.rename(columns={'Elevation.1': 'Elevation'}, inplace=True)
         else:
             df_xs = pd.DataFrame(columns=['Points', 'Distance', 'Elevation', 'Manning n'])

@@ -1,3 +1,4 @@
+import os
 from datetime import datetime
 from pathlib import Path
 from typing import Generator, Union
@@ -96,6 +97,8 @@ class FM_GuiCSVResult(FM_ResultDriver):
         #: str: Display name of the result file.
         if self.header:
             _, fpath = [x.strip() for x in self.header.split('file', 1)]
+            if os.name != 'nt' and '\\' in fpath:
+                fpath = fpath.replace('\\', '/')
             return Path(fpath).stem
         if self.fpath:
             return self.fpath.stem
@@ -115,7 +118,6 @@ class FM_GuiCSVResult(FM_ResultDriver):
                 self.df = df
             else:
                 self.df = pd.concat([self.df, df], axis=1)
-
 
     def get_header(self) -> Union[str, None]:
         """Get the header of the CSV file. The GUI CSV may not always be exported with the header.
