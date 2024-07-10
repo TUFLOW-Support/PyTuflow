@@ -9,3 +9,4 @@ docs/_build*
 docs/_static*
 docs/generated*
 *.gz
+test_tmp.py
