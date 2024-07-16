@@ -1,7 +1,7 @@
 Pytuflow Cookbook
 =================
 
-The below are a series of examples to demonstrate how to use the :code:`pytuflow` package. For basic usage, see the
+The below are a series of examples to demonstrate how to use the :code:`pytuflow` package. For a really basic usage, see the
 :ref:`quickstart` guide.
 
 TUFLOW Model Files
@@ -31,7 +31,7 @@ from the `TUFLOW example model dataset <https://wiki.tuflow.com/TUFLOW_Example_M
    ecf = tcf.ecf()
    bc_dbase = tcf.bc_dbase()
    mat = tcf.mat()
-   # ... etc
+   # etc...
 
 Inputs can be accessed using the :meth:`get_inputs() <pytuflow.tmf.TCF.get_inputs>` method. This method returns a list of
 :class:`Input <pytuflow.tmf.Input>` objects. By default the :meth:`get_inputs() <pytuflow.tmf.TCF.get_inputs>` method
@@ -366,19 +366,18 @@ The purpose of this example is to showcase the process and can be expanded on wi
     _ = copyfile(tcf.path, dest)
     copied_files.append(dest)
 
+    # use get_files() to get all input files
+    # get_files() will expand any wildcards/variables found in any input references
+    # e.g. Read GIS Code == 2d_code_<<~s1~>>_R.shp
+    # will find all files that match the pattern
+    # likewise, in the bc_dbase, event variables are expanded
+    # if a TEF is found to help determine what the event variables are.
     for file in tcf.get_files():
-        # get_files() will expand any wildcards/variables
-        # found in any input references
-        # e.g. Read GIS Code == 2d_code_<<~s1~>>_R.shp
-        # will find all files that match the pattern
-        # likewise, in the bc_dbase, event variables are expanded
-        # if a TEF is found.
-
         # The return from get_files() are TuflowPath objects
-        # which is an extension of the Path class to handle GPKG inputs
+        # which is an extension of the Path class to handle GPKG inputs.
         # GIS files returned from this method are always
         # shown as 'db >> lyr' regardless of GIS format
-        # To get the file without the 'lyr' part we can use the 'dbpath' property
+        # To get the file (db) without the 'lyr' part we can use the 'dbpath' property
         fpath = file.dbpath
 
         # replicate folder structure
@@ -427,9 +426,13 @@ as inputs, namely commands that define blocks within the control file. Examples 
 These commands are instead recorded as :class:`Scope <pytuflow.tmf.Scope>` objects and attached to the inputs
 that fall within the scope of the block.
 
-For example, using :code:`EG16_~s1~_~s2~_002.tcf`, the :code:`2d_code` input has a :code:`Global` scope
-(i.e. it is not within a defined block) whereas the :code:`2d_zsh` input is within the scope of the
-:code:`Scenario == D01`:
+For example, using :code:`EG16_~s1~_~s2~_002.tcf` from the example model dataset, the :code:`Read GRID Zpts` input has a :code:`Global` scope
+(i.e. it is not within a defined block) whereas the :code:`2d_zsh` input(s) are within the scope of the
+:code:`Scenario == D01` and :code:`Scenario == D02`:
+
+.. image:: assets/scope_example_basic.png
+   :width: 100%
+   :alt: Basic scope example showing some inputs within an "If Scenario" block
 
 .. code-block:: pycon
 
@@ -460,7 +463,7 @@ For example, consider the following command in the TGC.
         End If
     End If
 
-The :code:`Read GIS Z Shape` command (on line 3) would result in the following scopes:
+The :code:`Read GIS Z Shape` command (on line 3) would have the following scopes:
 
 .. code-block:: pycon
 
@@ -483,170 +486,207 @@ Would result in the following scope:
    >>> print(zsh.scope())
    [<ScenarioScope> D01 | D02]
 
-This example shows how to inspect and check input scope. Scope is assigned to an input depending on where it is
-in the control file. For example, inputs within an :code:`If Scenario/Event` block will have a :code:`Scenario` or
-:code:`Event` scope. Other example scopes include :code:`OneDim` if the input is within a :code:`Start 1D Domain` block,
+One important part of the :code:`IF logic` scope, is when an input falls within the :code:`ELSE` block.
+
+.. code-block:: tuflow
+   :linenos:
+
+   If Scenario == D01
+      Read Grid Zpts == DEV.tif
+   Else
+      Read Grid Zpts == EXG.tif
+   End If
+
+The :code:`Read Grid Zpts == EXG.tif` input will have a scope of :code:`<ScenarioScope> ELSE`. However it is possible
+to get a scope list that is more detailed by setting the :code:`else_` argument to :code:`False`. This will show
+what is required to reach the :code:`ELSE` block using :code:`!` to denote what the scenario can't be.
+
+.. code-block:: pycon
+
+   >>> print(zsh.scope())
+   [<ScenarioScope> ELSE]
+   >>> print(zsh.scope(else_=False))
+   [<ScenarioScope> !D01]
+
+Examples of different scope types include, (as shown in the examples above) inputs within an
+:code:`If Scenario/Event` block will have a :code:`Scenario` or :code:`Event` scope. Other example scopes
+include :code:`OneDim` if the input is within a :code:`Start 1D Domain` block,
 :code:`EventVariable` if the input is within a :code:`Define Event` block, and :code:`Global` if the input is not
 within any specific block.
 
-.. code-block:: python
+It's possible to check against a scope using the :code:`==` operator. This can be useful for doing simple checks
+on whether a given input is within a given scenario/event block.
 
-   from pytuflow.tmf import TCF, Scope, Context
+.. code-block:: pycon
 
+   >>> from pytuflow.tmf import Scope
+   >>> inp = tcf.find_input('Read Grid Zpts')[0]
+   >>> scope = inp.scope()[0]
+   >>> print(inp, ';', scope)
+   Read Grid Zpts == DEV.tif ; ScenarioScope: D01
+   >>> print(scope == Scope('Scenario', 'D01'))
+   True
+   >>> print(scope == Scope('Scenario'))
+   True
+   >>> print(scope == Scope('Scenario', 'EXG'))
+   False
+   >>> print(scope == Scope('Global'))
+   False
 
-   # consider the following inputs in a control file
-   # Set Zpts == 100
-   # If Scenario == DEV
-   #     Read Grid Zpts == DEV.tif
-   # Else
-   #     Read Grid Zpts == EXG.tif
-   # EndIf
+It's also possible to use the :code:`in` operator to check if a scope is within a given scope list. For example,
+consider the following TGC command:
 
-    tcf = TCF('path/to/model.tcf')
-    for inp in tcf.get_inputs():
-         print(inp, '; Scope:', inp.scope())
-    # >>> Set Zpts == 100; Scope: [<GlobalScope>]
-    # >>> Read Grid Zpts == DEV.tif; Scope: [<ScenarioScope> DEV]
-    # >>> Read Grid Zpts == EXG.tif; Scope: [<ScenarioScope> ELSE]
+.. code-block:: tuflow
+   :linenos:
 
-    # by default, any inputs within an ELSE block will be given an 'Else' scope
-    # this can be changed to show more detailed information i.e. what is required to reach the ELSE block
-    # e.g. the Scope names will be shown with an exclamation mark (!) at the front to denote that the input
-    # isn't a given scenario(s) to reach the ELSE block
-    for inp in tcf.get_inputs():
-        print(inp, '; Scope:', inp.scope(else_=False))
-    # >>> Set Zpts == 100; Scope: [<GlobalScope>]
-    # >>> Read Grid Zpts == DEV.tif; Scope: [<ScenarioScope> DEV]
-    # >>> Read Grid Zpts == EXG.tif; Scope: [<ScenarioScope> !DEV]
+   If Scenario == D01 | D02
+       Read GIS Z Shape == gis\2d_zsh_EG07_006_R.shp
+   End If
 
-    # This is also true for 'Else If' blocks. To see the full details, the else_ parameter must be set to False
+.. code-block:: pycon
 
-    # to check an input's scope you can use the native '==' operator
-    inp = tcf.find_input('Read Grid Zpts == DEV.tif')[0]
-    scope = inp.scope()[0]
-    print(scope)
-    # >>> <ScenarioScope> DEV
-    print(scope == Scope('Scenario', 'DEV'))
-    # >>> True
-    print(scope == Scope('Scenario'))
-    # >>> True
-    print(scope == Scope('Scenario', 'EXG'))
-    # >>> False
-    print(scope == Scope('Global'))
-    # >>> False
+   >>> from pytuflow.tmf import Scope
+   >>> inp = tcf.find_input('Read GIS Z Shape')[0]
+   >>> print(inp, ';', inp.scope())
+   Read GIS Z Shape == gis\2d_zsh_EG07_006_R.shp ; [<ScenarioScope> D01 | D02]
+   >>> print(Scope('Scenario', 'D01') in inp.scope())
+   True
+   >>> print(Scope('Scenario', 'D02') in inp.scope())
+   True
+   >>> print(Scope('Scenario', 'D03') in inp.scope())
+   False
 
-    # The returned ScopeList object from input.scope() can also be used to check for scope
-    print(Scope('Scenario', 'DEV') in inp.scope())
-    # >>> True
-    # This is true even if the input has multiple scenario options
-    # e.g.
-    # If Scenario == D01 | D02
-    #    Read Grid Zpts == DEV.tif
-    # End if
-    print(inp.scope())
-    # >>> [<ScenarioScope> D01 | D02]
-    print(Scope('Scenario', 'D01') in inp.scope())
-    # >>> True
-    # It will also return True in nested IF statements
-    # e.g.
-    # If Scenario == D01 | D02
-    #     If Scenario == D03
-    #         Read Grid Zpts == DEV.tif
-    #     End If
-    # End If
-    print(inp.scope())
-    # >>> [<ScenarioScope> D01 | D02, <ScenarioScope> D03]
-    print(Scope('Scenario', 'D03'), inp.scope())
-    # >>> True
-    print(Scope('Scenario', 'D02'), inp.scope())
-    # >>> True
+Using the :code:`in` operator can be useful but it doesn't necessarily indicate whether a given input will be included
+in a given model run since "if logic" can be complex i.e. nested if statements and the use of :code:`Else If/Else` blocks
+means logic may trigger earlier. The best way to check if an input will be included is by using a :class:`Context <pytuflow.tmf.Context>`
+object either by calling :meth:`context() <pytuflow.tmf.TCF.context>` on the given control file, or by initialising the
+:class:`Context <pytuflow.tmf.Context>` class manually.
 
-    # Be careful when using the above method to check scope as the return does not necessarily indicate whether
-    # a given input will be included in a given model run. To assess this properly, a context object should be used.
-    # This can be done by passing in the context to the TCF with the context() method, or individually to an input
-    # by initialising the Context class manually
-    ctx = Context(['-s1 D02 -s2 D03'])
-    print(ctx.in_context_by_scope(inp.scope(else_=False)))
-    # >>> True
-    ctx = Context(['-s1 D01 -s2 D02'])
-    print(ctx.in_context_by_scope(inp.scope(else_=False)))
-    # >>> False
+E.g. using the following commands:
+
+.. code-block:: tuflow
+   :linenos:
+
+   If Scenario == D01
+      If Scenario == D02
+         Read GRID Zpts == D02_1.tif
+      End if
+   Else If Scenario == D02
+      Read GRID Zpts == D02_2.tif
+   End if
+
+We can easily check if a given input is read in based on a given scenario/event combination using a context object:
+
+.. code-block:: pycon
+
+   >>> from pytuflow.tmf import Context
+   >>> inp1 = tcf.find_input('D02_1.tif')[0]
+   >>> inp2 = tcf.find_input('D02_2.tif')[0]
+   >>> ctx = Context(['-s1 D01 -s2 D02'])
+   >>> in_scope = ctx.in_context_by_scope(inp1.scope(else_=False))
+   >>> print(in_scope)
+   True
+   >>> in_scope = ctx.in_context_by_scope(inp2.scope(else_=False))
+   >>> print(in_scope)
+   False
+
+Alternatively you can track the input from build state to run state to see if it is included in the model run.
+
+.. code-block:: pycon
+
+   >>> inp1 = tcf.find_input('D02_1.tif')[0]
+   >>> inp2 = tcf.find_input('D02_2.tif')[0]
+   >>> tcf_run = tcf.context('-s1 D01 -s2 D02')
+   >>> in_scope = tcf_run.input(inp1.uuid) is not None
+   >>> print(in_scope)
+   True
+   >>> in_scope = tcf_run.input(inp2.uuid) is not None
+   >>> print(in_scope)
+   False
 
 
 Run a TUFLOW Model
 ~~~~~~~~~~~~~~~~~~
 
-The below example demonstrates how to how to use the :meth:`run() <pytuflow.tmf.TCFRunState.run>` method
-a TUFLOW model using the :code:`pytuflow` package.
+The below examples demonstrates how to how to use the :meth:`run() <pytuflow.tmf.TCFRunState.run>` method
+to run a TUFLOW model using the :code:`pytuflow` package.
 
-.. code-block:: python
+The first thing to understand is that the :meth:`run() <pytuflow.tmf.TCFRunState.run>` method can only be called from the
+:class:`TCFRunState <pytuflow.tmf.TCFRunState>` object which is returned from the :meth:`context() <pytuflow.tmf.TCF.context>`
+method from the :class:`TCF <pytuflow.tmf.TCF>` object. The :meth:`context() <pytuflow.tmf.TCF.context>` method takes in the scenario/event arguments
+in the from of a single string delimited by spaces e.g.
 
-   from pytuflow.tmf import TCF
+* :code:`tcf.context('-s1 HPC -s2 GPU -e1 Q100 -e2 2h')`
 
+or a list of string flags e.g.
 
-   tcf = TCF('path/to/model.tcf')
+* :code:`tcf.context(['-s1', 'HPC', '-s2', 'GPU', '-e1', 'Q100', '-e2', '2h'])`.
 
-   # context() method must be called before running the model. The arguments passed into context() are the
-   # scenario/event arguments that would be passed via a batch file. If there are no scenario/event arguments, then
-   # context() must still be called with no arguments.
-   proc = tcf.context().run('path/to/TUFLOW_iSP_w64.exe')
+The :meth:`context() <pytuflow.tmf.TCF.context>` method must be called before running the model even if there are no
+scenario/event arguments.
 
-   # or to run with some scenarios
-   proc = tcf.context('-s1 HPC -s2 GPU').run('path/to/TUFLOW_iSP_w64.exe')
+The :meth:`run() <pytuflow.tmf.TCFRunState.run>` method takes in the path to the TUFLOW executable and returns a :code:`Popen` object.
 
-   # the return from the run() method is a subprocess.Popen object which can be used to monitor the process
-   # e.g. to check or wait for the run to finish
-   if proc.poll() is None:
-       # still running
-       continue
-   # wait for the run to finish
-   proc.wait()
+.. code-block:: pycon
 
-   # precision can be changed using the prec argument
-   proc = tcf.context().run('path/to/TUFLOW_iSP_w64.exe', prec='dp')  # single precision is default
+   >>> from pytuflow.tmf import TCF
+   >>> tcf = TCF('path/to/model.tcf')
+   >>> proc = tcf.context().run('path/to/TUFLOW_iSP_w64.exe')
 
-   # additional TUFLOW run arguments can be passed using add_tf_flags
-   proc = tcf.context().run('path/to/TUFLOW_iSP_w64.exe', add_tf_flags=['-t', '-x'])
+Alternatively, TUFLOW exectables can be registered using the :meth:`register_tuflow_binary() <pytuflow.util.tf.register_tuflow_binary>`
+or :meth:`register_tuflow_binary_folder() <pytuflow.util.tf.register_tuflow_binary_folder>` functions. This allows for
+the TUFLOW executable to be called by the version name rather than the full path.
 
-   # additional subprocess.Popen arguments can be passed in via the run() method as keyword arguments
-   proc = tcf.context().run('path/to/TUFLOW_iSP_w64.exe', stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+.. code-block:: pycon
 
-   # TUFLOW executables can be registered either by registering the executable path directly or by registering
-   # a folder containing many different TUFLOW releases.
-   # e.g. register a specific version
-   from pytuflow.utils.tf import register_tuflow_binary, register_tuflow_binary_folder
-   register_tuflow_binary('2023-03-AF', 'path/to/2023-03-AF/TUFLOW_iSP_w64.exe')
+   >>> proc = tcf.context().run('2023-03-AE')
 
-   # now to run this version, then the version name can be passed inplace of the executable path
-   proc = tcf.context().run('2023-03-AF')
+TUFLOW executables only need to be registered once and the preferred method is to register a folder that contains
+all your TUFLOW versions. However, specific executables can be registered individually and where there is a version
+name conflict, the individually registered executable will take precedence.
 
-   # a even more useful method is to register a folder containing multiple TUFLOW releases
-   # e.g. consider the following folder structure
+.. code-block:: pycon
 
-   # TUFLOW_releases/
-   #   |
-   #   |-- 2018-03-AE/
-   #   |     |
-   #   |     |-- TUFLOW_iSP_w64.exe
-   #   |
-   #   |-- 2020-10-AF/
-   #   |     |
-   #   |     |-- TUFLOW_iSP_w64.exe
-   #   |
-   #   |-- 2023-03-AF/
-   #   |     |
-   #   |     |-- TUFLOW_iSP_w64.exe
+   >>> from pytuflow.util.tf import register_tuflow_binary, register_tuflow_binary_folder
+   >>> register_tuflow_binary('2023-03-AE', 'path/to/2023-03-AE/TUFLOW_iSP_w64.exe')
+   >>> register_tuflow_binary_folder('path/to/TUFLOW/releases')
 
-   # the 'TUFLOW_releases' folder can be registered and the subdirectories will be scanned for TUFLOW executables.
-   # The folder names will be used as the TUFLOW release version name.
+The directory structure of :code:`path/to/TUFLOW/releases` should contain directories with the TUFLOW version name and
+inside each version name directory should be the TUFLOW executable.
 
-   register_tuflow_binary_folder('path/to/TUFLOW_releases')
-   proc = tcf.context().run('2020-10-AF')
+.. image:: assets/tuflow_release_folder.png
+   :width: 100%
+   :alt: Folder structure for TUFLOW releases.
 
-   # the available TUFLOW versions is updated each time a TUFLOW executable is requested, so new versions can
-   # be added to the registered folders without needing to re-register the folder.
-   # for this reason it is therefore not recommended to register a network location as
-   # this may be a very slow process to update.
+By default, the single precision TUFLOW executable will be called. To call the double precision executable, the :code:`prec`
+argument can be used.
+
+.. code-block:: pycon
+
+   >>> proc = tcf.context().run('2023-03-AE', prec='dp')
+
+Additional TUFLOW CLI arguments can be passed in via the :code:`add_tf_flags` argument.
+
+.. code-block:: pycon
+
+   >>> proc = tcf.context().run('2023-03-AE', add_tf_flags=['-pu1'])
+
+Additional keyword arguments can be passed into the :meth:`run() <pytuflow.tmf.TCFRunState.run>` method which will
+be passed directly into the :code:`Popen()` call. This can be useful for capturing the stdout and stderr.
+
+.. code-block:: pycon
+
+   >>> import subprocess
+   >>> proc = tcf.context().run('2023-03-AE', stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+The :code:`Popen` object can be polled to check if it has finished (or :code:`Popen.wait()` can be used) and, once it has finished, it can be used to obtain
+the return code (zero should be returned from a successful run).
+
+.. code-block:: pycon
+
+   >>> proc.wait()
+   >>> proc.poll()
+   0
 
 
 Test a TUFLOW Model
