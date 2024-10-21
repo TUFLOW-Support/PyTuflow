@@ -4167,7 +4167,7 @@ class ResData():
         if self.has_reference_time:
             self._tmp_reference_time = zeroTime
 
-    def timeSteps(self, zeroTime=None):
+    def timeSteps(self, zeroTime=None, domain=None):
         """
         Returns a list of the available time steps. Assumes all time series results have the same timesteps.
         
@@ -4178,72 +4178,77 @@ class ResData():
             self.reloadTimesteps(self.reference_time)
         else:
             self.reloadTimesteps(zeroTime)
-        
-        if self.Data_1D.H.loaded:
-            return self.Data_1D.H.Values[:,1].tolist()
-        elif self.Data_1D.V.loaded:
-            return self.Data_1D.V.Values[:,1].tolist()
-        elif self.Data_1D.E.loaded:
-            return self.Data_1D.E.Values[:,1].tolist()
-        elif self.Data_1D.Q.loaded:
-            return self.Data_1D.Q.Values[:,1].tolist()
-        elif self.Data_1D.A.loaded:
-            return self.Data_1D.A.Values[:,1].tolist()
-        elif self.Data_2D.H.loaded:
-            return self.Data_2D.H.Values[:,1].tolist()
-        elif self.Data_2D.D.loaded:
-            return self.Data_2D.D.Values[:,1].tolist()
-        elif self.Data_2D.V.loaded:
-            return self.Data_2D.V.Values[:,1].tolist()
-        elif self.Data_2D.Q.loaded:
-            return self.Data_2D.Q.Values[:,1].tolist()
-        elif self.Data_2D.GL.loaded:
-            return self.Data_2D.GL.Values[:,1].tolist()
-        elif self.Data_2D.QA.loaded:
-            return self.Data_2D.QA.Values[:,1].tolist()
-        elif self.Data_2D.QI.loaded:
-            return self.Data_2D.QI.Values[:,1].tolist()
-        elif self.Data_2D.Vx.loaded:
-            return self.Data_2D.Vx.Values[:,1].tolist()
-        elif self.Data_2D.Vy.loaded:
-            return self.Data_2D.Vy.Values[:,1].tolist()
-        elif self.Data_2D.QS.loaded:
-            return self.Data_2D.QS.Values[:,1].tolist()
-        elif self.Data_2D.HUS.loaded:
-            return self.Data_2D.HUS.Values[:,1].tolist()
-        elif self.Data_2D.HDS.loaded:
-            return self.Data_2D.HDS.Values[:,1].tolist()
-        elif self.Data_2D.HAvg.loaded:
-            return self.Data_2D.HAvg.Values[:,1].tolist()
-        elif self.Data_2D.HMax.loaded:
-            return self.Data_2D.HMax.Values[:,1].tolist()
-        elif self.Data_2D.QIn.loaded:
-            return self.Data_2D.QIn.Values[:,1].tolist()
-        elif self.Data_2D.QOut.loaded:
-            return self.Data_2D.QOut.Values[:,1].tolist()
-        elif self.Data_2D.SS.loaded:
-            return self.Data_2D.SS.Values[:,1].tolist()
-        elif self.Data_2D.Vol.loaded:
-            return self.Data_2D.Vol.Values[:,1].tolist()
-        elif self.Data_RL.H_P.loaded:
-            return self.Data_RL.H_P.Values[:,1].tolist()
-        elif self.Data_RL.Q_L.loaded:
-            return self.Data_RL.Q_L.Values[:,1].tolist()
-        elif self.Data_RL.Vol_R.loaded:
-            return self.Data_RL.Vol_R.Values[:,1].tolist()
-        else:
-            return []
 
-    def dates(self):
+        if domain is None or domain.upper() == '1D':
+            if self.Data_1D.H.loaded:
+                return self.Data_1D.H.Values[:,1].tolist()
+            elif self.Data_1D.V.loaded:
+                return self.Data_1D.V.Values[:,1].tolist()
+            elif self.Data_1D.E.loaded:
+                return self.Data_1D.E.Values[:,1].tolist()
+            elif self.Data_1D.Q.loaded:
+                return self.Data_1D.Q.Values[:,1].tolist()
+            elif self.Data_1D.A.loaded:
+                return self.Data_1D.A.Values[:,1].tolist()
+
+        if domain is None or domain.upper() == '2D':
+            if self.Data_2D.H.loaded:
+                return self.Data_2D.H.Values[:,1].tolist()
+            elif self.Data_2D.D.loaded:
+                return self.Data_2D.D.Values[:,1].tolist()
+            elif self.Data_2D.V.loaded:
+                return self.Data_2D.V.Values[:,1].tolist()
+            elif self.Data_2D.Q.loaded:
+                return self.Data_2D.Q.Values[:,1].tolist()
+            elif self.Data_2D.GL.loaded:
+                return self.Data_2D.GL.Values[:,1].tolist()
+            elif self.Data_2D.QA.loaded:
+                return self.Data_2D.QA.Values[:,1].tolist()
+            elif self.Data_2D.QI.loaded:
+                return self.Data_2D.QI.Values[:,1].tolist()
+            elif self.Data_2D.Vx.loaded:
+                return self.Data_2D.Vx.Values[:,1].tolist()
+            elif self.Data_2D.Vy.loaded:
+                return self.Data_2D.Vy.Values[:,1].tolist()
+            elif self.Data_2D.QS.loaded:
+                return self.Data_2D.QS.Values[:,1].tolist()
+            elif self.Data_2D.HUS.loaded:
+                return self.Data_2D.HUS.Values[:,1].tolist()
+            elif self.Data_2D.HDS.loaded:
+                return self.Data_2D.HDS.Values[:,1].tolist()
+            elif self.Data_2D.HAvg.loaded:
+                return self.Data_2D.HAvg.Values[:,1].tolist()
+            elif self.Data_2D.HMax.loaded:
+                return self.Data_2D.HMax.Values[:,1].tolist()
+            elif self.Data_2D.QIn.loaded:
+                return self.Data_2D.QIn.Values[:,1].tolist()
+            elif self.Data_2D.QOut.loaded:
+                return self.Data_2D.QOut.Values[:,1].tolist()
+            elif self.Data_2D.SS.loaded:
+                return self.Data_2D.SS.Values[:,1].tolist()
+            elif self.Data_2D.Vol.loaded:
+                return self.Data_2D.Vol.Values[:,1].tolist()
+
+        if domain is None or domain.upper() == 'RL':
+            if self.Data_RL.H_P.loaded:
+                return self.Data_RL.H_P.Values[:,1].tolist()
+            elif self.Data_RL.Q_L.loaded:
+                return self.Data_RL.Q_L.Values[:,1].tolist()
+            elif self.Data_RL.Vol_R.loaded:
+                return self.Data_RL.Vol_R.Values[:,1].tolist()
+
+        return []
+
+    def dates(self, domain=None):
         """Returns timesteps as dates"""
 
         if not self.has_reference_time:
             return []
 
         if self._tmp_reference_time is None:
-            return [roundSeconds(self.reference_time + timedelta(hours=x), 2) for x in self.timeSteps()]
+            return [roundSeconds(self.reference_time + timedelta(hours=x), 2) for x in self.timeSteps(domain=domain)]
         else:
-            return [roundSeconds(self._tmp_reference_time + timedelta(hours=x), 2) for x in self.timeSteps()]
+            return [roundSeconds(self._tmp_reference_time + timedelta(hours=x), 2) for x in self.timeSteps(domain=domain)]
 
     def set_reference_time(self, reference_time):
         """Sets results reference time - old time will be overridden"""
