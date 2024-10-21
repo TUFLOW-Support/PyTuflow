@@ -33,6 +33,9 @@ from the `TUFLOW example model dataset <https://wiki.tuflow.com/TUFLOW_Example_M
    mat = tcf.mat()
    # etc...
 
+Viewing All Command Inputs
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
 Inputs can be accessed using the :meth:`get_inputs() <pytuflow.tmf.TCF.get_inputs>` method. This method returns a list of
 :class:`Input <pytuflow.tmf.Input>` objects. By default the :meth:`get_inputs() <pytuflow.tmf.TCF.get_inputs>` method
 is recursive, meaning that it will also return inputs from any control files that are read in from the TCF.
@@ -123,6 +126,9 @@ doesn't make much difference since no control files are read in from anything ot
    <SettingInput> Set Mat == 1
    <GisInput> Read GIS Mat == gis\2d_mat_EG00_001_R.shp
 
+Finding Specific Inputs
+^^^^^^^^^^^^^^^^^^^^^^^
+
 To find specific inputs, the :meth:`find_input() <pytuflow.tmf.TCF.find_input>` method can be used. This method returns
 a list of inputs found in the TCF (recursive by default) that match the search parameters.
 
@@ -180,6 +186,9 @@ Example, finding all inputs that have :code:`1d_` or :code:`2d_` in the right-ha
    <GisInput> Read GIS Code == gis\2d_code_EG00_001_R.shp
    <GisInput> Read GIS Mat == gis\2d_mat_EG00_001_R.shp
    <GisInput> Read GIS BC == gis\2d_bc_EG00_001_L.shp
+
+Advanced Input Filtering
+^^^^^^^^^^^^^^^^^^^^^^^^
 
 Inputs have various properties such as associated files, GIS geometry types, scope, and whether any files are missing.
 The available properties are dependent on the input type. E.g. a :class:`FileInput <pytuflow.tmf.FileInput>` will have
@@ -254,6 +263,9 @@ demonstration on the :code:`callback` argument.
    >>> for inp in tcf.find_input(callback=lambda x: Scope('scenario', 'D01') in x.scope()):
    ...     inp
    <GisInput> Read GIS Z Shape == gis\2d_zsh_EG07_006_R.shp
+
+Finding Input for a Specific Event / Scenario
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 To view the inputs in a given scenario/event, use the :meth:`context() <pytuflow.tmf.TCF.context>` method to
 resolve the inputs first.
@@ -449,6 +461,9 @@ For example, using :code:`EG16_~s1~_~s2~_002.tcf` from the example model dataset
    >>> print(zsh.scope())
    [<ScenarioScope> D01]
 
+Scope List
+^^^^^^^^^^
+
 The return from the :meth:`scope() <pytuflow.tmf.GisInput.scope>` method is a :class:`ScopeList <pytuflow.tmf.ScopeList>`.
 Additional items in the list are associated with nested blocks.
 
@@ -486,6 +501,9 @@ Would result in the following scope:
    >>> print(zsh.scope())
    [<ScenarioScope> D01 | D02]
 
+Else Logic
+^^^^^^^^^^
+
 One important part of the :code:`IF logic` scope, is when an input falls within the :code:`ELSE` block.
 
 .. code-block:: tuflow
@@ -507,6 +525,9 @@ what is required to reach the :code:`ELSE` block using :code:`!` to denote what 
    [<ScenarioScope> ELSE]
    >>> print(zsh.scope(else_=False))
    [<ScenarioScope> !D01]
+
+Scope Checking
+^^^^^^^^^^^^^^
 
 Examples of different scope types include, (as shown in the examples above) inputs within an
 :code:`If Scenario/Event` block will have a :code:`Scenario` or :code:`Event` scope. Other example scopes
@@ -555,6 +576,9 @@ consider the following TGC command:
    True
    >>> print(Scope('Scenario', 'D03') in inp.scope())
    False
+
+Checking Scope in a Model Run
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Using the :code:`in` operator can be useful but it doesn't necessarily indicate whether a given input will be included
 in a given model run since "if logic" can be complex i.e. nested if statements and the use of :code:`Else If/Else` blocks
@@ -612,8 +636,8 @@ The below examples demonstrates how to how to use the :meth:`run() <pytuflow.tmf
 to run a TUFLOW model using the :code:`pytuflow` package.
 
 The first thing to understand is that the :meth:`run() <pytuflow.tmf.TCFRunState.run>` method can only be called from the
-:class:`TCFRunState <pytuflow.tmf.TCFRunState>` object which is returned from the :meth:`context() <pytuflow.tmf.TCF.context>`
-method from the :class:`TCF <pytuflow.tmf.TCF>` object. The :meth:`context() <pytuflow.tmf.TCF.context>` method takes in the scenario/event arguments
+:class:`TCFRunState <pytuflow.tmf.TCFRunState>` object which is returned from the :meth:`tcf.context() <pytuflow.tmf.TCF.context>`.
+The :meth:`context() <pytuflow.tmf.TCF.context>` method takes in the scenario/event arguments
 in the from of a single string delimited by spaces e.g.
 
 * :code:`tcf.context('-s1 HPC -s2 GPU -e1 Q100 -e2 2h')`
@@ -625,7 +649,8 @@ or a list of string flags e.g.
 The :meth:`context() <pytuflow.tmf.TCF.context>` method must be called before running the model even if there are no
 scenario/event arguments.
 
-The :meth:`run() <pytuflow.tmf.TCFRunState.run>` method takes in the path to the TUFLOW executable and returns a :code:`Popen` object.
+The :meth:`run() <pytuflow.tmf.TCFRunState.run>` method takes in the path to the TUFLOW executable and returns
+a :code:`subprocess.Popen` object.
 
 .. code-block:: pycon
 
@@ -640,6 +665,9 @@ the TUFLOW executable to be called by the version name rather than the full path
 .. code-block:: pycon
 
    >>> proc = tcf.context().run('2023-03-AE')
+
+Registering TUFLOW Versions
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 TUFLOW executables only need to be registered once and the preferred method is to register a folder that contains
 all your TUFLOW versions. However, specific executables can be registered individually and where there is a version
@@ -688,182 +716,257 @@ the return code (zero should be returned from a successful run).
    >>> proc.poll()
    0
 
-
 Test a TUFLOW Model
-~~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^^
 
-The below shows an example of how to test a TUFLOW model using the :code:`pytuflow` package. The same ability
-to register TUFLOW executables can be used when running the :meth:`run_test() <pytuflow.tmf.TCFRunState.run_test>` method.
+A :meth:`test() <pytuflow.tmf.TCFRunState.test>` method is available to run a TUFLOW model in test mode. This is mostly
+just a convenience method that utilises the :meth:`run() <pytuflow.tmf.TCFRunState.run>` method with the appropriate
+CLI flags.
 
-.. code-block:: python
+The return from :meth:`test() <pytuflow.tmf.TCFRunState.test>` is a tuple containing stdout and stderr returned from
+:code:`subprocess.Popen.communicate()`. Because the stdout and stderr is piped to the :code:`subprocess.Popen` object,
+no console will open when running the :meth:`test() <pytuflow.tmf.TCFRunState.test>` method.
 
-   from pytuflow.tmf import TCF
+.. code-block:: pycon
 
+   >>> out, err = tcf.context().test('2023-03-AF')
+   >>> if err:
+   ...     for line in out.split('\r\n'):
+   ...         print(line)
+   ... else:
+   ...     print('Model tested successfully')
 
-   tcf = TCF('path/to/model.tcf')
-   out, err = tcf.context().run_test('2023-03-AF')
-
-   # the return from the run_test() method is a tuple containing stdout and stderr
-   # returned from the the subprocess.Popen object.
-   # Because the stdout and stderr is piped to the subprocess.Popen object
-   # the run_test() method will not produce any console object.
-
-   # to view any errors
-   if err:
-       for line in err.split('\r\n'):
-           print(line
-
-   # to view the output
-   for line in out.split('\r\n'):
-       print(line)
+Editing a Model
+~~~~~~~~~~~~~~~
 
 .. _updating_an_input:
 
-Update an Input
-~~~~~~~~~~~~~~~
+Editing an Input
+^^^^^^^^^^^^^^^^
 
-The below are examples on how to edit an :doc:`input <inp>` in TUFLOW and save the changes.
+An :doc:`input's <inp>` "command" (left-hand side) and "value" (right-hand side) can be edited. The value can be edited
+using :meth:`update_value() <pytuflow.tmf.InputBuildState.update_value>`:
 
-.. code-block:: python
+.. code-block:: pycon
 
-   from pytuflow.tmf import TCF
+   >>> inp = tcf.find_input('solution scheme')[0]
+   >>> print(inp)
+   Solution Scheme == Classic
+   >>> inp.update_value('HPC')
+   >>> print(inp)
+   Solution Scheme == HPC
 
+The command can be edited using :meth:`update_command() <pytuflow.tmf.InputBuildState.update_command>`, however the command must
+be updated to a value that is the same type as the original command. For example, if the original command is
+:code:`Read GIS Code`, then the updated command must also be a GIS command. Typically
+:meth:`update_command() <pytuflow.tmf.InputBuildState.update_command>`
+should be used to tweak the command slightly:
 
-   tcf = TCF('path/to/model.tcf')
-   inp = tcf.find_input('solution scheme')[0]
+.. code-block:: pycon
+
+   >>> inp = tcf.find_input('Read Grid Zpts')[0]
+   >>> print(inp)
+   Read Grid Zpts == DEM_001.tif
+   >>> inp.update_command('Read Grid Zpts XF OFF')
    print(inp)
-   # >>> Solution Scheme == Classic
+   Read Grid Zpts XF OFF == DEM_001.tif
 
-   # change the input value (right-hand side of the command)
-   inp.update_value('HPC')
-   print(inp)
-   # >>> Solution Scheme == HPC
+.. note::
 
-   # The change has not been saved. You can check this be querying the 'dirty' attribute
-   print(inp.dirty)
-   # >>> True
-   print(tcf.dirty)
-   # >>> True
+   Editing an input does not overwrite the TCF file until the :meth:`write() <pytuflow.tmf.TCF.write>` method is called.
+   See the :ref:`saving edits <saving_edits>` section for more information. The :meth:`undo() <pytuflow.tmf.TCF.undo>` method can be used to
+   unwind changes and the :meth:`reset() <pytuflow.tmf.TCF.reset>` method can be used to reset the control file
+   to it's original state.
 
-   # the changes can be saved via the tcf.write() method
-   # the 'inc' argument will determine where the new tcf
-   # is written to. The options are:
-   # - 'inplace' will overwrite the original tcf
-   # - 'auto' (default) will save into a new TCF with an auto incremented tcf number
-   # - '[user-suffix]' will save into a new TCF with a user suffix e.g. '001' (should be a string)
-   tcf.write('inplace')  # save over the original tcf
-   print(inp.dirty)
-   # >>> False
-   print(tcf.dirty)
-   # >>> False
+Adding a New Input
+^^^^^^^^^^^^^^^^^^
 
-   # the input can also have the left-hand side updated using 'update_command()'
-   inp = tcf.find_input('gpu solver')[0]
-   print(inp)
-   # >>> GPU Solver == ON
-   # This is an old command that invokes the old GPU Solver
-   # this should be updated to 'Solution Scheme == HPC'
-   inp.update_command('Solution Scheme')
-   inp.update_value('HPC')
-   print(inp)
-   # >>> Solution Scheme == HPC
+A new input can be added by using either :meth:`append_input() <pytuflow.tmf.TCF.append_input>` to add an input to the
+end of the control file, or :meth:`insert_input() <pytuflow.tmf.TCF.insert_input>` to add an input after, or before,
+an existing input.
 
-   # The entire input can also be updated by setting the underlying 'Command' object.
-   # users should be careful when using this as certain settings may be lost
-   # if not done properly and can't be reversed using the undo() or reset() methods.
-   from pytuflow.tmf import Command
-   # get the original input settings - this settings object may contain
-   # contextual information which is important to retain
-   settings = inp.raw_command_obj().settings
-   cmd = Command('Solution Scheme == Classic', settings)
-   inp.set_raw_command_obj(cmd)
-   print(inp)
-   # >>> Solution Scheme == Classic
+.. note::
 
-   # it is also possible to comment out or uncomment commands
-   # e.g. to comment out a given input
-   inp = tcf.find_input('hardware')[0]
-   print(inp)
-   # >>> Hardware == GPU
-   inp = tcf.comment_out(inp)
-   print(inp)
-   # >>> ! Hardware == GPU
-   # in reverse, to find a commented out command, comments parameter must be set to True
-   inp = tcf.find_input('hardware', comments=True)[0]
-   print(inp)
-   # >>> ! Hardware == GPU
-   inp = tcf.uncomment(inp)
-   print(inp)
-   # >>> Hardware == GPU
+   The current control file content (including unsaved edits and comments) can be viewed using the :meth:`preview() <pytuflow.tmf.TCF.preview>` method, which
+   can be useful when using PyTuflow to edit control files interactively.
 
+The below TCF (starting with a single command input) is used for the examples:
 
-Add a New Input
-~~~~~~~~~~~~~~~
+.. code-block:: tuflow
+   :linenos:
 
-The below are examples of how to add a new :doc:`input <inp>` to a TUFLOW control file.
+   Solution Scheme == HPC
 
-.. code-block:: python
+.. code-block:: pycon
 
-   from pytuflow.tmf import TCF
+   >>> inp = tcf.append_input('Hardware == GPU')
+   >>> tcf.preview()
+   Solution Scheme == HPC
+   Hardware == GPU
 
+A line gap can be added between command inputs by using the :code:`gap` argument.
 
-   tcf = TCF('path/to/model.tcf')
+.. code-block:: pycon
 
-   # to add a new input to the end of the control file
-   inp = tcf.append_input('Model Scenarios == DEV | 5m')
-   print(inp)
-   # >>> Model Scenarios == DEV | 5m
+   >>> inp = tcf.append_input('SGS == ON', gap=1)
+   >>> tcf.preview()
+   Solution Scheme == HPC
+   Hardware == GPU
 
-   # to add a new input next to an existing input
-   inp = tcf.find_input('solution scheme')[0]
-   new_inp = tcf.insert_input(inp, 'Hardware == GPU', after=True)
+   SGS == ON
 
-   # GIS inputs can simply reference the GIS file path (relative or absolute path)
-   # and the command will be auto generated
-   inp = tcf.find_input('set code')[0]
-   new_inp = tcf.insert_input(inp, 'path/to/2d_code_R.shp', after=True)
-   print(new_inp)
-   # >>> Read GIS Code == gis\2d_code_R.shp
+Inputs can be inserted into a particular location using the :meth:`insert_input() <pytuflow.tmf.TCF.insert_input>` method.
+By default the input is inserted before the reference input, however this can be changed by setting the :code:`after`
+argument to :code:`True`.
 
-   # in this case, the input will be inserted after the 'set code' input
-   # in the TGC (even though the method is being called from the TCF)
-   # because this is where the reference input is located.
-   # append_input() will always add to the control file being called from
-   # since there is no reference input.
-   # Reference GPKG layers should be done in a similar way as they
-   # are done in TUFLOW "database.gpkg >> lyrname" and the command
-   # reference will simplify it accordingly. They can also be added
-   # by just using they layer name, however it is then up to the user
-   # to ensure a spatial database command is present.
+.. code-block:: pycon
 
-   # A list of GIS inputs can also be used
-   inp = tcf.find_input('read grid zpts')[0]
-   new_inp = tcf.insert_input(inp, ['path/to/2d_zsh_rd_L.shp', 'path/to/2d_zsh_rd_P.shp'], after=True)
-   print(new_inp)
-   # >>> Read GIS Z Shape == gis\2d_zsh_rd_L.shp | gis\2d_zsh_rd_P.shp
+   >>> inp = find_input('Solution Scheme')[0]
+   >>> tcf.insert_input(inp, 'Tutorial Model == ON')
+   >>> tcf.preview()
+   Tutorial Model == ON
+   Solution Scheme == HPC
+   Hardware == GPU
 
-   # An input can be added inside a 'If Scenario' block by giving the input
-   # a scope. e.g.
-   inp = tcf.find_input('read grid zpts')[0]
-   new_inp = tcf.insert_input(inp, 'path/to/2d_zsh_DEV_R.shp', after=True)
-   new_inp.set_scope([('Scenario', 'DEV')])
+   SGS == ON
 
-   # the required argument for set_scope() is a list of tuples
-   # the second item in the tuple can use a pipe symbol '|'
-   # in the same way that TUFLOW uses it to denote multiple options
-   # e.g. ('Scenario', 'DEV | EXG')
-   # passing in multiple tuples will add nested IF statements
+Removing an Input
+^^^^^^^^^^^^^^^^^
 
-   # when this new input is written to file (or cf.preview() called to print to the console)
-   # it will be placed inside the 'If Scenario == DEV' block
-   tcf.tgc().preview()
+Inputs can be removed using the :meth:`remove_input() <pytuflow.tmf.TCF.remove_input>` method.
 
+.. code-block:: tuflow
+   :linenos:
+
+   Solution Scheme == HPC
+   Hardware == GPU
+   SGS == ON
+
+.. code-block:: pycon
+
+   >>> inp = tcf.find_input('SGS')[0]
+   >>> tcf.remove_input(inp)
+   >>> tcf.preview()
+   Solution Scheme == HPC
+   Hardware == GPU
+
+Alternatively, inputs can be commented out using the :meth:`comment_out() <pytuflow.tmf.TCF.comment_out>` method.
+
+.. code-block:: pycon
+
+   >>> inp = tcf.find_input('SGS')[0]
+   >>> tcf.comment_out(inp)
+   >>> tcf.preview()
+   Solution Scheme == HPC
+   Hardware == GPU
+   ! SGS == ON
+
+:meth:`uncomment() <pytuflow.tmf.TCF.uncomment>` can be used to reverse a commented out command.
+
+.. code-block:: pycon
+
+   >>> inp = tcf.find_input('SGS == ON', comments=True)[0]
+   >>> tcf.uncomment(inp)
+   >>> tcf.preview()
+   Solution Scheme == HPC
+   Hardware == GPU
+   SGS == ON
+
+.. _saving_edits:
+
+Saving Edits
+^^^^^^^^^^^^
+
+Editing, adding, or removing inputs are not saved to the file until the :meth:`write() <pytuflow.tmf.TCF.write>` method is called.
+By default, the :meth:`write() <pytuflow.tmf.TCF.write>` method will save the TCF to a new file with an auto-incremented
+name. The :code:`inc` argument can be set to :code:`'inplace'` to save the changes to the original file, or a string
+to save the changes to a new file with a user-defined suffix.
+
+Other control files will automatically have the :meth:`write() <pytuflow.tmf.TCF.write>` method called
+if they have edits if the :code:`TCF` is the object being saved/written. If 'inplace' isn't being used, any control files
+saved with new names will be automatically updated in the TCF object.
+
+**Original TCF (model_001.tcf)**
+
+.. code-block:: tuflow
+   :linenos:
+
+   Solution Scheme == HPC
+   Hardware == GPU
+   SGS == ON
+
+.. code-block:: pycon
+
+   >>> inp = tcf.find_input('Hardware')[0]
+   >>> inp.update_value('CPU')
+   >>> tcf.write()
+
+**New TCF (model_002.tcf)**
+
+.. code-block:: tuflow
+   :linenos:
+
+   Solution Scheme == HPC
+   Hardware == CPU
+   SGS == ON
+
+.. note::
+
+   Once a control file is saved, all edits that were being tracked are cleared. This means that the :meth:`undo() <pytuflow.tmf.TCF.undo>`
+   and :meth:`reset() <pytuflow.tmf.TCF.reset>` methods will be reset to the state of the saved file.
 
 Querying a Database
 ~~~~~~~~~~~~~~~~~~~
 
 The below are examples of how to query a :class:`database <pytuflow.tmf.Database>` in a TUFLOW control file. For example
 getting the boundary time series from a :class:`bc_dbase <pytuflow.tmf.BCDatabase>`
+
+It is worth first mentioning how to view the database itself. Database data is stored in a Pandas DataFrame and can
+be retrieved using the :meth:`db() <pytuflow.tmf.Database.db>` method.
+
+.. code-block:: pycon
+
+   >>> bc_dbase = tcf.bc_dbase()
+   >>> df = bc_dbase.db()
+   >>> print(df.head())
+               Source        Column 1     Column 2  Add Col 1  Mult Col 2  Add Col 2  Column 3  Column 4
+   Name
+   FC01  EG00_001.csv  inflow_time_hr  inflow_FC01        NaN         NaN        NaN       NaN       NaN
+
+
+Simple Boundary Value Example
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This simple example shows how to query a :class:`bc_dbase <pytuflow.tmf.BCDatabase>` that is not using any
+event variables using the :meth:`value() <pytuflow.tmf.BCDatabase.value>`.
+
+.. code-block:: pycon
+
+   >>> bc_dbase = tcf.bc_dbase()
+   >>> qt = bc_dbase.value('FC01')
+   >>> print(qt.head())
+         inflow_time_hr  inflow_FC01
+   0           0.000         0.00
+   1           0.083         0.84
+   2           0.167         3.31
+   3           0.250         4.60
+   4           0.333         7.03
+
+
+Boundary Value with Event Variables
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The best way to extract a specific event from a :class:`bc_dbase <pytuflow.tmf.BCDatabase>` that is using event variables,
+is to use the :meth:`context() <pytuflow.tmf.TCF.context>` method to resolve the event variables first. This should be
+called on the :class:`TCF <pytuflow.tmf.TCF>` object since the TEF file is required to resolve the event variables.
+
+.. code-block:: pycon
+
+   from pytuflow.tmf import TCF
+
+   tcf = TCF('path/to/model.tcf')
+   q100 = tcf.context('-e1 Q100').bc_dbase().value('FC01')
+   q050 = tcf.context('-e1 Q50').bc_dbase().value('FC01')
 
 .. code-block:: python
 
