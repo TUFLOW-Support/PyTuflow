@@ -83,7 +83,10 @@ class IDResultTypeItem:
     @property
     def valid(self) -> bool:
         """: bool: Class is valid if there are any Corrected items."""
-        return bool(self.correct)
+        valid = bool(self.correct)
+        if self.result_types == ['dummy']:
+            self.result_types.clear()
+        return valid
 
 
 class ErrorMessage:
@@ -524,6 +527,8 @@ class Iterator:
                 ids_ = [None for _ in ids]
             if result_types:
                 result_types_ = [None for _ in result_types]
+        if not result_types and not result_types_ and type_.lower() != 'max':
+            result_types_ = result_types = ['dummy']
         corrected = []
         for id1, id2 in zip(ids, ids_):
             for rt1, rt2 in zip(result_types, result_types_):

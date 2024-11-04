@@ -167,7 +167,7 @@ class TimeSeriesResult(ABC):
         ----------
         result_type : Union[str, list[str]], optional
             The result type can be a single value or a list of values. The result type can be the full name as
-            returned by :meth:`result_types() <pytuflow.results.TPC.result_types>` (not case sensitivte) or a
+            returned by :meth:`result_types() <pytuflow.results.TPC.result_types>` (not case-sensitive) or a
             well known short name e.g. 'q', 'v', 'h' etc.  If no result type is provided, all result types will be
             searched (within the provided domain).
         domain : str, optional
@@ -198,7 +198,7 @@ class TimeSeriesResult(ABC):
         ----------
         result_type : Union[str, list[str]], optional
             The result type can be a single value or a list of values. The result type can be the full name as
-            returned by :meth:`result_types() <pytuflow.results.TPC.result_types>` (not case sensitivte) or a
+            returned by :meth:`result_types() <pytuflow.results.TPC.result_types>` (not case-sensitive) or a
             well known short name e.g. 'q', 'v', 'h' etc. If no result type is provided, all result types will be
             searched.
 
@@ -477,8 +477,10 @@ class TimeSeriesResult(ABC):
         timesteps = []
         for item in iter.id_result_type([], [], domain, 'temporal'):
             if item.result_item.domain not in domains:
-                domains.append(item.result_item.domain)
-                for timestep in item.result_item.timesteps(dtype):
+                ts = item.result_item.timesteps(dtype)
+                if ts:
+                    domains.append(item.result_item.domain)
+                for timestep in ts:
                     if timestep not in domains:
                         timesteps.append(timestep)
         return sorted(timesteps)

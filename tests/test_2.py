@@ -1045,3 +1045,57 @@ class Test_FVBCTide(unittest.TestCase):
         ns = './tests/fv_bc_tide/Cudgen_Nodestrings_MGA56/2d_ns_Cudgen_004_OceanBoundary_L.shp'
         res = FVBCTide(nc, ns)
         self.assertEqual('Cudgen_Tide[TZ:UTC]', res.sim_id)
+
+    def test_not_fv_bc_tide(self):
+        p = './tests/hyd_tables/EG14_001_1d_ta_tables_check.csv'
+        try:
+            res = FVBCTide(p, p)
+            raise AssertionError('Should have raised an exception')
+        except ValueError:
+            pass
+
+    def test_ids(self):
+        nc = './tests/fv_bc_tide/Cudgen_Nodestrings_MGA56/Cudgen_Tide.nc'
+        ns = './tests/fv_bc_tide/Cudgen_Nodestrings_MGA56/2d_ns_Cudgen_004_OceanBoundary_L.shp'
+        res = FVBCTide(nc, ns)
+        ids = res.ids()
+        self.assertEqual(13, len(ids))
+
+    def test_node_ids(self):
+        nc = './tests/fv_bc_tide/Cudgen_Nodestrings_MGA56/Cudgen_Tide.nc'
+        ns = './tests/fv_bc_tide/Cudgen_Nodestrings_MGA56/2d_ns_Cudgen_004_OceanBoundary_L.shp'
+        res = FVBCTide(nc, ns)
+        ids = res.node_ids()
+        self.assertEqual(12, len(ids))
+        ids = res.node_ids('h')
+        self.assertEqual(12, len(ids))
+
+    def test_node_string_ids(self):
+        nc = './tests/fv_bc_tide/Cudgen_Nodestrings_MGA56/Cudgen_Tide.nc'
+        ns = './tests/fv_bc_tide/Cudgen_Nodestrings_MGA56/2d_ns_Cudgen_004_OceanBoundary_L.shp'
+        res = FVBCTide(nc, ns)
+        ids = res.node_string_ids()
+        self.assertEqual(1, len(ids))
+
+    def test_result_types(self):
+        nc = './tests/fv_bc_tide/Cudgen_Nodestrings_MGA56/Cudgen_Tide.nc'
+        ns = './tests/fv_bc_tide/Cudgen_Nodestrings_MGA56/2d_ns_Cudgen_004_OceanBoundary_L.shp'
+        res = FVBCTide(nc, ns)
+        rts = res.result_types()
+        self.assertEqual(1, len(rts))
+
+    def test_node_result_types(self):
+        nc = './tests/fv_bc_tide/Cudgen_Nodestrings_MGA56/Cudgen_Tide.nc'
+        ns = './tests/fv_bc_tide/Cudgen_Nodestrings_MGA56/2d_ns_Cudgen_004_OceanBoundary_L.shp'
+        res = FVBCTide(nc, ns)
+        rts = res.node_result_types()
+        self.assertEqual(1, len(rts))
+        rts = res.node_result_types('Ocean_pt_1')
+        self.assertEqual(1, len(rts))
+
+    def test_node_string_result_types(self):
+        nc = './tests/fv_bc_tide/Cudgen_Nodestrings_MGA56/Cudgen_Tide.nc'
+        ns = './tests/fv_bc_tide/Cudgen_Nodestrings_MGA56/2d_ns_Cudgen_004_OceanBoundary_L.shp'
+        res = FVBCTide(nc, ns)
+        rts = res.node_string_result_types()
+        self.assertEqual(0, len(rts))

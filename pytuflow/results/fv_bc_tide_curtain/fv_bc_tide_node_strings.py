@@ -24,7 +24,7 @@ class FVBCTideNodeStrings(TimeSeriesResultItem):
         super().__init__(provider.nc.path)
         self.name = 'Node String'
         self.domain = '2d'
-        self.domain_2 = 'node string'
+        self.domain_2 = 'node_string'
 
     def load(self, *args, **kwargs) -> None:
         # docstring inherited
@@ -37,3 +37,9 @@ class FVBCTideNodeStrings(TimeSeriesResultItem):
     def conv_result_type_name(self, result_type: str) -> str:
         # docstring inherited
         return RESULT_SHORT_NAME.get(result_type.lower(), result_type.lower())
+
+    def ids(self, result_type: str) -> list[str]:
+        # docstring inherited
+        if not result_type:
+            return self.provider.get_labels()
+        return []
