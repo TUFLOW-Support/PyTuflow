@@ -153,9 +153,9 @@ class HydTables(TimeSeriesResult):
         """:code:`time_series()` method acts as the plotting method for HydTables, although the plot types
         are more similar to a call for plotting cross-sections than time series.
 
-        The extracted plot data can either be for :code:`cross-secitions` (domain = '1d cross_section') or
+        The extracted plot data can either be for :code:`cross-sections` (domain = '1d cross_section') or
         :code:`channels` (domain = '1d channel'). The available result types can be found using
-        :meth:`cross_section_result_types() <pyuflow.results.HydTables.cross_section_result_types>` and
+        :meth:`cross_section_result_types() <pytuflow.results.HydTables.cross_section_result_types>` and
         :meth:`channel_result_types() <pytuflow.results.HydTables.channel_result_types>` respectively.
 
         Parameters
@@ -165,7 +165,7 @@ class HydTables(TimeSeriesResult):
             If no ID is provided, all IDs will be searched (within the provided domain).
         result_type : Union[str, list[str]]
             The result type can be a single value or a list of values. The result type can be the full name as
-            returned by :meth:`result_types() <pytuflow.results.TPC.result_types>` (not case sensitivte) or a
+            returned by :meth:`result_types() <pytuflow.results.TPC.result_types>` (not case sensitive) or a
             well known short name e.g. 'q', 'v', 'h' etc.  If no result type is provided, all result types will be
             searched (within the provided domain).
         domain : str, optional
@@ -239,7 +239,7 @@ class HydTables(TimeSeriesResult):
             marker = fo.tell()
             line = fo.readline()
             if re.findall(r'^"Section\s', line):
-                info = re.split('[\[\] ]', line)  # split by [ ] and space
+                info = re.split(r'[\[\] ]', line)  # split by [ ] and space
                 xs_id = info[1].strip()
                 xs_source = info[-2].strip()
                 if os.name != 'nt' and '\\' in xs_source:
@@ -280,7 +280,7 @@ class HydTables(TimeSeriesResult):
             marker = fo.tell()
             line = fo.readline()
             if re.findall(r'^Channel', line):
-                info = re.split('[\[\] ]', line)
+                info = re.split(r'[\[\] ]', line)
                 channel_id = info[1].strip()
                 cross_sections = re.findall(r'XS\d{5}', line)
                 xs1 = cross_sections[0]

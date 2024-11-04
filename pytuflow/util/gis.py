@@ -41,6 +41,9 @@ try:
     from fm_to_estry.helpers.gis import vector_geometry_as_array, get_driver_name_from_extension
     has_gdal = True
 except ImportError:
+    ogr = None
+    vector_geometry_as_array = None
+    get_driver_name_from_extension = None
     has_gdal = False
 
 

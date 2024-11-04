@@ -11,6 +11,7 @@ from pytuflow.results.info.info import INFO
 from pytuflow.results.tpc.tpc import TPC
 from pytuflow.results.gpkg_ts.gpkg_ts import GPKG_TS
 from pytuflow.results.iterator_util import Iterator
+from pytuflow.results.fv_bc_tide_curtain.fv_bc_tide import FVBCTide
 
 
 class Test_TPC_2016(TestCase):
@@ -1035,3 +1036,12 @@ class Test_BC_Tables(unittest.TestCase):
             raise Exception('Should have raised a NotImplementedError')
         except NotImplementedError as e:
             pass
+
+
+class Test_FVBCTide(unittest.TestCase):
+
+    def test_load(self):
+        nc = './tests/fv_bc_tide/Cudgen_Nodestrings_MGA56/Cudgen_Tide.nc'
+        ns = './tests/fv_bc_tide/Cudgen_Nodestrings_MGA56/2d_ns_Cudgen_004_OceanBoundary_L.shp'
+        res = FVBCTide(nc, ns)
+        self.assertEqual('Cudgen_Tide[TZ:UTC]', res.sim_id)
