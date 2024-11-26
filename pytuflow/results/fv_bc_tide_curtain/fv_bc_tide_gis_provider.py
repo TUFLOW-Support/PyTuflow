@@ -10,8 +10,15 @@ from pytuflow.util.geom import calc_spherical_length
 
 
 class FVBCTideGISProvider:
+    """Class for providing GIS data to the FVBCTideProvider class."""
 
     def __init__(self, path: PathLike) -> None:
+        """
+        Parameters
+        ----------
+        path : PathLike
+            Path to the GIS file.
+        """
         #: Path: Path to the GIS file.
         self.path = path
         #: str: Name of the GIS layer.

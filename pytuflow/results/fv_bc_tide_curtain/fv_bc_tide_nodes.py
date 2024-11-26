@@ -13,7 +13,7 @@ RESULT_SHORT_NAME = {'h': 'water level'}
 
 
 class FVBCTideNodes(Nodes):
-    """Class for holding FV BC Tide Node data."""
+    """Class for holding FV BC Tide node data."""
 
     def __init__(self, provider: 'FVBCTideProvider') -> None:
         """

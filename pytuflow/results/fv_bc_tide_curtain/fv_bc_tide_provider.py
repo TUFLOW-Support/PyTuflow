@@ -15,7 +15,7 @@ except ImportError:
 
 
 class FVBCTideProvider:
-    """Class for providing FV BC tide data to the TUFLOW Viewer class."""
+    """Class for providing FV BC tide data to the FVBCTide result class."""
 
     def __init__(self, nc_path: PathLike, gis_path: PathLike, use_local_time: bool = True) -> None:
         """

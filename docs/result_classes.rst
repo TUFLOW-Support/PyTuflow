@@ -72,3 +72,9 @@ please see the :doc:`results` page.
     results.BoundaryTypeHQ
     results.BoundaryTypeSA
     results.BoundaryTypeRF
+    results.FVBCTideNodes
+    results.FVBCTideNodeStrings
+    results.FVBCTideTimeSeries
+    results.FVBCTideProvider
+    results.FVBCTideNCProvider
+    results.FVBCTideGISProvider

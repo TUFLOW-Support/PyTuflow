@@ -17,3 +17,4 @@ as entry points to load results. For more information on the underlying classes,
    results.FM_TS
    results.HydTables
    results.BCTables
+   results.FVBCTide

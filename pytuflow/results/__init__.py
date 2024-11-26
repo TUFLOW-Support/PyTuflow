@@ -67,3 +67,12 @@ from .bc_tables.bc_tables_time_series import BCTablesTimeSeries
 from .bc_tables.bc_tables_boundary import Boundary
 from .bc_tables.boundary_type import (BoundaryType, BoundaryTypeBC, BoundaryTypeQT, BoundaryTypeHT, BoundaryTypeHQ,
                                       BoundaryTypeSA, BoundaryTypeRF)
+
+# FVBCTide
+from .fv_bc_tide_curtain.fv_bc_tide import FVBCTide
+from .fv_bc_tide_curtain.fv_bc_tide_nodes import FVBCTideNodes
+from .fv_bc_tide_curtain.fv_bc_tide_node_strings import FVBCTideNodeStrings
+from .fv_bc_tide_curtain.fv_bc_tide_time_series import FVBCTideTimeSeries
+from .fv_bc_tide_curtain.fv_bc_tide_provider import FVBCTideProvider
+from .fv_bc_tide_curtain.fv_bc_tide_nc_provider import FVBCTideNCProvider
+from .fv_bc_tide_curtain.fv_bc_tide_gis_provider import FVBCTideGISProvider

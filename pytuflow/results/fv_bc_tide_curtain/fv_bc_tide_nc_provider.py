@@ -10,7 +10,7 @@ from pytuflow.util.logging import get_logger
 
 
 class FVBCTideNCProvider:
-    """Class for interfacing with FV BC Tide Curtain netCDF files."""
+    """Class for providing data from the netCDF file to the FVBCTideProvider class."""
 
     def __init__(self, path: Path, use_local_time: bool) -> None:
         """
