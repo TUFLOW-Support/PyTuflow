@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING
 import pandas as pd
 
 from .fv_bc_tide_time_series import FVBCTideTimeSeries
-from ..abc.time_series_result_item import TimeSeriesResultItem
+from ..abc.nodes import Nodes
 
 if TYPE_CHECKING:
     from .fv_bc_tide_provider import FVBCTideProvider
@@ -12,7 +12,7 @@ if TYPE_CHECKING:
 RESULT_SHORT_NAME = {'h': 'water level'}
 
 
-class FVBCTideNodes(TimeSeriesResultItem):
+class FVBCTideNodes(Nodes):
     """Class for holding FV BC Tide Node data."""
 
     def __init__(self, provider: 'FVBCTideProvider') -> None:
@@ -25,9 +25,7 @@ class FVBCTideNodes(TimeSeriesResultItem):
         #: FVBCTideProvider: FV BC Tide provider object.
         self.provider = provider
         super().__init__(provider.nc.path)
-        self.name = 'Node'
         self.domain = '2d'
-        self.domain_2 = 'node'
 
     def load(self, *args, **kwargs) -> None:
         # docstring inherited
@@ -47,3 +45,7 @@ class FVBCTideNodes(TimeSeriesResultItem):
         if not result_type or result_type.lower() not in self.time_series:
             return self.time_series['Water Level'].df.columns.to_list()
         return []
+
+    def long_plot_result_types(self) -> list[str]:
+        # docstring inherited
+        return self.result_types(None)

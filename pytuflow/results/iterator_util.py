@@ -341,7 +341,7 @@ class Iterator:
             result_types = [result_types] if result_types is not None else []
 
         # find node and channel result items
-        result_items = [x for x in self._result_items if x.name == 'Node' or x.name == 'Channel']
+        result_items = [x for x in self._result_items if x.name in ['Node', 'Channel']]
         if len(result_items) != 2:
             raise Exception('Need exactly 2 result items (Nodes and Channels) to extract LP results.')
         if result_items[0].name == 'Node':
@@ -405,8 +405,7 @@ class Iterator:
         yield IDResultTypeItem('Node', corrected, False)
 
     def _correct_id(self, ids: list[str], df: pd.DataFrame, valid_ids: dict = None) -> list[str]:
-        """
-        Returns a list of corrected IDs (correct case) else None if ID is not found.
+        """Returns a list of corrected IDs (correct case) else None if ID is not found.
 
         :param ids:
             list of IDs to correct
@@ -472,8 +471,7 @@ class Iterator:
                          valid_ids: dict = None,
                          valid_rts: dict = None
                          ) -> list[Corrected]:
-        """
-        Returns a list of Corrected items for the given IDs, result types, and domain_2.
+        """Returns a list of Corrected items for the given IDs, result types, and domain_2.
 
         :param ids:
             list of IDs to correct

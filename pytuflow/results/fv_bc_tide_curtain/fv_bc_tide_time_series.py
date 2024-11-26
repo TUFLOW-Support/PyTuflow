@@ -1,7 +1,9 @@
+from datetime import timedelta
 from typing import TYPE_CHECKING
 import pandas as pd
 
 from ..abc.time_series import TimeSeries
+from ...pytuflow_types import TimeLike
 
 if TYPE_CHECKING:
     from .fv_bc_tide_provider import FVBCTideProvider
@@ -36,3 +38,11 @@ class FVBCTideTimeSeries(TimeSeries):
                 self.df = df
             else:
                 self.df = pd.concat([self.df, df], axis=1)
+        if not self.df.empty:
+            self.df.index.name = 'Time'
+
+    def timesteps(self, dtype: str) -> list[TimeLike]:
+        # docstring inherited
+        if dtype == 'absolute':
+            return [self.reference_time + timedelta(hours=x) for x in self.df.index]
+        return self.df.index.tolist()

@@ -1,5 +1,7 @@
 from typing import TYPE_CHECKING
 
+import pandas as pd
+
 from ..abc.time_series_result_item import TimeSeriesResultItem
 
 if TYPE_CHECKING:
@@ -28,7 +30,7 @@ class FVBCTideNodeStrings(TimeSeriesResultItem):
 
     def load(self, *args, **kwargs) -> None:
         # docstring inherited
-        pass
+        self.df = pd.DataFrame(index=self.provider.get_labels())
 
     def load_time_series(self) -> None:
         # docstring inherited

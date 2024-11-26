@@ -2,6 +2,7 @@ import re
 from pathlib import Path
 from typing import Union
 
+import pandas as pd
 from netCDF4 import Dataset
 
 from .fv_bc_tide_node_strings import FVBCTideNodeStrings
@@ -9,7 +10,7 @@ from .fv_bc_tide_nodes import FVBCTideNodes
 from .fv_bc_tide_provider import FVBCTideProvider
 from .. import Iterator
 from ..abc.time_series_result import TimeSeriesResult
-from pytuflow.pytuflow_types import PathLike
+from pytuflow.pytuflow_types import PathLike, TimeLike
 
 
 class FVBCTide(TimeSeriesResult):
@@ -62,9 +63,17 @@ class FVBCTide(TimeSeriesResult):
             return Iterator(*args)
         return Iterator(self.nodes, self.node_strings)
 
-    def long_plot_result_types(self) -> list[str]:
-        # docstring inherited
-        return ['Water Level']
+    def node_string_count(self) -> int:
+        """Returns the number of node strings in the results.
+
+        Returns
+        -------
+        int
+            Number of node strings.
+        """
+        if self.node_strings:
+            return self.node_strings.count()
+        return 0
 
     def node_ids(self, result_type: Union[str, list[str]] = '') -> list[str]:
         # docstring inherited
@@ -128,3 +137,46 @@ class FVBCTide(TimeSeriesResult):
                 return self.node_strings.result_types(None)
             return self.result_types(id, '2d node_string')
         return []
+
+    def long_plot(self,
+                  ids: Union[str, list[str]],
+                  result_type: Union[str, list[str]],
+                  time: TimeLike
+                  ) -> pd.DataFrame:
+        if not ids:
+            raise ValueError('No ids provided')
+
+        orig_name, orig_domain = self.node_strings.name, self.node_strings.domain_2  # a little hacky
+        self.node_strings.name = 'Channel'
+        self.node_strings.domain_2 = 'channel'
+
+        try:
+            df = pd.DataFrame()
+            iter = self.init_iterator()
+            for item in iter.lp_id_result_type(ids, result_type):
+                for id_ in item.ids:
+                    for rt in item.result_types:
+                        a = self.provider.get_section(id_, time)
+                        df_ = pd.DataFrame(a, columns=['Chainage', rt])
+                        if df is None:
+                            df = df_
+                        else:
+                            df = pd.concat([df, df_], axis=1)
+                return df.set_index('Chainage')
+        finally:
+            self.node_strings.name, self.node_strings.domain_2 = orig_name, orig_domain
+
+        return pd.DataFrame()
+
+    def connectivity(self, ids: Union[str, list[str]]) -> pd.DataFrame:
+        raise NotImplementedError
+
+    def maximum_result_types(self, id: Union[str, list[str]] = '', domain: str = '') -> list[str]:
+        raise NotImplementedError
+
+    def maximum(self,
+                id: Union[str, list[str]],
+                result_type: Union[str, list[str]],
+                domain: str = None
+                ) -> pd.DataFrame:
+        raise NotImplementedError

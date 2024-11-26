@@ -112,8 +112,7 @@ class TimeSeriesResult(ABC):
         return Iterator(self.channels, self.nodes, self.po, self.rl)
 
     def channel_count(self) -> int:
-        """
-        Return the number of channels in the result file.
+        """Return the number of channels in the result file.
 
         Returns
         -------

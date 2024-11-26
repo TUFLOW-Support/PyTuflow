@@ -28,6 +28,7 @@ class TimeSeriesResultItem(ABC):
 
     def __init__(self, fpath: PathLike, *args, **kwargs) -> None:
         super().__init__()
+        self._lp_name = None
         #: str: Name or Source of the result item.
         self.name = None
         #: str: Domain of the result item.
