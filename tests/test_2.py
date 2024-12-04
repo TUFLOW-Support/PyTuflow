@@ -7,7 +7,7 @@ from pytuflow.results.fm.fm import FM_TS
 from pytuflow.results.fm.fm_nodes import FMNodes
 from pytuflow.fm import GXY
 from pytuflow.results.hyd_tables.hyd_tables import HydTables
-from pytuflow.results.info.info import INFO
+from pytuflow.outputs.info import INFO
 from pytuflow.results.tpc.tpc import TPC
 from pytuflow.results.gpkg_ts.gpkg_ts import GPKG_TS
 from pytuflow.results.iterator_util import Iterator
@@ -706,7 +706,7 @@ class Test_Info_2013(unittest.TestCase):
     def test_load(self):
         p = './tests/2013/M04_5m_001_1d.info'
         res = INFO(p)
-        self.assertEqual('M04_5m_001', res.sim_id)
+        self.assertEqual('M04_5m_001', res.name)
 
     def test_not_info(self):
         p = './tests/2013/EG00_001_Scen_1+Scen_2.2dm.info'
@@ -727,14 +727,42 @@ class Test_Info_2013(unittest.TestCase):
     def test_channels(self):
         p = './tests/2013/M04_5m_001_1d.info'
         res = INFO(p)
-        self.assertEqual(54, res.channel_count())
-        self.assertEqual(54, len(res.channel_ids()))
+        self.assertEqual(54, res.channel_count)
+        self.assertEqual(54, len(res.ids('channel')))
+        self.assertEqual(54, len(res.ids('q')))
+        self.assertEqual(2, len(res.data_types('channel')))
+        self.assertEqual(2, len(res.data_types('ds1')))
 
     def test_nodes(self):
         p = './tests/2013/M04_5m_001_1d.info'
         res = INFO(p)
-        self.assertEqual(55, res.node_count())
-        self.assertEqual(55, len(res.node_ids()))
+        self.assertEqual(55, res.node_count)
+        self.assertEqual(55, len(res.ids('node')))
+        self.assertEqual(55, len(res.ids('h')))
+        self.assertEqual(1, len(res.data_types('node')))
+        self.assertEqual(1, len(res.data_types('ds1.1')))
+
+    def test_id_data_type_context(self):
+        p = './tests/2013/M04_5m_001_1d.info'
+        res = INFO(p)
+        self.assertEqual(109, len(res.ids('1d')))
+        self.assertEqual(3, len(res.data_types('1d')))
+        try:
+            _ = res.ids('2d')
+            raise AssertionError('Should have raised an exception')
+        except ValueError:
+            pass
+        try:
+            _ = res.data_types('2d')
+            raise AssertionError('Should have raised an exception')
+        except ValueError:
+            pass
+
+    def test_times(self):
+        p = './tests/2013/M04_5m_001_1d.info'
+        res = INFO(p)
+        self.assertEqual(181, len(res.times()))
+        self.assertEqual(181, len(res.times(fmt='absolute')))
 
     def test_time_series(self):
         p = './tests/2013/M04_5m_001_1d.info'
@@ -743,6 +771,14 @@ class Test_Info_2013(unittest.TestCase):
         self.assertEqual((181, 1), ts.shape)
         ts = res.time_series(['FC01.24.1', 'FC01.25.1'], 'h')
         self.assertEqual((181, 2), ts.shape)
+        ts = res.time_series(None, None)
+        self.assertEqual((181, 163), ts.shape)
+        ts = res.time_series('ds1', None)
+        self.assertEqual((181, 2), ts.shape)
+        ts = res.time_series(None, 'flow')
+        self.assertEqual((181, 54), ts.shape)
+        ts = res.time_series('ds1', 'v', time_fmt='absolute')
+        self.assertEqual((181, 1), ts.shape)
 
     def test_maximums(self):
         p = './tests/2013/M04_5m_001_1d.info'
@@ -751,23 +787,34 @@ class Test_Info_2013(unittest.TestCase):
         self.assertEqual((2, 4), df.shape)
         df = res.maximum(['FC01.24.1', 'FC01.25.1'], ['h'])
         self.assertEqual((2, 2), df.shape)
+        df = res.maximum(['ds1', 'FC01.24.1'], ['flow', 'level'])
+        self.assertEqual((2, 4), df.shape)
+        df = res.maximum('ds1', None)
+        self.assertEqual((1, 4), df.shape)
+        df = res.maximum(None, 'flow')
+        self.assertEqual((54, 2), df.shape)
+        df = res.maximum(None, None)
+        self.assertEqual((109, 6), df.shape)
+        df = res.maximum('ds1', 'flow', time_fmt='absolute')
+        self.assertEqual((1, 2), df.shape)
 
-    def test_long_plot_result_types(self):
+    def test_connectivity(self):
         p = './tests/2013/M04_5m_001_1d.info'
         res = INFO(p)
-        self.assertEqual(5, len(res.long_plot_result_types()))
+        df = res.connectivity(['ds1', 'ds2'])
+        self.assertEqual((2, 10), df.shape)
 
     def test_long_plot(self):
         p = './tests/2013/M04_5m_001_1d.info'
         res = INFO(p)
-        df = res.long_plot('ds1', ['bed level', 'water level', 'max water level'], 1)
-        self.assertEqual((12, 7), df.shape)
+        df = res.section('ds1', ['bed level', 'water level', 'max water level', 'pits'], 1)
+        self.assertEqual((12, 8), df.shape)
 
     def test_long_plot_2(self):
         p = './tests/2013/M04_5m_001_1d.info'
         res = INFO(p)
-        df = res.long_plot(['FC01.1_R', 'FC01.36'], ['bed level', 'water level', 'pipes'], 1)
-        self.assertEqual((4, 6), df.shape)
+        df = res.section(['FC01.1_R', 'FC01.36'], ['bed level', 'water level', 'pipes'], 1)
+        self.assertEqual((4, 7), df.shape)
 
 
 class Test_HydTables(unittest.TestCase):

@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import Union, Iterable, Any, Dict
 
 from pytuflow.tmf.tmf.tuflow_model_files.dataclasses.case_insensitive_dict import CaseInsDict
+from pytuflow.tmf.tmf.tuflow_model_files.dataclasses.append_dict import AppendDict
 from pytuflow.tmf.tmf.tuflow_model_files.dataclasses.file import TuflowPath
 # from pytuflow.tmf.tmf.tuflow_model_files.dataclasses.types import SearchTagLike, ContextLike, VariableMap
 
@@ -20,3 +21,12 @@ VariableMap = Dict[str, str]
 
 #: :code:`str | Iterable[tuple[str, Any]]`: Type hint for a search tag list item used to filter inputs from a control file. Can be in the form of a :code:`str` or a tuple :code:`(str, typing.Any)` or a list of tuples :code:`[(str, typing.Any), ...]`.
 SearchTagLike = Union[str, Iterable[tuple[str, Any]]]
+
+#: PlotExtractionLocation: The location to extract plot data for
+PlotExtractionLocation = Union[str, list[str], tuple[float, float], list[tuple[float, float]], None]
+
+#: PlotExtractionDataType: The data type to extract plot data for
+PlotExtractionDataType = Union[str, list[str], None]
+
+#: LongPlotExtractionLocation: The location to extract long plot data for
+LongPlotExtractionLocation = Union[str, list[str]]
