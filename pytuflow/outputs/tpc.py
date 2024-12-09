@@ -1,6 +1,7 @@
 from datetime import timedelta
 from pathlib import Path
 import re
+from typing import Union
 
 import numpy as np
 import pandas as pd
@@ -295,6 +296,38 @@ class TPC(INFO, ITimeSeries2D):
         """
         return super().ids(context)
 
+    def maximum(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
+                time_fmt: str = 'relative') -> pd.DataFrame:
+        # docstring inherited
+        locations, data_types = self._loc_data_types_to_list(locations, data_types)
+        context = ' '.join(locations + data_types)
+        ctx = self.context_combinations(context)
+        if ctx.empty:
+            return pd.DataFrame()
+
+        # 1D
+        df = super().maximum(locations, data_types, time_fmt)
+
+        # 2D
+        df1 = self._extract_maximum(data_types, ctx[ctx['domain'] == '2d'].data_type.unique(),
+                                    self._maximum_data_2d, ctx, time_fmt)
+        df1.columns = [f'po/{x}' for x in df1.columns]
+        if df.empty and not df1.empty:
+            df = df1
+        elif not df1.empty:
+            df = pd.concat([df, df1], axis=0)
+
+        # rl
+        df1 = self._extract_maximum(data_types, ctx[ctx['domain'] == 'rl'].data_type.unique(),
+                                    self._maximum_data_rl, ctx, time_fmt)
+        df1.columns = [f'rl/{x}' for x in df1.columns]
+        if df.empty and not df1.empty:
+            df = df1
+        elif not df1.empty:
+            df = pd.concat([df, df1], axis=0)
+
+        return df
+
     def _info_name_correction(self, name: str) -> str:
         # override this as it isn't needed for TPC
         return name
@@ -411,7 +444,7 @@ class TPC(INFO, ITimeSeries2D):
             for res in results:
                 max_ = res.max()
                 tmax = res.idxmax()
-                self._maximum_data[data_type] = pd.DataFrame({'max': max_, 'tmax': tmax})
+                self._maximum_data_2d[data_type] = pd.DataFrame({'max': max_, 'tmax': tmax})
 
     def _load_maximum_from_property(self, prop: str) -> pd.DataFrame:
         p = self._expand_property_path(prop)

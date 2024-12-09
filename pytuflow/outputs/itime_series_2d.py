@@ -62,16 +62,20 @@ class ITimeSeries2D(ABC):
         if ctx1:
             ctx1 = [x if x != 'region' else 'polygon' for x in ctx1]
             df = df[df['geometry'].isin(ctx1)]
-            for i in range(len(ctx1) - 1, -1, -1):
-                ctx.pop(i)
+            j = len(ctx) - 1
+            for i, x in enumerate(reversed(ctx.copy())):
+                if x in ['point', 'line', 'polygon', 'region']:
+                    ctx.pop(j - i)
 
         # data types
         ctx1 = [get_standard_data_type_name(x) for x in ctx]
         ctx1 = [x for x in ctx1 if x in df['data_type'].unique()]
         if ctx1:
             df = df[df['data_type'].isin(ctx1)]
-            for i in range(len(ctx1) - 1, -1, -1):
-                ctx.pop(i)
+            j = len(ctx) - 1
+            for i, x in enumerate(reversed(ctx.copy())):
+                if get_standard_data_type_name(x) in ctx1:
+                    ctx.pop(j - i)
 
         # ids
         if ctx:

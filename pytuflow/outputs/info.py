@@ -234,28 +234,15 @@ class INFO(TimeSeries, ITimeSeries1D):
     def maximum(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
                 time_fmt: str = 'relative') -> pd.DataFrame:
         # docstring inherited
-        locations, data_types = self._figure_out_loc_and_data_types(locations, data_types)
+        locations, data_types = self._loc_data_types_to_list(locations, data_types)
+        context = ' '.join(locations + data_types)
+        ctx = self.context_combinations(context)
+        if ctx.empty:
+            return pd.DataFrame()
 
-        locations_lower = [x.lower() for x in locations]
-        df = pd.DataFrame()
-        for dtype in data_types:
-            dtype1 = get_standard_data_type_name(dtype)
-            if dtype1 not in self._time_series_data:
-                continue
-            for res_df in self._maximum_data[dtype1]:
-                idxs = [res_df.index.str.lower().get_loc(x) for x in locations_lower if x in res_df.index.str.lower()]
-                if not idxs:
-                    continue
-                rows = res_df.index[idxs]
-                df1 = res_df.loc[rows]
-                if time_fmt == 'absolute':
-                    df1['tmax'] = df1['tmax'].apply(lambda x: self.reference_time + timedelta(hours=x))
-                ctx = 'node' if dtype1 == 'Water Levels' else 'channel'
-                df1.columns = [f'{ctx}/{dtype}/{x}' for x in df1.columns]
-                if df.empty:
-                    df = df1
-                else:
-                    df = pd.concat([df, df1], axis=1)
+        df = self._extract_maximum(data_types, ctx[ctx['domain'] == '1d'].data_type.unique(),
+                                   self._maximum_data, ctx, time_fmt)
+        df.columns = ['{0}/{1}'.format('node' if get_standard_data_type_name(x.split('/')[0]) == 'water level' else 'channel', x) for x in df.columns]
 
         return df
 
@@ -636,39 +623,35 @@ class INFO(TimeSeries, ITimeSeries1D):
                 tmax = res.idxmax()
                 self._maximum_data[data_type] = pd.DataFrame({'max': max_, 'tmax': tmax})
 
-    def _figure_out_loc_and_data_types(self, locations: Union[str, list[str], None],
+    def _extract_maximum(self, data_types: list[str], data_types_2: list[str],
+                         maximum_data: dict, ctx: pd.DataFrame, time_fmt: str) -> pd.DataFrame:
+        df = pd.DataFrame()
+        for dtype2 in data_types_2:
+            dtype = [x for x in data_types if get_standard_data_type_name(x) == dtype2]
+            dtype = dtype[0] if dtype else dtype2
+            if dtype2 not in maximum_data:
+                continue
+            for res_df in maximum_data[dtype2]:
+                rows = res_df.index[res_df.index.isin(ctx['id'])]
+                df1 = res_df.loc[rows]
+                if time_fmt == 'absolute':
+                    df1['tmax'] = df1['tmax'].apply(lambda x: self.reference_time + timedelta(hours=x))
+                df1.columns = [f'{dtype}/{x}' for x in df1.columns]
+                if df.empty:
+                    df = df1
+                else:
+                    df = pd.concat([df, df1], axis=1)
+        return df
+
+    def _loc_data_types_to_list(self, locations: Union[str, list[str], None],
                                        data_types: Union[str, list[str], None]) -> tuple[list[str], list[str]]:
-        """Figure out the locations and data types to use."""
-        if locations and not isinstance(locations, list):
-            locations = [locations]
-        if data_types and not isinstance(data_types, list):
-            data_types = [data_types]
-
-        if not locations and not data_types:
-            locations = self.ids()
-            data_types = self.data_types()
-        if not locations:
-            ctx = []
-            for x in ['node', 'channel']:
-                for y in data_types:
-                    if get_standard_data_type_name(y) in self.data_types(x):
-                        ctx.append(x)
-            if not ctx:
-                locations = []
-            elif len(ctx) > 1:
-                locations = self.ids()
-            else:
-                locations = self.ids(ctx[0])
-        if not data_types:
-            ctx = [x for x in ['node', 'channel'] for y in locations if y in self.ids(x)]
-            if not ctx:
-                data_types = []
-            elif len(ctx) > 1:
-                data_types = self.data_types()
-            else:
-                data_types = self.data_types(ctx[0])
-
+        """Convert locations and data_types to list format."""
+        locations = locations if locations is not None else []
+        locations = locations if isinstance(locations, list) else [locations]
+        data_types = data_types if data_types is not None else []
+        data_types = data_types if isinstance(data_types, list) else [data_types]
         return locations, data_types
+
 
     def _figure_out_loc_and_data_types_lp(self, locations: Union[str, list[str]],
                                           data_types: Union[str, list[str], None]) -> tuple[list[str], list[str]]:

@@ -148,26 +148,12 @@ class Test_TPC_2016(TestCase):
         self.assertEqual(2, len(res.ids('vol')))
 
     def test_maximums(self):
-        p = './tests/2016/M04_5m_001.tpc'
-        res = TPC(p)
-        df = res.rl.maximums.df
-        self.assertEqual((3, 14), df.shape)
-
-    def test_maximums_2(self):
-        p = './tests/2016/M04_5m_001.tpc'
+        p = './tests/2016/EG14_001.tpc'
         res = TPC(p)
         self.assertEqual((1, 4), res.maximum('ds1', ['q', 'v']).shape)
-
-    def test_maximums_po(self):
-        p = './tests/2016/M04_5m_001.tpc'
-        res = TPC(p)
-        df = res.po.maximums.df
-        self.assertEqual((4, 16), df.shape)
-
-    def test_maximums_po_2(self):
-        p = './tests/2016/M04_5m_001.tpc'
-        res = TPC(p)
-        self.assertEqual((1, 4), res.maximum('test', 'flow').shape)
+        self.assertEqual((1, 2), res.maximum('ds1.1', ['h']).shape)
+        self.assertEqual((1, 2), res.maximum('po_line', 'q').shape)
+        self.assertEqual((2, 4), res.maximum('rl po', 'h').shape)
 
     def test_time_series(self):
         p = './tests/2016/M04_5m_001.tpc'
