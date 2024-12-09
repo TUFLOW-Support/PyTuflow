@@ -9,7 +9,7 @@ from pytuflow.pytuflow_types import PathLike, TimeLike, PlotExtractionLocation, 
 class Output(ABC):
     """Base class for all TUFLOW output classes. This class should not be initialised directly."""
 
-    PLOTTING_CAPABILITY = []
+    _PLOTTING_CAPABILITY = []
 
     @abstractmethod
     def __init__(self, *fpath: PathLike) -> None:
@@ -212,4 +212,4 @@ class Output(ABC):
         bool
             True if the capability is present.
         """
-        return capability.lower() in [x.lower() for x in self.PLOTTING_CAPABILITY]
+        return capability.lower() in [x.lower() for x in self._PLOTTING_CAPABILITY]

@@ -1,4 +1,3 @@
-import logging
 import re
 from datetime import timedelta, datetime
 from pathlib import Path
@@ -7,6 +6,7 @@ from typing import Union
 import numpy as np
 import pandas as pd
 
+from pytuflow.outputs.helpers.get_standard_data_type_name import get_standard_data_type_name
 from pytuflow.outputs.helpers.tpc_reader import TPCReader
 from pytuflow.outputs.itime_series_1d import ITimeSeries1D
 from pytuflow.outputs.time_series import TimeSeries
@@ -32,27 +32,7 @@ class INFO(TimeSeries, ITimeSeries1D):
     >>> info = INFO('path/to/file.info')
     """
 
-    PLOTTING_CAPABILITY = ['timeseries', 'section']
-    ALTERNATE_DATA_TYPE_NAMES = CaseInsDict({
-        'Water Levels': ['water level', 'water levels', 'water_level', 'water_levels', 'h', 'stage', 'level', 'levels'],
-        'Flows': ['flow', 'flows', 'q'],
-        'Velocities': ['velocity', 'velocities', 'vel', 'v'],
-        'Water Levels Max': ['water level max', 'water_level_max', 'water level maximum', 'water_level_maximum',
-                             'water levels max', 'water_levels_max', 'maxh', 'maximumh',
-                            'max water level', 'max_water_level', 'max water levels', 'max_water_levels', 'max h',
-                            'max_h', 'max stage', 'max_stage', 'max level', 'max_level', 'max levels', 'max levels'],
-        'Water Levels TMax': ['water level tmax', 'water_level_tmax', 'water level tmaximum', 'water_level_tmaximum',
-                              'water levels tmax', 'water_levels_tmax', 'tmaxh', 'tmaximumh',
-                              'tmax water level', 'tmax_water_level', 'tmax water levels', 'tmax_water_levels', 'tmax h',
-                              'tmax_h', 'tmax stage', 'tmax_stage', 'tmax level', 'tmax_level', 'tmax levels',
-                              'tmax levels', 'time of max h', 'time_of_max_h', 'time of max level', 'time_of_max_level',
-                              'time of max water level', 'time_of_max_water_level', 'time of max stage',
-                              'time_of_max_stage'],
-        'Bed Level': ['bed level', 'bed levels', 'bed_level', 'bed_levels', 'bed', 'bathymetry', 'bathy', 'z',
-                      'ground level', 'ground_level', 'ground levels', 'ground_levels'],
-        'Pipes': ['pipes', 'pipe', 'culverts', 'culvert', 'culverts and pipes', 'culverts_and_pipes'],
-        'Pits': ['pits', 'pit', 'pit level', 'pit_level', 'pit levels', 'pit_levels']
-    })
+    _PLOTTING_CAPABILITY = ['timeseries', 'section']
 
     def __init__(self, fpath: PathLike) -> None:
         """
@@ -65,10 +45,15 @@ class INFO(TimeSeries, ITimeSeries1D):
 
         #: Path: The path to the 1D time-series .info output file.
         self.fpath = Path(fpath)
+        #: str: The unit system used in the output file.
+        self.units = 'si'
+
+        if not self.fpath.exists():
+            raise FileNotFoundError(f'File not found: {self.fpath}')
 
         # call before tpc_reader is initialised to give a clear error message if it isn't actually a .info time series file
-        if not self.looks_like_this(fpath):
-            raise ValueError(f'File does not look like a time series .info file: {fpath}')
+        if not self.looks_like_this(self.fpath):
+            raise ValueError(f'File does not look like a time series {self.__class__.__name__} file: {fpath}')
 
         #: :doc:`TPCReader<pytuflow.outputs.helpers.tpc_reader.TPCReader>`: The TPC reader for the .info file. The INFO file format uses the TPC format.
         self.tpc_reader = TPCReader(self.fpath)
@@ -86,12 +71,14 @@ class INFO(TimeSeries, ITimeSeries1D):
     def load(self) -> None:
         # docstring inherited
         self.name = self.tpc_reader.get_property('Simulation ID')
-        self.node_count = self.tpc_reader.get_property('Number Nodes')
-        self.channel_count = self.tpc_reader.get_property('Number Channels')
+        self.units = 'si' if self.tpc_reader.get_property('Units') == 'METRIC' else 'us customary'
+        self.node_count = self.tpc_reader.get_property(r'Number (?:1D\s)?Nodes', 0, regex=True)
+        self.channel_count = self.tpc_reader.get_property(r'Number (?:1D\s)?Channels', 0, regex=True)
         self._load_node_info()
         self._load_chan_info()
         self._load_time_series()
         self._load_maximums()
+        self._load_1d_info()
 
     def close(self):
         # docstring inherited
@@ -125,18 +112,21 @@ class INFO(TimeSeries, ITimeSeries1D):
             return True
         return False
 
+    def context_combinations(self, context: str) -> pd.DataFrame:
+        # docstring inherited
+        # split context into components
+        ctx = [x.lower() for x in context.split()] if context else []
+        return super().context_combinations_1d(ctx)
+
     def times(self, context: str = None, fmt: str = 'relative') -> list[TimeLike]:
         """Returns all the available times for the output.
 
         The context is an optional input that can be used to filter the return further. For INFO results, the
         returned times will be the same regardless of the context, so it is not recommended to pass in any
         context. Valid contexts for INFO results are:
-        - '1d': returns all data types
-        - 'node': returns only node data types
-        - 'channel': returns only channel data types
-        - 'timeseries': returns only IDs that have time series data. This will be all IDs for INFO results.
-        - 'section': returns only IDs that have section data (i.e. long plot data). This is identical to 'nodes'
-        for INFO results
+        - '1d': returns all times
+        - 'node': returns only node times
+        - 'channel': returns only channel times
         - [id]: returns only data types for the given ID.
         - [data_type]: returns only IDs for the given data type.
 
@@ -159,23 +149,7 @@ class INFO(TimeSeries, ITimeSeries1D):
         >>> res.times('absolute')
         [Timestamp('2021-01-01 00:00:00'), Timestamp('2021-01-01 00:01:00'), ..., Timestamp('2021-01-01 03:00:00')]
         """
-        # validate context
-        if context:
-            data_types = flatten([self._data_type_to_alternate_name(x) for x in self.data_types()])
-            possible_contexts = ['1d', 'node', 'channel', 'timeseries', 'section'] + self.ids() + data_types
-            if context.lower() not in possible_contexts:
-                raise ValueError(f'Invalid context: {context}')
-        # all times are the same so context doesn't actually matter
-        times = []
-        for data_type, results in self._time_series_data.items():
-            for res_df in results:
-                times = res_df.index.tolist()
-                break
-
-        if fmt in ['absolute', 'datetime']:
-            times = [self.reference_time + timedelta(hours=x) for x in times]
-
-        return times
+        return super().times(context, fmt)
 
     def data_types(self, context: str = None) -> list[str]:
         """Returns all the available data types (result types) for the output given the context.
@@ -215,31 +189,7 @@ class INFO(TimeSeries, ITimeSeries1D):
         >>> res.data_types('FC01.1_R')
         ['Flow', 'Velocity']
         """
-        # validate context
-        if context:
-            possible_contexts = ['node', 'channel', '1d', 'section', 'timeseries'] + self.ids()
-            if context.lower() not in possible_contexts:
-                raise ValueError(f'Invalid context: {context}')
-
-        if not context or context.lower() in ['1d', 'timeseries']:
-            return ['Water Level', 'Flow', 'Velocity']
-
-        if context.lower() == 'section':
-            return ['Water Level', 'Water Level Max', 'Water Level TMax', 'Bed Level', 'Pits', 'Pipes']
-
-        # if context is not node or channel, figure out which one it is
-        if context.lower() not in ['node', 'channel']:
-            if context.lower() == 'section':
-                context = 'node'
-            elif context.lower() in self.node_info.index.str.lower():
-                context = 'node'
-            else:
-                context = 'channel'
-
-        if context.lower() == 'node':
-            return ['Water Level']
-
-        return ['Flow', 'Velocity']
+        return super().data_types(context)
 
     def ids(self, context: str = None) -> list[str]:
         """Returns all the available IDs for the output.
@@ -279,29 +229,7 @@ class INFO(TimeSeries, ITimeSeries1D):
         >>> rse.ids('h')
         ['FC01.1_R.1', 'FC01.1_R.2', 'FC01.2_R.1', 'FC01.2_R.2', 'FC04.1_C.1', 'FC04.1_C.2']
         """
-        # validate context argument
-        if context:
-            data_types = flatten([self._data_type_to_alternate_name(x) for x in self.data_types()])
-            possible_contexts = ['node', 'channel', '1d', 'section', 'timeseries'] + data_types
-            if context.lower() not in possible_contexts:
-                raise ValueError(f'Invalid context: {context}')
-
-        if not context or context.lower() in ['1d', 'timeseries']:
-            return self.chan_info.index.tolist() + self.node_info.index.tolist()
-
-        # if context is not node or channel, figure out which one it is
-        if context.lower() not in ['node', 'channel']:
-            if context.lower() == 'section':
-                context = 'node'
-            elif context.lower() in self.ALTERNATE_DATA_TYPE_NAMES['water levels']:
-                context = 'node'
-            else:
-                context = 'channel'
-
-        if context.lower() == 'node':
-            return self.node_info.index.tolist()
-
-        return self.chan_info.index.tolist()
+        return super().ids(context)
 
     def maximum(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
                 time_fmt: str = 'relative') -> pd.DataFrame:
@@ -311,7 +239,7 @@ class INFO(TimeSeries, ITimeSeries1D):
         locations_lower = [x.lower() for x in locations]
         df = pd.DataFrame()
         for dtype in data_types:
-            dtype1 = self._alternate_name_to_data_type(dtype)  # get the correct data_type name
+            dtype1 = get_standard_data_type_name(dtype)
             if dtype1 not in self._time_series_data:
                 continue
             for res_df in self._maximum_data[dtype1]:
@@ -396,7 +324,7 @@ class INFO(TimeSeries, ITimeSeries1D):
         locations_lower = [x.lower() for x in locations]
         df = pd.DataFrame()
         for dtype in data_types:
-            dtype1 = self._alternate_name_to_data_type(dtype)  # get the correct data_type name
+            dtype1 = get_standard_data_type_name(dtype)  # get the correct data_type name
             if dtype1 not in self._time_series_data:
                 continue
             for res_df in self._time_series_data[dtype1]:
@@ -499,17 +427,17 @@ class INFO(TimeSeries, ITimeSeries1D):
 
         # loop through data types and add them to the data frame
         for dtype in data_types:
-            dtype1 = self._alternate_name_to_data_type(dtype)
+            dtype1 = get_standard_data_type_name(dtype)
 
-            if dtype1 == 'Bed Level':
+            if dtype1 == 'bed level':
                 df1 = self.lp.melt_2_columns(dfconn, ['us_invert', 'ds_invert'], dtype)
                 df[dtype] = df1[dtype]
-            elif dtype1 == 'Pipes':
+            elif dtype1 == 'pipes':
                 df1 = self.lp.melt_2_columns(dfconn, ['lbus_obvert', 'lbds_obvert'], dtype)
                 df1 = df1.join(self.chan_info['ispipe'], on='channel')
                 df1.loc[~df1['ispipe'], dtype] = np.nan
                 df[dtype] = df1[dtype]
-            elif dtype1 == 'Pits':
+            elif dtype1 == 'pits':
                 y = []
                 for i, row in dfconn.iterrows():
                     nd = row['us_node']
@@ -530,10 +458,10 @@ class INFO(TimeSeries, ITimeSeries1D):
                     else:
                         y.append(np.nan)
                 df[dtype] = y
-            elif 'TMax' in dtype1:
+            elif 'tmax' in dtype1:
                 dtype1 = dtype1.replace('TMax', '').strip()
                 df[dtype] = self._maximum_data[dtype1][0].loc[df['node'], 'tmax'].tolist()
-            elif 'Max' in dtype1:
+            elif 'max' in dtype1:
                 dtype1 = dtype1.replace('Max', '').strip()
                 df[dtype] = self._maximum_data[dtype1][0].loc[df['node'], 'max'].tolist()
             else:  # temporal result
@@ -586,17 +514,17 @@ class INFO(TimeSeries, ITimeSeries1D):
         """Correct the name of the file. Only required for INFO results and should be overerriden by subclasses."""
         return name.replace('_1d_','_1d_1d_')
 
-    def _expand_property_path(self, prop: str) -> Path:
+    def _expand_property_path(self, prop: str, regex: bool = False, value: str = None) -> Path:
         """Expands the property value into a full path. Returns None if the property does not exist."""
-        prop_path = self.tpc_reader.get_property(prop, None)
-        if prop_path is not None:
-            if prop in ['Channel Info', 'Node Info']:
+        prop_path = self.tpc_reader.get_property(prop, None, regex) if value is None else value
+        if prop_path not in [None, 'NONE']:
+            if 'node info' in prop.lower() or 'channel info' in prop.lower():
                 prop_path = self._info_name_correction(prop_path)
             return self.fpath.parent / prop_path
 
     def _load_node_info(self) -> None:
         """Load node info DataFrame."""
-        node_info_csv = self._expand_property_path('Node Info')
+        node_info_csv = self._expand_property_path(r'(?:1D\s)?Node Info', regex=True)
         if node_info_csv is not None:
             try:
                 self.node_info = pd.read_csv(
@@ -619,7 +547,7 @@ class INFO(TimeSeries, ITimeSeries1D):
 
     def _load_chan_info(self) -> None:
         """Load channel info DataFrame."""
-        chan_info_csv = self._expand_property_path('Channel Info')
+        chan_info_csv = self._expand_property_path(r'(?:1D\s)?Channel Info', regex=True)
         if chan_info_csv is not None:
             try:
                 self.chan_info = pd.read_csv(
@@ -651,6 +579,24 @@ class INFO(TimeSeries, ITimeSeries1D):
             except Exception as e:
                 logger.warning(f'INFO._load_chan_info(): Error loading channel info: {e}')
 
+    def _load_1d_info(self) -> None:
+        """Loads the 1D info into a single table with data type and temporal information."""
+        info = {'id': [], 'data_type': [], 'geometry': [], 'start': [], 'end': [], 'dt': []}
+        for dtype, vals in self._time_series_data.items():
+            for df1 in vals:
+                dt = np.round((df1.index[1] - df1.index[0]) * 3600., decimals=2)
+                start = df1.index[0]
+                end = df1.index[-1]
+                for col in df1.columns:
+                    info['id'].append(col)
+                    info['data_type'].append(dtype)
+                    info['geometry'].append('point' if col in self.node_info.index else 'line')
+                    info['start'].append(start)
+                    info['end'].append(end)
+                    info['dt'].append(dt)
+
+        self.oned_objs = pd.DataFrame(info)
+
     def _load_time_series(self) -> None:
         """Load time-series data into memory."""
         for res in ['Water Levels', 'Flows', 'Velocities']:
@@ -658,7 +604,8 @@ class INFO(TimeSeries, ITimeSeries1D):
             if p is not None:
                 try:
                     df = self._load_time_series_csv(p)
-                    self._time_series_data[res] = df
+                    stnd = get_standard_data_type_name(res)  # convert to a standard data type name
+                    self._time_series_data[stnd] = df
                 except Exception as e:
                     logger.warning(f'INFO._load_time_series(): Error loading time series from {p}: {e}')
 
@@ -675,7 +622,8 @@ class INFO(TimeSeries, ITimeSeries1D):
 
     def _csv_col_name_corr(self, name: str) -> str:
         """Correct the column name in the CSV file to be just the id."""
-        name = ' '.join(name.split(' ')[1:])
+        if not re.findall(r'(Entry|Additional|Exit) LC', name):
+            name = ' '.join(name.split(' ')[1:])
         name = re.sub(r'\[.*]', '', name).strip()
         return name
 
@@ -687,18 +635,6 @@ class INFO(TimeSeries, ITimeSeries1D):
                 max_ = res.max()
                 tmax = res.idxmax()
                 self._maximum_data[data_type] = pd.DataFrame({'max': max_, 'tmax': tmax})
-
-    def _data_type_to_alternate_name(self, name: str) -> list[str]:
-        """Returns alternate names for the given data type."""
-        name = self._alternate_name_to_data_type(name)
-        return self.ALTERNATE_DATA_TYPE_NAMES.get(name, name)
-
-    def _alternate_name_to_data_type(self, data_type: str) -> str:
-        """Returns the correct data type name to use from a given alternate name for the data type."""
-        for key, value in self.ALTERNATE_DATA_TYPE_NAMES.items():
-            if data_type.lower() in value:
-                return key
-        return data_type
 
     def _figure_out_loc_and_data_types(self, locations: Union[str, list[str], None],
                                        data_types: Union[str, list[str], None]) -> tuple[list[str], list[str]]:
@@ -715,8 +651,7 @@ class INFO(TimeSeries, ITimeSeries1D):
             ctx = []
             for x in ['node', 'channel']:
                 for y in data_types:
-                    if self._alternate_name_to_data_type(y) in [self._alternate_name_to_data_type(z) for z in
-                                                                self.data_types(x)]:
+                    if get_standard_data_type_name(y) in self.data_types(x):
                         ctx.append(x)
             if not ctx:
                 locations = []
@@ -756,10 +691,10 @@ class INFO(TimeSeries, ITimeSeries1D):
                 raise ValueError('No valid locations provided.')
 
         if not data_types:
-            data_types = [self._alternate_name_to_data_type(x) for x in self.data_types('section')]
+            data_types = self.data_types('section')
         else:
-            valid_types = [self._alternate_name_to_data_type(x) for x in self.data_types('section')]
-            data_types = [x for x in data_types if self._alternate_name_to_data_type(x) in valid_types]
+            valid_types = self.data_types('section')
+            data_types = [x for x in data_types if get_standard_data_type_name(x) in valid_types]
             if not data_types:
                 logger.warning(f'INFO.section(): No valid data types provided ({data_types}).')
 

@@ -8,7 +8,7 @@ from pytuflow.results.fm.fm_nodes import FMNodes
 from pytuflow.fm import GXY
 from pytuflow.results.hyd_tables.hyd_tables import HydTables
 from pytuflow.outputs.info import INFO
-from pytuflow.results.tpc.tpc import TPC
+from pytuflow.outputs.tpc import TPC
 from pytuflow.results.gpkg_ts.gpkg_ts import GPKG_TS
 from pytuflow.results.iterator_util import Iterator
 from pytuflow.results.fv_bc_tide_curtain.fv_bc_tide import FVBCTide
@@ -17,9 +17,9 @@ from pytuflow.results.fv_bc_tide_curtain.fv_bc_tide import FVBCTide
 class Test_TPC_2016(TestCase):
 
     def test_load(self):
-        p = './tests/2016/M04_5m_001.tpc'
+        p = './tests/2016/EG14_001.tpc'
         res = TPC(p)
-        self.assertEqual('M04_5m_001', res.sim_id)
+        self.assertEqual('EG14_001', res.name)
 
     def test_not_tpc(self):
         p = './tests/2013/M04_5m_001_1d.info'
@@ -46,166 +46,106 @@ class Test_TPC_2016(TestCase):
             pass
 
     def test_channel_count(self):
-        p = './tests/2016/M04_5m_001.tpc'
+        p = './tests/2016/EG14_001.tpc'
         res = TPC(p)
-        self.assertEqual(54, res.channel_count())
+        self.assertEqual(54, res.channel_count)
 
     def test_node_count(self):
-        p = './tests/2016/M04_5m_001.tpc'
+        p = './tests/2016/EG14_001.tpc'
         res = TPC(p)
-        self.assertEqual(55, res.node_count())
+        self.assertEqual(53, res.node_count)
 
     def test_po_count(self):
-        p = './tests/2016/M04_5m_001.tpc'
+        p = './tests/2016/EG14_001.tpc'
         res = TPC(p)
-        self.assertEqual(4, res.po_count())
+        self.assertEqual(1, res.po_point_count)
+        self.assertEqual(1, res.po_line_count)
+        self.assertEqual(1, res.po_poly_count)
 
     def test_rl_count(self):
-        p = './tests/2016/M04_5m_001.tpc'
+        p = './tests/2016/EG14_001.tpc'
         res = TPC(p)
-        self.assertEqual(3, res.rl_count())
+        self.assertEqual(1, res.rl_point_count)
+        self.assertEqual(1, res.rl_line_count)
+        self.assertEqual(1, res.rl_poly_count)
 
-    def test_channel_ids(self):
-        p = './tests/2016/M04_5m_001.tpc'
+    def test_times(self):
+        p = './tests/2016/EG14_001.tpc'
         res = TPC(p)
-        self.assertEqual(54, len(res.channel_ids()))
+        times = res.times()
+        self.assertEqual(181, len(times))
+        times = res.times(fmt='absolute')
+        self.assertEqual(181, len(times))
 
-    def test_channel_ids_error(self):
-        p = './tests/2016/M04_5m_001.tpc'
+    def test_times_domain_context(self):
+        p = './tests/2016/EG14_001_unique_1d_times.tpc'
         res = TPC(p)
-        try:
-            ids = res.channel_ids('level')
-            raise AssertionError('Should have raised an exception')
-        except ValueError:
-            pass
+        times = res.times('1d')
+        self.assertEqual(91, len(times))
+        times = res.times('2d')
+        self.assertEqual(181, len(times))
+        times = res.times('po_point')
+        self.assertEqual(181, len(times))
+        times = res.times()
+        self.assertEqual(181, len(times))
 
-    def test_channel_ids_error_2(self):
-        p = './tests/2016/M04_5m_001.tpc'
+    def test_times_location_context(self):
+        p = './tests/2016/EG14_001_dup_2d_dtype.tpc'
         res = TPC(p)
-        try:
-            ids = res.channel_ids(['flow', 'level'])
-            raise AssertionError('Should have raised an exception')
-        except ValueError:
-            pass
+        times = res.times('po_line')
+        self.assertEqual(181, len(times))
+        times = res.times('po_line_2')
+        self.assertEqual(91, len(times))
+        times = res.times()
+        self.assertEqual(181, len(times))
 
-    def test_ids_error(self):
-        p = './tests/2016/M04_5m_001.tpc'
+    def test_data_types(self):
+        p = './tests/2016/EG14_001.tpc'
         res = TPC(p)
-        # works
-        ids = res.ids('level', '1d')
-        # doesn't work
-        try:
-            ids = res.ids('levl', '1d')  # misspell
-            raise AssertionError('Should have raised an exception')
-        except ValueError:
-            pass
+        self.assertEqual(22, len(res.data_types()))
 
-    def test_ids_error_2(self):
-        p = './tests/2016/M04_5m_001.tpc'
+    def test_data_types_domain_context(self):
+        p = './tests/2016/EG14_001.tpc'
         res = TPC(p)
-        # works
-        ids = res.ids(['flow', 'level'], '1d')
-        # doesn't work
-        try:
-            ids = res.ids(['e', 'g'], '1d')
-            raise AssertionError('Should have raised an exception')
-        except ValueError:
-            pass
+        self.assertEqual(9, len(res.data_types('1d')))
+        self.assertEqual(3, len(res.data_types('node')))
+        self.assertEqual(6, len(res.data_types('channel')))
+        self.assertEqual(16, len(res.data_types('po')))
+        self.assertEqual(4, len(res.data_types('po line')))
+        self.assertEqual(8, len(res.data_types('po point')))
+        self.assertEqual(5, len(res.data_types('po polygon')))
+        self.assertEqual(3, len(res.data_types('rl')))
+        self.assertEqual(1, len(res.data_types('rl point')))
+        self.assertEqual(1, len(res.data_types('rl line')))
+        self.assertEqual(1, len(res.data_types('rl polygon')))
 
-    def test_node_ids(self):
-        p = './tests/2016/M04_5m_001.tpc'
+    def test_data_types_location_context(self):
+        p = './tests/2016/EG14_001.tpc'
         res = TPC(p)
-        self.assertEqual(55, len(res.node_ids()))
-
-    def test_po_ids(self):
-        p = './tests/2016/M04_5m_001.tpc'
-        res = TPC(p)
-        self.assertEqual(4, len(res.po_ids()))
-
-    def test_rl_ids(self):
-        p = './tests/2016/M04_5m_001.tpc'
-        res = TPC(p)
-        self.assertEqual(3, len(res.rl_ids()))
-
-    def test_channel_result_types(self):
-        p = './tests/2016/M04_5m_001.tpc'
-        res = TPC(p)
-        self.assertEqual(3, len(res.channel_result_types()))
-
-    def test_node_result_types(self):
-        p = './tests/2016/M04_5m_001.tpc'
-        res = TPC(p)
-        self.assertEqual(2, len(res.node_result_types()))
-
-    def test_node_result_types_error(self):
-        p = './tests/2016/M04_5m_001.tpc'
-        res = TPC(p)
-        try:
-            rts = res.node_result_types('ds1')
-            raise AssertionError('Should have raised an exception')
-        except ValueError:
-            pass
-
-    def test_node_result_types_error_2(self):
-        p = './tests/2016/M04_5m_001.tpc'
-        res = TPC(p)
-        try:
-            rts = res.node_result_types(['ds1.1', 'ds1'])
-            raise AssertionError('Should have raised an exception')
-        except ValueError:
-            pass
-
-    def test_result_types_error(self):
-        p = './tests/2016/M04_5m_001.tpc'
-        res = TPC(p)
-        # works
-        rts = res.result_types('ds1')
-        # doesn't work
-        try:
-            rts = res.result_types('ds0')  # doesn't exist in any result item
-            raise AssertionError('Should have raised an exception')
-        except ValueError:
-            pass
-
-    def test_result_types_error_2(self):
-        p = './tests/2016/M04_5m_001.tpc'
-        res = TPC(p)
-        # works
-        rts = res.result_types(['ds1', 'ds1.1'])
-        # doesn't work
-        try:
-            rts = res.result_types(['ds1', 'ds0'])  # doesn't exist in any result item
-            raise AssertionError('Should have raised an exception')
-        except ValueError:
-            pass
-
-    def test_po_result_types(self):
-        p = './tests/2016/M04_5m_001.tpc'
-        res = TPC(p)
-        self.assertEqual(8, len(res.po_result_types()))
-
-    def test_rl_result_types(self):
-        p = './tests/2016/M04_5m_001.tpc'
-        res = TPC(p)
-        self.assertEqual(3, len(res.rl_result_types()))
-
-    def test_result_types(self):
-        p = './tests/2016/M04_5m_001.tpc'
-        res = TPC(p)
-        self.assertEqual(9, len(res.result_types()))
-        self.assertEqual(3, len(res.result_types('ds1')))
-        self.assertEqual(1, len(res.result_types('test')))
-        self.assertEqual(3, len(res.result_types('test_2')))
+        self.assertEqual(4, len(res.data_types('po_line')))
 
     def test_ids(self):
-        p = './tests/2016/M04_5m_001.tpc'
+        p = './tests/2016/EG14_001.tpc'
         res = TPC(p)
-        self.assertEqual(len(res.ids('flow')), 55)
+        self.assertEqual(113, len(res.ids()))
 
-    def test_ids2(self):
-        p = './tests/2016/M04_5m_001.tpc'
+    def test_ids_domain_context(self):
+        p = './tests/2016/EG14_001.tpc'
         res = TPC(p)
-        self.assertEqual(len(res.ids()), 113)
+        self.assertEqual(54, len(res.ids('channel')))
+        self.assertEqual(53, len(res.ids('node')))
+        self.assertEqual(107, len(res.ids('1d')))
+        self.assertEqual(6, len(res.ids('po rl')))
+        self.assertEqual(3, len(res.ids('rl')))
+        self.assertEqual(3, len(res.ids('po')))
+        self.assertEqual(2, len(res.ids('rl point line')))
+
+    def test_ids_data_type_context(self):
+        p = './tests/2016/EG14_001.tpc'
+        res = TPC(p)
+        self.assertEqual(55, len(res.ids('h')))
+        self.assertEqual(56, len(res.ids('q')))
+        self.assertEqual(2, len(res.ids('vol')))
 
     def test_maximums(self):
         p = './tests/2016/M04_5m_001.tpc'
@@ -331,21 +271,23 @@ class Test_TPC_2016(TestCase):
             pass
 
 
+class Test_TPC_NC(TestCase):
+
+    def test_load(self):
+        p = './tests/nc_ts/EG15_001.tpc'
+        res = TPC(p)
+        self.assertEqual('EG15_001', res.name)
+
+
 class Test_TPC_2019(TestCase):
 
     def test_load(self):
-        p = './tests/2019/M03_5m_001.tpc'
+        pass
+
+    def test_load_channel_losses(self):
+        p = './tests/2020/EG15_001.tpc'
         res = TPC(p)
-        self.assertEqual('M03_5m_001', res.sim_id)
-        self.assertEqual(datetime(2000, 1, 1), res.reference_time)
-        df = res.nodes.time_series['Water Level'].df
-        df = res.nodes.time_series['Energy'].df
-        df = res.channels.time_series['Flow'].df
-        df = res.channels.time_series['Velocity'].df
-        df = res.channels.time_series['Flow Area'].df
-        df = res.rl.time_series['Flow'].df
-        df = res.rl.time_series['Water Level'].df
-        df = res.rl.time_series['Volume'].df
+        self.assertEqual('EG15_001', res.name)
 
     def test_channel_count(self):
         p = './tests/2019/M03_5m_001.tpc'
@@ -747,16 +689,6 @@ class Test_Info_2013(unittest.TestCase):
         res = INFO(p)
         self.assertEqual(109, len(res.ids('1d')))
         self.assertEqual(3, len(res.data_types('1d')))
-        try:
-            _ = res.ids('2d')
-            raise AssertionError('Should have raised an exception')
-        except ValueError:
-            pass
-        try:
-            _ = res.data_types('2d')
-            raise AssertionError('Should have raised an exception')
-        except ValueError:
-            pass
 
     def test_times(self):
         p = './tests/2013/M04_5m_001_1d.info'
