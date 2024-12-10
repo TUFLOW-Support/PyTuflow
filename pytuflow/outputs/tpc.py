@@ -143,7 +143,7 @@ class TPC(INFO, ITimeSeries2D):
     def context_combinations(self, context: str) -> pd.DataFrame:
         # docstring inherited
         # split context into components
-        ctx = [x.lower() for x in context.split()] if context else []
+        ctx = [x.strip().lower() for x in context.split('/')] if context else []
 
         # 1D
         df = super().context_combinations_1d(ctx)
@@ -178,7 +178,7 @@ class TPC(INFO, ITimeSeries2D):
         - [location]: The location to filter the times by. This will return all times for the given location.
 
         Combine contexts:
-        - [context1] [context2] ...: Combine multiple contexts to filter the times further (space delim).
+        - [context1]/[context2] ...: Combine multiple contexts to filter the times further ('/' delim).
 
         Parameters
         ----------
@@ -223,7 +223,7 @@ class TPC(INFO, ITimeSeries2D):
         - [location]: The location to filter the data_types by.
 
         Combine contexts:
-        - [context1] [context2] ...: Combine multiple contexts to filter the times further (space delim).
+        - [context1]/[context2] ...: Combine multiple contexts to filter the times further ('/' delim).
 
         Parameters
         ----------
@@ -275,7 +275,7 @@ class TPC(INFO, ITimeSeries2D):
         - [data_type]: The data_type to filter the ids by.
 
         Combine contexts:
-        - [context1] [context2] ...: Combine multiple contexts to filter the times further (space delim).
+        - [context1]/[context2] ...: Combine multiple contexts to filter the times further ('/' delim).
 
         Parameters
         ----------
@@ -298,9 +298,77 @@ class TPC(INFO, ITimeSeries2D):
 
     def maximum(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
                 time_fmt: str = 'relative') -> pd.DataFrame:
-        # docstring inherited
+        """Returns a dataframe containing the maximum values for the given data types. The returned dataframe
+        will include time of maximum results as well.
+
+        It's possible to pass in a well known shorthand for the data type e.g. 'q' for flow.
+
+        The location can be an ID or contextual string, e.g. 'channel' to extract the maximum values
+        for all channels. An ID can be used alongside a contextual string since there can be duplicate IDs across
+        domains e.g. 'test/channel' - where 'test' is the name and 'channel' is additional context. Note, the order
+        does not matter, but it doesn't work very well if your ID has a '/' or has the same name as a contextual string
+        (e.g. calling a po line 'line').
+        For the TPC result class, the following contexts are available:
+
+        Domain contexts:
+        - 1d
+        - 2d (or po)
+        - rl (or 0d)
+
+        Geometry contexts:
+        - node
+        - channel
+        - point - (for 2d and rl domains only - use 'node' for 1d domain)
+        - line - (for 2d and rl domains only - use 'channel' for 1d domain)
+        - polygon (or region)
+
+        Combine contexts:
+        - [context1]/[context2] ...: Combine multiple contexts to filter the times further ('/' delim).
+
+        The returned DataFrame will have an index column corresponding to the location ids, and the columns
+        will be in the format 'context/data_type/[max|tmax]',
+        e.g. 'channel/flow/max', 'channel/flow/tmax'
+
+        Parameters
+        ----------
+        locations : str | list[str]
+            The location to extract the maximum values for.
+        data_types : str | list[str]
+            The data types to extract the maximum values for.
+        time_fmt : str, optional
+            The format for the time of max result. Options are 'relative' or 'absolute'
+
+        Returns
+        -------
+        pd.DataFrame
+            The maximum, and time of maximum values
+
+        Examples
+        --------
+        Extracting the maximum flow for a given channel:
+
+        >>> res.maximum('ds1', 'flow')
+             channel/flow/max  channel/flow/tmax
+        ds1            59.423           1.383333
+
+        Extracting all the maximum results for a given channel:
+
+        >>> res.maximum(['ds1'], None)
+             channel/Flow/max  ...  channel/Velocity/tmax
+        ds1            59.423  ...               0.716667
+
+        Extracting the maximum flow for all channels:
+
+        >>> res.maximum(None, 'flow')
+                 channel/flow/max  channel/flow/tmax
+        ds1                 59.423           1.383333
+        ds2                 88.177           1.400000
+        ...                  ...              ...
+        FC04.1_C             9.530           1.316667
+        FC_weir1            67.995           0.966667
+        """
         locations, data_types = self._loc_data_types_to_list(locations, data_types)
-        context = ' '.join(locations + data_types)
+        context = '/'.join(locations + data_types)
         ctx = self.context_combinations(context)
         if ctx.empty:
             return pd.DataFrame()
@@ -325,6 +393,124 @@ class TPC(INFO, ITimeSeries2D):
             df = df1
         elif not df1.empty:
             df = pd.concat([df, df1], axis=0)
+
+        return df
+
+    def time_series(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
+                    time_fmt: str = 'relative') -> pd.DataFrame:
+        """Returns a time series dataframe for the given location(s) and data type(s). INFO result types will
+        always share a common time index.
+
+        It's possible to pass in a well known shorthand for the data type e.g. 'q' for flow.
+
+        The location can be an ID or contextual string, e.g. 'channel' to extract the maximum values
+        for all channels. An ID can be used alongside a contextual string since there can be duplicate IDs across
+        domains e.g. 'test/channel' - where 'test' is the name and 'channel' is additional context. Note, the order
+        does not matter, but it doesn't work very well if your ID has a '/' or has the same name as a contextual string
+        (e.g. calling a po line 'line').
+        For the TPC result class, the following contexts are available:
+
+        Domain contexts:
+        - 1d
+        - 2d (or po)
+        - rl (or 0d)
+
+        Geometry contexts:
+        - node
+        - channel
+        - point - (for 2d and rl domains only - use 'node' for 1d domain)
+        - line - (for 2d and rl domains only - use 'channel' for 1d domain)
+        - polygon (or region)
+
+        Combine contexts:
+        - [context1]/[context2] ...: Combine multiple contexts to filter the times further ('/' delim).
+
+        The returned column names will be in the format 'context/data_type/location' e.g. 'channel/flow/FC01.1_R'.
+        The data_type name in the column heading will be identical to the data type name passed into the
+        function e.g. if 'h' is used instead of 'water level', then the return will be 'node/h/FC01.1_R.1'.
+
+        Parameters
+        ----------
+        locations : str | list[str]
+            The location to extract the time series data for. If None is passed in, all locations will be returned for
+            the given data_types.
+        data_types : str | list[str]
+            The data type to extract the time series data for. If None is passed in, all data types will be returned
+            for the given locations.
+        time_fmt : str, optional
+            The format for the time column. Options are 'relative' or 'absolute'.
+
+        Returns
+        -------
+        pd.DataFrame
+            The time series data.
+
+        Examples
+        --------
+        Extracting flow for a given channel.
+
+        >>> res.time_series('ds1', 'q')
+        Time (h)   channel/q/ds1
+        0.000000           0.000
+        0.016667           0.000
+        ...                  ...
+        2.983334           8.670
+        3.000000           8.391
+
+        Extracting all data types for a given location
+
+        >>> res.time_series('ds1', None)
+        Time (h)  channel/Flow/ds1  channel/Velocity/ds1
+        0.000000             0.000                 0.000
+        0.016667             0.000                 0.000
+        ...                    ...                   ...
+        2.983334             8.670                 1.348
+        3.000000             8.391                 1.333
+
+        Extracting all flow results
+
+        >>> res.time_series(None, 'flow')
+        Time (h)  channel/flow/ds1  ...  channel/flow/FC_weir1
+        0.000000             0.000  ...                    0.0
+        0.016667             0.000  ...                    0.0
+        ...                    ...  ...                    ...
+        2.983334             8.670  ...                    0.0
+        3.000000             8.391  ...                    0.0
+        """
+        locations, data_types = self._loc_data_types_to_list(locations, data_types)
+        context = '/'.join(locations + data_types)
+        ctx = self.context_combinations(context)
+        if ctx.empty:
+            return pd.DataFrame()
+
+        share_idx = ctx[['start', 'end', 'dt']].drop_duplicates().shape[0] < 2
+
+        # 1D
+        df = self._extract_time_series(data_types, ctx[ctx['domain'] == '1d'].data_type.unique(),
+                                       self._time_series_data, ctx, time_fmt, share_idx)
+        df.columns = self._prepend_1d_type_to_column_name(df.columns)
+
+        # 2D
+        df1 = self._extract_time_series(data_types, ctx[ctx['domain'] == '2d'].data_type.unique(),
+                                        self._time_series_data_2d, ctx, time_fmt, share_idx)
+        df1.columns = ['{0}/po/{1}/{2}'.format(*x.split('/')) if x.split('/')[0] == 'time' else f'po/{x}' for x in df1.columns]
+        if df.empty and not df1.empty:
+            df = df1
+        elif not df1.empty:
+            if share_idx:
+                df1.index = df.index
+            df = pd.concat([df, df1], axis=1)
+
+        # rl
+        df1 = self._extract_time_series(data_types, ctx[ctx['domain'] == 'rl'].data_type.unique(),
+                                        self._time_series_data_rl, ctx, time_fmt, share_idx)
+        df1.columns = ['{0}/rl/{1}/{2}'.format(*x.split('/')) if x.split('/')[0] == 'time' else f'rl/{x}' for x in df1.columns]
+        if df.empty and not df1.empty:
+            df = df1
+        elif not df1.empty:
+            if share_idx:
+                df1.index = df.index
+            df = pd.concat([df, df1], axis=1, ignore_index=not share_idx)
 
         return df
 

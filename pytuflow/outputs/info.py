@@ -115,7 +115,7 @@ class INFO(TimeSeries, ITimeSeries1D):
     def context_combinations(self, context: str) -> pd.DataFrame:
         # docstring inherited
         # split context into components
-        ctx = [x.lower() for x in context.split()] if context else []
+        ctx = [x.strip().lower() for x in context.split('/')] if context else []
         return super().context_combinations_1d(ctx)
 
     def times(self, context: str = None, fmt: str = 'relative') -> list[TimeLike]:
@@ -233,16 +233,69 @@ class INFO(TimeSeries, ITimeSeries1D):
 
     def maximum(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
                 time_fmt: str = 'relative') -> pd.DataFrame:
-        # docstring inherited
+        """Returns a dataframe containing the maximum values for the given data types. The returned dataframe
+        will include time of maximum results as well.
+
+        It's possible to pass in a well known shorthand for the data type e.g. 'q' for flow.
+
+        The location can also be a contextual string, e.g. 'channel' to extract the maximum values for all channels.
+        For the INFO result class, the following contexts are available:
+        - '1d': returns all maximum values (same as passing in None for locations)
+        - 'node'
+        - 'channel'
+
+        The returned DataFrame will have an index column corresponding to the location ids, and the columns
+        will be in the format 'context/data_type/[max|tmax]',
+        e.g. 'channel/flow/max', 'channel/flow/tmax'
+
+        Parameters
+        ----------
+        locations : str | list[str]
+            The location to extract the maximum values for.
+        data_types : str | list[str]
+            The data types to extract the maximum values for.
+        time_fmt : str, optional
+            The format for the time of max result. Options are 'relative' or 'absolute'
+
+        Returns
+        -------
+        pd.DataFrame
+            The maximum, and time of maximum values
+
+        Examples
+        --------
+        Extracting the maximum flow for a given channel:
+
+        >>> res.maximum('ds1', 'flow')
+             channel/flow/max  channel/flow/tmax
+        ds1            59.423           1.383333
+
+        Extracting all the maximum results for a given channel:
+
+        >>> res.maximum(['ds1'], None)
+             channel/Flow/max  ...  channel/Velocity/tmax
+        ds1            59.423  ...               0.716667
+
+        Extracting the maximum flow for all channels:
+
+        >>> res.maximum(None, 'flow')
+                 channel/flow/max  channel/flow/tmax
+        ds1                 59.423           1.383333
+        ds2                 88.177           1.400000
+        ...                  ...              ...
+        FC04.1_C             9.530           1.316667
+        FC_weir1            67.995           0.966667
+        """
+        pass
         locations, data_types = self._loc_data_types_to_list(locations, data_types)
-        context = ' '.join(locations + data_types)
+        context = '/'.join(locations + data_types)
         ctx = self.context_combinations(context)
         if ctx.empty:
             return pd.DataFrame()
 
         df = self._extract_maximum(data_types, ctx[ctx['domain'] == '1d'].data_type.unique(),
                                    self._maximum_data, ctx, time_fmt)
-        df.columns = ['{0}/{1}'.format('node' if get_standard_data_type_name(x.split('/')[0]) == 'water level' else 'channel', x) for x in df.columns]
+        df.columns = self._prepend_1d_type_to_column_name(df.columns)
 
         return df
 
@@ -251,7 +304,13 @@ class INFO(TimeSeries, ITimeSeries1D):
         """Returns a time series dataframe for the given location(s) and data type(s). INFO result types will
         always share a common time index.
 
-        It's possible to pass in a well known short-hand for the data type e.g. 'q' for flow.
+        It's possible to pass in a well known shorthand for the data type e.g. 'q' for flow.
+
+        The location can also be a contextual string, e.g. 'channel' to extract the maximum values for all channels.
+        For the INFO result class, the following contexts are available:
+        - '1d': returns all maximum values (same as passing in None for locations)
+        - 'node'
+        - 'channel'
 
         The returned column names will be in the format 'context/data_type/location' e.g. 'channel/flow/FC01.1_R'.
         The data_type name in the column heading will be identical to the data type name passed into the
@@ -305,30 +364,16 @@ class INFO(TimeSeries, ITimeSeries1D):
         2.983334             8.670  ...                    0.0
         3.000000             8.391  ...                    0.0
         """
-        locations, data_types = self._figure_out_loc_and_data_types(locations, data_types)
+        locations, data_types = self._loc_data_types_to_list(locations, data_types)
+        context = '/'.join(locations + data_types)
+        ctx = self.context_combinations(context)
+        if ctx.empty:
+            return pd.DataFrame()
 
-        # note INFO has no need to worry about multiple index columns
-        locations_lower = [x.lower() for x in locations]
-        df = pd.DataFrame()
-        for dtype in data_types:
-            dtype1 = get_standard_data_type_name(dtype)  # get the correct data_type name
-            if dtype1 not in self._time_series_data:
-                continue
-            for res_df in self._time_series_data[dtype1]:
-                idxs = [res_df.columns.str.lower().get_loc(x) for x in locations_lower if x in res_df.columns.str.lower()]
-                if not idxs:
-                    continue
-                cols = res_df.columns[idxs]
-                df1 = res_df.loc[:, cols]
-                ctx = 'node' if dtype1 == 'Water Levels' else 'channel'
-                df1.columns = [f'{ctx}/{dtype}/{x}' for x in df1.columns]
-                if df.empty:
-                    df = df1
-                else:
-                    df = pd.concat([df, df1], axis=1)
-
-        if time_fmt in ['absolute', 'datetime']:
-            df = df.reindex(self.times(fmt='absolute'))
+        share_idx = ctx[['start', 'end', 'dt']].drop_duplicates().shape[0] < 2
+        df = self._extract_time_series(data_types, ctx[ctx['domain'] == '1d'].data_type.unique(),
+                                       self._time_series_data, ctx, time_fmt, share_idx)
+        df.columns = self._prepend_1d_type_to_column_name(df.columns)
 
         return df
 
@@ -410,17 +455,17 @@ class INFO(TimeSeries, ITimeSeries1D):
         dfconn = self.connectivity(locations)
 
         # init long plot DataFrame
-        df = self.lp.init_lp(dfconn)
+        df = self._lp.init_lp(dfconn)
 
         # loop through data types and add them to the data frame
         for dtype in data_types:
             dtype1 = get_standard_data_type_name(dtype)
 
             if dtype1 == 'bed level':
-                df1 = self.lp.melt_2_columns(dfconn, ['us_invert', 'ds_invert'], dtype)
+                df1 = self._lp.melt_2_columns(dfconn, ['us_invert', 'ds_invert'], dtype)
                 df[dtype] = df1[dtype]
             elif dtype1 == 'pipes':
-                df1 = self.lp.melt_2_columns(dfconn, ['lbus_obvert', 'lbds_obvert'], dtype)
+                df1 = self._lp.melt_2_columns(dfconn, ['lbus_obvert', 'lbds_obvert'], dtype)
                 df1 = df1.join(self.chan_info['ispipe'], on='channel')
                 df1.loc[~df1['ispipe'], dtype] = np.nan
                 df[dtype] = df1[dtype]
@@ -625,6 +670,9 @@ class INFO(TimeSeries, ITimeSeries1D):
 
     def _extract_maximum(self, data_types: list[str], data_types_2: list[str],
                          maximum_data: dict, ctx: pd.DataFrame, time_fmt: str) -> pd.DataFrame:
+        """Extract the maximum result data_types_2 from the maximum_data dictionary. data_types is the user's name for
+        the result which will be used for the column names.
+        """
         df = pd.DataFrame()
         for dtype2 in data_types_2:
             dtype = [x for x in data_types if get_standard_data_type_name(x) == dtype2]
@@ -642,6 +690,49 @@ class INFO(TimeSeries, ITimeSeries1D):
                 else:
                     df = pd.concat([df, df1], axis=1)
         return df
+
+    def _extract_time_series(self, data_types: list[str], data_types_2: list[str], time_series_data: dict,
+                             ctx: pd.DataFrame, time_fmt: str, share_idx: bool) -> pd.DataFrame:
+        """Extract the time series result data_types_2 from the time_series_data dictionary. data_types is the
+        user's name for the result which will be used for the column names.
+        """
+        df = pd.DataFrame()
+        for dtype2 in data_types_2:
+            dtype = [x for x in data_types if get_standard_data_type_name(x) == dtype2]
+            dtype = dtype[0] if dtype else dtype2
+            if dtype2 not in time_series_data:
+                continue
+            for res_df in time_series_data[dtype2]:
+                idx = res_df.columns[res_df.columns.isin(ctx['id'])]
+                if idx.empty:
+                    continue
+                df1 = res_df.loc[:, idx]
+                if time_fmt == 'absolute':
+                    df1.index = [self.reference_time + timedelta(hours=x) for x in df1.index]
+                df1.index.name = 'time'
+                index_name = df1.index.name
+                if not share_idx:
+                    col_names = flatten([index_name, x] for x in df1.columns)
+                    df1.reset_index(inplace=True, drop=False)
+                    df1 = df1[col_names]
+
+                df1.columns = [f'{x}/{dtype}/{df1.columns[i+1]}' if x == index_name else f'{dtype}/{x}' for i, x in enumerate(df1.columns)]
+                df = df1 if df.empty else pd.concat([df, df1], axis=1)
+
+        return df
+
+    def _prepend_1d_type_to_column_name(self, columns: pd.Index) -> pd.Index:
+        """Prepend 'node' or 'channel' to the column names.
+        Requires all results to be 1D (no mixed in in po or rl results).
+        """
+        def col_names(x):
+            x1 = x.split('/')
+            t = len(x1) > 2  # is time column
+            dtype = x1[0] if t else x1[1]
+            c = 'node' if dtype in ['water level', 'energy', 'volume', 'mass balance', 'node flow regime'] else 'channel'
+            return f'{x1[0]}/{c}/{x1[1]}/{x1[2]}' if t else f'{c}/{x1[0]}/{x1[1]}'
+
+        return columns.to_series().apply(col_names)
 
     def _loc_data_types_to_list(self, locations: Union[str, list[str], None],
                                        data_types: Union[str, list[str], None]) -> tuple[list[str], list[str]]:

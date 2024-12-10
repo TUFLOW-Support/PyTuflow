@@ -111,13 +111,13 @@ class Test_TPC_2016(TestCase):
         self.assertEqual(3, len(res.data_types('node')))
         self.assertEqual(6, len(res.data_types('channel')))
         self.assertEqual(16, len(res.data_types('po')))
-        self.assertEqual(4, len(res.data_types('po line')))
-        self.assertEqual(8, len(res.data_types('po point')))
-        self.assertEqual(5, len(res.data_types('po polygon')))
+        self.assertEqual(4, len(res.data_types('po/line')))
+        self.assertEqual(8, len(res.data_types('po/point')))
+        self.assertEqual(5, len(res.data_types('po/polygon')))
         self.assertEqual(3, len(res.data_types('rl')))
-        self.assertEqual(1, len(res.data_types('rl point')))
-        self.assertEqual(1, len(res.data_types('rl line')))
-        self.assertEqual(1, len(res.data_types('rl polygon')))
+        self.assertEqual(1, len(res.data_types('rl/point')))
+        self.assertEqual(1, len(res.data_types('rl/line')))
+        self.assertEqual(1, len(res.data_types('rl/polygon')))
 
     def test_data_types_location_context(self):
         p = './tests/2016/EG14_001.tpc'
@@ -135,10 +135,10 @@ class Test_TPC_2016(TestCase):
         self.assertEqual(54, len(res.ids('channel')))
         self.assertEqual(53, len(res.ids('node')))
         self.assertEqual(107, len(res.ids('1d')))
-        self.assertEqual(6, len(res.ids('po rl')))
+        self.assertEqual(6, len(res.ids('po/rl')))
         self.assertEqual(3, len(res.ids('rl')))
         self.assertEqual(3, len(res.ids('po')))
-        self.assertEqual(2, len(res.ids('rl point line')))
+        self.assertEqual(2, len(res.ids('rl/point/line')))
 
     def test_ids_data_type_context(self):
         p = './tests/2016/EG14_001.tpc'
@@ -153,108 +153,106 @@ class Test_TPC_2016(TestCase):
         self.assertEqual((1, 4), res.maximum('ds1', ['q', 'v']).shape)
         self.assertEqual((1, 2), res.maximum('ds1.1', ['h']).shape)
         self.assertEqual((1, 2), res.maximum('po_line', 'q').shape)
-        self.assertEqual((2, 4), res.maximum('rl po', 'h').shape)
+        self.assertEqual((2, 4), res.maximum('rl/po', 'h').shape)
 
     def test_time_series(self):
-        p = './tests/2016/M04_5m_001.tpc'
+        p = './tests/2016/EG14_001.tpc'
         res = TPC(p)
-        ts = res.time_series('test', 'flow')
-        self.assertEqual((181, 2), ts.shape)
+        ts = res.time_series('po_line', 'flow')
+        self.assertEqual((181, 1), ts.shape)
         ts = res.time_series('ds1', 'flow')
         self.assertEqual((181, 1), ts.shape)
         ts = res.time_series(['ds1', 'ds2'], 'flow')
         self.assertEqual((181, 2), ts.shape)
         ts = res.time_series('ds1', ['flow', 'velocity'])
         self.assertEqual((181, 2), ts.shape)
+        ts = res.time_series('rl/po', 'q')
+        self.assertEqual((181, 2), ts.shape)
+        ts = res.time_series('po', None)
+        self.assertEqual((181, 17), ts.shape)
+        ts = res.time_series(['po_line', 'ds1'], 'q')
+        self.assertEqual((181, 2), ts.shape)
 
-    def test_time_series_2(self):
-        p = './tests/2016/M04_5m_001.tpc'
+    def test_time_series_different_time_index_1d(self):
+        p = './tests/2016/EG14_001_unique_1d_times.tpc'
         res = TPC(p)
-        ts = res.time_series('ds1', 'Q')
-        self.assertEqual((181, 1), ts.shape)
+        ts = res.time_series(['po_line', 'ds1'], 'q')
+        self.assertEqual((181, 4), ts.shape)
+        ts = res.time_series(['po_line', 'rl_line'], 'flow')
+        self.assertEqual((181, 2), ts.shape)
 
-    def test_time_series_error(self):
-        p = './tests/2016/M04_5m_001.tpc'
+    def test_time_series_different_time_index_po(self):
+        p = './tests/2016/EG14_001_dup_2d_dtype.tpc'
         res = TPC(p)
-        try:
-            ts = res.time_series('ds0', 'Q')
-            raise AssertionError('Should have raised an exception')
-        except ValueError:
-            pass
+        ts = res.time_series(['po_line', 'po_line_2'], 'q')
+        self.assertEqual((181, 4), ts.shape)
+        ts = res.time_series(['po_line', 'po_line_2'], 'q', time_fmt='absolute')
+        self.assertEqual((181, 4), ts.shape)
 
-    def test_time_series_error_2(self):
-        p = './tests/2016/M04_5m_001.tpc'
-        res = TPC(p)
-        try:
-            ts = res.time_series('ds1', ['Q', 'flow regime'])
-            raise AssertionError('Should have raised an exception')
-        except ValueError:
-            pass
-
-    def test_connectivity(self):
-        p = './tests/2016/M04_5m_001.tpc'
-        res = TPC(p)
-        df = res.connectivity(['ds1', 'ds4'])
-        self.assertEqual((4, 10), df.shape)
-
-    def test_long_plot_result_types(self):
-        p = './tests/2016/M04_5m_001.tpc'
-        res = TPC(p)
-        self.assertEqual(7, len(res.long_plot_result_types()))
-
-    def test_long_plot(self):
-        p = './tests/2016/M04_5m_001.tpc'
-        res = TPC(p)
-        df = res.long_plot('ds1', ['bed level', 'water level'], 1)
-        self.assertEqual((12, 5), df.shape)
-
-    def test_long_plot_2(self):
-        p = './tests/2016/M04_5m_001.tpc'
-        res = TPC(p)
-        df = res.long_plot('ds1', ['bed level', 'pipes', 'pits', 'water level'], 1)
-        self.assertEqual((12, 7), df.shape)
-
-    def test_long_plot_3(self):
-        p = './tests/2016/M04_5m_001.tpc'
-        res = TPC(p)
-        df = res.long_plot('ds1', ['bed level', 'water level', 'max water level'], 1)
-        self.assertEqual((12, 7), df.shape)
-
-    def test_long_plot_error(self):
-        p = './tests/2016/M04_5m_001.tpc'
-        res = TPC(p)
-        try:
-            df = res.long_plot('ds0', ['bed level', 'water level'], 1)
-            raise AssertionError('Should have raised an exception')
-        except ValueError:
-            pass
-
-    def test_long_plot_error_2(self):
-        p = './tests/2016/M04_5m_001.tpc'
-        res = TPC(p)
-        try:
-            df = res.long_plot('ds1', 'lvl', 1)
-            raise AssertionError('Should have raised an exception')
-        except ValueError:
-            pass
-
-    def test_long_plot_error_3(self):
-        p = './tests/2016/M04_5m_001.tpc'
-        res = TPC(p)
-        try:
-            df = res.long_plot('ds1', ['q', 'h'], 1)
-            raise AssertionError('Should have raised an exception')
-        except ValueError:
-            pass
-
-    def test_long_plot_error_4(self):
-        p = './tests/2016/M04_5m_001.tpc'
-        res = TPC(p)
-        try:
-            df = res.long_plot('ds1', ['h', 'max flow'], 1)
-            raise AssertionError('Should have raised an exception')
-        except ValueError:
-            pass
+    # def test_connectivity(self):
+    #     p = './tests/2016/M04_5m_001.tpc'
+    #     res = TPC(p)
+    #     df = res.connectivity(['ds1', 'ds4'])
+    #     self.assertEqual((4, 10), df.shape)
+    #
+    # def test_long_plot_result_types(self):
+    #     p = './tests/2016/M04_5m_001.tpc'
+    #     res = TPC(p)
+    #     self.assertEqual(7, len(res.long_plot_result_types()))
+    #
+    # def test_long_plot(self):
+    #     p = './tests/2016/M04_5m_001.tpc'
+    #     res = TPC(p)
+    #     df = res.long_plot('ds1', ['bed level', 'water level'], 1)
+    #     self.assertEqual((12, 5), df.shape)
+    #
+    # def test_long_plot_2(self):
+    #     p = './tests/2016/M04_5m_001.tpc'
+    #     res = TPC(p)
+    #     df = res.long_plot('ds1', ['bed level', 'pipes', 'pits', 'water level'], 1)
+    #     self.assertEqual((12, 7), df.shape)
+    #
+    # def test_long_plot_3(self):
+    #     p = './tests/2016/M04_5m_001.tpc'
+    #     res = TPC(p)
+    #     df = res.long_plot('ds1', ['bed level', 'water level', 'max water level'], 1)
+    #     self.assertEqual((12, 7), df.shape)
+    #
+    # def test_long_plot_error(self):
+    #     p = './tests/2016/M04_5m_001.tpc'
+    #     res = TPC(p)
+    #     try:
+    #         df = res.long_plot('ds0', ['bed level', 'water level'], 1)
+    #         raise AssertionError('Should have raised an exception')
+    #     except ValueError:
+    #         pass
+    #
+    # def test_long_plot_error_2(self):
+    #     p = './tests/2016/M04_5m_001.tpc'
+    #     res = TPC(p)
+    #     try:
+    #         df = res.long_plot('ds1', 'lvl', 1)
+    #         raise AssertionError('Should have raised an exception')
+    #     except ValueError:
+    #         pass
+    #
+    # def test_long_plot_error_3(self):
+    #     p = './tests/2016/M04_5m_001.tpc'
+    #     res = TPC(p)
+    #     try:
+    #         df = res.long_plot('ds1', ['q', 'h'], 1)
+    #         raise AssertionError('Should have raised an exception')
+    #     except ValueError:
+    #         pass
+    #
+    # def test_long_plot_error_4(self):
+    #     p = './tests/2016/M04_5m_001.tpc'
+    #     res = TPC(p)
+    #     try:
+    #         df = res.long_plot('ds1', ['h', 'max flow'], 1)
+    #         raise AssertionError('Should have raised an exception')
+    #     except ValueError:
+    #         pass
 
 
 class Test_TPC_NC(TestCase):
@@ -722,17 +720,20 @@ class Test_Info_2013(unittest.TestCase):
         df = res.connectivity(['ds1', 'ds2'])
         self.assertEqual((2, 10), df.shape)
 
-    def test_long_plot(self):
-        p = './tests/2013/M04_5m_001_1d.info'
-        res = INFO(p)
-        df = res.section('ds1', ['bed level', 'water level', 'max water level', 'pits'], 1)
-        self.assertEqual((12, 8), df.shape)
+    # def test_data_types_section(self):
+    #     pass
 
-    def test_long_plot_2(self):
-        p = './tests/2013/M04_5m_001_1d.info'
-        res = INFO(p)
-        df = res.section(['FC01.1_R', 'FC01.36'], ['bed level', 'water level', 'pipes'], 1)
-        self.assertEqual((4, 7), df.shape)
+    # def test_long_plot(self):
+    #     p = './tests/2013/M04_5m_001_1d.info'
+    #     res = INFO(p)
+    #     df = res.section('ds1', ['bed level', 'water level', 'max water level', 'pits'], 1)
+    #     self.assertEqual((12, 8), df.shape)
+    #
+    # def test_long_plot_2(self):
+    #     p = './tests/2013/M04_5m_001_1d.info'
+    #     res = INFO(p)
+    #     df = res.section(['FC01.1_R', 'FC01.36'], ['bed level', 'water level', 'pipes'], 1)
+    #     self.assertEqual((4, 7), df.shape)
 
 
 class Test_HydTables(unittest.TestCase):

@@ -19,6 +19,8 @@ class TimeSeries(TabularOutput):
 
         It's possible to pass in a well known short-hand for the data type e.g. 'q' for flow.
 
+        The location can also be a contextual string, e.g. 'channel' to extract the maximum values for all channels.
+
         The returned DataFrame will have an index column corresponding to the location ids, and the columns
         will be in the format 'context/data_type/[max|tmax]',
         e.g. 'channel/flow/max', 'channel/flow/tmax'
