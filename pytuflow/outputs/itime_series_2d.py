@@ -3,24 +3,30 @@ from abc import ABC, abstractmethod
 import pandas as pd
 
 from pytuflow.outputs.helpers.get_standard_data_type_name import get_standard_data_type_name
-from pytuflow.pytuflow_types import PathLike, LongPlotExtractionLocation
+from pytuflow.pytuflow_types import PathLike
 
 
 class ITimeSeries2D(ABC):
-    """Interface class for 1D time series outputs."""
+    """Interface class for 2D and RL time series outputs.
+
+    Parameters
+    ----------
+    fpath : :class:`PathLike <pytuflow.pytuflow_types.PathLike>`
+        The file path to the TUFLOW output file.
+    """
 
     @abstractmethod
     def __init__(self, *fpath: PathLike) -> None:
         super().__init__()
-        #: pd.DataFrame: 2D information - this is typically PO data from TUFLOW Classic/HPC however can also be 2D data from TUFLOW FV.
+        #: pd.DataFrame: PO/2D output objects. Column headers are :code:`[id, data_type, geometry, start, end, dt]`
         self.po_objs = pd.DataFrame(columns=['id', 'data_type', 'geometry', 'start', 'end', 'dt'])
-        #: pd.DataFrame: RL information.
+        #: pd.DataFrame: RL output objects. Column headers are :code:`[id, data_type, geometry, start, end, dt]`
         self.rl_objs = pd.DataFrame(columns=['id', 'data_type', 'geometry', 'start', 'end', 'dt'])
-        #: int: Number of 2d points - named po however refers to 2d points.
+        #: int: Number of 2d points
         self.po_point_count = 0
-        #: int: Number of 2d lines - named po however refers to 2d lines.
+        #: int: Number of 2d lines
         self.po_line_count = 0
-        #: int: Number of 2d polys - named po however refers to 2d polys.
+        #: int: Number of 2d polys
         self.po_poly_count = 0
         #: int: Number of reporting location points
         self.rl_point_count = 0
@@ -30,6 +36,21 @@ class ITimeSeries2D(ABC):
         self.rl_poly_count = 0
 
     def context_combinations_2d(self, context: list[str]) -> pd.DataFrame:
+        """Returns a DataFrame of all the 1D output objects that match the context.
+
+        For example, the context may be :code:`['po']` or :code:`['po', 'flow']`. The return DataFrame
+        is a filtered version of the :code:`po_objs` + :code:`rl_objs` DataFrame that matches the context.
+
+        Parameters
+        ----------
+        context : list[str]
+            The context to filter the 1D objects by.
+
+        Returns
+        -------
+        pd.DataFrame
+            The filtered 1D objects
+        """
         ctx = context.copy() if context else []
         df = pd.DataFrame(columns=['id', 'data_type', 'geometry', 'start', 'end', 'dt', 'domain'])
 

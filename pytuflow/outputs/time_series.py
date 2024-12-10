@@ -66,7 +66,7 @@ class TimeSeries(TabularOutput):
         pass
 
     def context_combinations(self, context: str) -> pd.DataFrame:
-        """Returns a DataFrame with the context combinations for the given context string.
+        """Returns a DataFrame with the output combinations for the given context string.
 
         Parameters
         ----------
@@ -81,7 +81,7 @@ class TimeSeries(TabularOutput):
         return pd.DataFrame(columns=['id', 'data_type', 'geometry', 'start', 'end', 'dt', 'domain'])
 
     def times(self, context: str = None, fmt: str = 'relative') -> list[TimeLike]:
-        """Returns all the available times for the output.
+        """Returns all the available times for the given context.
 
        The context is an optional input that can be used to filter the return further. E.g. this can be used to
        get the times only for a given 1D channel.
@@ -117,7 +117,7 @@ class TimeSeries(TabularOutput):
         return unique_sorted_times.tolist()
 
     def data_types(self, context: str = None) -> list[str]:
-        """Returns all the available data types (result types) for the output given the context.
+        """Returns all the available data types (result types) for the given context.
 
         The context is an optional input that can be used to filter the return further. E.g. this can be used to
         return only data types that contain maximum results.
@@ -140,7 +140,7 @@ class TimeSeries(TabularOutput):
         return ctx['data_type'].unique().tolist()
 
     def ids(self, context: str = None) -> list[str]:
-        """Returns all the available IDs for the output.
+        """Returns all the available IDs for the given context.
 
         The context argument can be used to add a filter to the returned IDs. E.g. passing in a data type will return
         all the ids that contain that results for that data type.

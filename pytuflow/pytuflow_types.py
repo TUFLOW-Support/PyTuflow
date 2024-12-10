@@ -7,8 +7,8 @@ from pytuflow.tmf.tmf.tuflow_model_files.dataclasses.append_dict import AppendDi
 from pytuflow.tmf.tmf.tuflow_model_files.dataclasses.file import TuflowPath
 # from pytuflow.tmf.tmf.tuflow_model_files.dataclasses.types import SearchTagLike, ContextLike, VariableMap
 
-#: :code:`Path | str | bytes`: Type hint for an object that represents a file path or directory.
-PathLike = Union[Path, str, bytes]
+#: :class:`Path` | :code:`str`: Type hint for an object that represents a file path or directory.
+PathLike = Union[Path, str]
 
 #: :code:`float | datetime`: Type hint for an object that represents a time value (relative or absolute).
 TimeLike = Union[float, datetime]
@@ -28,5 +28,7 @@ PlotExtractionLocation = Union[str, list[str], tuple[float, float], list[tuple[f
 #: PlotExtractionDataType: The data type to extract plot data for
 PlotExtractionDataType = Union[str, list[str], None]
 
-#: LongPlotExtractionLocation: The location to extract long plot data for
-LongPlotExtractionLocation = Union[str, list[str]]
+
+class FileTypeError(ValueError):
+    """Raised when a file is not of the correct type."""
+    pass

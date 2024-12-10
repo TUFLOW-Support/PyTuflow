@@ -1,4 +1,3 @@
-from datetime import timedelta
 from pathlib import Path
 import re
 from typing import Union
@@ -9,8 +8,6 @@ from netCDF4 import Dataset
 
 from pytuflow.outputs.helpers.get_standard_data_type_name import get_standard_data_type_name
 from pytuflow.outputs.helpers.nc_ts import NC_TS
-from pytuflow.outputs.helpers.temporal_properties import TemporalProp
-from pytuflow.outputs.helpers.tpc_internal_data_type_mapping import map_standard_data_types_to_tpc_internal
 from pytuflow.outputs.info import INFO
 from pytuflow.outputs.itime_series_2d import ITimeSeries2D
 from pytuflow.outputs.helpers.tpc_reader import TPCReader
@@ -24,26 +21,70 @@ logger = get_logger()
 class TPC(INFO, ITimeSeries2D):
     """Class to handle the standard TUFLOW Time Series result file (.tpc).
 
-    This class supports both 1D, 2D, and  reporting location (RL) results. It also supports varying time indexes between
-    results, including within a single domain e.g. 2d po results where water levels for one location are at a different
-    temporal resolution than another location. This is not something that TUFLOW Classic/HPC will do, however it
-    is something that can occur in TUFLOW FV. TUFLOW Classic/HPC can have different time indexes
-    between 1D and 2D / RL results.
+    Supports:
 
-    This class also supports duplicate IDs across domains e.g. a 1D node called 'test', a PO point called 'test',
-    and an RL point called 'test' - these can all have the same ID with a 'Water Level' result attached.
+    * 1D, 2D, and  Reporting Location (RL) results.
+    * Supports varying time indexes between results e.g. 1D results can have a different output interval than 2D
+      results. It also supports varying time indexes within a single domain e.g. :code:`2d_po` results where one
+      location has a different temporal resolution than another location. This is not something that TUFLOW Classic/HPC
+      supports, however it is something that can occur in TUFLOW FV.
+    * Supports duplicate IDs across domains e.g. a 1D node called :code:`test`, a PO point called :code:`test`,
+      and an RL point called :code:`test` - these can all have the same ID with a :code:`Water Level` result attached.
 
     This class does not need to be explicitly closed as it will load the results into memory and closes any open files
     after initialisation.
 
+    Parameters
+    ----------
+    fpath : :class:`PathLike <pytuflow.pytuflow_types.PathLike>`
+        The path to the output (.tpc) file.
+
+    Raises
+    ------
+    FileNotFoundError
+        Raised if the .tpc file does not exist.
+    FileTypeError
+        Raises :class:`pytuflow.pytuflow_types.FileTypeError` if the file does not look like a .tpc file.
+    EOFError
+        Raised if the .tpc file is empty or incomplete.
+
     Examples
     --------
+    Loading a .tpc file:
+
     >>> from pytuflow.outputs import TPC
     >>> res = TPC('path/to/file.tpc')
+
+    Querying all the available :code:`2d_po` data types:
+
+    >>> res.data_types('po')
+    ['flow into region', 'volume', 'average water level', 'water level', 'velocity']
+
+    Querying all the available 1D channel IDs
+
+    >>> res.ids('channel')
+    ['FC01.1_R', 'FC01.2_R', 'FC04.1_C']
+
+    Extracting the time-series information for a given channel and data type:
+
+    >>> res.time_series('FC01.1_R', 'flow')
+    time      channel/flow/FC01.1_R
+    0.000000                  0.000
+    0.016667                  0.000
+    0.033333                  0.000
+    0.050000                  0.000
+    0.066667                  0.000
+    ...                         ...
+    2.933333                  3.806
+    2.950000                  3.600
+    2.966667                  3.400
+    2.983334                  3.214
+    3.000000                  3.038
+
+    For more examples, see the documentation for the individual methods.
     """
 
-    def __init__(self, fpath: PathLike) -> None:
-        # docstring inherited
+    def __init__(self, fpath: PathLike):
         # private
         self._time_series_data_2d = AppendDict()
         self._time_series_data_rl = AppendDict()
@@ -63,45 +104,9 @@ class TPC(INFO, ITimeSeries2D):
             self._ncid.close()
             self._ncid = None
 
-    def load(self) -> None:
-        # docstring inherited
-        self.format = self.tpc_reader.get_property('Time Series Output Format', 'CSV')
-        if 'CSV' in self.format:
-            self.format = 'CSV'  # it is possible to have both CSV and NC and CSV is a more complete format
-
-        if self.format == 'NC':
-            self._nc_file = self._expand_property_path('NetCDF Time Series')
-            self._ncid = Dataset(self._nc_file, 'r')
-
-        self.reference_time = self.tpc_reader.get_property('Reference Time', self.reference_time)
-
-        # rl counts - up here since it's easy to get and useful when loading time series and maximum data
-        self.rl_point_count = self.tpc_reader.get_property('Number Reporting Location Points', 0)
-        self.rl_line_count = self.tpc_reader.get_property('Number Reporting Location Lines', 0)
-        self.rl_poly_count = self.tpc_reader.get_property('Number Reporting Location Regions', 0)
-
-        # 1d
-        super().load()
-
-        # po
-        self.po_objs = self._load_po_info()
-        if not self.po_objs.empty:
-            self.po_point_count = self.po_objs[self.po_objs['geometry'] == 'point']['id'].unique().size
-            self.po_line_count = self.po_objs[self.po_objs['geometry'] == 'line']['id'].unique().size
-            self.po_poly_count = self.po_objs[self.po_objs['geometry'] == 'polygon']['id'].unique().size
-
-        # rl
-        self.rl_objs = self._load_rl_info()
-
-        # gis layers
-        self.gis_layer_p_fpath = self._expand_property_path('GIS Plot Layer Points')
-        self.gis_layer_l_fpath = self._expand_property_path('GIS Plot Layer Lines')
-        self.gis_layer_r_fpath = self._expand_property_path('GIS Plot Layer Regions')
-
-        # close open files
-        if self._ncid:
-            self._ncid.close()
-            self._ncid = None
+    def close(self) -> None:
+        """Close the result and any open files. Not required to be called explicitly for the TPC output class."""
+        pass  # no files are left open
 
     @staticmethod
     def looks_like_this(fpath: PathLike) -> bool:
@@ -513,6 +518,46 @@ class TPC(INFO, ITimeSeries2D):
             df = pd.concat([df, df1], axis=1, ignore_index=not share_idx)
 
         return df
+
+    def _load(self) -> None:
+        """Load the TPC file into memory. Called by the __init__ method."""
+        self.format = self.tpc_reader.get_property('Time Series Output Format', 'CSV')
+        if 'CSV' in self.format:
+            self.format = 'CSV'  # it is possible to have both CSV and NC and CSV is a more complete format
+
+        if self.format == 'NC':
+            self._nc_file = self._expand_property_path('NetCDF Time Series')
+            self._ncid = Dataset(self._nc_file, 'r')
+
+        self.reference_time = self.tpc_reader.get_property('Reference Time', self.reference_time)
+
+        # rl counts - up here since it's easy to get and useful when loading time series and maximum data
+        self.rl_point_count = self.tpc_reader.get_property('Number Reporting Location Points', 0)
+        self.rl_line_count = self.tpc_reader.get_property('Number Reporting Location Lines', 0)
+        self.rl_poly_count = self.tpc_reader.get_property('Number Reporting Location Regions', 0)
+
+        # 1d
+        super()._load()
+
+        # po
+        self.po_objs = self._load_po_info()
+        if not self.po_objs.empty:
+            self.po_point_count = self.po_objs[self.po_objs['geometry'] == 'point']['id'].unique().size
+            self.po_line_count = self.po_objs[self.po_objs['geometry'] == 'line']['id'].unique().size
+            self.po_poly_count = self.po_objs[self.po_objs['geometry'] == 'polygon']['id'].unique().size
+
+        # rl
+        self.rl_objs = self._load_rl_info()
+
+        # gis layers
+        self.gis_layer_p_fpath = self._expand_property_path('GIS Plot Layer Points')
+        self.gis_layer_l_fpath = self._expand_property_path('GIS Plot Layer Lines')
+        self.gis_layer_r_fpath = self._expand_property_path('GIS Plot Layer Regions')
+
+        # close open files
+        if self._ncid:
+            self._ncid.close()
+            self._ncid = None
 
     def _info_name_correction(self, name: str) -> str:
         # override this as it isn't needed for TPC

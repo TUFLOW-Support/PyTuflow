@@ -10,7 +10,7 @@ from pytuflow.outputs.helpers.get_standard_data_type_name import get_standard_da
 from pytuflow.outputs.helpers.tpc_reader import TPCReader
 from pytuflow.outputs.itime_series_1d import ITimeSeries1D
 from pytuflow.outputs.time_series import TimeSeries
-from pytuflow.pytuflow_types import PathLike, TimeLike, AppendDict, CaseInsDict
+from pytuflow.pytuflow_types import PathLike, TimeLike, AppendDict, FileTypeError
 from pytuflow.util import flatten
 from pytuflow.util.logging import get_logger
 from pytuflow.util.time_util import closest_time_index
@@ -19,28 +19,67 @@ logger = get_logger()
 
 
 class INFO(TimeSeries, ITimeSeries1D):
-    """Class for reading TUFLOW info time series results (.info). These are text files with a '.info' extension
-    (not '.2dm.info') that are output by the 2013 TUFLOW release. The format is similar to the TPC format, however
-    does not include 2D or RL results.
+    """Class for reading TUFLOW info time series results (.info). These are text files with a :code:`.info` extension
+    (typically found in the 1D output folder and ending with :code:`_1d.info` and not :code:`.2dm.info`)
+    that are output by the 2013 TUFLOW release. The format is similar to the TPC format, however
+    does not include :code:`2d_po` or Reporting Location (:code:`0d_rl`) results.
 
     This class does not need to be explicitly closed as it will load the results into memory and closes any open files
     after initialisation.
 
+    Parameters
+    ----------
+    fpath : :class:`PathLike <pytuflow.pytuflow_types.PathLike>`
+        The path to the output (.info) file.
+
+    Raises
+    ------
+    FileNotFoundError
+        Raised if the .info file does not exist.
+    FileTypeError
+        Raises :class:`pytuflow.pytuflow_types.FileTypeError` if the file does not look like a time series .info file.
+    EOFError
+        Raised if the .info file is empty or incomplete.
+
     Examples
     --------
+    Load a :code:`.info` file:
+
     >>> from pytuflow.outputs import INFO
     >>> info = INFO('path/to/file.info')
+
+    Querying all the available data types:
+
+    >>> res.data_types()
+    ['water level', 'flow', 'velocity']
+
+    Querying all the available 1D channel IDs
+
+    >>> res.ids('channel')
+    ['FC01.1_R', 'FC01.2_R', 'FC04.1_C']
+
+    Extracting the time-series information for a given channel and data type:
+
+    >>> res.time_series('FC01.1_R', 'flow')
+    time      channel/flow/FC01.1_R
+    0.000000                  0.000
+    0.016667                  0.000
+    0.033333                  0.000
+    0.050000                  0.000
+    0.066667                  0.000
+    ...                         ...
+    2.933333                  3.806
+    2.950000                  3.600
+    2.966667                  3.400
+    2.983334                  3.214
+    3.000000                  3.038
+
+    For more examples, see the documentation for the individual methods.
     """
 
     _PLOTTING_CAPABILITY = ['timeseries', 'section']
 
-    def __init__(self, fpath: PathLike) -> None:
-        """
-        Parameters
-        ----------
-        fpath : PathLike
-            The path to the 1D time-series .info output file.
-        """
+    def __init__(self, fpath: PathLike):
         super(INFO, self).__init__(fpath)
 
         #: Path: The path to the 1D time-series .info output file.
@@ -53,35 +92,25 @@ class INFO(TimeSeries, ITimeSeries1D):
 
         # call before tpc_reader is initialised to give a clear error message if it isn't actually a .info time series file
         if not self.looks_like_this(self.fpath):
-            raise ValueError(f'File does not look like a time series {self.__class__.__name__} file: {fpath}')
+            raise FileTypeError(f'File does not look like a time series {self.__class__.__name__} file: {fpath}')
 
         #: :doc:`TPCReader<pytuflow.outputs.helpers.tpc_reader.TPCReader>`: The TPC reader for the .info file. The INFO file format uses the TPC format.
         self.tpc_reader = TPCReader(self.fpath)
 
         # call after tpc_reader has been initialised so that we know the file can be loaded by the reader
         if self.looks_empty(fpath):
-            raise ValueError(f'File is empty or incomplete: {fpath}')
+            raise EOFError(f'File is empty or incomplete: {fpath}')
 
         # private properties
         self._time_series_data = AppendDict()
         self._maximum_data = AppendDict()
 
-        self.load()
+        self._load()
 
-    def load(self) -> None:
-        # docstring inherited
-        self.name = self.tpc_reader.get_property('Simulation ID')
-        self.units = 'si' if self.tpc_reader.get_property('Units') == 'METRIC' else 'us customary'
-        self.node_count = self.tpc_reader.get_property(r'Number (?:1D\s)?Nodes', 0, regex=True)
-        self.channel_count = self.tpc_reader.get_property(r'Number (?:1D\s)?Channels', 0, regex=True)
-        self._load_node_info()
-        self._load_chan_info()
-        self._load_time_series()
-        self._load_maximums()
-        self._load_1d_info()
-
-    def close(self):
-        # docstring inherited
+    def close(self) -> None:
+        """Close the result and any open files associated with the result.
+        Not required to be called for the INFO output class as all files are closed after initialisation.
+        """
         pass  # no files are left open
 
     @staticmethod
@@ -119,16 +148,18 @@ class INFO(TimeSeries, ITimeSeries1D):
         return super().context_combinations_1d(ctx)
 
     def times(self, context: str = None, fmt: str = 'relative') -> list[TimeLike]:
-        """Returns all the available times for the output.
+        """Returns all the available times for the given context.
 
         The context is an optional input that can be used to filter the return further. For INFO results, the
         returned times will be the same regardless of the context, so it is not recommended to pass in any
         context. Valid contexts for INFO results are:
-        - '1d': returns all times
-        - 'node': returns only node times
-        - 'channel': returns only channel times
-        - [id]: returns only data types for the given ID.
-        - [data_type]: returns only IDs for the given data type.
+
+        * :code:`None`: default - returns all available times
+        * :code:`1d`: returns all times
+        * :code:`node`: returns only node times
+        * :code:`channel`: returns only channel times
+        * :code:`[id]`: returns only data types for the given ID.
+        * :code:`[data_type]`: returns only IDs for the given data type.
 
         Parameters
         ----------
@@ -152,16 +183,18 @@ class INFO(TimeSeries, ITimeSeries1D):
         return super().times(context, fmt)
 
     def data_types(self, context: str = None) -> list[str]:
-        """Returns all the available data types (result types) for the output given the context.
+        """Returns all the available data types (result types) for the given context.
 
         The context is an optional input that can be used to filter the return further. Available
         context objects for the INFO result class are:
-        - '1d': returns all data types
-        - 'node': returns only node data types
-        - 'channel': returns only channel data types
-        - 'timeseries': returns only IDs that have time series data. This will be all IDs for INFO results.
-        - 'section': returns only IDs that have section data (i.e. long plot data).
-        - [id]: returns only data types for the given ID.
+
+        * :code:`None`: default - returns all :code:`timeseries` data types
+        * :code:`1d`: same as :code:`None` as INFO results only contain 1D data
+        * :code:`node`
+        * :code:`channel`
+        * :code:`timeseries`: returns only IDs that have time series data.
+        * :code:`section`: returns only IDs that have section data (i.e. long plot data).
+        * :code:`[id]`: returns only data types for the given ID.
 
         Parameters
         ----------
@@ -176,33 +209,47 @@ class INFO(TimeSeries, ITimeSeries1D):
         Examples
         --------
         The below examples demonstrate how to use the context argument to filter the returned data types. The first
-        example returns all data types, the second returns only node data types, the third returns only channel data
-        types, and the fourth returns only data types for the channel 'FC01.1_R' which is the same as using
-        the 'channels' context for INFO results.
+        example returns all data types:
 
         >>> res.data_types()
-        ['Water Level', 'Flow', 'Velocity']
+        ['water level', 'flow', 'velocity']
+
+        Returning only the node data types:
         >>> res.data_types('node')
-        ['Water Level']
-        >>> res.data_types('channel')
-        ['Flow', 'Velocity']
+        ['water level']
+
+        Return only data types for the channel 'FC01.1_R':
+
         >>> res.data_types('FC01.1_R')
-        ['Flow', 'Velocity']
+        ['flow', 'velocity']
+
+        Return data types that are available for plotting section data:
+
+        >>> res.data_types('section')
+        ['bed level', 'pipes', 'pits', 'water level', 'max water level']
         """
+        if context and 'section' in context:
+            dtypes = super().data_types('node')
+            dtypes += [f'max {x}' for x in dtypes if x in self._maximum_data]
+            return ['bed level', 'pipes', 'pits'] + dtypes
+        elif context and 'timeseries' in context:
+            context = None
         return super().data_types(context)
 
     def ids(self, context: str = None) -> list[str]:
-        """Returns all the available IDs for the output.
+        """Returns all the available IDs for the given context.
 
         The context argument can be used to add a filter to the returned IDs. Available context objects for the INFO
         result class are:
-        - '1d': returns all IDs
-        - 'node': returns only node IDs
-        - 'channel': returns only channel IDs
-        - 'timeseries': returns only IDs that have time series data. This will be all IDs for INFO results.
-        - 'section': returns only IDs that have section data (i.e. long plot data). This is identical to 'nodes'
-        for INFO results
-        - [data_type]: returns only IDs for the given data type.
+
+        * :code:`None`: default - returns all :code:`timeseries` IDs
+        * :code:`1d`: same as :code:`None` as INFO results only contain 1D data
+        * :code:`node`
+        * :code:`channel`
+        * :code:`timeseries`: returns only IDs that have time series data. This will be all IDs for INFO results.
+        * :code:`section`: returns only IDs that have section data (i.e. long plot data). This is identical to 'nodes'
+          for INFO results
+        * :code:`[data_type]`: returns only IDs for the given data type. Shorthand data type names can be used.
 
         Parameters
         ----------
@@ -217,45 +264,56 @@ class INFO(TimeSeries, ITimeSeries1D):
         Examples
         --------
         The below examples demonstrate how to use the context argument to filter the returned IDs. The first example
-        returns all IDs, the second returns only node IDs, the third returns only channel IDs, and the fourth returns
-        only water level IDs which is the same as using the 'nodes' context for INFO results.
+        returns all IDs:
 
         >>> res.ids()
         ['FC01.1_R', 'FC01.2_R', 'FC04.1_C', 'FC01.1_R.1', 'FC01.1_R.2', 'FC01.2_R.1', 'FC01.2_R.2', 'FC04.1_C.1', 'FC04.1_C.2']
+
+        Return only node IDs:
+
         >>> res.ids('node')
         ['FC01.1_R.1', 'FC01.1_R.2', 'FC01.2_R.1', 'FC01.2_R.2', 'FC04.1_C.1', 'FC04.1_C.2']
-        >>> res.ids('channel')
-        ['FC01.1_R', 'FC01.2_R', 'FC04.1_C']
+
+        Return IDs that have water level results:
+
         >>> rse.ids('h')
         ['FC01.1_R.1', 'FC01.1_R.2', 'FC01.2_R.1', 'FC01.2_R.2', 'FC04.1_C.1', 'FC04.1_C.2']
         """
+        if context and 'section' in context:
+            context = 'node'
+        elif context and 'timeseries' in context:
+            context = None
         return super().ids(context)
 
     def maximum(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
                 time_fmt: str = 'relative') -> pd.DataFrame:
-        """Returns a dataframe containing the maximum values for the given data types. The returned dataframe
+        """Returns a DataFrame containing the maximum values for the given data types. The returned DataFrame
         will include time of maximum results as well.
 
-        It's possible to pass in a well known shorthand for the data type e.g. 'q' for flow.
+        It's possible to pass in a well known shorthand for the data type e.g. :code:`q` for :code:`flow`.
 
-        The location can also be a contextual string, e.g. 'channel' to extract the maximum values for all channels.
-        For the INFO result class, the following contexts are available:
-        - '1d': returns all maximum values (same as passing in None for locations)
-        - 'node'
-        - 'channel'
+        The location can also be a contextual string, e.g. :code:`channel` to extract the maximum values for all
+        channels. For the INFO result class, the following contexts are available:
 
-        The returned DataFrame will have an index column corresponding to the location ids, and the columns
-        will be in the format 'context/data_type/[max|tmax]',
-        e.g. 'channel/flow/max', 'channel/flow/tmax'
+        * :code:`None`: returns all maximum values
+        * :code:`1d`: returns all maximum values (same as passing in None for locations)
+        * :code:`node`
+        * :code:`channel`
+
+        The returned DataFrame will have an index column corresponding to the location IDs, and the columns
+        will be in the format :code:`context/data_type/[max|tmax]`,
+        e.g. :code:`channel/flow/max`, :code:`channel/flow/tmax`
 
         Parameters
         ----------
         locations : str | list[str]
-            The location to extract the maximum values for.
+            The location to extract the maximum values for. :code:`None` will return all locations for the
+            given data_types.
         data_types : str | list[str]
-            The data types to extract the maximum values for.
+            The data types to extract the maximum values for. :code:`None` will return all data types for the
+            given locations.
         time_fmt : str, optional
-            The format for the time of max result. Options are 'relative' or 'absolute'
+            The format for the time of max result. Options are :code:`relative` or :code:`absolute`
 
         Returns
         -------
@@ -279,14 +337,13 @@ class INFO(TimeSeries, ITimeSeries1D):
         Extracting the maximum flow for all channels:
 
         >>> res.maximum(None, 'flow')
-                 channel/flow/max  channel/flow/tmax
+                 channel/flow/max   channel/flow/tmax
         ds1                 59.423           1.383333
         ds2                 88.177           1.400000
         ...                  ...              ...
         FC04.1_C             9.530           1.316667
         FC_weir1            67.995           0.966667
         """
-        pass
         locations, data_types = self._loc_data_types_to_list(locations, data_types)
         context = '/'.join(locations + data_types)
         ctx = self.context_combinations(context)
@@ -301,31 +358,34 @@ class INFO(TimeSeries, ITimeSeries1D):
 
     def time_series(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
                     time_fmt: str = 'relative') -> pd.DataFrame:
-        """Returns a time series dataframe for the given location(s) and data type(s). INFO result types will
+        """Returns a time-series DataFrame for the given location(s) and data type(s). INFO result types will
         always share a common time index.
 
-        It's possible to pass in a well known shorthand for the data type e.g. 'q' for flow.
+        It's possible to pass in a well known shorthand for the data type e.g. :code:`q` for :code:`flow`.
 
-        The location can also be a contextual string, e.g. 'channel' to extract the maximum values for all channels.
-        For the INFO result class, the following contexts are available:
-        - '1d': returns all maximum values (same as passing in None for locations)
-        - 'node'
-        - 'channel'
+        The location can also be a contextual string, e.g. :code:`channel` to extract the time-series values for all
+        channels. For the INFO result class, the following contexts are available:
 
-        The returned column names will be in the format 'context/data_type/location' e.g. 'channel/flow/FC01.1_R'.
-        The data_type name in the column heading will be identical to the data type name passed into the
-        function e.g. if 'h' is used instead of 'water level', then the return will be 'node/h/FC01.1_R.1'.
+        * :code:`None`: returns all locations
+        * :code:`1d`: returns all locations (same as passing in None for locations)
+        * :code:`node`
+        * :code:`channel`
+
+        The returned column names will be in the format :code:`context/data_type/location`
+        e.g. :code:`channel/flow/FC01.1_R`. The :code:`data_type` name in the column heading will be identical to the
+        data type  name passed into the function e.g. if :code:`h` is used instead of :code:`water level`, then the
+        return will be :code:`node/h/FC01.1_R.1`.
 
         Parameters
         ----------
         locations : str | list[str]
-            The location to extract the time series data for. If None is passed in, all locations will be returned for
-            the given data_types.
+            The location to extract the time series data for. If :code:`None` is passed in, all locations will be
+            returned for the given data_types.
         data_types : str | list[str]
-            The data type to extract the time series data for. If None is passed in, all data types will be returned
-            for the given locations.
+            The data type to extract the time series data for. If :code:`None` is passed in, all data types
+            will be returned for the given locations.
         time_fmt : str, optional
-            The format for the time column. Options are 'relative' or 'absolute'.
+            The format for the time column. Options are :code:`relative` or :code:`absolute`.
 
         Returns
         -------
@@ -380,23 +440,25 @@ class INFO(TimeSeries, ITimeSeries1D):
     def section(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
                 time: TimeLike) -> pd.DataFrame:
         """Returns a long plot for the given location and data types at the given time. If one location is given,
-        the the long plot will connect the given location down to the outlet. If 2 locations are given, then the
+        the long plot will connect the given location down to the outlet. If 2 locations are given, then the
         long plot will connect the two locations (they must be connectable). If more than 2 locations are given,
-        multiple long plot will be produced, however one channel must be a common downstream location and the other
+        multiple long plot will be produced (each long plot will be given a unique :code:`branch_id`,
+        however one channel must be a common downstream location and the other
         channels must be upstream of this location.
 
-        The order the locations are contained in the `location` parameter does not matter as both directions are
+        The order of the locations are contained in the `location` parameter does not matter as both directions are
         checked, however it will be faster to include the upstream location first as this will be the first connection
         checked.
 
         The returned DataFrame will have the following columns:
-        - 'branch_id': The branch ID. If more than 2 pipes are provided, or the channels diverge at an intersection,
-        then multiple branches will be returned. The same channel could be in multiple branches. The branch id
-        starts at zero for the first branch, and increments by one for each additional branch.
-        - 'channel': The channel ID.
-        - 'node': The node ID.
-        - 'offset': The offset along the long plot
-        - [data_types]: The data types requested.
+
+        * :code:`branch_id`: The branch ID. If more than 2 pipes are provided, or the channels diverge at an intersection,
+          then multiple branches will be returned. The same channel could be in multiple branches. The branch id
+          starts at zero for the first branch, and increments by one for each additional branch.
+        * :code:`channel`: The channel ID.
+        * :code:`node`: The node ID.
+        * :code:`offset`: The offset along the long plot
+        * :code:`[data_types]`: The data types requested.
 
         Parameters
         ----------
@@ -412,9 +474,16 @@ class INFO(TimeSeries, ITimeSeries1D):
         pd.DataFrame
             The section data.
 
+        Raises
+        ------
+        ValueError
+            Raised if no valid :code:`locations` are provided or if :code:`data_types` is not :code:`Node`
+            but the provided :code:`data_types` are all invalid. A value error is also raised if more than one location
+            is provided and the locations are not connectable.
+
         Examples
         --------
-        Extracting a long plot from a given channel ("ds1") to the outlet at 1.0 hours:
+        Extracting a long plot from a given channel :code:`ds1` to the outlet at :code:`1.0` hours:
 
         >>> res.section('ds1', ['bed', 'level', 'max level'], 1.)
             branch_id  channel       node  offset     bed    level  max level
@@ -431,7 +500,7 @@ class INFO(TimeSeries, ITimeSeries1D):
         5           0  ds_weir      ds5.2   492.7  32.580  33.9942    34.3672
         11          0  ds_weir  ds_weir.2   508.9  32.580  32.9532    33.4118
 
-        Extracting a long plot between "ds1" and "ds4" at 1.0 hours:
+        Extracting a long plot between :code:`ds1` and :code:`ds4` at :code:`1.0` hours:
 
         >>> res.section(['ds1', 'ds4'], ['bed', 'level', 'max level'], 1.)
            branch_id channel   node  offset     bed    level  max level
@@ -466,25 +535,25 @@ class INFO(TimeSeries, ITimeSeries1D):
                 df[dtype] = df1[dtype]
             elif dtype1 == 'pipes':
                 df1 = self._lp.melt_2_columns(dfconn, ['lbus_obvert', 'lbds_obvert'], dtype)
-                df1 = df1.join(self.chan_info['ispipe'], on='channel')
+                df1 = df1.join(self.channel_info['ispipe'], on='channel')
                 df1.loc[~df1['ispipe'], dtype] = np.nan
                 df[dtype] = df1[dtype]
             elif dtype1 == 'pits':
                 y = []
                 for i, row in dfconn.iterrows():
                     nd = row['us_node']
-                    pits = self.chan_info[(self.chan_info['ds_node'] == nd) & (self.chan_info['us_channel'] == '------')
-                                          & (self.chan_info['ds_channel'] == '------')].index.tolist()
+                    pits = self.channel_info[(self.channel_info['ds_node'] == nd) & (self.channel_info['us_channel'] == '------')
+                                             & (self.channel_info['ds_channel'] == '------')].index.tolist()
                     if pits:
-                        y.append(self.chan_info.loc[pits[0], 'lbus_obvert'])
+                        y.append(self.channel_info.loc[pits[0], 'lbus_obvert'])
                     else:
                         y.append(np.nan)
                     if i + 1 == dfconn.shape[0]:
                         nd = row['ds_node']
-                        pits = self.chan_info[(self.chan_info['us_node'] == nd) & (self.chan_info['us_channel'] == '------')
-                                              & (self.chan_info['ds_channel'] == '------')].index.tolist()
+                        pits = self.channel_info[(self.channel_info['us_node'] == nd) & (self.channel_info['us_channel'] == '------')
+                                                 & (self.channel_info['ds_channel'] == '------')].index.tolist()
                         if pits:
-                            y.append(self.chan_info.loc[pits[0], 'lbus_obvert'])
+                            y.append(self.channel_info.loc[pits[0], 'lbus_obvert'])
                         else:
                             y.append(np.nan)
                     else:
@@ -504,43 +573,37 @@ class INFO(TimeSeries, ITimeSeries1D):
 
     def curtain(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
                 time: TimeLike) -> pd.DataFrame:
-        """Returns a dataframe containing curtain plot data for the given location and data type.
+        """Not supported for INFO results. Raises a :code:`NotImplementedError`.
 
-        Parameters
-        ----------
-        locations : str | list[str]
-            The location to extract the curtain data for.
-        data_types : str | list[str]
-            The data type to extract the curtain data for.
-        time : TimeLike
-            The time to extract the curtain data for.
-
-        Returns
-        -------
-        pd.DataFrame
-            The curtain data.
+        See Also
+        --------
+        :meth:`has_plotting_capability` : Check if a given output class supports a given plotting capability before
+           trying to use it.
         """
         raise NotImplementedError('.INFO files do not support curtain plotting.')
 
     def profile(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
                 time: TimeLike) -> pd.DataFrame:
-        """Returns a dataframe containing vertical profile data for the given location and data type.
+        """Not supported for INFO results. Raises a :code:`NotImplementedError`.
 
-        Parameters
-        ----------
-        locations : str | list[str]
-            The location to extract the profile data for.
-        data_types : str | list[str]
-            The data type to extract the profile data for.
-        time : TimeLike
-            The time to extract the profile data for.
-
-        Returns
-        -------
-        pd.DataFrame
-            The profile data.
+        See Also
+        --------
+        :meth:`has_plotting_capability` : Check if a given output class supports a given plotting capability before
+           trying to use it.
         """
         raise NotImplementedError('.INFO files do not support vertical profile plotting.')
+
+    def _load(self) -> None:
+        """Load the INFO file into memory. Called by the __init__ method."""
+        self.name = self.tpc_reader.get_property('Simulation ID')
+        self.units = 'si' if self.tpc_reader.get_property('Units') == 'METRIC' else 'us customary'
+        self.node_count = self.tpc_reader.get_property(r'Number (?:1D\s)?Nodes', 0, regex=True)
+        self.channel_count = self.tpc_reader.get_property(r'Number (?:1D\s)?Channels', 0, regex=True)
+        self._load_node_info()
+        self._load_chan_info()
+        self._load_time_series()
+        self._load_maximums()
+        self._load_1d_info()
 
     def _info_name_correction(self, name: str) -> str:
         """Correct the name of the file. Only required for INFO results and should be overerriden by subclasses."""
@@ -582,7 +645,7 @@ class INFO(TimeSeries, ITimeSeries1D):
         chan_info_csv = self._expand_property_path(r'(?:1D\s)?Channel Info', regex=True)
         if chan_info_csv is not None:
             try:
-                self.chan_info = pd.read_csv(
+                self.channel_info = pd.read_csv(
                     chan_info_csv,
                     engine='python',
                     index_col='id',
@@ -606,8 +669,8 @@ class INFO(TimeSeries, ITimeSeries1D):
                         'pblockage': float,
                     }
                 )
-                self.chan_info.drop('no', axis=1, inplace=True)
-                self.chan_info['ispipe'] = self.chan_info['flags'].str.match(r'.*[CR].*', False)
+                self.channel_info.drop('no', axis=1, inplace=True)
+                self.channel_info['ispipe'] = self.channel_info['flags'].str.match(r'.*[CR].*', False)
             except Exception as e:
                 logger.warning(f'INFO._load_chan_info(): Error loading channel info: {e}')
 
@@ -757,7 +820,7 @@ class INFO(TimeSeries, ITimeSeries1D):
             locations = [locations] if not isinstance(locations, list) else locations
             for loc in locations:
                 if loc.lower() not in valid_loc_lower:
-                    logger.warning(f'INFO.section(): Location {loc} not found in the output - ignoring.')
+                    logger.warning(f'INFO.section(): Location "{loc}" not found in the output - removing.')
                 else:
                     locations1.append(valid_loc[valid_loc_lower.index(loc.lower())])
             locations = locations1
@@ -767,9 +830,19 @@ class INFO(TimeSeries, ITimeSeries1D):
         if not data_types:
             data_types = self.data_types('section')
         else:
+            data_types = [data_types] if not isinstance(data_types, list) else data_types
             valid_types = self.data_types('section')
-            data_types = [x for x in data_types if get_standard_data_type_name(x) in valid_types]
-            if not data_types:
-                logger.warning(f'INFO.section(): No valid data types provided ({data_types}).')
+            data_types1 = []
+            for dtype in data_types:
+                if get_standard_data_type_name(dtype) not in valid_types:
+                    logger.warning(
+                        f'INFO.section(): Data type "{dtype}" is not a valid section data type or '
+                        f'not in output - removing.'
+                    )
+                else:
+                    data_types1.append(dtype)
+            if not data_types1:
+                raise ValueError('No valid data types provided.')
+            data_types = data_types1
 
         return locations, data_types

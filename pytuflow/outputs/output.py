@@ -13,12 +13,6 @@ class Output(ABC):
 
     @abstractmethod
     def __init__(self, *fpath: PathLike) -> None:
-        """
-        Parameters
-        ----------
-        fpath : PathLike
-            The path to the output file(s).
-        """
         super().__init__()
         self._fpath = fpath
 
@@ -30,10 +24,11 @@ class Output(ABC):
     def __repr__(self) -> str:
         return f"{self.__class__.__name__} ({self.name})"
 
-    @abstractmethod
-    def load(self) -> None:
-        """Load the results from the output file(s). This is called automatically on initialisation."""
-        pass
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
 
     @abstractmethod
     def close(self) -> None:
@@ -47,7 +42,7 @@ class Output(ABC):
 
         Parameters
         ----------
-        fpath : PathLike
+        fpath : :class:`PathLike <pytuflow.pytuflow_types.PathLike>`
             The path to the output file(s).
 
         Returns
@@ -64,7 +59,7 @@ class Output(ABC):
 
         Parameters
         ----------
-        fpath : PathLike
+        fpath : :class:`PathLike <pytuflow.pytuflow_types.PathLike>`
             The path to the output file(s).
 
         Returns
@@ -202,10 +197,17 @@ class Output(ABC):
     def has_plotting_capability(self, capability: str) -> bool:
         """Check if the output has a given plotting capability.
 
+        The capability options are:
+
+        * :code:`timeseries`
+        * :code:`section`
+        * :code:`curtain`
+        * :code:`profile`
+
         Parameters
         ----------
         capability : str
-            The capability to check for. E.g. 'Profile Plot' checks if the output supports (vertical) profile plotting.
+            The capability to check for
 
         Returns
         -------
