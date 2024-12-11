@@ -596,6 +596,8 @@ class TPC(INFO, ITimeSeries2D):
             if df is not None:
                 data_type = get_standard_data_type_name(data_type)
                 self._time_series_data[data_type] = df
+                if data_type != 'flow integral':
+                    self._nd_res_types.append(data_type)
 
         # load channel time series
         for prop, _ in self.tpc_reader.iter_properties(start_after='1D Channel Maximums', end_before='Number Reporting Location Points'):
@@ -605,7 +607,12 @@ class TPC(INFO, ITimeSeries2D):
                 if 'Channel Losses' in data_type:
                     for dtype in ['Channel Entry Losses', 'Channel Additional Losses', 'Channel Exit Losses']:
                         df1 = self._post_process_channel_losses(df, dtype)
-                        dtype = get_standard_data_type_name(dtype)
+                        if df1 is not None:
+                            dtype = get_standard_data_type_name(dtype)
+                            self._time_series_data[dtype] = df1
+                    df1 = self._post_process_channel_losses_2(df)
+                    if df1 is not None:
+                        dtype = get_standard_data_type_name('Channel Losses')
                         self._time_series_data[dtype] = df1
                 else:
                     data_type = get_standard_data_type_name(data_type)
@@ -655,9 +662,17 @@ class TPC(INFO, ITimeSeries2D):
     def _post_process_channel_losses(self, df: pd.DataFrame, dtype: str) -> pd.DataFrame:
         d = {'Channel Entry Losses': 'Entry', 'Channel Additional Losses': 'Additional', 'Channel Exit Losses': 'Exit'}
         cols = df.columns.str.contains(d[dtype])
-        df1 = df.loc[:,cols].copy()
-        df1.columns = [' '.join(x.split(' ')[2:]) for x in df1.columns]
-        return df1
+        if cols.any():
+            df1 = df.loc[:,cols].copy()
+            df1.columns = [' '.join(x.split(' ')[2:]) for x in df1.columns]
+            return df1
+
+    def _post_process_channel_losses_2(self, df: pd.DataFrame) -> pd.DataFrame:
+        cols = df.columns.str.startswith('LC')
+        if cols.any():
+            df1 = df.loc[:,cols].copy()
+            df1.columns = [' '.join(x.split(' ')[1:]) for x in df1.columns]
+            return df1
 
     def _load_maximums(self) -> None:
         # override

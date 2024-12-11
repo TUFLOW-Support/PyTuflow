@@ -104,6 +104,7 @@ class INFO(TimeSeries, ITimeSeries1D):
         # private properties
         self._time_series_data = AppendDict()
         self._maximum_data = AppendDict()
+        self._nd_res_types = []
 
         self._load()
 
@@ -686,7 +687,7 @@ class INFO(TimeSeries, ITimeSeries1D):
                 for col in df1.columns:
                     info['id'].append(col)
                     info['data_type'].append(dtype)
-                    info['geometry'].append('point' if col in self.node_info.index else 'line')
+                    info['geometry'].append('point' if dtype in self._nd_res_types else 'line')
                     info['start'].append(start)
                     info['end'].append(end)
                     info['dt'].append(dt)
@@ -695,6 +696,7 @@ class INFO(TimeSeries, ITimeSeries1D):
 
     def _load_time_series(self) -> None:
         """Load time-series data into memory."""
+        self._nd_res_types = ['water level']
         for res in ['Water Levels', 'Flows', 'Velocities']:
             p = self._expand_property_path(res)
             if p is not None:

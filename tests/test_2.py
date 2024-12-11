@@ -244,6 +244,28 @@ class Test_TPC_NC(TestCase):
         res = TPC(p)
         self.assertEqual('EG15_001', res.name)
 
+    def test_times(self):
+        p = './tests/nc_ts/EG15_001.tpc'
+        res = TPC(p)
+        self.assertEqual(181, len(res.times()))
+        self.assertEqual(181, len(res.times(fmt='absolute')))
+        self.assertEqual(181, len(res.times('channel')))
+        self.assertEqual(181, len(res.times('node')))
+        self.assertEqual(181, len(res.times('po')))
+        self.assertEqual(181, len(res.times('rl')))
+
+    def test_data_types(self):
+        p = './tests/nc_ts/EG15_001.tpc'
+        res = TPC(p)
+        self.assertEqual(24, len(res.data_types()))
+        self.assertEqual(8, len(res.data_types('channel')))
+        self.assertEqual(5, len(res.data_types('node')))
+        self.assertEqual(16, len(res.data_types('po')))
+        self.assertEqual(3, len(res.data_types('rl')))
+        self.assertEqual(4, len(res.data_types('po/line')))
+        self.assertEqual(10, len(res.data_types('pit10')))
+        self.assertEqual(13, len(res.data_types('1d')))
+
 
 class Test_TPC_2019(TestCase):
 
