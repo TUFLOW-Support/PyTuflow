@@ -20,3 +20,4 @@ Custom types available in the :code:`pytuflow` library.
    pytuflow_types.VariableMap
    pytuflow_types.SearchTagLike
    pytuflow_types.FileTypeError
+   pytuflow_types.PlotExtractionLocation

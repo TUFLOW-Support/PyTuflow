@@ -11,7 +11,11 @@ please see the :doc:`outputs` page.
    :nosignatures:
    :template: custom-class-template.rst
 
+   outputs.Output
+   outputs.TabularOutput
+   outputs.TimeSeries
    outputs.ITimeSeries1D
    outputs.ITimeSeries2D
+   outputs.helpers.TPCReader
 
 

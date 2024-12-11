@@ -46,7 +46,7 @@ class INFO(TimeSeries, ITimeSeries1D):
     Load a :code:`.info` file:
 
     >>> from pytuflow.outputs import INFO
-    >>> info = INFO('path/to/file.info')
+    >>> res = INFO('path/to/file.info')
 
     Querying all the available data types:
 
@@ -94,7 +94,7 @@ class INFO(TimeSeries, ITimeSeries1D):
         if not self.looks_like_this(self.fpath):
             raise FileTypeError(f'File does not look like a time series {self.__class__.__name__} file: {fpath}')
 
-        #: :doc:`TPCReader<pytuflow.outputs.helpers.tpc_reader.TPCReader>`: The TPC reader for the .info file. The INFO file format uses the TPC format.
+        #: :doc:`TPCReader<pytuflow.outputs.helpers.TPCReader>`: The TPC reader for the .info file. The INFO file format uses the TPC format.
         self.tpc_reader = TPCReader(self.fpath)
 
         # call after tpc_reader has been initialised so that we know the file can be loaded by the reader
@@ -214,11 +214,12 @@ class INFO(TimeSeries, ITimeSeries1D):
         >>> res.data_types()
         ['water level', 'flow', 'velocity']
 
-        Returning only the node data types:
+        Returning only the :code:`node` data types:
+
         >>> res.data_types('node')
         ['water level']
 
-        Return only data types for the channel 'FC01.1_R':
+        Return only data types for the channel :code:`FC01.1_R`:
 
         >>> res.data_types('FC01.1_R')
         ['flow', 'velocity']
@@ -276,7 +277,7 @@ class INFO(TimeSeries, ITimeSeries1D):
 
         Return IDs that have water level results:
 
-        >>> rse.ids('h')
+        >>> res.ids('h')
         ['FC01.1_R.1', 'FC01.1_R.2', 'FC01.2_R.1', 'FC01.2_R.2', 'FC04.1_C.1', 'FC04.1_C.2']
         """
         if context and 'section' in context:
@@ -442,11 +443,11 @@ class INFO(TimeSeries, ITimeSeries1D):
         """Returns a long plot for the given location and data types at the given time. If one location is given,
         the long plot will connect the given location down to the outlet. If 2 locations are given, then the
         long plot will connect the two locations (they must be connectable). If more than 2 locations are given,
-        multiple long plot will be produced (each long plot will be given a unique :code:`branch_id`,
+        multiple long plot will be produced (each long plot will be given a unique :code:`branch_id`),
         however one channel must be a common downstream location and the other
         channels must be upstream of this location.
 
-        The order of the locations are contained in the `location` parameter does not matter as both directions are
+        The order of the locations are contained in the :code:`location` parameter does not matter as both directions are
         checked, however it will be faster to include the upstream location first as this will be the first connection
         checked.
 
@@ -477,9 +478,9 @@ class INFO(TimeSeries, ITimeSeries1D):
         Raises
         ------
         ValueError
-            Raised if no valid :code:`locations` are provided or if :code:`data_types` is not :code:`Node`
+            Raised if no valid :code:`locations` are provided or if :code:`data_types` is not :code:`None`
             but the provided :code:`data_types` are all invalid. A value error is also raised if more than one location
-            is provided and the locations are not connectable.
+            is provided and the locations are not connected.
 
         Examples
         --------

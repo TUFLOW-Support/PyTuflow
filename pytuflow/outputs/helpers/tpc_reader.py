@@ -9,17 +9,17 @@ from pytuflow.pytuflow_types import PathLike
 
 
 class TPCReader:
-    """Class for reading and interacting with the TUFLOW TPC format. This class does not load results, but provides
-    and interface to the TPC file.
+    """Class for reading and interacting with the TUFLOW TPC format. This class does not load results, what it
+    does do is provide an interface to the TPC file. For example, it allows quickly finding a given property within
+    the files, or iterating over all properties or a subset of properties (refined using a filter).
+
+    Parameters
+    ----------
+    fpath : :class:`PathLike <pytuflow.pytuflow_types.PathLike>`
+        The path to the TPC output file.
     """
 
     def __init__(self, fpath: PathLike) -> None:
-        """
-        Parameters
-        ----------
-        fpath : PathLike
-            The path to the TPC output file.
-        """
         #: Path: The path to the TPC output file.
         self.fpath = Path(fpath)
         if not self.fpath.exists():
@@ -40,13 +40,15 @@ class TPCReader:
         """
         return self._df.shape[0]
 
-    def find_property_name(self, name: str) -> str:
+    def find_property_name(self, name: str, regex_flags: int = 0) -> str:
         """Returns the property name from a regex search string.
 
         Parameters
         ----------
         name : str
             The regex search string.
+        regex_flags : int, optional
+            The flags to apply to the regular expression.
 
         Returns
         -------
@@ -54,7 +56,7 @@ class TPCReader:
             The property name.
         """
         for idx, row in self._df.iterrows():
-            if re.match(name, row[0]):
+            if re.match(name, row[0], flags=regex_flags):
                 return row[0]
 
     def get_property(self, name: str, default: typing.Any = None, regex: bool = False, value: str = None) -> typing.Any:
@@ -68,6 +70,11 @@ class TPCReader:
             The property name.
         default : Any, optional
             The default value to return if the property is not found.
+        regex : bool, optional
+            If True, the name will be treated as a regular expression.
+        value : str, optional
+            The property value. If provided, this value will be used instead of searching for the value. This still
+            can be useful, as the returned property will be in the correct data type (e.g. float, datetime, etc).
 
         Returns
         -------

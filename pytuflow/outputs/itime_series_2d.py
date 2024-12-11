@@ -36,7 +36,7 @@ class ITimeSeries2D(ABC):
         self.rl_poly_count = 0
 
     def context_combinations_2d(self, context: list[str]) -> pd.DataFrame:
-        """Returns a DataFrame of all the 1D output objects that match the context.
+        """Returns a DataFrame of all the 2D and RL output objects that match the context.
 
         For example, the context may be :code:`['po']` or :code:`['po', 'flow']`. The return DataFrame
         is a filtered version of the :code:`po_objs` + :code:`rl_objs` DataFrame that matches the context.

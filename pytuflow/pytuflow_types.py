@@ -22,11 +22,8 @@ VariableMap = Dict[str, str]
 #: :code:`str | Iterable[tuple[str, Any]]`: Type hint for a search tag list item used to filter inputs from a control file. Can be in the form of a :code:`str` or a tuple :code:`(str, typing.Any)` or a list of tuples :code:`[(str, typing.Any), ...]`.
 SearchTagLike = Union[str, Iterable[tuple[str, Any]]]
 
-#: PlotExtractionLocation: The location to extract plot data for
+#: PlotExtractionLocation: Type hint for the location to extract plot data for. Includes spatial or ID based inputs.
 PlotExtractionLocation = Union[str, list[str], tuple[float, float], list[tuple[float, float]], None]
-
-#: PlotExtractionDataType: The data type to extract plot data for
-PlotExtractionDataType = Union[str, list[str], None]
 
 
 class FileTypeError(ValueError):

@@ -213,22 +213,26 @@ class TPC(INFO, ITimeSeries2D):
         context are:
 
         Domain contexts:
-        - 1d
-        - 2d (or po)
-        - rl (or 0d)
 
-        Geometry contexts:
-        - node
-        - channel
-        - point - (for 2d and rl domains only - use 'node' for 1d domain)
-        - line - (for 2d and rl domains only - use 'channel' for 1d domain)
-        - polygon (or region)
+        * :code:`1d`
+        * :code:`2d` (or :code:`po`)
+        * :code:`rl` (or :code:`0d`)
+
+        Geometry contexts (note: they are not plural):
+
+        * :code:`node`
+        * :code:`channel`
+        * :code:`point` - (for 2d and rl domains only - use :code:`node` for 1d domain)
+        * :code:`line` - (for 2d and rl domains only - use :code:`channel` for 1d domain)
+        * :code:`polygon` (or :code:`region`)
 
         Location contexts:
-        - [location]: The location to filter the data_types by.
+
+        * :code:`[location]`: The location to filter the data_types by.
 
         Combine contexts:
-        - [context1]/[context2] ...: Combine multiple contexts to filter the times further ('/' delim).
+
+        * :code:`[context1]/[context2] ...`  Combine multiple contexts to filter the times further ('/' delim).
 
         Parameters
         ----------
@@ -242,19 +246,23 @@ class TPC(INFO, ITimeSeries2D):
 
         Examples
         --------
-        The below examples demonstrate how to use the context argument to filter the returned data types. The first
-        example returns all data types, the second returns only node data types, the third returns only channel data
-        types, and the fourth returns only data types for the channel 'FC01.1_R' which is the same as using
-        the 'channels' context for INFO results.
+        Get the available data types for 1D :code:`channel` results:
 
-        >>> res.data_types()
-        ['Water Level', 'Flow', 'Velocity']
-        >>> res.data_types('node')
-        ['Water Level']
         >>> res.data_types('channel')
-        ['Flow', 'Velocity']
-        >>> res.data_types('FC01.1_R')
-        ['Flow', 'Velocity']
+        ['flow', 'velocity', 'channel entry losses', 'channel additional losses', 'channel exit losses', 'channel flow regime']
+
+        Get the available data types for 2D :code:`po` and specicially for :code:`po line`.
+
+        >>> res.data_types('po/line')
+        ['depth', 'flow area', 'flow integral', 'flow']
+
+        Get the available data types for 2D :code:`po` and RL (:code:`rl`) :code:`region` results.
+
+        >>> res.data_types('po/rl/region')
+        ['flow into region', 'flow out of region', 'volume', 'average water level', 'max water level']
+
+        The above could also be accomplished with just :code:`region` (or :code:`polygon`) since it's only
+        applicable for :code:`po` and :code:`rl` domains.
         """
         return super().data_types(context)
 
@@ -265,22 +273,26 @@ class TPC(INFO, ITimeSeries2D):
         context are:
 
         Domain contexts:
-        - 1d
-        - 2d (or po)
-        - rl (or 0d)
 
-        Geometry contexts:
-        - node
-        - channel
-        - point - (for 2d and rl domains only - use 'node' for 1d domain)
-        - line - (for 2d and rl domains only - use 'channel' for 1d domain)
-        - polygon (or region)
+        * :code:`1d`
+        * :code:`2d` (or :code:`po`)
+        * :code:`rl` (or :code:`0d`)
+
+        Geometry contexts (note: they are not plural):
+
+        * :code:`node`
+        * :code:`channel`
+        * :code:`point` - (for 2d and rl domains only - use :code:`node` for 1d domain)
+        * :code:`line` - (for 2d and rl domains only - use :code:`channel` for 1d domain)
+        * :code:`polygon` (or :code:`region`)
 
         Data type contexts:
-        - [data_type]: The data_type to filter the ids by.
+
+        * :code:`[data_type]`: The data_type to filter the ids by.
 
         Combine contexts:
-        - [context1]/[context2] ...: Combine multiple contexts to filter the times further ('/' delim).
+
+        * :code:`[context1]/[context2] ...`: Combine multiple contexts to filter the times further ('/' delim).
 
         Parameters
         ----------
@@ -294,10 +306,15 @@ class TPC(INFO, ITimeSeries2D):
 
         Examples
         --------
-        >>> res.ids('node')
-        ['FC01.1_R.1', 'FC01.1_R.2', 'FC01.2_R.1', 'FC01.2_R.2', 'FC04.1_C.1', 'FC04.1_C.2']
-        >>> res.ids('channel')
-        ['FC01.1_R', 'FC01.2_R', 'FC04.1_C']
+        Get the IDs for all :code:`po` results:
+
+        >>> res.ids('po')
+        ['po_poly', 'po_point', 'po_line']
+
+        Get the IDs for all :code:`rl line` results:
+
+        >>> res.ids('rl/line')
+        ['rl_line']
         """
         return super().ids(context)
 
@@ -316,23 +333,26 @@ class TPC(INFO, ITimeSeries2D):
         For the TPC result class, the following contexts are available:
 
         Domain contexts:
-        - 1d
-        - 2d (or po)
-        - rl (or 0d)
 
-        Geometry contexts:
-        - node
-        - channel
-        - point - (for 2d and rl domains only - use 'node' for 1d domain)
-        - line - (for 2d and rl domains only - use 'channel' for 1d domain)
-        - polygon (or region)
+        * :code:`1d`
+        * :code:`2d` (or :code:`po`)
+        * :code:`rl` (or :code:`0d`)
+
+        Geometry contexts (note: they are not plural):
+
+        * :code:`node`
+        * :code:`channel`
+        * :code:`point` - (for 2d and rl domains only - use :code:`node` for 1d domain)
+        * :code:`line` - (for 2d and rl domains only - use :code:`channel` for 1d domain)
+        * :code:``polygon` (or :code:`region`)
 
         Combine contexts:
-        - [context1]/[context2] ...: Combine multiple contexts to filter the times further ('/' delim).
+
+        * :code:`[context1]/[context2] ...`: Combine multiple contexts to filter the times further ('/' delim).
 
         The returned DataFrame will have an index column corresponding to the location ids, and the columns
-        will be in the format 'context/data_type/[max|tmax]',
-        e.g. 'channel/flow/max', 'channel/flow/tmax'
+        will be in the format :code:`context/data_type/[max|tmax]`,
+        e.g. :code:`channel/flow/max`, :code:`channel/flow/tmax`.
 
         Parameters
         ----------
@@ -341,7 +361,7 @@ class TPC(INFO, ITimeSeries2D):
         data_types : str | list[str]
             The data types to extract the maximum values for.
         time_fmt : str, optional
-            The format for the time of max result. Options are 'relative' or 'absolute'
+            The format for the time of max result. Options are :code:`relative` or :code:`absolute`
 
         Returns
         -------
@@ -406,33 +426,37 @@ class TPC(INFO, ITimeSeries2D):
         """Returns a time series dataframe for the given location(s) and data type(s). INFO result types will
         always share a common time index.
 
-        It's possible to pass in a well known shorthand for the data type e.g. 'q' for flow.
+        It's possible to pass in a well known shorthand for the data type e.g. :code:`q` for :code:`flow`.
 
-        The location can be an ID or contextual string, e.g. 'channel' to extract the maximum values
+        The location can be an ID or contextual string, e.g. :code:`channel` to extract the maximum values
         for all channels. An ID can be used alongside a contextual string since there can be duplicate IDs across
-        domains e.g. 'test/channel' - where 'test' is the name and 'channel' is additional context. Note, the order
-        does not matter, but it doesn't work very well if your ID has a '/' or has the same name as a contextual string
-        (e.g. calling a po line 'line').
+        domains e.g. :code:`test/channel` - where :code:`test` is the name and :code:`channel` is additional context.
+        Note, the order does not matter, but it doesn't work very well if your ID has a '/' or has the same name as a
+        contextual string (e.g. calling a po line 'line').
         For the TPC result class, the following contexts are available:
 
         Domain contexts:
-        - 1d
-        - 2d (or po)
-        - rl (or 0d)
 
-        Geometry contexts:
-        - node
-        - channel
-        - point - (for 2d and rl domains only - use 'node' for 1d domain)
-        - line - (for 2d and rl domains only - use 'channel' for 1d domain)
-        - polygon (or region)
+        * :code:`1d`
+        * :code:`2d` (or :code:`po`)
+        * :code:`rl` (or :code:`0d`)
+
+        Geometry contexts (note: they are not plural):
+
+        * :code: `node`
+        * :code: `channel`
+        * :code: `point` - (for 2d and rl domains only - use :code:`node` for 1d domain)
+        * :code: `line` - (for 2d and rl domains only - use :code:`channel` for 1d domain)
+        * :code: `polygon` (or :code:`region`)
 
         Combine contexts:
-        - [context1]/[context2] ...: Combine multiple contexts to filter the times further ('/' delim).
 
-        The returned column names will be in the format 'context/data_type/location' e.g. 'channel/flow/FC01.1_R'.
-        The data_type name in the column heading will be identical to the data type name passed into the
-        function e.g. if 'h' is used instead of 'water level', then the return will be 'node/h/FC01.1_R.1'.
+        * :code:`[context1]/[context2] ...`: Combine multiple contexts to filter the times further ('/' delim).
+
+        The returned column names will be in the format :code:¬context/data_type/location`
+        e.g. :code:`channel/flow/FC01.1_R`. The data_type name in the column heading will be identical to the data type
+        name passed into the function e.g. if :code:`h` is used instead of :code:`water level`,
+        then the return will be :code:`node/h/FC01.1_R.1`.
 
         Parameters
         ----------
@@ -472,7 +496,7 @@ class TPC(INFO, ITimeSeries2D):
         2.983334             8.670                 1.348
         3.000000             8.391                 1.333
 
-        Extracting all flow results
+        Extracting all :code:`flow` results
 
         >>> res.time_series(None, 'flow')
         Time (h)  channel/flow/ds1  ...  channel/flow/FC_weir1

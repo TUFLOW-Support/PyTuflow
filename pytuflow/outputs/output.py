@@ -1,9 +1,10 @@
 from abc import ABC, abstractmethod
 from datetime import datetime, timezone
+from typing import Union
 
 import pandas as pd
 
-from pytuflow.pytuflow_types import PathLike, TimeLike, PlotExtractionLocation, PlotExtractionDataType
+from pytuflow.pytuflow_types import PathLike, TimeLike, PlotExtractionLocation
 
 
 class Output(ABC):
@@ -110,16 +111,16 @@ class Output(ABC):
         pass
 
     @abstractmethod
-    def time_series(self, locations: PlotExtractionLocation, data_types: PlotExtractionDataType,
+    def time_series(self, locations: PlotExtractionLocation, data_types: Union[str, list[str]],
                     time_fmt: str = 'relative') -> pd.DataFrame:
         """Returns a time series dataframe for the given location and data type. The return DataFrame may have multiple
         time columns if the output time series data do not share a common time key.
 
         Parameters
         ----------
-        locations : :doc:`pytuflow.pytuflow_types.PlotExtractionLocation`
+        locations : :doc:`PlotExtractionLocation <pytuflow.pytuflow_types.PlotExtractionLocation>`
             The location to extract the time series data for.
-        data_types : :doc:`pytuflow.pytuflow_types.PlotExtractionDataType`
+        data_types : str | list[str]
             The data type to extract the time series data for.
         time_fmt : str, optional
             The format for the time column. Options are 'relative' or 'absolute'.
@@ -132,15 +133,15 @@ class Output(ABC):
         pass
 
     @abstractmethod
-    def section(self, locations: PlotExtractionLocation, data_types: PlotExtractionDataType,
+    def section(self, locations: PlotExtractionLocation, data_types: Union[str, list[str]],
                 time: TimeLike) -> pd.DataFrame:
         """Returns a section dataframe for the given location and data type.
 
         Parameters
         ----------
-        locations : :doc:`pytuflow.pytuflow_types.PlotExtractionLocation`
+        locations : :doc:`PlotExtractionLocation <pytuflow.pytuflow_types.PlotExtractionLocation>`
             The location to extract the section data for.
-        data_types : :doc:`pytuflow.pytuflow_types.PlotExtractionDataType`
+        data_types : str | list[str]
             The data type to extract the section data for.
         time : TimeLike
             The time to extract the section data for.
@@ -153,15 +154,15 @@ class Output(ABC):
         pass
 
     @abstractmethod
-    def curtain(self, locations: PlotExtractionLocation, data_types: PlotExtractionDataType,
+    def curtain(self, locations: PlotExtractionLocation, data_types: Union[str, list[str]],
                 time: TimeLike) -> pd.DataFrame:
         """Returns a dataframe containing curtain plot data for the given location and data type.
 
         Parameters
         ----------
-        locations : :doc:`pytuflow.pytuflow_types.PlotExtractionLocation`
+        locations : :doc:`PlotExtractionLocation <pytuflow.pytuflow_types.PlotExtractionLocation>`
             The location to extract the curtain data for.
-        data_types : :doc:`pytuflow.pytuflow_types.PlotExtractionDataType`
+        data_types : str | list[str]
             The data type to extract the curtain data for.
         time : TimeLike
             The time to extract the curtain data for.
@@ -174,15 +175,15 @@ class Output(ABC):
         pass
 
     @abstractmethod
-    def profile(self, locations: PlotExtractionLocation, data_types: PlotExtractionDataType,
+    def profile(self, locations: PlotExtractionLocation, data_types: Union[str, list[str]],
                 time: TimeLike) -> pd.DataFrame:
         """Returns a dataframe containing vertical profile data for the given location and data type.
 
         Parameters
         ----------
-        locations : :doc:`pytuflow.pytuflow_types.PlotExtractionLocation`
+        locations : :doc:`PlotExtractionLocation <pytuflow.pytuflow_types.PlotExtractionLocation>`
             The location to extract the profile data for.
-        data_types : :doc:`pytuflow.pytuflow_types.PlotExtractionDataType`
+        data_types : str | list[str]
             The data type to extract the profile data for.
         time : TimeLike
             The time to extract the profile data for.
