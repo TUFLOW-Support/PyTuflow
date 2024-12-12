@@ -266,6 +266,21 @@ class Test_TPC_NC(TestCase):
         self.assertEqual(10, len(res.data_types('pit10')))
         self.assertEqual(13, len(res.data_types('1d')))
 
+    def test_ids(self):
+        p = './tests/nc_ts/EG15_001.tpc'
+        res = TPC(p)
+        self.assertEqual(58, len(res.ids()))
+        self.assertEqual(30, len(res.ids('channel')))
+        self.assertEqual(34, len(res.ids('node')))
+
+    def test_maximums(self):
+        p = './tests/nc_ts/EG15_001.tpc'
+        res = TPC(p)
+        df = res.maximum('pit10', 'q')
+        self.assertEqual((1, 2), df.shape)
+        df = res.maximum('pit10', ['q', 'h'])
+        self.assertEqual((1, 4), df.shape)
+
 
 class Test_TPC_2019(TestCase):
 

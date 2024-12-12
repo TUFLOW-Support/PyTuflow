@@ -794,7 +794,8 @@ class INFO(TimeSeries, ITimeSeries1D):
         def col_names(x):
             x1 = x.split('/')
             t = len(x1) > 2  # is time column
-            dtype = x1[0] if t else x1[1]
+            dtype = x1[1] if t else x1[0]
+            dtype = get_standard_data_type_name(dtype)
             c = 'node' if dtype in ['water level', 'energy', 'volume', 'mass balance', 'node flow regime'] else 'channel'
             return f'{x1[0]}/{c}/{x1[1]}/{x1[2]}' if t else f'{c}/{x1[0]}/{x1[1]}'
 
