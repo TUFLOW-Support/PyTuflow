@@ -281,6 +281,20 @@ class Test_TPC_NC(TestCase):
         df = res.maximum('pit10', ['q', 'h'])
         self.assertEqual((1, 4), df.shape)
 
+    def test_time_series(self):
+        p = './tests/nc_ts/EG15_001.tpc'
+        res = TPC(p)
+        df = res.time_series('po_line', 'flow')
+        self.assertEqual((181, 1), df.shape)
+        df = res.time_series('po', ['q', 'h', 'vol'])
+        self.assertEqual((181, 3), df.shape)
+
+    def test_section(self):
+        p = './tests/nc_ts/EG15_001.tpc'
+        res = TPC(p)
+        df = res.section('pipe1', ['bed level', 'max water level'], 0.5)
+        self.assertEqual((10, 6), df.shape)
+
 
 class Test_TPC_2019(TestCase):
 
