@@ -7,7 +7,7 @@
     "velocity": ["v", "velocity", "velocities"],
     "flow": ["q", "flows?", "discharges?"],
     "volume": ["vols?", "volumes?", "vl", "node(?:\\s|_|-)?volumes?"],
-    "bed level": ["bed(?:\\s|_|-)?levels?", "bed", "bathymetry", "bathy", "bathymetries", "z", "ground(?:\\s|_|-)?(?:levels?)?"],
+    "bed level": ["bed(?:\\s|_|-)?levels?", "bed", "bathymetry", "bathy", "bathymetries", "z", "ground(?:\\s|_|-)?(?:levels?)?", "bed(?:\\s|_|-)?elevations?"],
     "pipes": ["pipes?", "culverts?", "conduits?", "culverts?(?:\\s|_|-)(?:and)?(?:\\s|_|-)pipes?", "culverts?(?:\\s|_|-)?pipes?", "culverts?(?:\\s|_|-)?conduits?", "culverts?(?:\\s|_|-)?conduits?(?:\\s|_|-)?pipes?"],
     "pits": ["pits?", "pit(?:\\s|_|-)?levels?"],
     "flow integral": ["qi", "integral(?:\\s|_|-)?flows?", "flow(?:\\s|_|-)?integrals?", "cq", "cumulative(?:\\s|_|-)?flows?"],

@@ -299,9 +299,6 @@ class Test_TPC_NC(TestCase):
 class Test_TPC_2019(TestCase):
 
     def test_load(self):
-        pass
-
-    def test_load_channel_losses(self):
         p = './tests/2020/EG15_001.tpc'
         res = TPC(p)
         self.assertEqual('EG15_001', res.name)
@@ -309,38 +306,40 @@ class Test_TPC_2019(TestCase):
     def test_channel_count(self):
         p = './tests/2019/M03_5m_001.tpc'
         res = TPC(p)
-        self.assertEqual(3, res.channel_count())
+        self.assertEqual(3, res.channel_count)
 
     def test_node_count(self):
         p = './tests/2019/M03_5m_001.tpc'
         res = TPC(p)
-        self.assertEqual(6, res.node_count())
+        self.assertEqual(6, res.node_count)
 
     def test_rl_count(self):
         p = './tests/2019/M03_5m_001.tpc'
         res = TPC(p)
-        self.assertEqual(3, res.rl_count())
+        self.assertEqual(1, res.rl_point_count)
+        self.assertEqual(1, res.rl_line_count)
+        self.assertEqual(1, res.rl_poly_count)
 
     def test_channel_ids(self):
         p = './tests/2019/M03_5m_001.tpc'
         res = TPC(p)
-        self.assertEqual(3, len(res.channel_ids()))
+        self.assertEqual(3, len(res.ids('channel')))
 
     def test_channel_ids_2(self):
         p = './tests/2020/EG15_001.tpc'
         res = TPC(p)
-        ids = res.channel_ids('entry loss')
+        ids = res.ids('entry loss')
         self.assertEqual(18, len(ids))
 
     def test_node_ids(self):
         p = './tests/2019/M03_5m_001.tpc'
         res = TPC(p)
-        self.assertEqual(6, len(res.node_ids()))
+        self.assertEqual(6, len(res.ids('node')))
 
     def test_rl_ids(self):
         p = './tests/2019/M03_5m_001.tpc'
         res = TPC(p)
-        self.assertEqual(3, len(res.rl_ids()))
+        self.assertEqual(3, len(res.ids('rl')))
 
     def test_time_series(self):
         p = './tests/2019/M03_5m_001.tpc'
@@ -353,26 +352,14 @@ class Test_TPC_2019(TestCase):
     def test_long_plot(self):
         p = './tests/2020/EG15_001.tpc'
         res = TPC(p)
-        df = res.long_plot('pipe1', ['bed elevation', 'water level', 'pipes', 'pits'], 1)
-        self.assertEqual((10, 7), df.shape)
+        df = res.section('pipe1', ['bed elevation', 'water level', 'pipes', 'pits'], 1)
+        self.assertEqual((10, 8), df.shape)
 
     def test_all_results(self):
         p = './tests/2020/EG15_001.tpc'
         res = TPC(p)
         df = res.time_series(None, None)
         self.assertEqual((37, 246), df.shape)
-
-    def test_maximum_types(self):
-        p = './tests/2020/EG15_001.tpc'
-        res = TPC(p)
-        result_types = res.maximum_result_types()
-        self.assertEqual(3, len(result_types))
-
-    def test_maximum_types_2(self):
-        p = './tests/2020/EG15_001.tpc'
-        res = TPC(p)
-        result_types = res.maximum_result_types('FC01.1_R')
-        self.assertEqual(2, len(result_types))
 
     def test_maximums(self):
         p = './tests/2020/EG15_001.tpc'

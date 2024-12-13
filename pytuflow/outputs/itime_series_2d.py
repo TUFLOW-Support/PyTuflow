@@ -100,7 +100,7 @@ class ITimeSeries2D(ABC):
 
         # ids
         if ctx:
-            df = df[df['id'].isin(ctx)]
+            df = df[df['id'].str.lower().isin(ctx)]
 
         return df if not df.empty else pd.DataFrame(columns=['id', 'data_type', 'geometry', 'start', 'end', 'dt', 'domain'])
 

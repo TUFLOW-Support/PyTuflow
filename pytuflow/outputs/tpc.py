@@ -596,7 +596,7 @@ class TPC(INFO, ITimeSeries2D):
             if df is not None:
                 data_type = get_standard_data_type_name(data_type)
                 self._time_series_data[data_type] = df
-                if data_type != 'flow integral':
+                if df.columns.isin(self.node_info.index).all():
                     self._nd_res_types.append(data_type)
 
         # load channel time series
@@ -743,7 +743,12 @@ class TPC(INFO, ITimeSeries2D):
     def _load_po_info(self) -> pd.DataFrame:
         d = {'P': 'point', 'L': 'line', 'R': 'polygon'}
         po_info = {'id': [], 'data_type': [], 'geometry': [], 'start': [], 'end': [], 'dt': []}
-        plot_objs = self._gis_plot_objects()
+        if self._time_series_data_2d:
+            plot_objs = self._gis_plot_objects()
+            if plot_objs is None:
+                logger.warning('TPC._load_po_info(): Using TPC to guess PO geometry...')
+                plot_objs = self._geom_from_tpc()  # derive geometry from tpc rather than the gis/[...]_PLOT.csv
+
         for dtype, vals in self._time_series_data_2d.items():
             for df1 in vals:
                 dt = np.round((df1.index[1] - df1.index[0]) * 3600., decimals=2)
@@ -768,6 +773,22 @@ class TPC(INFO, ITimeSeries2D):
                 logger.warning(f'TPC._gis_plot_objects(): Error loading GIS Plot Objects: {e}')
         else:
             logger.error('TPC._gis_plot_objects(): Could not find GIS Plot Objects property.')
+
+    def _geom_from_tpc(self):
+        d = AppendDict()
+        df = pd.DataFrame(columns=['geom'])
+        df.index.name = 'id'
+        for prop, value in self.tpc_reader.iter_properties('^2D', regex=True):
+            data_type = re.sub(r'^2D (Point|Line|Region)', '', prop).split('[', 1)[0].strip()
+            geom = re.findall('(Point|Line|Region)', prop)[0][0]
+            dtype = get_standard_data_type_name(data_type)
+            d[dtype] = geom
+            i = len(d[dtype]) - 1
+            df1 = self._time_series_data_2d[dtype][i]
+            if df.index.str.isin(df1.columns).any():
+                logger.warning('TPC._geom_from_tpc(): Duplicate IDs found in 2D results. Using the last instance.')
+            df = pd.concat([df, pd.DataFrame({'geom': geom}, index=df1.columns)], axis=0)
+        return df
 
     def _load_rl_info(self) -> pd.DataFrame:
         d = {'water level': 'point', 'flow': 'line', 'volume': 'polygon'}
