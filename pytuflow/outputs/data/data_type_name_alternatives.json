@@ -45,6 +45,15 @@
     "ground water velocity": ["gwv\\s?\\d*", "gw(?:\\s|_|-)?velocities?(?:\\s|_|-)?\\d*", "ground(?:\\s|_|-)?water(?:\\s|_|-)?velocities?(?:\\s|_|-)?\\d*", "ground(?:\\s|_|-)?water(?:\\s|_|-)?v(?:\\s|_|-)?\\d*"],
     "ground water u-velocity": ["gwvu\\s?\\d*", "gw(?:\\s|_|-)?u-?vel(?:ocit(?:y|ies))(?:\\s|_|-)?\\d*", "ground(?:\\s|_|-)?water(?:\\s|_|-)?u-?vel(?:ocit(?:y|ies))(?:\\s|_|-)?\\d*", "ground(?:\\s|_|-)?water(?:\\s|_|-)?vu(?:\\s|_|-)?\\d*"],
     "ground water v-velocity": ["gwvv\\s?\\d*", "gw(?:\\s|_|-)?v-?vel(?:ocit(?:y|ies))(?:\\s|_|-)?\\d*", "ground(?:\\s|_|-)?water(?:\\s|_|-)?v-?vel(?:ocit(?:y|ies))(?:\\s|_|-)?\\d*", "ground(?:\\s|_|-)?water(?:\\s|_|-)?vv(?:\\s|_|-)?\\d*"],
-    "ground water volume": ["gwvl\\s?\\d*", "gw(?:\\s|_|-)?vols?(?:\\s|_|-)?\\d*", "ground(?:\\s|_|-)?water(?:\\s|_|-)?vols?(?:\\s|_|-)?\\d*", "ground(?:\\s|_|-)?water(?:\\s|_|-)?vl(?:\\s|_|-)?\\d*"]
+    "ground water volume": ["gwvl\\s?\\d*", "gw(?:\\s|_|-)?vols?(?:\\s|_|-)?\\d*", "ground(?:\\s|_|-)?water(?:\\s|_|-)?vols?(?:\\s|_|-)?\\d*", "ground(?:\\s|_|-)?water(?:\\s|_|-)?vl(?:\\s|_|-)?\\d*"],
+    "salt flux": ["salt(?:\\s|_|-)?flux(?:es)?", "salt(?:\\s|_|-)?discharges?", "salt(?:\\s|_|-)?flows?"],
+    "temp flux": ["temp(?:\\s|_|-)?flux(?:es)?", "temp(?:\\s|_|-)?discharges?", "temp(?:\\s|_|-)?flows?"],
+    "sed \\d flux": ["sed(?:\\s|_|-)?\\d(?:\\s|_|-)?flux(?:es)?", "sed(?:\\s|_|-)?\\d(?:\\s|_|-)?discharges?", "sed(?:\\s|_|-)?\\d(?:\\s|_|-)?flows?"],
+    "trace \\d flux": ["trace(?:\\s|_|-)?\\d(?:\\s|_|-)?flux(?:es)?", "trace(?:\\s|_|-)?\\d(?:\\s|_|-)?discharges?", "trace(?:\\s|_|-)?\\d(?:\\s|_|-)?flows?"],
+    "sed \\d bedload flux": ["sed(?:\\s|_|-)?\\d(?:\\s|_|-)?bedload(?:\\s|_|-)?flux(?:es)?", "sed(?:\\s|_|-)?\\d(?:\\s|_|-)?bedload(?:\\s|_|-)?discharges?", "sed(?:\\s|_|-)?\\d(?:\\s|_|-)?bedload(?:\\s|_|-)?flows?"],
+    "temperature": ["temp(?:\\s|_|-)?(?:levels?)?", "temperature(?:\\s|_|-)?(?:levels?)?", "temperatures?"],
+    "salinity": ["sal(?:\\s|_|-)?(?:levels?)?", "salinity(?:\\s|_|-)?(?:levels?)?", "salinities?"],
+    "sediment fraction \\d concentration": ["sed(?:\\s|_|-)?\\d(?:\\s|_|-)?fraction(?:\\s|_|-)?concentrations?", "sed(?:\\s|_|-)?\\d(?:\\s|_|-)?fraction(?:\\s|_|-)?conc(?:s)?", "sed(?:\\s|_|-)?\\d(?:\\s|_|-)?fraction(?:\\s|_|-)?conc(?:s)?", "sed(?:\\s|_|-)?\\d(?:\\s|_|-)?fraction(?:\\s|_|-)?concs?"],
+    "tracer \\d concentration": ["tracer?(?:\\s|_|-)?\\d(?:\\s|_|-)?concentrations?", "tracer?(?:\\s|_|-)?\\d(?:\\s|_|-)?conc(?:s)?", "tracer?(?:\\s|_|-)?\\d(?:\\s|_|-)?conc(?:s)?", "tracer?(?:\\s|_|-)?\\d(?:\\s|_|-)?concs?"]
   }
 }

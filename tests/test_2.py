@@ -14,6 +14,117 @@ from pytuflow.results.iterator_util import Iterator
 from pytuflow.results.fv_bc_tide_curtain.fv_bc_tide import FVBCTide
 
 
+class Test_Info_2013(unittest.TestCase):
+
+    def test_load(self):
+        p = './tests/2013/M04_5m_001_1d.info'
+        res = INFO(p)
+        self.assertEqual('M04_5m_001', res.name)
+
+    def test_not_info(self):
+        p = './tests/2013/EG00_001_Scen_1+Scen_2.2dm.info'
+        try:
+            res = INFO(p)
+            raise AssertionError('Should have raised an exception')
+        except ValueError:
+            pass
+
+    def test_blank_info(self):
+        p = './tests/2013/M04_5m_001_1d_blank.info'
+        try:
+            res = INFO(p)
+            raise AssertionError('Should have raised an exception')
+        except EOFError:
+            pass
+
+    def test_channels(self):
+        p = './tests/2013/M04_5m_001_1d.info'
+        res = INFO(p)
+        self.assertEqual(54, res.channel_count)
+        self.assertEqual(54, len(res.ids('channel')))
+        self.assertEqual(54, len(res.ids('q')))
+        self.assertEqual(2, len(res.data_types('channel')))
+        self.assertEqual(2, len(res.data_types('ds1')))
+
+    def test_nodes(self):
+        p = './tests/2013/M04_5m_001_1d.info'
+        res = INFO(p)
+        self.assertEqual(55, res.node_count)
+        self.assertEqual(55, len(res.ids('node')))
+        self.assertEqual(55, len(res.ids('h')))
+        self.assertEqual(1, len(res.data_types('node')))
+        self.assertEqual(1, len(res.data_types('ds1.1')))
+
+    def test_id_data_type_context(self):
+        p = './tests/2013/M04_5m_001_1d.info'
+        res = INFO(p)
+        self.assertEqual(109, len(res.ids('1d')))
+        self.assertEqual(3, len(res.data_types('1d')))
+
+    def test_times(self):
+        p = './tests/2013/M04_5m_001_1d.info'
+        res = INFO(p)
+        self.assertEqual(181, len(res.times()))
+        self.assertEqual(181, len(res.times(fmt='absolute')))
+
+    def test_time_series(self):
+        p = './tests/2013/M04_5m_001_1d.info'
+        res = INFO(p)
+        ts = res.time_series('ds1', 'q')
+        self.assertEqual((181, 1), ts.shape)
+        ts = res.time_series(['FC01.24.1', 'FC01.25.1'], 'h')
+        self.assertEqual((181, 2), ts.shape)
+        ts = res.time_series(None, None)
+        self.assertEqual((181, 163), ts.shape)
+        ts = res.time_series('ds1', None)
+        self.assertEqual((181, 2), ts.shape)
+        ts = res.time_series(None, 'flow')
+        self.assertEqual((181, 54), ts.shape)
+        ts = res.time_series('ds1', 'v', time_fmt='absolute')
+        self.assertEqual((181, 1), ts.shape)
+
+    def test_maximums(self):
+        p = './tests/2013/M04_5m_001_1d.info'
+        res = INFO(p)
+        df = res.maximum(['ds1', 'ds2'], ['flow', 'velocity'])
+        self.assertEqual((2, 4), df.shape)
+        df = res.maximum(['FC01.24.1', 'FC01.25.1'], ['h'])
+        self.assertEqual((2, 2), df.shape)
+        df = res.maximum(['ds1', 'FC01.24.1'], ['flow', 'level'])
+        self.assertEqual((2, 4), df.shape)
+        df = res.maximum('ds1', None)
+        self.assertEqual((1, 4), df.shape)
+        df = res.maximum(None, 'flow')
+        self.assertEqual((54, 2), df.shape)
+        df = res.maximum(None, None)
+        self.assertEqual((109, 6), df.shape)
+        df = res.maximum('ds1', 'flow', time_fmt='absolute')
+        self.assertEqual((1, 2), df.shape)
+
+    def test_connectivity(self):
+        p = './tests/2013/M04_5m_001_1d.info'
+        res = INFO(p)
+        df = res.connectivity(['ds1', 'ds2'])
+        self.assertEqual((2, 10), df.shape)
+
+    def test_data_types_section(self):
+        p = './tests/2013/M04_5m_001_1d.info'
+        res = INFO(p)
+        self.assertEqual(5, len(res.data_types('section')))
+
+    def test_long_plot(self):
+        p = './tests/2013/M04_5m_001_1d.info'
+        res = INFO(p)
+        df = res.section('ds1', ['bed level', 'water level', 'max water level', 'pits'], 1)
+        self.assertEqual((12, 8), df.shape)
+
+    def test_long_plot_2(self):
+        p = './tests/2013/M04_5m_001_1d.info'
+        res = INFO(p)
+        df = res.section(['FC01.1_R', 'FC01.36'], ['bed level', 'water level', 'pipes'], 1)
+        self.assertEqual((4, 7), df.shape)
+
+
 class Test_TPC_2016(TestCase):
 
     def test_load(self):
@@ -368,6 +479,70 @@ class Test_TPC_2019(TestCase):
         self.assertEqual((52, 6), df.shape)
 
 
+class Test_TPC_Frankenmodel(TestCase):
+
+    def test_load(self):
+        p = './tests/2021/frankenmodel.tpc'
+        res = TPC(p)
+        self.assertEqual('frankenmodel', res.name)
+
+    def test_times(self):
+        p = './tests/2021/frankenmodel.tpc'
+        res = TPC(p)
+        times = res.times()
+        self.assertEqual(73, len(times))
+        times = res.times('2d')
+        self.assertEqual(73, len(times))
+        times = res.times('1d')
+        self.assertEqual(0, len(times))
+        times = res.times('ADCP1')
+        self.assertEqual(73, len(times))
+
+    def test_ids(self):
+        p = './tests/2021/frankenmodel.tpc'
+        res = TPC(p)
+        ids = res.ids()
+        self.assertEqual(9, len(ids))
+        ids = res.ids('2d')
+        self.assertEqual(9, len(ids))
+        ids = res.ids('h')
+        self.assertEqual(3, len(ids))
+        ids = res.ids('sal')
+        self.assertEqual(3, len(ids))
+        ids = res.ids('salt flux')
+        self.assertEqual(6, len(ids))
+        ids = res.ids('sed 1 flux')
+        self.assertEqual(6, len(ids))
+
+    def test_data_types(self):
+        p = './tests/2021/frankenmodel.tpc'
+        res = TPC(p)
+        dtypes = res.data_types()
+        self.assertEqual(18, len(dtypes))
+        dtypes = res.data_types('ADCP1')
+        self.assertEqual(9, len(dtypes))
+        dtypes = res.data_types('ns1')
+        self.assertEqual(9, len(dtypes))
+
+    def test_maximums(self):
+        p = './tests/2021/frankenmodel.tpc'
+        res = TPC(p)
+        df = res.maximum('ADCP1', 'tracer 1 conc')
+        self.assertEqual((1, 2), df.shape)
+        df = res.maximum('ADCP1', 'tracer conc')
+        self.assertTrue(df.empty)
+
+    def test_time_series(self):
+        p = './tests/2021/frankenmodel.tpc'
+        res = TPC(p)
+        ts = res.time_series(None, None)
+        self.assertEqual((73, 81), ts.shape)
+        ts = res.time_series('ADCP1', None)
+        self.assertEqual((73, 9), ts.shape)
+        ts = res.time_series('ns1', 'sed 1 bedload flux')
+        self.assertEqual((73, 1), ts.shape)
+
+
 class Test_GPKG_TS_2023(TestCase):
 
     def test_load(self):
@@ -645,117 +820,6 @@ class Test_FM_TS(unittest.TestCase):
         self.assertEqual(37, len(ts))
         ts = res.timesteps(dtype='absolute')
         self.assertEqual(37, len(ts))
-
-
-class Test_Info_2013(unittest.TestCase):
-
-    def test_load(self):
-        p = './tests/2013/M04_5m_001_1d.info'
-        res = INFO(p)
-        self.assertEqual('M04_5m_001', res.name)
-
-    def test_not_info(self):
-        p = './tests/2013/EG00_001_Scen_1+Scen_2.2dm.info'
-        try:
-            res = INFO(p)
-            raise AssertionError('Should have raised an exception')
-        except ValueError:
-            pass
-
-    def test_blank_info(self):
-        p = './tests/2013/M04_5m_001_1d_blank.info'
-        try:
-            res = INFO(p)
-            raise AssertionError('Should have raised an exception')
-        except EOFError:
-            pass
-
-    def test_channels(self):
-        p = './tests/2013/M04_5m_001_1d.info'
-        res = INFO(p)
-        self.assertEqual(54, res.channel_count)
-        self.assertEqual(54, len(res.ids('channel')))
-        self.assertEqual(54, len(res.ids('q')))
-        self.assertEqual(2, len(res.data_types('channel')))
-        self.assertEqual(2, len(res.data_types('ds1')))
-
-    def test_nodes(self):
-        p = './tests/2013/M04_5m_001_1d.info'
-        res = INFO(p)
-        self.assertEqual(55, res.node_count)
-        self.assertEqual(55, len(res.ids('node')))
-        self.assertEqual(55, len(res.ids('h')))
-        self.assertEqual(1, len(res.data_types('node')))
-        self.assertEqual(1, len(res.data_types('ds1.1')))
-
-    def test_id_data_type_context(self):
-        p = './tests/2013/M04_5m_001_1d.info'
-        res = INFO(p)
-        self.assertEqual(109, len(res.ids('1d')))
-        self.assertEqual(3, len(res.data_types('1d')))
-
-    def test_times(self):
-        p = './tests/2013/M04_5m_001_1d.info'
-        res = INFO(p)
-        self.assertEqual(181, len(res.times()))
-        self.assertEqual(181, len(res.times(fmt='absolute')))
-
-    def test_time_series(self):
-        p = './tests/2013/M04_5m_001_1d.info'
-        res = INFO(p)
-        ts = res.time_series('ds1', 'q')
-        self.assertEqual((181, 1), ts.shape)
-        ts = res.time_series(['FC01.24.1', 'FC01.25.1'], 'h')
-        self.assertEqual((181, 2), ts.shape)
-        ts = res.time_series(None, None)
-        self.assertEqual((181, 163), ts.shape)
-        ts = res.time_series('ds1', None)
-        self.assertEqual((181, 2), ts.shape)
-        ts = res.time_series(None, 'flow')
-        self.assertEqual((181, 54), ts.shape)
-        ts = res.time_series('ds1', 'v', time_fmt='absolute')
-        self.assertEqual((181, 1), ts.shape)
-
-    def test_maximums(self):
-        p = './tests/2013/M04_5m_001_1d.info'
-        res = INFO(p)
-        df = res.maximum(['ds1', 'ds2'], ['flow', 'velocity'])
-        self.assertEqual((2, 4), df.shape)
-        df = res.maximum(['FC01.24.1', 'FC01.25.1'], ['h'])
-        self.assertEqual((2, 2), df.shape)
-        df = res.maximum(['ds1', 'FC01.24.1'], ['flow', 'level'])
-        self.assertEqual((2, 4), df.shape)
-        df = res.maximum('ds1', None)
-        self.assertEqual((1, 4), df.shape)
-        df = res.maximum(None, 'flow')
-        self.assertEqual((54, 2), df.shape)
-        df = res.maximum(None, None)
-        self.assertEqual((109, 6), df.shape)
-        df = res.maximum('ds1', 'flow', time_fmt='absolute')
-        self.assertEqual((1, 2), df.shape)
-
-    def test_connectivity(self):
-        p = './tests/2013/M04_5m_001_1d.info'
-        res = INFO(p)
-        df = res.connectivity(['ds1', 'ds2'])
-        self.assertEqual((2, 10), df.shape)
-
-    def test_data_types_section(self):
-        p = './tests/2013/M04_5m_001_1d.info'
-        res = INFO(p)
-        self.assertEqual(5, len(res.data_types('section')))
-
-    def test_long_plot(self):
-        p = './tests/2013/M04_5m_001_1d.info'
-        res = INFO(p)
-        df = res.section('ds1', ['bed level', 'water level', 'max water level', 'pits'], 1)
-        self.assertEqual((12, 8), df.shape)
-
-    def test_long_plot_2(self):
-        p = './tests/2013/M04_5m_001_1d.info'
-        res = INFO(p)
-        df = res.section(['FC01.1_R', 'FC01.36'], ['bed level', 'water level', 'pipes'], 1)
-        self.assertEqual((4, 7), df.shape)
 
 
 class Test_HydTables(unittest.TestCase):

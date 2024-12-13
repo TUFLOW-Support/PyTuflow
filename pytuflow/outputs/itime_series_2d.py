@@ -55,15 +55,15 @@ class ITimeSeries2D(ABC):
         df = pd.DataFrame(columns=['id', 'data_type', 'geometry', 'start', 'end', 'dt', 'domain'])
 
         # domain
-        po, rl = False, False
+        filtered_something = False
         if not context or '2d' in ctx or 'po' in ctx:
-            po = True
+            filtered_something = True
             df = self.po_objs.copy()
             df['domain'] = '2d'
             df = self._context_refine_by_geometry(ctx, df)
             ctx = [x for x in ctx if x not in ['po', '2d']]
         if not context or '0d' in ctx or 'rl' in ctx:
-            rl = True
+            filtered_something = True
             df1 = self.rl_objs.copy()
             df1['domain'] = 'rl'
             df1 = self._context_refine_by_geometry(ctx, df1)
@@ -71,7 +71,7 @@ class ITimeSeries2D(ABC):
             ctx = [x for x in ctx if x not in ['rl', '0d']]
 
         # if no domain (including 1d) specified then get everything and let other filters do the work
-        if not po and not rl and '1d' not in context and 'node' not in context and 'channel' not in context:
+        if not filtered_something and '1d' not in context and 'node' not in context and 'channel' not in context:
             df = self.po_objs.copy()
             df['domain'] = '2d'
             df1 = self.rl_objs.copy()
@@ -81,6 +81,7 @@ class ITimeSeries2D(ABC):
         # geometry
         ctx1 = [x for x in ctx if x in ['point', 'line', 'polygon', 'region']]
         if ctx1:
+            filtered_something = True
             ctx1 = [x if x != 'region' else 'polygon' for x in ctx1]
             df = df[df['geometry'].isin(ctx1)]
             j = len(ctx) - 1
@@ -92,6 +93,7 @@ class ITimeSeries2D(ABC):
         ctx1 = [get_standard_data_type_name(x) for x in ctx]
         ctx1 = [x for x in ctx1 if x in df['data_type'].unique()]
         if ctx1:
+            filtered_something = True
             df = df[df['data_type'].isin(ctx1)]
             j = len(ctx) - 1
             for i, x in enumerate(reversed(ctx.copy())):
@@ -100,7 +102,14 @@ class ITimeSeries2D(ABC):
 
         # ids
         if ctx:
-            df = df[df['id'].str.lower().isin(ctx)]
+            df = df[df['id'].str.lower().isin(ctx)] if not df.empty else pd.DataFrame()
+            if not df.empty:
+                j = len(ctx) - 1
+                for i, x in enumerate(reversed(ctx.copy())):
+                    if df['id'].str.lower().isin([x.lower()]).any():
+                        ctx.pop(j - i)
+                if ctx and not filtered_something:
+                    df = pd.DataFrame()
 
         return df if not df.empty else pd.DataFrame(columns=['id', 'data_type', 'geometry', 'start', 'end', 'dt', 'domain'])
 

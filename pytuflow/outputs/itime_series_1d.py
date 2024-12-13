@@ -91,21 +91,21 @@ class ITimeSeries1D(ABC):
         df['domain'] = '1d'
 
         # domain
-        something = False
+        filtered_something = False
         if '1d' in ctx:
-            something = True
+            filtered_something = True
             ctx.remove('1d')
         if 'node' in ctx:
-            something = True
+            filtered_something = True
             df = df[df['geometry'] == 'point']
             ctx.remove('node')
         if 'channel' in ctx:
-            something = True
+            filtered_something = True
             df = df[df['geometry'] == 'line']
             ctx.remove('channel')
 
         # if no domain (including 2d/rl) specified then get everything and let other filters do the work
-        if not something and '0d' not in context and '2d' not in context and 'po' not in context and 'rl' not in context:
+        if not filtered_something and '0d' not in context and '2d' not in context and 'po' not in context and 'rl' not in context:
             df = self.oned_objs.copy()
             df['domain'] = '1d'
 
@@ -113,6 +113,7 @@ class ITimeSeries1D(ABC):
         ctx1 = [get_standard_data_type_name(x) for x in ctx]
         ctx1 = [x for x in ctx1 if x in df['data_type'].unique()]
         if ctx1:
+            filtered_something = True
             df = df[df['data_type'].isin(ctx1)]
             j = len(ctx) - 1
             for i, x in enumerate(reversed(ctx.copy())):
@@ -120,7 +121,14 @@ class ITimeSeries1D(ABC):
                     ctx.pop(j - i)
 
         # ids
-        if ctx:
-            df = df[df['id'].str.lower().isin(ctx)]
+        if ctx and not df.empty:
+            df = df[df['id'].str.lower().isin(ctx)] if not df.empty else pd.DataFrame()
+            if not df.empty:
+                j = len(ctx) - 1
+                for i, x in enumerate(reversed(ctx.copy())):
+                    if df['id'].str.lower().isin([x.lower()]).any():
+                        ctx.pop(j - i)
+                if ctx and not filtered_something:
+                    df = pd.DataFrame()
 
         return df if not df.empty else pd.DataFrame(columns=['id', 'data_type', 'geometry', 'start', 'end', 'dt', 'domain'])

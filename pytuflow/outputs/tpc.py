@@ -745,8 +745,8 @@ class TPC(INFO, ITimeSeries2D):
         po_info = {'id': [], 'data_type': [], 'geometry': [], 'start': [], 'end': [], 'dt': []}
         if self._time_series_data_2d:
             plot_objs = self._gis_plot_objects()
-            if plot_objs is None:
-                logger.warning('TPC._load_po_info(): Using TPC to guess PO geometry...')
+            if plot_objs is None or plot_objs.geom.dtype != np.dtype('O'):
+                logger.warning('TPC._load_po_info(): Missing or invalid PLOT.csv. Using TPC to guess PO geometry...')
                 plot_objs = self._geom_from_tpc()  # derive geometry from tpc rather than the gis/[...]_PLOT.csv
 
         for dtype, vals in self._time_series_data_2d.items():
@@ -785,9 +785,9 @@ class TPC(INFO, ITimeSeries2D):
             d[dtype] = geom
             i = len(d[dtype]) - 1
             df1 = self._time_series_data_2d[dtype][i]
-            if df.index.str.isin(df1.columns).any():
-                logger.warning('TPC._geom_from_tpc(): Duplicate IDs found in 2D results. Using the last instance.')
-            df = pd.concat([df, pd.DataFrame({'geom': geom}, index=df1.columns)], axis=0)
+            df2 = pd.DataFrame({'geom': geom}, index=df1.columns)
+            df = pd.concat([df, df2[~df2.index.isin(df.index)]], axis=0)
+            df.update(df2)
         return df
 
     def _load_rl_info(self) -> pd.DataFrame:

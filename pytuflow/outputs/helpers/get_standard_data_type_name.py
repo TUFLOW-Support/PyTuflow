@@ -26,5 +26,9 @@ def get_standard_data_type_name(name: str) -> str:
             return key
         for val in vals:
             if re.match(fr'^(?:t?max(?:imum)?(?:\s|_|-)?)?{val}(?:(?:\s|_|-)?t?max(?:imum)?)?$', name, re.IGNORECASE):
+                if '\\d' in key:
+                    n = re.findall(r'\d+', name)
+                    return key.replace('\\d', n[0]) if n else key
                 return key
+
     return name.lower()
