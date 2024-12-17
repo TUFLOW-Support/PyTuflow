@@ -82,7 +82,7 @@ class INFO(TimeSeries, ITimeSeries1D):
     def __init__(self, fpath: PathLike):
         super(INFO, self).__init__(fpath)
 
-        #: Path: The path to the 1D time-series .info output file.
+        #: Path: The path to the source output file.
         self.fpath = Path(fpath)
         #: str: The unit system used in the output file.
         self.units = 'si'
@@ -94,14 +94,12 @@ class INFO(TimeSeries, ITimeSeries1D):
         if not self.looks_like_this(self.fpath):
             raise FileTypeError(f'File does not look like a time series {self.__class__.__name__} file: {fpath}')
 
-        #: :doc:`TPCReader<pytuflow.outputs.helpers.TPCReader>`: The TPC reader for the .info file. The INFO file format uses the TPC format.
-        self.tpc_reader = TPCReader(self.fpath)
-
         # call after tpc_reader has been initialised so that we know the file can be loaded by the reader
         if self.looks_empty(fpath):
             raise EOFError(f'File is empty or incomplete: {fpath}')
 
         # private properties
+        self._tpc_reader = self._init_tpc_reader()
         self._time_series_data = AppendDict()
         self._maximum_data = AppendDict()
         self._nd_res_types = []
@@ -597,15 +595,19 @@ class INFO(TimeSeries, ITimeSeries1D):
 
     def _load(self) -> None:
         """Load the INFO file into memory. Called by the __init__ method."""
-        self.name = self.tpc_reader.get_property('Simulation ID')
-        self.units = 'si' if self.tpc_reader.get_property('Units') == 'METRIC' else 'us customary'
-        self.node_count = self.tpc_reader.get_property(r'Number (?:1D\s)?Nodes', 0, regex=True)
-        self.channel_count = self.tpc_reader.get_property(r'Number (?:1D\s)?Channels', 0, regex=True)
+        self.name = self._tpc_reader.get_property('Simulation ID')
+        self.units = 'si' if self._tpc_reader.get_property('Units') == 'METRIC' else 'us customary'
+        self.node_count = self._tpc_reader.get_property(r'Number (?:1D\s)?Nodes', 0, regex=True)
+        self.channel_count = self._tpc_reader.get_property(r'Number (?:1D\s)?Channels', 0, regex=True)
         self._load_node_info()
         self._load_chan_info()
         self._load_time_series()
         self._load_maximums()
         self._load_1d_info()
+
+    def _init_tpc_reader(self) -> TPCReader:
+        """Initialise the TPCReader object."""
+        return TPCReader(self.fpath)
 
     def _info_name_correction(self, name: str) -> str:
         """Correct the name of the file. Only required for INFO results and should be overerriden by subclasses."""
@@ -613,7 +615,7 @@ class INFO(TimeSeries, ITimeSeries1D):
 
     def _expand_property_path(self, prop: str, regex: bool = False, value: str = None) -> Path:
         """Expands the property value into a full path. Returns None if the property does not exist."""
-        prop_path = self.tpc_reader.get_property(prop, None, regex) if value is None else value
+        prop_path = self._tpc_reader.get_property(prop, None, regex) if value is None else value
         if prop_path not in [None, 'NONE']:
             if 'node info' in prop.lower() or 'channel info' in prop.lower():
                 prop_path = self._info_name_correction(prop_path)

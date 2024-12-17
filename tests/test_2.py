@@ -9,7 +9,7 @@ from pytuflow.fm import GXY
 from pytuflow.results.hyd_tables.hyd_tables import HydTables
 from pytuflow.outputs.info import INFO
 from pytuflow.outputs.tpc import TPC
-from pytuflow.results.gpkg_ts.gpkg_ts import GPKG_TS
+from pytuflow.outputs.gpkg_ts_1d import GPKG_TS_1D
 from pytuflow.results.iterator_util import Iterator
 from pytuflow.results.fv_bc_tide_curtain.fv_bc_tide import FVBCTide
 
@@ -543,85 +543,133 @@ class Test_TPC_Frankenmodel(TestCase):
         self.assertEqual((73, 1), ts.shape)
 
 
-class Test_GPKG_TS_2023(TestCase):
+class Test_GPKG_TS_1D(TestCase):
 
     def test_load(self):
         p = './tests/2023/M06_5m_003_SWMM_swmm_ts.gpkg'
-        res = GPKG_TS(p)
-        self.assertEqual('M06_5m_003_SWMM', res.sim_id)
+        res = GPKG_TS_1D(p)
+        self.assertEqual('M06_5m_003_SWMM', res.name)
+
+    def test_load_2(self):
+        p = './tests/2023/EG15_001_TS_1D.gpkg'
+        res = GPKG_TS_1D(p)
+        self.assertEqual('EG15_001', res.name)
 
     def test_not_gpkg(self):
         p = './tests/2023/projection.gpkg'
         try:
-            res = GPKG_TS(p)
+            res = GPKG_TS_1D(p)
             raise AssertionError('Should have raised an exception')
         except ValueError:
             pass
 
     def test_channel_count(self):
         p = './tests/2023/M06_5m_003_SWMM_swmm_ts.gpkg'
-        res = GPKG_TS(p)
-        self.assertEqual(18, res.channel_count())
+        res = GPKG_TS_1D(p)
+        self.assertEqual(18, res.channel_count)
+
+    def test_channel_count_2(self):
+        p = './tests/2023/EG15_001_TS_1D.gpkg'
+        res = GPKG_TS_1D(p)
+        self.assertEqual(30, res.channel_count)
 
     def test_node_count(self):
         p = './tests/2023/M06_5m_003_SWMM_swmm_ts.gpkg'
-        res = GPKG_TS(p)
-        self.assertEqual(22, res.node_count())
+        res = GPKG_TS_1D(p)
+        self.assertEqual(22, res.node_count)
+
+    def test_node_count_2(self):
+        p = './tests/2023/EG15_001_TS_1D.gpkg'
+        res = GPKG_TS_1D(p)
+        self.assertEqual(34, res.node_count)
+
+    def test_times(self):
+        p = './tests/2023/M06_5m_003_SWMM_swmm_ts.gpkg'
+        res = GPKG_TS_1D(p)
+        ts = res.times()
+        self.assertEqual(37, len(ts))
+
+    def test_times_2(self):
+        p = './tests/2023/EG15_001_TS_1D.gpkg'
+        res = GPKG_TS_1D(p)
+        ts = res.times()
+        self.assertEqual(181, len(ts))
 
     def test_channel_ids(self):
         p = './tests/2023/M06_5m_003_SWMM_swmm_ts.gpkg'
-        res = GPKG_TS(p)
-        self.assertEqual(18, len(res.channel_ids()))
+        res = GPKG_TS_1D(p)
+        self.assertEqual(18, len(res.ids('channel')))
+
+    def test_channel_ids_2(self):
+        p = './tests/2023/EG15_001_TS_1D.gpkg'
+        res = GPKG_TS_1D(p)
+        self.assertEqual(30, len(res.ids('channel')))
 
     def test_node_ids(self):
         p = './tests/2023/M06_5m_003_SWMM_swmm_ts.gpkg'
-        res = GPKG_TS(p)
-        self.assertEqual(22, len(res.node_ids()))
+        res = GPKG_TS_1D(p)
+        self.assertEqual(22, len(res.ids('node')))
+
+    def test_node_ids_2(self):
+        p = './tests/2023/EG15_001_TS_1D.gpkg'
+        res = GPKG_TS_1D(p)
+        self.assertEqual(34, len(res.ids('node')))
 
     def test_channel_result_types(self):
         p = './tests/2023/M06_5m_003_SWMM_swmm_ts.gpkg'
-        res = GPKG_TS(p)
-        self.assertEqual(5, len(res.channel_result_types()))
+        res = GPKG_TS_1D(p)
+        self.assertEqual(5, len(res.data_types('channel')))
+
+    def test_channel_result_types_2(self):
+        p = './tests/2023/EG15_001_TS_1D.gpkg'
+        res = GPKG_TS_1D(p)
+        self.assertEqual(9, len(res.data_types('channel')))
 
     def test_node_result_types(self):
         p = './tests/2023/M06_5m_003_SWMM_swmm_ts.gpkg'
-        res = GPKG_TS(p)
-        self.assertEqual(7, len(res.node_result_types()))
+        res = GPKG_TS_1D(p)
+        self.assertEqual(7, len(res.data_types('node')))
 
-    def test_ids(self):
-        p = './tests/2023/M06_5m_003_SWMM_swmm_ts.gpkg'
-        res = GPKG_TS(p)
-        self.assertEqual(40, len(res.ids('flow')))
-
-    def test_timesteps(self):
-        p = './tests/2023/M06_5m_003_SWMM_swmm_ts.gpkg'
-        res = GPKG_TS(p)
-        ts = res.timesteps()
-        self.assertEqual(37, len(ts))
+    def test_node_result_types_2(self):
+        p = './tests/2023/EG15_001_TS_1D.gpkg'
+        res = GPKG_TS_1D(p)
+        self.assertEqual(5, len(res.data_types('node')))
 
     def test_time_series(self):
         p = './tests/2023/M06_5m_003_SWMM_swmm_ts.gpkg'
-        res = GPKG_TS(p)
+        res = GPKG_TS_1D(p)
         ts = res.time_series('FC01.1_R', ['q', 'v'])
         self.assertEqual((37, 2), ts.shape)
 
+    def test_time_series_2(self):
+        p = './tests/2023/EG15_001_TS_1D.gpkg'
+        res = GPKG_TS_1D(p)
+        ts = res.time_series('FC01.1_R', ['q', 'v'])
+        self.assertEqual((181, 2), ts.shape)
+
     def test_connectivity(self):
         p = './tests/2023/M06_5m_003_SWMM_swmm_ts.gpkg'
-        res = GPKG_TS(p)
+        res = GPKG_TS_1D(p)
+        df = res.connectivity(['pipe2'])
+        self.assertEqual((7, 10), df.shape)
+
+    def test_connectivity_2(self):
+        p = './tests/2023/EG15_001_TS_1D.gpkg'
+        res = GPKG_TS_1D(p)
         df = res.connectivity(['pipe2'])
         self.assertEqual((7, 10), df.shape)
 
     def test_long_plot(self):
         p = './tests/2023/M06_5m_003_SWMM_swmm_ts.gpkg'
-        res = GPKG_TS(p)
-        df = res.long_plot('pipe1', ['Bed Level', 'water level'], 1)
-        self.assertEqual((10, 5), df.shape)
+        res = GPKG_TS_1D(p)
+        df = res.section('pipe1', ['Bed Level', 'water level'], 1)
+        self.assertEqual((10, 6), df.shape)
 
     def test_long_plot2(self):
         p = './tests/2023/M06_5m_003_SWMM_swmm_ts.gpkg'
-        res = GPKG_TS(p)
-        df = res.long_plot('pipe1', ['bed level', 'pipes', 'pits'], 1)
-        self.assertEqual((10, 6), df.shape)
+        res = GPKG_TS_1D(p)
+        df = res.section('pipe1', ['bed level', 'pipes', 'pits'], 1)
+        self.assertEqual((10, 7), df.shape)
 
     def test_long_plot3(self):
         p = './tests/2023/M06_5m_003_SWMM_swmm_ts.gpkg'

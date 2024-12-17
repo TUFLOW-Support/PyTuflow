@@ -545,7 +545,7 @@ class TPC(INFO, ITimeSeries2D):
 
     def _load(self) -> None:
         """Load the TPC file into memory. Called by the __init__ method."""
-        self.format = self.tpc_reader.get_property('Time Series Output Format', 'CSV')
+        self.format = self._tpc_reader.get_property('Time Series Output Format', 'CSV')
         if 'CSV' in self.format:
             self.format = 'CSV'  # it is possible to have both CSV and NC and CSV is a more complete format
 
@@ -553,12 +553,12 @@ class TPC(INFO, ITimeSeries2D):
             self._nc_file = self._expand_property_path('NetCDF Time Series')
             self._ncid = Dataset(self._nc_file, 'r')
 
-        self.reference_time = self.tpc_reader.get_property('Reference Time', self.reference_time)
+        self.reference_time = self._tpc_reader.get_property('Reference Time', self.reference_time)
 
         # rl counts - up here since it's easy to get and useful when loading time series and maximum data
-        self.rl_point_count = self.tpc_reader.get_property('Number Reporting Location Points', 0)
-        self.rl_line_count = self.tpc_reader.get_property('Number Reporting Location Lines', 0)
-        self.rl_poly_count = self.tpc_reader.get_property('Number Reporting Location Regions', 0)
+        self.rl_point_count = self._tpc_reader.get_property('Number Reporting Location Points', 0)
+        self.rl_line_count = self._tpc_reader.get_property('Number Reporting Location Lines', 0)
+        self.rl_poly_count = self._tpc_reader.get_property('Number Reporting Location Regions', 0)
 
         # 1d
         super()._load()
@@ -590,7 +590,7 @@ class TPC(INFO, ITimeSeries2D):
     def _load_time_series(self) -> None:
         """Load time-series data into memory."""
         # load node time series
-        for prop, _ in self.tpc_reader.iter_properties(start_after='1D Node Maximums', end_before='1D Channel Maximums'):
+        for prop, _ in self._tpc_reader.iter_properties(start_after='1D Node Maximums', end_before='1D Channel Maximums'):
             data_type = prop.replace('1D', '').strip()
             df = self._load_time_series_from_property(prop, data_type, '1D')
             if df is not None:
@@ -600,7 +600,7 @@ class TPC(INFO, ITimeSeries2D):
                     self._nd_res_types.append(data_type)
 
         # load channel time series
-        for prop, _ in self.tpc_reader.iter_properties(start_after='1D Channel Maximums', end_before='Number Reporting Location Points'):
+        for prop, _ in self._tpc_reader.iter_properties(start_after='1D Channel Maximums', end_before='Number Reporting Location Points'):
             data_type = prop.replace('1D', '').strip()
             df = self._load_time_series_from_property(prop, data_type, '1D')
             if df is not None:
@@ -633,7 +633,7 @@ class TPC(INFO, ITimeSeries2D):
                 self._time_series_data_rl['volume'] = df
 
         # 2d data
-        for prop, value in self.tpc_reader.iter_properties('^2D', regex=True):
+        for prop, value in self._tpc_reader.iter_properties('^2D', regex=True):
             data_type = re.sub(r'^2D (Point|Line|Region)', '', prop).split('[', 1)[0].strip()
             df = self._load_time_series_from_property(prop, data_type, '2D', value)
             if df is not None:
@@ -778,7 +778,7 @@ class TPC(INFO, ITimeSeries2D):
         d = AppendDict()
         df = pd.DataFrame(columns=['geom'])
         df.index.name = 'id'
-        for prop, value in self.tpc_reader.iter_properties('^2D', regex=True):
+        for prop, value in self._tpc_reader.iter_properties('^2D', regex=True):
             data_type = re.sub(r'^2D (Point|Line|Region)', '', prop).split('[', 1)[0].strip()
             geom = re.findall('(Point|Line|Region)', prop)[0][0]
             dtype = get_standard_data_type_name(data_type)

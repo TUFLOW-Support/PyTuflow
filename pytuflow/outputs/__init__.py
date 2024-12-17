@@ -1,6 +1,7 @@
 # entry points
 from .info import INFO
 from .tpc import TPC
+from .gpkg_ts_1d import GPKG_TS_1D
 
 # base classes
 from .itime_series_1d import ITimeSeries1D

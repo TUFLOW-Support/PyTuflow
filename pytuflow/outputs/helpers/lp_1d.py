@@ -12,8 +12,17 @@ class LP_1D:
         self._static_types = []
         self._temp_types = []
 
+        # get the case-sensitive ID from the chan_info index
+        ids1 = []
+        for id_ in ids:
+            try:
+                id1 = chan_info.index[chan_info.index.str.lower() == id_.lower()].values[0]
+                ids1.append(id1)
+            except IndexError:
+                raise ValueError(f'Could not find ID: {id_}')
+
         #: list[str]: The IDs to trace for connectivity
-        self.ids = ids
+        self.ids = ids1
         #: pd.DataFrame: Node information. Column headers are 'id', 'bed_level', 'top_level', 'nchannel', 'channels'
         self.node_info = node_info
         #: pd.DataFrame: Channel information. Column headers are 'id', 'us_node', 'ds_node', 'us_chan', 'ds_chan', 'length', 'us_invert', 'ds_invert', 'lbus_obvert', 'rbus_obvert', 'lbds_obvert', 'rbds_obvert'
