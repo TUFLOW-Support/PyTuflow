@@ -1,0 +1,46 @@
+Format Version == 2
+Units == METRIC
+Simulation ID == EG15_001
+Time Series Output Format == GPKG
+
+
+NetCDF Time Series == NONE
+GPKG Time Series == .\EG15_001_TS_1D.gpkg
+GPKG Time Series == .\EG15_001_TS_2D.gpkg
+GPKG Time Series == .\EG15_001_TS_RL.gpkg
+
+
+Number 1D Nodes == 34
+Number 1D Channels == 30
+
+1D Node Info == .\csv\EG15_001_1d_Node.csv
+1D Channel Info == .\csv\EG15_001_1d_Chan.csv
+
+1D Node Maximums == .\csv\EG15_001_1d_Nmx.csv
+1D Water Levels == NONE
+1D Node Volumes == NONE
+1D Flow Integrals == NONE
+1D Energy Levels == NONE
+1D Mass Balance Errors == NONE
+1D Node Regime == NONE
+
+1D Channel Maximums == .\csv\EG15_001_1d_Cmx.csv
+1D Flows == NONE
+1D Velocities == NONE
+1D Flow Areas == NONE
+1D Channel Losses == NONE
+1D Channel Regime == NONE
+
+Number Reporting Location Points == 1
+Reporting Location Points Water Levels == NONE
+Reporting Location Points Maximums == .\csv\EG15_001_RLP_Hmx.csv
+
+Number Reporting Location Lines == 1
+Reporting Location Lines Flows == NONE
+Reporting Location Lines Maximums == .\csv\EG15_001_RLL_Qmx.csv
+
+Number Reporting Location Regions == 1
+Reporting Location Regions Volumes == NONE
+Reporting Location Regions Maximums == .\csv\EG15_001_RLR_Volmx.csv
+
+2D Region 2D Region 2D Region 2D Region 2D Region 2D Point 2D Point 2D Point 2D Point 2D Point 2D Point 2D Point 2D Point 2D Line 2D Line 2D Line 

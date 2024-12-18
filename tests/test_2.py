@@ -479,6 +479,14 @@ class Test_TPC_2019(TestCase):
         self.assertEqual((52, 6), df.shape)
 
 
+class Test_TPC_GPKG(TestCase):
+
+    def test_load(self):
+        p = './tests/tpc_gpkg/EG15_001.tpc'
+        res = TPC(p)
+        self.assertEqual('EG15_001', res.name)
+
+
 class Test_TPC_Frankenmodel(TestCase):
 
     def test_load(self):

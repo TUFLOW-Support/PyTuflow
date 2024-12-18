@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 from netCDF4 import Dataset
 
+from pytuflow.outputs.gpkg_1d import GPKG1D
 from pytuflow.outputs.helpers.get_standard_data_type_name import get_standard_data_type_name
 from pytuflow.outputs.helpers.nc_ts import NC_TS
 from pytuflow.outputs.info import INFO
@@ -93,6 +94,9 @@ class TPC(INFO, ITimeSeries2D):
         self._nc_file = None
         self._ncid = None
         self._gis_layers_initialised = False
+        self._gpkg1d = None
+        self._gpkg2d = None
+        self._gpkgrl = None
 
         #: str: format of the results - options are 'CSV' or 'NC'. If both are specified, the NC will be preferred.
         self.format = 'CSV'
@@ -589,6 +593,10 @@ class TPC(INFO, ITimeSeries2D):
 
     def _load_time_series(self) -> None:
         """Load time-series data into memory."""
+        if self.format == 'GPKG':  # special approach
+            self._load_time_series_gpkg()
+            return
+
         # load node time series
         for prop, _ in self._tpc_reader.iter_properties(start_after='1D Node Maximums', end_before='1D Channel Maximums'):
             data_type = prop.replace('1D', '').strip()
@@ -647,8 +655,10 @@ class TPC(INFO, ITimeSeries2D):
             try:
                 if self.format == 'CSV':
                     df = self._load_time_series_csv(p)
-                else:
+                elif self.format == 'NC':
                     df = self._load_time_series_nc(data_type, domain)
+                else:  # GPKG
+                    df = self._load_time_series_gpkg(data_type, domain)
                 return df
             except Exception as e:
                 logger.warning(f'TPC._load_time_series_from_property(): Error loading from {prop}: {e}')
@@ -658,6 +668,24 @@ class TPC(INFO, ITimeSeries2D):
         if df is None or df.empty:
             logger.warning(f'TPC._load_time_series_nc(): No data found in NetCDF file for {dtype} for domain {domain}.')
         return df
+
+    def _load_time_series_gpkg(self):
+        for prop, value in self._tpc_reader.iter_properties('GPKG Time Series'):
+            if str(value).lower().endswith('_1d.gpkg'):
+                self._gpkg1d = GPKG1D(self._expand_property_path(prop, value=value))
+            elif str(prop).lower().endswith('_2d.gpkg'):
+                self._gpkg2d = self._expand_property_path(prop, value=value)
+            elif str(prop).lower().endswith('_rl.gpkg'):
+                self._gpkgrl = self._expand_property_path(prop, value=value)
+
+        if self._gpkg1d is not None:
+            self._time_series_data = self._gpkg1d._time_series_data
+
+        if self._gpkg2d is not None:
+            self._time_series_data_2d = self._gpkg2d._time_series_data_2d
+
+        if self._gpkgrl is not None:
+            self._time_series_data_rl = self._gpkgrl._time_series_data_rl
 
     def _post_process_channel_losses(self, df: pd.DataFrame, dtype: str) -> pd.DataFrame:
         d = {'Channel Entry Losses': 'Entry', 'Channel Additional Losses': 'Additional', 'Channel Exit Losses': 'Exit'}
