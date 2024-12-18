@@ -149,12 +149,11 @@ class INFO(TimeSeries, ITimeSeries1D):
     def times(self, context: str = None, fmt: str = 'relative') -> list[TimeLike]:
         """Returns all the available times for the given context.
 
-        The context is an optional input that can be used to filter the return further. For INFO results, the
-        returned times will be the same regardless of the context, so it is not recommended to pass in any
-        context. Valid contexts for INFO results are:
+        The context is an optional input that can be used to filter the return further.Valid contexts
+        for this class are:
 
         * :code:`None`: default - returns all available times
-        * :code:`1d`: returns all times
+        * :code:`1d`
         * :code:`node`: returns only node times
         * :code:`channel`: returns only channel times
         * :code:`[id]`: returns only data types for the given ID.
@@ -165,7 +164,7 @@ class INFO(TimeSeries, ITimeSeries1D):
         context : str, optional
             The context to filter the times by.
         fmt : str, optional
-            The format for the times. Options are 'relative' or 'absolute'.
+            The format for the times. Options are :code:`relative` or :code:`absolute`.
 
         Returns
         -------
@@ -185,10 +184,10 @@ class INFO(TimeSeries, ITimeSeries1D):
         """Returns all the available data types (result types) for the given context.
 
         The context is an optional input that can be used to filter the return further. Available
-        context objects for the INFO result class are:
+        context objects for this class are:
 
         * :code:`None`: default - returns all :code:`timeseries` data types
-        * :code:`1d`: same as :code:`None` as INFO results only contain 1D data
+        * :code:`1d`: same as :code:`None` as class only contains 1D data
         * :code:`node`
         * :code:`channel`
         * :code:`timeseries`: returns only IDs that have time series data.
@@ -239,16 +238,15 @@ class INFO(TimeSeries, ITimeSeries1D):
     def ids(self, context: str = None) -> list[str]:
         """Returns all the available IDs for the given context.
 
-        The context argument can be used to add a filter to the returned IDs. Available context objects for the INFO
-        result class are:
+        The context argument can be used to add a filter to the returned IDs. Available context objects for this
+        class are:
 
         * :code:`None`: default - returns all :code:`timeseries` IDs
-        * :code:`1d`: same as :code:`None` as INFO results only contain 1D data
+        * :code:`1d`: same as :code:`None` as class only contains 1D data
         * :code:`node`
         * :code:`channel`
-        * :code:`timeseries`: returns only IDs that have time series data. This will be all IDs for INFO results.
-        * :code:`section`: returns only IDs that have section data (i.e. long plot data). This is identical to 'nodes'
-          for INFO results
+        * :code:`timeseries`: returns only IDs that have time series data.
+        * :code:`section`: returns only IDs that have section data (i.e. long plot data).
         * :code:`[data_type]`: returns only IDs for the given data type. Shorthand data type names can be used.
 
         Parameters
@@ -293,7 +291,7 @@ class INFO(TimeSeries, ITimeSeries1D):
         It's possible to pass in a well known shorthand for the data type e.g. :code:`q` for :code:`flow`.
 
         The location can also be a contextual string, e.g. :code:`channel` to extract the maximum values for all
-        channels. For the INFO result class, the following contexts are available:
+        channels. The following contexts are available for this class:
 
         * :code:`None`: returns all maximum values
         * :code:`1d`: returns all maximum values (same as passing in None for locations)
@@ -358,13 +356,12 @@ class INFO(TimeSeries, ITimeSeries1D):
 
     def time_series(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
                     time_fmt: str = 'relative') -> pd.DataFrame:
-        """Returns a time-series DataFrame for the given location(s) and data type(s). INFO result types will
-        always share a common time index.
+        """Returns a time-series DataFrame for the given location(s) and data type(s).
 
         It's possible to pass in a well known shorthand for the data type e.g. :code:`q` for :code:`flow`.
 
         The location can also be a contextual string, e.g. :code:`channel` to extract the time-series values for all
-        channels. For the INFO result class, the following contexts are available:
+        channels. The following contexts are available for this class:
 
         * :code:`None`: returns all locations
         * :code:`1d`: returns all locations (same as passing in None for locations)
@@ -446,7 +443,7 @@ class INFO(TimeSeries, ITimeSeries1D):
         however one channel must be a common downstream location and the other
         channels must be upstream of this location.
 
-        The order of the locations are contained in the :code:`location` parameter does not matter as both directions are
+        The order of the locations in the :code:`location` parameter does not matter as both directions are
         checked, however it will be faster to include the upstream location first as this will be the first connection
         checked.
 
@@ -539,26 +536,7 @@ class INFO(TimeSeries, ITimeSeries1D):
                 df1.loc[~df1['ispipe'], dtype] = np.nan
                 df[dtype] = df1[dtype]
             elif dtype1 == 'pits':
-                y = []
-                for i, row in dfconn.iterrows():
-                    nd = row['us_node']
-                    pits = self.channel_info[(self.channel_info['ds_node'] == nd) & (self.channel_info['us_channel'] == '------')
-                                             & (self.channel_info['ds_channel'] == '------')].index.tolist()
-                    if pits:
-                        y.append(self.channel_info.loc[pits[0], 'lbus_obvert'])
-                    else:
-                        y.append(np.nan)
-                    if i + 1 == dfconn.shape[0]:
-                        nd = row['ds_node']
-                        pits = self.channel_info[(self.channel_info['us_node'] == nd) & (self.channel_info['us_channel'] == '------')
-                                                 & (self.channel_info['ds_channel'] == '------')].index.tolist()
-                        if pits:
-                            y.append(self.channel_info.loc[pits[0], 'lbus_obvert'])
-                        else:
-                            y.append(np.nan)
-                    else:
-                        y.append(np.nan)
-                df[dtype] = y
+                df[dtype] = self._get_pits(dfconn)
             elif 'tmax' in dtype1:
                 dtype1 = dtype1.replace('TMax', '').strip()
                 df[dtype] = self._maximum_data[dtype1][0].loc[df['node'], 'tmax'].tolist()
@@ -852,3 +830,29 @@ class INFO(TimeSeries, ITimeSeries1D):
             data_types = data_types1
 
         return locations, data_types
+
+    def _get_pits(self, dfconn: pd.DataFrame) -> np.ndarray:
+        """Get the pit data for the long plot."""
+        y = []
+        for i, row in dfconn.iterrows():
+            nd = row['us_node']
+            pits = self.channel_info[
+                (self.channel_info['ds_node'] == nd) & (self.channel_info['us_channel'] == '------')
+                & (self.channel_info['ds_channel'] == '------')].index.tolist()
+            if pits:
+                y.append(self.channel_info.loc[pits[0], 'lbus_obvert'])
+            else:
+                y.append(np.nan)
+            if i + 1 == dfconn.shape[0]:
+                nd = row['ds_node']
+                pits = self.channel_info[
+                    (self.channel_info['us_node'] == nd) & (self.channel_info['us_channel'] == '------')
+                    & (self.channel_info['ds_channel'] == '------')].index.tolist()
+                if pits:
+                    y.append(self.channel_info.loc[pits[0], 'lbus_obvert'])
+                else:
+                    y.append(np.nan)
+            else:
+                y.append(np.nan)
+
+        return np.array(y)

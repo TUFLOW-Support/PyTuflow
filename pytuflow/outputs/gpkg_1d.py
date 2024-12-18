@@ -10,15 +10,16 @@ from pytuflow.outputs.helpers import TPCReader
 from pytuflow.outputs.info import INFO
 from pytuflow.outputs.helpers.get_standard_data_type_name import get_standard_data_type_name
 from pytuflow.outputs.helpers.gpkg_time_series_extractor import gpkg_time_series_extractor
-from pytuflow.pytuflow_types import PathLike, TimeLike
+from pytuflow.pytuflow_types import PathLike, TimeLike, TuflowPath
+from pytuflow.util.time_util import parse_time_units_string
 
 if TYPE_CHECKING:
     from sqlite3 import Cursor
 
 
-class GPKG_TS_1D(INFO):
-    """Class for handling GeoPackage time series results. The GPKG time series format is a specific format published
-     by TUFLOW built on the GeoPackage standard.
+class GPKG1D(INFO):
+    """Class for handling 1D GeoPackage time series results (.gpkg). The GPKG time series format is a specific
+    format published by TUFLOW built on the GeoPackage standard.
 
     This class does not need to be explicitly closed as it will load the results into memory and closes any open files
     after initialisation.
@@ -33,14 +34,47 @@ class GPKG_TS_1D(INFO):
     FileNotFoundError
         Raised if the .info file does not exist.
     FileTypeError
-        Raises :class:`pytuflow.pytuflow_types.FileTypeError` if the file does not look like a time series .info file.
+        Raises :class:`pytuflow.pytuflow_types.FileTypeError` if the file does not look like a 1D time
+        series .gpkg file.
     EOFError
         Raised if the .info file is empty or incomplete.
 
     Examples
     --------
-    >>> from pytuflow.outputs import GPKG_TS_1D
-    >>> res = GPKG_TS_1D('path/to/file.gpkg')
+    Load a :code:`_swmm_ts.gpkg` file:
+
+    >>> from pytuflow.outputs import GPKG1D
+    >>> res = GPKG1D('path/to/output_swmm_ts.gpkg')
+
+    Querying all the available data types:
+
+    >>> res.data_types()
+    ['depth', 'water level', 'storage volume', 'lateral inflow', 'total inflow', 'flood losses', 'net lateral inflow',
+    'flow', 'channel depth', 'velocity', 'channel volume', 'channel capacity']
+
+    Querying all the available channel IDs:
+
+    >>> res.ids('channel')
+    ['FC01.1_R', 'FC01.2_R', 'FC04.1_C', 'Pipe1', 'Pipe10', 'Pipe11', 'Pipe13', 'Pipe14', 'Pipe15', 'Pipe16', 'Pipe2',
+    'Pipe20', 'Pipe3', 'Pipe4', 'Pipe6', 'Pipe7', 'Pipe8', 'Pipe9']
+
+    Extracting time series data for a given channel and data type:
+
+    >>> res.time_series('Pipe1', 'flow')
+    time      channel/flow/Pipe1
+    0.000000            0.000000
+    0.083333            0.000000
+    0.166667            0.000000
+    0.250000            0.000000
+    0.333333            0.000038
+    ...                      ...
+    2.666667            0.009748
+    2.750000            0.008384
+    2.833333            0.007280
+    2.916667            0.005999
+    3.000000            0.004331
+
+    For more examples, see the documentation for the individual methods.
     """
 
     _PLOTTING_CAPABILITY = ['timeseries', 'section']
@@ -52,6 +86,7 @@ class GPKG_TS_1D(INFO):
         # private properties
         self._gis_layer_p_name = None
         self._gis_layer_l_name = None
+        self._is_swmm = False
 
         super().__init__(fpath)
 
@@ -72,8 +107,13 @@ class GPKG_TS_1D(INFO):
         try:
             cur = conn.cursor()
             cur.execute('SELECT Version FROM TUFLOW_timeseries_version;')
-            _ = cur.fetchone()[0]
-            valid = True
+            version = Version(cur.fetchone()[0])
+            if version == Version('1.0'):
+                valid = True
+            else:
+                cur.execute('SELECT Type FROM Geom_L LIMIT 1;')
+                typ = cur.fetchone()[0]
+                valid = bool(re.findall(r'^Chan', typ))
         except Exception as e:
             valid = False
         finally:
@@ -128,25 +168,25 @@ class GPKG_TS_1D(INFO):
 
     def curtain(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
                 time: TimeLike) -> pd.DataFrame:
-        """Not supported for GPKG_TS_1D results. Raises a :code:`NotImplementedError`.
+        """Not supported for GPKG1D results. Raises a :code:`NotImplementedError`.
 
         See Also
         --------
         :meth:`has_plotting_capability` : Check if a given output class supports a given plotting capability before
            trying to use it.
         """
-        raise NotImplementedError('GPKG_TS_1D outputs do not support curtain plotting.')
+        raise NotImplementedError('GPKG1D outputs do not support curtain plotting.')
 
     def profile(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
                 time: TimeLike) -> pd.DataFrame:
-        """Not supported for GPKG_TS_1D results. Raises a :code:`NotImplementedError`.
+        """Not supported for GPKG1D results. Raises a :code:`NotImplementedError`.
 
         See Also
         --------
         :meth:`has_plotting_capability` : Check if a given output class supports a given plotting capability before
            trying to use it.
         """
-        raise NotImplementedError('GPKG_TS_1D outputs do not support vertical profile plotting.')
+        raise NotImplementedError('GPKG1D outputs do not support vertical profile plotting.')
 
     def _load(self):
         import sqlite3
@@ -159,11 +199,17 @@ class GPKG_TS_1D(INFO):
             cur.execute('SELECT Version FROM TUFLOW_timeseries_version;')
             self.format_version = Version(cur.fetchone()[0])
             if self.format_version < Version('1.1'):
+                self._is_swmm = True
                 self.name = re.sub(r'_swmm_ts$', '', self.fpath.stem)
             else:
                 self.name = re.sub(r'_TS_1D$', '', self.fpath.stem)
-            cur.execute('SELECT DISTINCT Table_name, Count, Series_name, Series_units FROM Timeseries_info;')
-            for table_name, count, series_name, units in cur.fetchall():
+
+            reference_time = None
+            cur.execute('SELECT DISTINCT Table_name, Count, Series_name, Series_units, Reference_time FROM Timeseries_info;')
+            for table_name, count, series_name, units, rt in cur.fetchall():
+                if reference_time is None:
+                    reference_time, _ = parse_time_units_string(rt, r'\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}',
+                                                                '%Y-%m-%d %H:%M:%S')
                 if re.findall('_P$', table_name):
                     self.node_count = count
                     self._gis_layer_p_name = table_name
@@ -172,14 +218,19 @@ class GPKG_TS_1D(INFO):
                     self._gis_layer_l_name = table_name
                 if series_name.lower() == 'water level' and units.lower() == 'ft':
                     self.units = 'us imperial'
+            if reference_time is not None:
+                self.reference_time = reference_time
 
             self._load_channel_info(cur)
             self._load_node_info(cur)
             self._load_time_series(cur)
             self._load_maximums()
             self._load_1d_info()
+
+            self.gis_layer_p_fpath = TuflowPath(self.fpath.parent) / f'{self.fpath.name} >> {self._gis_layer_p_name}'
+            self.gis_layer_l_fpath = TuflowPath(self.fpath.parent) / f'{self.fpath.name} >> {self._gis_layer_l_name}'
         except Exception as e:
-            raise Exception(f'Error loading GPKG_TS_1D: {e}')
+            raise Exception(f'Error loading GPKG1D: {e}')
         finally:
             conn.close()
 
@@ -206,7 +257,7 @@ class GPKG_TS_1D(INFO):
         COLUMNS = ['id', 'flags', 'length', 'us_node', 'ds_node', 'us_invert', 'ds_invert',
                    'lbus_obvert', 'rbus_obvert', 'lbds_obvert', 'rbds_obvert']
         TYPE_MAP = [str, str, float, str, str, float, float, float, float, float, float]
-        if self.format_version < Version('1.1'):
+        if self._is_swmm:
             cur.execute(
                 'SELECT '
                 'l.ID as id, '
@@ -254,7 +305,7 @@ class GPKG_TS_1D(INFO):
             self.channel_info = pd.DataFrame(d)
             self.channel_info.set_index('id', inplace=True)
             self.channel_info['flags'].apply(lambda x: x.split('[')[1].strip(']') if '[' in x else x)
-            if self.format_version < Version('1.1'):
+            if self._is_swmm:
                 self.channel_info['ispipe'] = (~np.isnan(self.channel_info['lbus_obvert']) & ~np.isnan(self.channel_info['lbds_obvert']))
                 self.channel_info['ispit'] = False
             else:
@@ -264,7 +315,7 @@ class GPKG_TS_1D(INFO):
             self.channel_info = pd.DataFrame([], columns=COLUMNS)
 
     def _load_node_info(self, cur: 'Cursor'):
-        if self.format_version < Version('1.1'):
+        if self._is_swmm:
             COLUMNS = ['id', 'bed_level', 'top_level', 'inlet_level']
             TYPE_MAP = [str, float, float, float]
             cur.execute(
@@ -318,3 +369,30 @@ class GPKG_TS_1D(INFO):
                     self.node_info.at[node, 'channels'] = ds[0]
             else:
                 self.node_info.at[node, 'channels'] = us + ds
+
+    def _get_pits(self, dfconn: pd.DataFrame) -> np.ndarray:
+        if self._is_swmm:
+            df = dfconn.copy()
+            # get inlet levels at upstream nodes
+            df['pit'] = self.node_info.loc[dfconn['us_node'], 'inlet_level'].tolist()
+            # need to get the last downstream node since it won't be accounted for by any upstream node
+            df['pit_'] = np.nan
+            nd = df.iloc[-1, df.columns.get_loc('ds_node')]
+            df.iloc[-1, df.columns.get_loc('pit_')] = self.node_info.loc[nd, 'inlet_level']
+        else:
+            df = dfconn.copy()
+            pits = []
+            for nd in df['us_node']:
+                if nd in self.channel_info.index and self.channel_info.loc[nd, 'ispit']:
+                    pits.append(self.channel_info.loc[nd, 'lbus_obvert'])
+                else:
+                    pits.append(np.nan)
+            df['pit'] = pits
+
+            df['pit_'] = np.nan
+            nd = dfconn.iloc[-1, dfconn.columns.get_loc('ds_node')]
+            if nd in self.channel_info.index and self.channel_info.loc[nd, 'ispit']:
+                df.iloc[-1, dfconn.columns.get_loc('pit_')] = self.channel_info.loc[nd, 'lbus_obvert']
+
+        df1 = self._lp.melt_2_columns(df, ['pit', 'pit_'], 'pits')
+        return df1['pits'].to_numpy()

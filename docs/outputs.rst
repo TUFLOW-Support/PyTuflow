@@ -16,3 +16,4 @@ The classes listed below are the top level classes that act as entry points to l
 
    outputs.TPC
    outputs.INFO
+   outputs.GPKG1D
