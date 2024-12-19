@@ -67,16 +67,25 @@ class ITimeSeries2D(ABC):
             df1 = self.rl_objs.copy()
             df1['domain'] = 'rl'
             df1 = self._context_refine_by_geometry(ctx, df1)
-            df = df1 if df.empty else pd.concat([df, df1], axis=0, ignore_index=True)
+            if not df1.empty:
+                df = df1 if df.empty else pd.concat([df, df1], axis=0, ignore_index=True)
             ctx = [x for x in ctx if x not in ['rl', '0d']]
 
         # if no domain (including 1d) specified then get everything and let other filters do the work
         if not filtered_something and '1d' not in context and 'node' not in context and 'channel' not in context:
-            df = self.po_objs.copy()
-            df['domain'] = '2d'
-            df1 = self.rl_objs.copy()
-            df1['domain'] = 'rl'
-            df = pd.concat([df, df1], axis=0, ignore_index=True)
+            df_ = None
+            if not self.po_objs.empty:
+                df_ = self.po_objs.copy()
+                df_['domain'] = '2d'
+            if not self.rl_objs.empty:
+                df1 = self.rl_objs.copy()
+                df1['domain'] = 'rl'
+                df_ = df1 if df_ is None else pd.concat([df_, df1], axis=0, ignore_index=True)
+
+            if df_ is None:
+                return df
+
+            df = df_
 
         # geometry
         ctx1 = [x for x in ctx if x in ['point', 'line', 'polygon', 'region']]

@@ -9,7 +9,7 @@ import pandas as pd
 from pytuflow.outputs.helpers import TPCReader
 from pytuflow.outputs.info import INFO
 from pytuflow.outputs.helpers.get_standard_data_type_name import get_standard_data_type_name
-from pytuflow.outputs.helpers.gpkg_time_series_extractor import gpkg_time_series_extractor
+from pytuflow.outputs.helpers.time_series_extractor import gpkg_time_series_extractor
 from pytuflow.pytuflow_types import PathLike, TimeLike, TuflowPath
 from pytuflow.util.time_util import parse_time_units_string
 
@@ -77,8 +77,6 @@ class GPKG1D(INFO):
     For more examples, see the documentation for the individual methods.
     """
 
-    _PLOTTING_CAPABILITY = ['timeseries', 'section']
-
     def __init__(self, fpath: PathLike):
         #: Version: the format version
         self.format_version = None
@@ -112,8 +110,12 @@ class GPKG1D(INFO):
                 valid = True
             else:
                 cur.execute('SELECT Type FROM Geom_L LIMIT 1;')
-                typ = cur.fetchone()[0]
-                valid = bool(re.findall(r'^Chan', typ))
+                typ = cur.fetchone()
+                if typ:
+                    typ = typ[0]
+                    valid = bool(re.findall(r'^Chan', typ))
+                else:
+                    valid = True  # cannot check any result if there aren't any
         except Exception as e:
             valid = False
         finally:
@@ -205,7 +207,8 @@ class GPKG1D(INFO):
                 self.name = re.sub(r'_TS_1D$', '', self.fpath.stem)
 
             reference_time = None
-            cur.execute('SELECT DISTINCT Table_name, Count, Series_name, Series_units, Reference_time FROM Timeseries_info;')
+            cur.execute(
+                'SELECT DISTINCT Table_name, Count, Series_name, Series_units, Reference_time FROM Timeseries_info;')
             for table_name, count, series_name, units, rt in cur.fetchall():
                 if reference_time is None:
                     reference_time, _ = parse_time_units_string(rt, r'\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}',

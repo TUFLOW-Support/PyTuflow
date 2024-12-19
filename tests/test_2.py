@@ -10,7 +10,7 @@ from pytuflow.results.hyd_tables.hyd_tables import HydTables
 from pytuflow.outputs.info import INFO
 from pytuflow.outputs.tpc import TPC
 from pytuflow.outputs.gpkg_1d import GPKG1D
-from pytuflow.results.iterator_util import Iterator
+from pytuflow.outputs.gpkg_2d import GPKG2D
 from pytuflow.results.fv_bc_tide_curtain.fv_bc_tide import FVBCTide
 
 
@@ -714,6 +714,20 @@ class Test_GPKG1D(TestCase):
         res = GPKG1D(p)
         df = res.maximum(['Pipe1', 'Pipe2', 'pipe3'], None)
         self.assertEqual((3, 10), df.shape)
+
+
+class Test_GPKG2D(TestCase):
+
+    def test_load(self):
+        p = './tests/2023/EG15_001_TS_2D.gpkg'
+        res = GPKG2D(p)
+        self.assertEqual('EG15_001', res.name)
+
+    def test_time_series(self):
+        p = './tests/2023/EG15_001_TS_2D.gpkg'
+        res = GPKG2D(p)
+        df = res.time_series('po_poly', 'vol')
+        self.assertEqual((181, 1), df.shape)
 
 
 class Test_FM_TS(unittest.TestCase):

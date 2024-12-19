@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 
 from pytuflow.outputs.helpers.get_standard_data_type_name import get_standard_data_type_name
+from pytuflow.outputs.helpers.time_series_extractor import time_series_extractor, maximum_extractor
 from pytuflow.outputs.helpers.tpc_reader import TPCReader
 from pytuflow.outputs.itime_series_1d import ITimeSeries1D
 from pytuflow.outputs.time_series import TimeSeries
@@ -348,8 +349,8 @@ class INFO(TimeSeries, ITimeSeries1D):
         if ctx.empty:
             return pd.DataFrame()
 
-        df = self._extract_maximum(data_types, ctx[ctx['domain'] == '1d'].data_type.unique(),
-                                   self._maximum_data, ctx, time_fmt)
+        df = maximum_extractor(ctx[ctx['domain'] == '1d'].data_type.unique(), data_types,
+                               self._maximum_data, ctx, time_fmt, self.reference_time)
         df.columns = self._prepend_1d_type_to_column_name(df.columns)
 
         return df
@@ -428,8 +429,8 @@ class INFO(TimeSeries, ITimeSeries1D):
             return pd.DataFrame()
 
         share_idx = ctx[['start', 'end', 'dt']].drop_duplicates().shape[0] < 2
-        df = self._extract_time_series(data_types, ctx[ctx['domain'] == '1d'].data_type.unique(),
-                                       self._time_series_data, ctx, time_fmt, share_idx)
+        df = time_series_extractor(ctx[ctx['domain'] == '1d'].data_type.unique(), data_types,
+                                   self._time_series_data, ctx, time_fmt, share_idx, self.reference_time)
         df.columns = self._prepend_1d_type_to_column_name(df.columns)
 
         return df
@@ -714,59 +715,6 @@ class INFO(TimeSeries, ITimeSeries1D):
                 tmax = res.idxmax()
                 self._maximum_data[data_type] = pd.DataFrame({'max': max_, 'tmax': tmax})
 
-    def _extract_maximum(self, data_types: list[str], data_types_2: list[str],
-                         maximum_data: dict, ctx: pd.DataFrame, time_fmt: str) -> pd.DataFrame:
-        """Extract the maximum result data_types_2 from the maximum_data dictionary. data_types is the user's name for
-        the result which will be used for the column names.
-        """
-        df = pd.DataFrame()
-        for dtype2 in data_types_2:
-            dtype = [x for x in data_types if get_standard_data_type_name(x) == dtype2]
-            dtype = dtype[0] if dtype else dtype2
-            if dtype2 not in maximum_data:
-                continue
-            for res_df in maximum_data[dtype2]:
-                rows = res_df.index[res_df.index.isin(ctx['id'])]
-                df1 = res_df.loc[rows]
-                if time_fmt == 'absolute':
-                    df1['tmax'] = df1['tmax'].apply(lambda x: self.reference_time + timedelta(hours=x))
-                df1.columns = [f'{dtype}/{x}' for x in df1.columns]
-                if df.empty:
-                    df = df1
-                else:
-                    df = pd.concat([df, df1], axis=1)
-        return df
-
-    def _extract_time_series(self, data_types: list[str], data_types_2: list[str], time_series_data: dict,
-                             ctx: pd.DataFrame, time_fmt: str, share_idx: bool) -> pd.DataFrame:
-        """Extract the time series result data_types_2 from the time_series_data dictionary. data_types is the
-        user's name for the result which will be used for the column names.
-        """
-        df = pd.DataFrame()
-        for dtype2 in data_types_2:
-            dtype = [x for x in data_types if get_standard_data_type_name(x) == dtype2]
-            dtype = dtype[0] if dtype else dtype2
-            if dtype2 not in time_series_data:
-                continue
-            for res_df in time_series_data[dtype2]:
-                idx = res_df.columns[res_df.columns.isin(ctx['id'])]
-                if idx.empty:
-                    continue
-                df1 = res_df.loc[:, idx]
-                if time_fmt == 'absolute':
-                    df1.index = [self.reference_time + timedelta(hours=x) for x in df1.index]
-                df1.index.name = 'time'
-                index_name = df1.index.name
-                if not share_idx:
-                    col_names = flatten([index_name, x] for x in df1.columns)
-                    df1.reset_index(inplace=True, drop=False)
-                    df1 = df1[col_names]
-
-                df1.columns = [f'{x}/{dtype}/{df1.columns[i+1]}' if x == index_name else f'{dtype}/{x}' for i, x in enumerate(df1.columns)]
-                df = df1 if df.empty else pd.concat([df, df1], axis=1)
-
-        return df
-
     def _prepend_1d_type_to_column_name(self, columns: pd.Index) -> pd.Index:
         """Prepend 'node' or 'channel' to the column names.
         Requires all results to be 1D (no mixed in in po or rl results).
@@ -789,7 +737,6 @@ class INFO(TimeSeries, ITimeSeries1D):
         data_types = data_types if data_types is not None else []
         data_types = data_types if isinstance(data_types, list) else [data_types]
         return locations, data_types
-
 
     def _figure_out_loc_and_data_types_lp(self, locations: Union[str, list[str]],
                                           data_types: Union[str, list[str], None]) -> tuple[list[str], list[str]]:
