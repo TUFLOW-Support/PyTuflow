@@ -11,6 +11,7 @@ from pytuflow.outputs.info import INFO
 from pytuflow.outputs.tpc import TPC
 from pytuflow.outputs.gpkg_1d import GPKG1D
 from pytuflow.outputs.gpkg_2d import GPKG2D
+from pytuflow.outputs.gpkg_rl import GPKGRL
 from pytuflow.results.fv_bc_tide_curtain.fv_bc_tide import FVBCTide
 
 
@@ -719,14 +720,72 @@ class Test_GPKG1D(TestCase):
 class Test_GPKG2D(TestCase):
 
     def test_load(self):
-        p = './tests/2023/EG15_001_TS_2D.gpkg'
+        p = './tests/tpc_gpkg/EG15_001_TS_2D.gpkg'
         res = GPKG2D(p)
         self.assertEqual('EG15_001', res.name)
 
+    def test_times(self):
+        p = './tests/tpc_gpkg/EG15_001_TS_2D.gpkg'
+        res = GPKG2D(p)
+        self.assertEqual(181, len(res.times()))
+
+    def test_data_types(self):
+        p = './tests/tpc_gpkg/EG15_001_TS_2D.gpkg'
+        res = GPKG2D(p)
+        self.assertEqual(16, len(res.data_types()))
+        # self.assertEqual(4, len(res.data_types('line')))  # source results are wrong
+
+    def test_ids(self):
+        p = './tests/tpc_gpkg/EG15_001_TS_2D.gpkg'
+        res = GPKG2D(p)
+        self.assertEqual(3, len(res.ids()))
+
+    def test_maximums(self):
+        p = './tests/tpc_gpkg/EG15_001_TS_2D.gpkg'
+        res = GPKG2D(p)
+        df = res.maximum('po_point', 'h')
+        self.assertEqual((1, 2), df.shape)
+
     def test_time_series(self):
-        p = './tests/2023/EG15_001_TS_2D.gpkg'
+        p = './tests/tpc_gpkg/EG15_001_TS_2D.gpkg'
         res = GPKG2D(p)
         df = res.time_series('po_poly', 'vol')
+        self.assertEqual((181, 1), df.shape)
+
+
+class Test_GPKGRL(TestCase):
+
+    def test_load(self):
+        p = './tests/tpc_gpkg/EG15_001_TS_RL.gpkg'
+        res = GPKGRL(p)
+        self.assertEqual('EG15_001', res.name)
+
+    def test_times(self):
+        p = './tests/tpc_gpkg/EG15_001_TS_RL.gpkg'
+        res = GPKGRL(p)
+        self.assertEqual(181, len(res.times()))
+
+    def test_data_types(self):
+        p = './tests/tpc_gpkg/EG15_001_TS_RL.gpkg'
+        res = GPKGRL(p)
+        self.assertEqual(3, len(res.data_types()))
+        # self.assertEqual(4, len(res.data_types('line')))  # source results are wrong
+
+    def test_ids(self):
+        p = './tests/tpc_gpkg/EG15_001_TS_RL.gpkg'
+        res = GPKGRL(p)
+        self.assertEqual(3, len(res.ids()))
+
+    def test_maximums(self):
+        p = './tests/tpc_gpkg/EG15_001_TS_RL.gpkg'
+        res = GPKGRL(p)
+        df = res.maximum('rl_point', 'h')
+        self.assertEqual((1, 2), df.shape)
+
+    def test_time_series(self):
+        p = './tests/tpc_gpkg/EG15_001_TS_RL.gpkg'
+        res = GPKGRL(p)
+        df = res.time_series('rl_point', 'h')
         self.assertEqual((181, 1), df.shape)
 
 

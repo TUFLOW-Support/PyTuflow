@@ -7,6 +7,8 @@ import pandas as pd
 from netCDF4 import Dataset
 
 from pytuflow.outputs.gpkg_1d import GPKG1D
+from pytuflow.outputs.gpkg_2d import GPKG2D
+from pytuflow.outputs.gpkg_rl import GPKGRL
 from pytuflow.outputs.helpers.get_standard_data_type_name import get_standard_data_type_name
 from pytuflow.outputs.helpers.nc_ts import NC_TS
 from pytuflow.outputs.helpers.time_series_extractor import maximum_extractor, time_series_extractor
@@ -675,9 +677,9 @@ class TPC(INFO, ITimeSeries2D):
             if str(value).lower().endswith('_1d.gpkg'):
                 self._gpkg1d = GPKG1D(self._expand_property_path(prop, value=value))
             elif str(prop).lower().endswith('_2d.gpkg'):
-                self._gpkg2d = self._expand_property_path(prop, value=value)
+                self._gpkg2d = GPKG2D(self._expand_property_path(prop, value=value))
             elif str(prop).lower().endswith('_rl.gpkg'):
-                self._gpkgrl = self._expand_property_path(prop, value=value)
+                self._gpkgrl = GPKGRL(self._expand_property_path(prop, value=value))
 
         if self._gpkg1d is not None:
             self._time_series_data = self._gpkg1d._time_series_data

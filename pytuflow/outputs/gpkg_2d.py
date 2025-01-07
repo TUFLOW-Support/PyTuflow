@@ -20,7 +20,7 @@ if typing.TYPE_CHECKING:
 
 
 class GPKG2D(TimeSeries, ITimeSeries2D):
-    """Class for handling 1D GeoPackage time series results (.gpkg). The GPKG time series format is a specific
+    """Class for handling 2D GeoPackage time series results (.gpkg). The GPKG time series format is a specific
     format published by TUFLOW built on the GeoPackage standard.
 
     This class does not need to be explicitly closed as it will load the results into memory and closes any open files
@@ -97,18 +97,25 @@ class GPKG2D(TimeSeries, ITimeSeries2D):
             cur.execute('SELECT Version FROM TUFLOW_timeseries_version;')
             version = Version(cur.fetchone()[0])
             if version == Version('1.0'):
-                valid = True
+                valid = False
             else:
-                cur.execute('SELECT Type FROM Geom_L LIMIT 1;')
-                typ = cur.fetchone()
-                if typ:
-                    valid = typ[0].lower() == '2d'
-                else:
-                    valid = True  # cannot determine if 2D or 1D or RL
+                valid = None
+                for table_name in ['Geom_P', 'Geom_L', 'Geom_R']:
+                    cur.execute(f'SELECT count(*) FROM sqlite_master WHERE type=\'table\' AND name="{table_name}";')
+                    count = int(cur.fetchone()[0])
+                    if count:
+                        cur.execute(f'SELECT Type FROM "{table_name}" LIMIT 1;')
+                        typ = cur.fetchone()
+                        if typ:
+                            valid = typ[0].lower() == '2d'
+                            break
+                if valid is None:  # could not determine if it is valid - could be empty
+                    valid = True
         except Exception as e:
             valid = False
         finally:
             conn.close()
+
         return valid
 
     @staticmethod
@@ -187,7 +194,7 @@ class GPKG2D(TimeSeries, ITimeSeries2D):
         :meth:`has_plotting_capability` : Check if a given output class supports a given plotting capability before
            trying to use it.
         """
-        raise NotImplementedError('GPKG2D files do not support section plotting.')
+        raise NotImplementedError(f'{__class__.__name__} files do not support section plotting.')
 
     def curtain(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
                 time: TimeLike) -> pd.DataFrame:
@@ -198,7 +205,7 @@ class GPKG2D(TimeSeries, ITimeSeries2D):
         :meth:`has_plotting_capability` : Check if a given output class supports a given plotting capability before
            trying to use it.
         """
-        raise NotImplementedError('GPKG2D files do not support curtain plotting.')
+        raise NotImplementedError(f'{__class__.__name__} files do not support curtain plotting.')
 
     def profile(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
                 time: TimeLike) -> pd.DataFrame:
@@ -209,7 +216,7 @@ class GPKG2D(TimeSeries, ITimeSeries2D):
         :meth:`has_plotting_capability` : Check if a given output class supports a given plotting capability before
            trying to use it.
         """
-        raise NotImplementedError('GPKG2D files do not support vertical profile plotting.')
+        raise NotImplementedError(f'{__class__.__name__} files do not support vertical profile plotting.')
 
     def _load(self):
         import sqlite3
@@ -217,6 +224,7 @@ class GPKG2D(TimeSeries, ITimeSeries2D):
             conn = sqlite3.connect(self.fpath)
         except Exception as e:
             raise Exception(f'Error connecting to sqlite database: {e}')
+
         try:
             self.name = re.sub(r'_TS_2D$', '', self.fpath.stem)
 
@@ -257,21 +265,21 @@ class GPKG2D(TimeSeries, ITimeSeries2D):
                 self.po_poly_count = cur.fetchone()[0]
                 self.gis_layer_r_fpath = TuflowPath(self.fpath.parent) / f'{self.fpath.name} >> {self._gis_layer_r_name}'
 
-            self._load_time_series(cur)
-            self._load_maximums()
+            self._load_time_series(cur, self._time_series_data_2d)
+            self._load_maximums(self._time_series_data_2d, self._maximum_data_2d)
             self._load_po_info(cur)
         except Exception as e:
             raise Exception(f'Error loading GPKG2D: {e}')
         finally:
             conn.close()
 
-    def _load_time_series(self, cur: 'Cursor'):
+    def _load_time_series(self, cur: 'Cursor', storage: AppendDict):
         if self._gis_layer_p_name:
             cur.execute(f'SELECT Column_name FROM Timeseries_info WHERE Table_name = "{self._gis_layer_p_name}";')
             data_types = [row[0] for row in cur.fetchall()]
             for dtype in data_types:
                 dtype1 = get_standard_data_type_name(dtype)
-                self._time_series_data_2d[dtype1] = gpkg_time_series_extractor(cur, dtype, self._gis_layer_p_name)
+                storage[dtype1] = gpkg_time_series_extractor(cur, dtype, self._gis_layer_p_name)
                 self._geoms[dtype1] = 'point'
 
         if self._gis_layer_l_name:
@@ -279,7 +287,7 @@ class GPKG2D(TimeSeries, ITimeSeries2D):
             data_types = [row[0] for row in cur.fetchall()]
             for dtype in data_types:
                 dtype1 = get_standard_data_type_name(dtype)
-                self._time_series_data_2d[dtype1] = gpkg_time_series_extractor(cur, dtype, self._gis_layer_l_name)
+                storage[dtype1] = gpkg_time_series_extractor(cur, dtype, self._gis_layer_l_name)
                 self._geoms[dtype1] = 'line'
 
         if self._gis_layer_r_name:
@@ -287,15 +295,15 @@ class GPKG2D(TimeSeries, ITimeSeries2D):
             data_types = [row[0] for row in cur.fetchall()]
             for dtype in data_types:
                 dtype1 = 'max water level' if dtype.lower() == 'max water level' else get_standard_data_type_name(dtype)
-                self._time_series_data_2d[dtype1] = gpkg_time_series_extractor(cur, dtype, self._gis_layer_r_name)
+                storage[dtype1] = gpkg_time_series_extractor(cur, dtype, self._gis_layer_r_name)
                 self._geoms[dtype1] = 'poly'
 
-    def _load_maximums(self) -> None:
-        for data_type, results in self._time_series_data_2d.items():
+    def _load_maximums(self, time_series_storage: AppendDict, storage: AppendDict) -> None:
+        for data_type, results in time_series_storage.items():
             for res in results:
                 max_ = res.max()
                 tmax = res.idxmax()
-                self._maximum_data_2d[data_type] = pd.DataFrame({'max': max_, 'tmax': tmax})
+                storage[data_type] = pd.DataFrame({'max': max_, 'tmax': tmax})
 
     def _load_po_info(self, cur: 'Cursor'):
         po_info = {'id': [], 'data_type': [], 'geometry': [], 'start': [], 'end': [], 'dt': []}
@@ -335,7 +343,7 @@ class GPKG2D(TimeSeries, ITimeSeries2D):
             if cur.fetchone():
                 return 'poly'
 
-        return 'unknown'
+        return ''
 
     def _loc_data_types_to_list(self, locations: Union[str, list[str]],
                                 data_types: Union[str, list[str]]) -> tuple[list[str], list[str]]:
