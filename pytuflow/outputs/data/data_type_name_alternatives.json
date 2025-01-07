@@ -9,7 +9,7 @@
     "total inflow": ["total(?:\\s|_|-)?inflows?"],
     "lateral inflow": ["lat(?:eral)?(?:\\s|_|-)?inflows?"],
     "net lateral inflow": ["net(?:\\s|_|-)?lat(?:eral)?(?:\\s|_|-)?inflows?"],
-    "volume": ["vols?", "volumes?", "vl", "node(?:\\s|_|-)?volumes?"],
+    "volume": ["vols?", "volumes?", "vl", "node(?:\\s|_|-)?volumes?", "storage(?:\\s|_|-)?vol(umes?)?"],
     "channel volume": ["chan(?:nel)?(?:\\s|_|-)?vol(?:ume)?s?"],
     "channel depth": ["chan(?:nel)?(?:\\s|_|-)?dep(?:th)?s?"],
     "channel capacity": ["chan(?:nel)?(?:\\s|_|-)?cap(?:acity)?"],

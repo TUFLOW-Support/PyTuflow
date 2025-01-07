@@ -676,13 +676,14 @@ class TPC(INFO, ITimeSeries2D):
         for prop, value in self._tpc_reader.iter_properties('GPKG Time Series'):
             if str(value).lower().endswith('_1d.gpkg'):
                 self._gpkg1d = GPKG1D(self._expand_property_path(prop, value=value))
-            elif str(prop).lower().endswith('_2d.gpkg'):
+            elif str(value).lower().endswith('_2d.gpkg'):
                 self._gpkg2d = GPKG2D(self._expand_property_path(prop, value=value))
-            elif str(prop).lower().endswith('_rl.gpkg'):
+            elif str(value).lower().endswith('_rl.gpkg'):
                 self._gpkgrl = GPKGRL(self._expand_property_path(prop, value=value))
 
         if self._gpkg1d is not None:
             self._time_series_data = self._gpkg1d._time_series_data
+            self._nd_res_types = self._gpkg1d._nd_res_types
 
         if self._gpkg2d is not None:
             self._time_series_data_2d = self._gpkg2d._time_series_data_2d
@@ -774,6 +775,12 @@ class TPC(INFO, ITimeSeries2D):
     def _load_po_info(self) -> pd.DataFrame:
         d = {'P': 'point', 'L': 'line', 'R': 'polygon'}
         po_info = {'id': [], 'data_type': [], 'geometry': [], 'start': [], 'end': [], 'dt': []}
+        if self.format.lower() == 'gpkg':
+            if self._gpkg2d is not None:
+                return self._gpkg2d.po_objs
+            else:
+                return pd.DataFrame(po_info)
+
         if self._time_series_data_2d:
             plot_objs = self._gis_plot_objects()
             if plot_objs is None or plot_objs.geom.dtype != np.dtype('O'):
@@ -802,6 +809,8 @@ class TPC(INFO, ITimeSeries2D):
                 return pd.read_csv(prop, index_col='id', names=['id', 'domain', 'data_types', 'geom'], header=None)
             except Exception as e:
                 logger.warning(f'TPC._gis_plot_objects(): Error loading GIS Plot Objects: {e}')
+        elif self.format.lower() == 'gpkg':
+            pass
         else:
             logger.error('TPC._gis_plot_objects(): Could not find GIS Plot Objects property.')
 
@@ -824,6 +833,12 @@ class TPC(INFO, ITimeSeries2D):
     def _load_rl_info(self) -> pd.DataFrame:
         d = {'water level': 'point', 'flow': 'line', 'volume': 'polygon'}
         rl_info = {'id': [], 'data_type': [], 'geometry': [], 'start': [], 'end': [], 'dt': []}
+        if self.format.lower() == 'gpkg':
+            if self._gpkgrl is not None:
+                return self._gpkgrl.rl_objs
+            else:
+                return pd.DataFrame(rl_info)
+
         for dtype, vals in self._time_series_data_rl.items():
             for df1 in vals:
                 dt = np.round((df1.index[1] - df1.index[0]) * 3600., decimals=2)

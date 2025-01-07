@@ -487,6 +487,43 @@ class Test_TPC_GPKG(TestCase):
         res = TPC(p)
         self.assertEqual('EG15_001', res.name)
 
+    def test_times(self):
+        p = './tests/tpc_gpkg/EG15_001.tpc'
+        res = TPC(p)
+        self.assertEqual(181, len(res.times()))
+
+    def test_data_types(self):
+        p = './tests/tpc_gpkg/EG15_001.tpc'
+        res = TPC(p)
+        self.assertEqual(24, len(res.data_types()))
+
+    def test_ids(self):
+        p = './tests/tpc_gpkg/EG15_001.tpc'
+        res = TPC(p)
+        self.assertEqual(58, len(res.ids()))
+
+    def test_maximums(self):
+        p = './tests/tpc_gpkg/EG15_001.tpc'
+        res = TPC(p)
+        df = res.maximum('Pipe1', 'v')
+        self.assertEqual((1, 2), df.shape)
+        df = res.maximum('po_point', 'h')
+        self.assertEqual((1, 2), df.shape)
+        df = res.maximum('po_line', 'qa')
+        self.assertEqual((1, 2), df.shape)
+
+    def test_time_series(self):
+        p = './tests/tpc_gpkg/EG15_001.tpc'
+        res = TPC(p)
+        df = res.time_series('pit2', ['h', 'q'])
+        self.assertEqual((181, 2), df.shape)
+
+    def test_section(self):
+        p = './tests/tpc_gpkg/EG15_001.tpc'
+        res = TPC(p)
+        df = res.section('pipe1', ['Bed Level', 'water level'], 1)
+        self.assertEqual((10, 6), df.shape)
+
 
 class Test_TPC_Frankenmodel(TestCase):
 
