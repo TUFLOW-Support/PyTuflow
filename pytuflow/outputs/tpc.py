@@ -23,7 +23,7 @@ logger = get_logger()
 
 
 class TPC(INFO, ITimeSeries2D):
-    """Class to handle the standard TUFLOW Time Series result file (.tpc).
+    """Class to handle the standard TUFLOW Time Series result file (:code:`.tpc`).
 
     Supports:
 

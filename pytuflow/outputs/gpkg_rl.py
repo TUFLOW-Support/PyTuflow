@@ -17,8 +17,12 @@ if typing.TYPE_CHECKING:
 
 
 class GPKGRL(GPKG2D):
-    """Class for handling RL GeoPackage time series results (.gpkg). The GPKG time series format is a specific
-    format published by TUFLOW built on the GeoPackage standard.
+    """Class for handling RL GeoPackage time series results (:code:`.gpkg` - typically ending with :code:`_RL.gpkg`).
+    The GPKG time series format is a specific format published by TUFLOW built on the GeoPackage standard.
+
+    This class can be used to initialise stand-alone GPKG result files, however it is  not required to be used if
+    loading GPKG results via the :class:`TPC <pytuflow.outputs.TPC>` class which will load all
+    domains automatically (i.e. :code:`GPKG1D`, :code:`GPKG2D`, :code:`GPKGRL`).
 
     This class does not need to be explicitly closed as it will load the results into memory and closes any open files
     after initialisation.
@@ -41,6 +45,33 @@ class GPKGRL(GPKG2D):
     Examples
     --------
     >>> from pytuflow.outputs.gpkg_rl import GPKGRL
+    >>> res = GPKGRL('path/to/file_RL.gpkg')
+
+    Querying all the available data types:
+
+    >>> res.data_types()
+    ['flow', 'water level', 'volume']
+
+    Querying all RL IDs:
+
+    >>> res.ids()
+    ['rl_point', 'rl_line', 'rl_poly']
+
+    Getting the water level time series from the RL point :code:`rl_point`:
+
+    >>> res.time_series('rl_point', 'water level')
+    time      rl/water level/rl_point
+    0.000000                      NaN
+    0.016667                      NaN
+    0.033333                      NaN
+    0.050000                      NaN
+    0.066667                      NaN
+    ...                           ...
+    2.933333                   40.147
+    2.950000                   40.133
+    2.966667                   40.116
+    2.983334                   40.101
+    3.000000                   40.084
     """
 
     def __init__(self, fpath: PathLike):

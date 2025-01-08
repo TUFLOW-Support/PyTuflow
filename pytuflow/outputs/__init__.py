@@ -2,6 +2,8 @@
 from .info import INFO
 from .tpc import TPC
 from .gpkg_1d import GPKG1D
+from .gpkg_2d import GPKG2D
+from .gpkg_rl import GPKGRL
 
 # base classes
 from .itime_series_1d import ITimeSeries1D

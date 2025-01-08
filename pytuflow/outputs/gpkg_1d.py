@@ -18,8 +18,14 @@ if TYPE_CHECKING:
 
 
 class GPKG1D(INFO):
-    """Class for handling 1D GeoPackage time series results (.gpkg). The GPKG time series format is a specific
-    format published by TUFLOW built on the GeoPackage standard.
+    """Class for handling 1D GeoPackage time series results (:code:`.gpkg` - typically ending with :code:`_1D.gpkg`
+    or :code:`_swmm_ts.gpkg`). The GPKG time series format is a specific format published by TUFLOW built
+    on the GeoPackage standard.
+
+    This class can be used to initialise stand-alone GPKG result files (e.g. :code:`swmm_ts.gpkg` results) however it is
+    not required to be used if loading results via the :class:`TPC <pytuflow.outputs.TPC>` class which will load all
+    domains automatically (i.e. :code:`GPKG1D`, :code:`GPKG2D`, :code:`GPKGRL`). Note: the :code:`swmm_ts.gpkg` is not
+    referenced in the TPC file, so will always require to be initialised with this class.
 
     This class does not need to be explicitly closed as it will load the results into memory and closes any open files
     after initialisation.
@@ -34,7 +40,7 @@ class GPKG1D(INFO):
     FileNotFoundError
         Raised if the .info file does not exist.
     FileTypeError
-        Raises :class:`pytuflow.pytuflow_types.FileTypeError` if the file does not look like a 1D time
+        Raises :class:`pytuflow.pytuflow_types.FileTypeError` if the file does not look like a time
         series .gpkg file.
     EOFError
         Raised if the .info file is empty or incomplete.

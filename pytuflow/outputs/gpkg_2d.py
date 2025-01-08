@@ -20,8 +20,12 @@ if typing.TYPE_CHECKING:
 
 
 class GPKG2D(TimeSeries, ITimeSeries2D):
-    """Class for handling 2D GeoPackage time series results (.gpkg). The GPKG time series format is a specific
-    format published by TUFLOW built on the GeoPackage standard.
+    """Class for handling 2D GeoPackage time series results (:code:`.gpkg` - typically ending with :code:`_2D.gpkg`).
+    The GPKG time series format is a specific format published by TUFLOW built on the GeoPackage standard.
+
+    This class can be used to initialise stand-alone GPKG result files, however it is  not required to be used if
+    loading GPKG results via the :class:`TPC <pytuflow.outputs.TPC>` class which will load all
+    domains automatically (i.e. :code:`GPKG1D`, :code:`GPKG2D`, :code:`GPKGRL`).
 
     This class does not need to be explicitly closed as it will load the results into memory and closes any open files
     after initialisation.
@@ -36,7 +40,7 @@ class GPKG2D(TimeSeries, ITimeSeries2D):
     FileNotFoundError
         Raised if the .info file does not exist.
     FileTypeError
-        Raises :class:`pytuflow.pytuflow_types.FileTypeError` if the file does not look like a 1D time
+        Raises :class:`pytuflow.pytuflow_types.FileTypeError` if the file does not look like a time
         series .gpkg file.
     EOFError
         Raised if the .info file is empty or incomplete.
@@ -44,6 +48,43 @@ class GPKG2D(TimeSeries, ITimeSeries2D):
     Examples
     --------
     >>> from pytuflow.outputs.gpkg_2d import GPKG2D
+    >>> res = GPKG2D('path/to/file_2D.gpkg')
+
+    Querying all the available data types:
+
+    >>> res.data_types()
+    ['flow', 'velocity', 'water level']
+
+    Querying all PO line data types:
+
+    >>> res.data_types('line')
+    ['flow']
+
+    Querying all PO IDs:
+
+    >>> res.ids()
+    ['po_point', 'po_line']
+
+    Querying all PO point IDs:
+
+    >>> res.ids('point')
+    ['po_point']
+
+    Getting the water level time series from the PO point :code:`po_point`:
+
+    >>> res.time_series('po_point', 'water level')
+    time      po/water level/po_point
+    0.000000                   39.073
+    0.016667                   39.073
+    0.033333                   39.073
+    0.050000                   39.073
+    0.066667                   39.073
+    ...                           ...
+    2.933333                   40.566
+    2.950000                   40.546
+    2.966667                   40.526
+    2.983333                   40.506
+    3.000000                   40.485
     """
     _PLOTTING_CAPABILITY = ['timeseries']
 
@@ -144,20 +185,166 @@ class GPKG2D(TimeSeries, ITimeSeries2D):
         return super().context_combinations_2d(ctx)
 
     def times(self, context: str = None, fmt: str = 'relative') -> list[TimeLike]:
-        # docstring inherited
+        """Returns all the available times for the given context.
+
+        The context is an optional input that can be used to filter the return further.Valid contexts
+        for this class are:
+
+        * :code:`None`: default - returns all available times
+        * :code:`point`:
+        * :code:`line`:
+        * :code:`polygon`: (or :code:`region`)
+        * :code:`[id]`: returns only data types for the given ID.
+        * :code:`[data_type]`: returns only data types for the given data type. Shorthand data type names can be used.
+
+        Parameters
+        ----------
+        context : str, optional
+            The context to filter the times by.
+        fmt : str, optional
+            The format for the times. Options are :code:`relative` or :code:`absolute`.
+
+        Returns
+        -------
+        list[TimeLike]
+            The available times in the requested format.
+
+        Examples
+        --------
+        >>> res.times()
+        [0.0, 0.016666666666666666, ..., 3.0]
+        >>> res.times('absolute')
+        [Timestamp('2021-01-01 00:00:00'), Timestamp('2021-01-01 00:01:00'), ..., Timestamp('2021-01-01 03:00:00')]
+        """
         return super().times(context, fmt)
 
     def data_types(self, context: str = None) -> list[str]:
-        # docstring inherited
+        """Returns all the available data types (result types) for the given context.
+
+        The context is an optional input that can be used to filter the return further. Available
+        context objects for this class are:
+
+        * :code:`None`: default - returns all available times
+        * :code:`point`:
+        * :code:`line`:
+        * :code:`polygon`: (or :code:`region`)
+        * :code:`[id]`: returns only data types for the given ID.
+
+        Parameters
+        ----------
+        context : str, optional
+            The context to filter the data types by.
+
+        Returns
+        -------
+        list[str]
+            The available data types.
+
+        Examples
+        --------
+        The below examples demonstrate how to use the context argument to filter the returned data types. The first
+        example returns all data types:
+
+        >>> res.data_types()
+        ['water level', 'flow', 'velocity']
+
+        Returning only the :code:`point` data types:
+
+        >>> res.data_types('point')
+        ['water level', 'velocity']
+
+        Return only data types for the channel :code:`FC01.1_R`:
+
+        >>> res.data_types('po_point')
+        ['water level']
+        """
         return super().data_types(context)
 
     def ids(self, context: str = None) -> list[str]:
-        # docstring inherited
+        """Returns all the available IDs for the given context.
+
+        The context argument can be used to add a filter to the returned IDs. Available context objects for this
+        class are:
+
+        * :code:`None`: default - returns all available times
+        * :code:`point`:
+        * :code:`line`:
+        * :code:`polygon`: (or :code:`region`)
+        * :code:`[data_type]`: returns only IDs for the given data type. Shorthand data type names can be used.
+
+        Parameters
+        ----------
+        context : str, optional
+            The context to filter the IDs by.
+
+        Returns
+        -------
+        list[str]
+            The available IDs.
+
+        Examples
+        --------
+        The below examples demonstrate how to use the context argument to filter the returned IDs. The first example
+        returns all IDs:
+
+        >>> res.ids()
+        ['po_point', 'po_line', 'po_polygon']
+
+        Return only line IDs:
+
+        >>> res.ids('line')
+        ['po_line']
+
+        Return IDs that have water level results:
+
+        >>> res.ids('h')
+        ['po_point']
+        """
         return super().ids(context)
 
     def maximum(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
                 time_fmt: str = 'relative') -> pd.DataFrame:
-        # docstring inherited
+        """Returns a DataFrame containing the maximum values for the given data types. The returned DataFrame
+        will include time of maximum results as well.
+
+        It's possible to pass in a well known shorthand for the data type e.g. :code:`q` for :code:`flow`.
+
+        The location can also be a contextual string, e.g. :code:`line` to extract the maximum values for all
+        line geometries. The following contexts are available for this class:
+
+        * :code:`None`: default - returns all available times
+        * :code:`point`:
+        * :code:`line`:
+        * :code:`polygon`: (or :code:`region`)
+
+        The returned DataFrame will have an index column corresponding to the location IDs, and the columns
+        will be in the format :code:`context/data_type/[max|tmax]`,
+        e.g. :code:`po/flow/max`, :code:`po/flow/tmax`
+
+        Parameters
+        ----------
+        locations : str | list[str]
+            The location to extract the maximum values for. :code:`None` will return all locations for the
+            given data_types.
+        data_types : str | list[str]
+            The data types to extract the maximum values for. :code:`None` will return all data types for the
+            given locations.
+        time_fmt : str, optional
+            The format for the time of max result. Options are :code:`relative` or :code:`absolute`
+
+        Returns
+        -------
+        pd.DataFrame
+            The maximum, and time of maximum values
+
+        Examples
+        --------
+        Extracting the maximum flow for a given location:
+
+        >>> res.maximum('po_line', 'flow')
+                  po/flow/max       po/flow/tmax
+        ds1            59.423           1.383333
+        """
         locations, data_types = self._loc_data_types_to_list(locations, data_types)
         context = '/'.join(locations + data_types)
         ctx = self.context_combinations(context)
@@ -171,7 +358,51 @@ class GPKG2D(TimeSeries, ITimeSeries2D):
 
     def time_series(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
                     time_fmt: str = 'relative') -> pd.DataFrame:
-        # docstring inherited
+        """Returns a time-series DataFrame for the given location(s) and data type(s).
+
+        It's possible to pass in a well known shorthand for the data type e.g. :code:`q` for :code:`flow`.
+
+        The location can also be a contextual string, e.g. :code:`line` to extract the time-series values for all
+        line geometry types. The following contexts are available for this class:
+
+        * :code:`None`: default - returns all available times
+        * :code:`point`:
+        * :code:`line`:
+        * :code:`polygon`: (or :code:`region`)
+
+        The returned column names will be in the format :code:`context/data_type/location`
+        e.g. :code:`po/flow/FC01.1_R`. The :code:`data_type` name in the column heading will be identical to the
+        data type  name passed into the function e.g. if :code:`h` is used instead of :code:`water level`, then the
+        return will be :code:`po/h/FC01.1_R.1`.
+
+        Parameters
+        ----------
+        locations : str | list[str]
+            The location to extract the time series data for. If :code:`None` is passed in, all locations will be
+            returned for the given data_types.
+        data_types : str | list[str]
+            The data type to extract the time series data for. If :code:`None` is passed in, all data types
+            will be returned for the given locations.
+        time_fmt : str, optional
+            The format for the time column. Options are :code:`relative` or :code:`absolute`.
+
+        Returns
+        -------
+        pd.DataFrame
+            The time series data.
+
+        Examples
+        --------
+        Extracting flow for a given channel.
+
+        >>> res.time_series('po_line', 'q')
+        Time (h)        po/q/ds1
+        0.000000           0.000
+        0.016667           0.000
+        ...                  ...
+        2.983334           8.670
+        3.000000           8.391
+        """
         locations, data_types = self._loc_data_types_to_list(locations, data_types)
         context = '/'.join(locations + data_types)
         ctx = self.context_combinations(context)

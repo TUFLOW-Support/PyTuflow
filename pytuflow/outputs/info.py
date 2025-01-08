@@ -20,8 +20,8 @@ logger = get_logger()
 
 
 class INFO(TimeSeries, ITimeSeries1D):
-    """Class for reading TUFLOW info time series results (.info). These are text files with a :code:`.info` extension
-    (typically found in the 1D output folder and ending with :code:`_1d.info` and not :code:`.2dm.info`)
+    """Class for reading TUFLOW info time series results (:code:`.info`). These are text files with a :code:`.info`
+    extension (typically found in the 1D output folder and ending with :code:`_1d.info` and not :code:`.2dm.info`)
     that are output by the 2013 TUFLOW release. The format is similar to the TPC format, however
     does not include :code:`2d_po` or Reporting Location (:code:`0d_rl`) results.
 
