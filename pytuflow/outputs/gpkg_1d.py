@@ -183,7 +183,7 @@ class GPKG1D(INFO):
         :meth:`has_plotting_capability` : Check if a given output class supports a given plotting capability before
            trying to use it.
         """
-        raise NotImplementedError('GPKG1D outputs do not support curtain plotting.')
+        return super().curtain(locations, data_types, time)
 
     def profile(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
                 time: TimeLike) -> pd.DataFrame:
@@ -194,7 +194,7 @@ class GPKG1D(INFO):
         :meth:`has_plotting_capability` : Check if a given output class supports a given plotting capability before
            trying to use it.
         """
-        raise NotImplementedError('GPKG1D outputs do not support vertical profile plotting.')
+        return super().profile(locations, data_types, time)
 
     def _load(self):
         import sqlite3

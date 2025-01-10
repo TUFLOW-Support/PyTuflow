@@ -12,6 +12,7 @@ from pytuflow.outputs.tpc import TPC
 from pytuflow.outputs.gpkg_1d import GPKG1D
 from pytuflow.outputs.gpkg_2d import GPKG2D
 from pytuflow.outputs.gpkg_rl import GPKGRL
+from pytuflow.outputs.fm_ts import FMTS
 from pytuflow.results.fv_bc_tide_curtain.fv_bc_tide import FVBCTide
 
 
@@ -857,96 +858,105 @@ class Test_FM_TS(unittest.TestCase):
 
     def test_load_python_csv(self):
         p = './tests/fm/python_csv/FMT_M01_001.csv'
-        res = FM_TS(p, None, None)
-        self.assertEqual('FMT_M01_001', res.sim_id)
+        res = FMTS(p)
+        self.assertEqual('FMT_M01_001', res.name)
 
     def test_load_gui_csv_without_header_all_results(self):
         p = './tests/fm/gui_csv/LBE_TBP3_0100F_BASE_350_BM_HPC_GPU_one_column_per_node_all.csv'
-        res = FM_TS(p, None, None)
-        self.assertEqual('LBE_TBP3_0100F_BASE_350_BM_HPC_GPU_one_column_per_node_all', res.sim_id)
+        res = FMTS(p, None, None)
+        self.assertEqual('LBE_TBP3_0100F_BASE_350_BM_HPC_GPU_one_column_per_node_all', res.name)
 
     def test_load_gui_csv_with_header_all_results(self):
         p = './tests/fm/gui_csv/LBE_TBP3_0100F_BASE_350_BM_HPC_GPU_one_column_per_node_all_header.csv'
-        res = FM_TS(p, None, None)
-        self.assertEqual('LBE_TBP3_0100F_BASE_350_BM_HPC_GPU', res.sim_id)
+        res = FMTS(p, None, None)
+        self.assertEqual('LBE_TBP3_0100F_BASE_350_BM_HPC_GPU', res.name)
 
     def test_load_zzn(self):
         p = './tests/fm/zzn/FMT_M01_001.zzn'
-        res = FM_TS(p, None, None)
-        self.assertEqual('FMT_M01_001', res.sim_id)
+        res = FMTS(p, None, None)
+        self.assertEqual('FMT_M01_001', res.name)
+
+    def test_load_with_dat(self):
+        p = './tests/fm/zzn/FMT_M01_001.zzn'
+        dat = './tests/fm/zzn/FMT_M01_001.dat'
+        res = FMTS(p, dat)
+        self.assertEqual('FMT_M01_001', res.name)
+
+    def test_load_with_gxy(self):
+        p = './tests/fm/zzn/FMT_M01_001.zzn'
+        gxy = './tests/fm/zzn/FMT_M01_001.gxy'
+        res = FMTS(p, None, gxy)
+        self.assertEqual('FMT_M01_001', res.name)
 
     def test_load_nodes(self):
         p = './tests/fm/zzn/FMT_M01_001.zzn'
         dat = './tests/fm/zzn/FMT_M01_001.dat'
         gxy = './tests/fm/zzn/FMT_M01_001.gxy'
-        res = FM_TS(p, gxy, dat)
-        self.assertEqual(6, len(res.nodes.time_series))
-        self.assertEqual((37, 103), res.nodes.time_series['Flow'].df.shape)
-
-    def test_load_nodes_2(self):
-        from pytuflow.fm import DAT
-        p = './tests/dummy'
-        gxy = GXY('./tests/fm/zzn/FMT_M01_001.gxy')
-        dat = DAT('./tests/fm/zzn/FMT_M01_001.dat')
-        dat.load()
-        id_list = list(dat._units_id.keys())
-        fm_node = FMNodes(p, id_list, gxy, dat)
-        self.assertEqual((115, 9), fm_node.df.shape)
+        res = FMTS(p, dat, gxy)
+        self.assertEqual(115, res.node_count)
 
     def test_load_channels(self):
         p = './tests/fm/zzn/FMT_M01_001.zzn'
         dat = './tests/fm/zzn/FMT_M01_001.dat'
         gxy = './tests/fm/zzn/FMT_M01_001.gxy'
-        res = FM_TS(p, gxy, dat)
-        self.assertEqual((122, 11), res.channels.df.shape)
+        res = FMTS(p, dat, gxy)
+        self.assertEqual(122, res.channel_count)
 
-    def test_fm_channels(self):
+    def test_times(self):
         p = './tests/fm/zzn/FMT_M01_001.zzn'
         dat = './tests/fm/zzn/FMT_M01_001.dat'
-        gxy = './tests/fm/zzn/FMT_M01_001.gxy'
-        res = FM_TS(p, gxy, dat)
-        self.assertEqual(122, len(res.channel_ids()))
+        res = FMTS(p, dat)
+        ts = res.times()
+        self.assertEqual(37, len(ts))
+        ts = res.times(fmt='absolute')
+        self.assertEqual(37, len(ts))
+        ts = res.times('FC01.34')
+        self.assertEqual(37, len(ts))
+
+    def test_ids(self):
+        p = './tests/fm/zzn/FMT_M01_001.zzn'
+        dat = './tests/fm/zzn/FMT_M01_001.dat'
+        res = FMTS(p, dat)
+        self.assertEqual(103, len(res.ids()))
+        self.assertEqual(115, len(res.ids('node')))
+        self.assertEqual(122, len(res.ids('channel')))
+
+    def test_data_types(self):
+        p = './tests/fm/zzn/FMT_M01_001.zzn'
+        dat = './tests/fm/zzn/FMT_M01_001.dat'
+        res = FMTS(p, dat)
+        self.assertEqual(6, len(res.data_types()))
+        self.assertEqual(6, len(res.data_types('node')))
+        self.assertEqual(0, len(res.data_types('channel')))
 
     def test_lp_types(self):
         p = './tests/fm/zzn/FMT_M01_001.zzn'
         dat = './tests/fm/zzn/FMT_M01_001.dat'
-        gxy = './tests/fm/zzn/FMT_M01_001.gxy'
-        res = FM_TS(p, gxy, dat)
-        self.assertEqual(['Bed Level', 'Stage', 'Stage Max'], res.long_plot_result_types())
-
-    def test_lp(self):
-        p = './tests/fm/zzn/FMT_M01_001.zzn'
-        dat = './tests/fm/zzn/FMT_M01_001.dat'
-        gxy = './tests/fm/zzn/FMT_M01_001.gxy'
-        res = FM_TS(p, gxy, dat)
-        df = res.long_plot('FC01.11', ['bed level', 'water level'], 1)
-        self.assertEqual((200, 5), df.shape)
+        res = FMTS(p, dat)
+        self.assertEqual(14, len(res.data_types('section')))
 
     def test_maximums(self):
         p = './tests/fm/zzn/FMT_M01_001.zzn'
         dat = './tests/fm/zzn/FMT_M01_001.dat'
-        gxy = './tests/fm/zzn/FMT_M01_001.gxy'
-        res = FM_TS(p, gxy, dat)
+        res = FMTS(p, dat)
         df = res.maximum('FC01.25', 'flow')
         self.assertEqual((1, 2), df.shape)
 
     def test_timeseries(self):
         p = './tests/fm/zzn/FMT_M01_001.zzn'
         dat = './tests/fm/zzn/FMT_M01_001.dat'
-        gxy = './tests/fm/zzn/FMT_M01_001.gxy'
-        res = FM_TS(p, gxy, dat)
+        res = FMTS(p, dat)
         ts = res.time_series('FC01.25', 'h')
         self.assertEqual((37, 1), ts.shape)
 
-    def test_timesteps(self):
+    def test_lp(self):
         p = './tests/fm/zzn/FMT_M01_001.zzn'
         dat = './tests/fm/zzn/FMT_M01_001.dat'
-        gxy = './tests/fm/zzn/FMT_M01_001.gxy'
-        res = FM_TS(p, gxy, dat)
-        ts = res.timesteps()
-        self.assertEqual(37, len(ts))
-        ts = res.timesteps(dtype='absolute')
-        self.assertEqual(37, len(ts))
+        res = FMTS(p, dat)
+        df = res.section('FC01.11', ['bed level', 'water level'], 1)
+        self.assertEqual((200, 6), df.shape)
+        df = res.section('FC01.11', ['bed level', 'max water level', 'pipes'], -1)
+        self.assertEqual((200, 7), df.shape)
 
 
 class Test_HydTables(unittest.TestCase):

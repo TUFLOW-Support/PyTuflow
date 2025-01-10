@@ -28,6 +28,7 @@
     "depth": ["d", "depth", "dep"],
     "gauge level": ["g[hl]?", "gauges?", "gauge(?:\\s|_|-)?levels?"],
     "wind": ["winds?", "w"],
+    "froude": ["froude", "fr"],
     "u-velocity": ["vu", "u-?vel(?:ocit(?:y|ies))?"],
     "v-velocity": ["vv", "v-?vel(?:ocit(?:y|ies))?"],
     "x-velocity": ["vx", "x-?vel(?:ocit(?:y|ies))?"],

@@ -204,5 +204,8 @@ class Connectivity:
         channels = list(self.node_info.loc[nd, 'channels']) if self.node_info.loc[nd, 'nchannel'] > 1 else [self.node_info.loc[nd, 'channels']]
         for chan in channels:
             us_node = self.chan_info.loc[chan, 'us_node']
-            if us_node == nd:
-                yield chan
+            try:
+                if us_node == nd:
+                    yield chan
+            except:
+                print('here')

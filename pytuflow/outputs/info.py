@@ -559,7 +559,7 @@ class INFO(TimeSeries, ITimeSeries1D):
         :meth:`has_plotting_capability` : Check if a given output class supports a given plotting capability before
            trying to use it.
         """
-        raise NotImplementedError('.INFO files do not support curtain plotting.')
+        raise NotImplementedError(f'{__class__.__name__} does not support curtain plotting.')
 
     def profile(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
                 time: TimeLike) -> pd.DataFrame:
@@ -570,7 +570,7 @@ class INFO(TimeSeries, ITimeSeries1D):
         :meth:`has_plotting_capability` : Check if a given output class supports a given plotting capability before
            trying to use it.
         """
-        raise NotImplementedError('.INFO files do not support vertical profile plotting.')
+        raise NotImplementedError(f'{__class__.__name__} does not support vertical profile plotting.')
 
     def _load(self) -> None:
         """Load the INFO file into memory. Called by the __init__ method."""
@@ -724,7 +724,7 @@ class INFO(TimeSeries, ITimeSeries1D):
             t = len(x1) > 2  # is time column
             dtype = x1[1] if t else x1[0]
             dtype = get_standard_data_type_name(dtype)
-            c = 'node' if dtype in ['water level', 'energy', 'volume', 'mass balance', 'node flow regime'] else 'channel'
+            c = 'node' if dtype in self._nd_res_types else 'channel'
             return f'{x1[0]}/{c}/{x1[1]}/{x1[2]}' if t else f'{c}/{x1[0]}/{x1[1]}'
 
         return columns.to_series().apply(col_names)

@@ -29,3 +29,8 @@ PlotExtractionLocation = Union[str, list[str], tuple[float, float], list[tuple[f
 class FileTypeError(ValueError):
     """Raised when a file is not of the correct type."""
     pass
+
+
+class ResultError(ValueError):
+    """Raised when a result file does not contain the expected data."""
+    pass
