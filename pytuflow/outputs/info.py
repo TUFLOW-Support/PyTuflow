@@ -12,7 +12,6 @@ from pytuflow.outputs.helpers.tpc_reader import TPCReader
 from pytuflow.outputs.itime_series_1d import ITimeSeries1D
 from pytuflow.outputs.time_series import TimeSeries
 from pytuflow.pytuflow_types import PathLike, TimeLike, AppendDict, FileTypeError
-from pytuflow.util import flatten
 from pytuflow.util.logging import get_logger
 from pytuflow.util.time_util import closest_time_index
 
@@ -512,7 +511,7 @@ class INFO(TimeSeries, ITimeSeries1D):
         7          0     ds4  ds4.2   301.6  33.189  35.6358    35.9533
         """
         # get locations and data types
-        locations, data_types = self._figure_out_loc_and_data_types_lp(locations, data_types)
+        locations, data_types = self._figure_out_loc_and_data_types_lp(locations, data_types, 'channel')
 
         # get the time index
         times = self.times(fmt='absolute') if isinstance(time, datetime) else self.times()
@@ -739,13 +738,14 @@ class INFO(TimeSeries, ITimeSeries1D):
         return locations, data_types
 
     def _figure_out_loc_and_data_types_lp(self, locations: Union[str, list[str]],
-                                          data_types: Union[str, list[str], None]) -> tuple[list[str], list[str]]:
+                                          data_types: Union[str, list[str], None],
+                                          context: str) -> tuple[list[str], list[str]]:
         """Figure out the locations and data types to use - long profile edition."""
         # sort out locations and data types
         if not locations:
             raise ValueError('No locations provided.')
         else:
-            valid_loc = self.ids('channel')
+            valid_loc = self.ids(context)
             valid_loc_lower = [x.lower() for x in valid_loc]
             locations1 = []
             locations = [locations] if not isinstance(locations, list) else locations

@@ -13,16 +13,10 @@ class LP_1D:
         self._temp_types = []
 
         # get the case-sensitive ID from the chan_info index
-        ids1 = []
-        for id_ in ids:
-            try:
-                id1 = chan_info.index[chan_info.index.str.lower() == id_.lower()].values[0]
-                ids1.append(id1)
-            except IndexError:
-                raise ValueError(f'Could not find ID: {id_}')
+        self._init_ids(ids, chan_info, node_info)
 
         #: list[str]: The IDs to trace for connectivity
-        self.ids = ids1
+        self.ids = ids
         #: pd.DataFrame: Node information. Column headers are 'id', 'bed_level', 'top_level', 'nchannel', 'channels'
         self.node_info = node_info
         #: pd.DataFrame: Channel information. Column headers are 'id', 'us_node', 'ds_node', 'us_chan', 'ds_chan', 'length', 'us_invert', 'ds_invert', 'lbus_obvert', 'rbus_obvert', 'lbds_obvert', 'rbds_obvert'
@@ -130,6 +124,16 @@ class LP_1D:
         df.loc[df['variable'] == value_vars[1], 'index'] = df[df['variable'] == value_vars[1]][['index']] + 1
         return df.sort_values('index')[['branch_id', 'channel', 'value']].rename(columns={'value': new_col_name})
 
+    def _init_ids(self, ids: list[str], chan_info: pd.DataFrame, node_info: pd.DataFrame) -> list[str]:
+        ids1 = []
+        for id_ in ids:
+            try:
+                id1 = chan_info.index[chan_info.index.str.lower() == id_.lower()].values[0]
+                ids1.append(id1)
+            except IndexError:
+                raise ValueError(f'Could not find ID: {id_}')
+        return ids
+
 
 class Connectivity:
     """Class to help calculate connectivity between channels."""
@@ -204,8 +208,5 @@ class Connectivity:
         channels = list(self.node_info.loc[nd, 'channels']) if self.node_info.loc[nd, 'nchannel'] > 1 else [self.node_info.loc[nd, 'channels']]
         for chan in channels:
             us_node = self.chan_info.loc[chan, 'us_node']
-            try:
-                if us_node == nd:
-                    yield chan
-            except:
-                print('here')
+            if us_node == nd:
+                yield chan
