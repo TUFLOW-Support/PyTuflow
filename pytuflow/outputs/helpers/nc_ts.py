@@ -14,8 +14,9 @@ with (Path(__file__).parents[1] / 'data' / 'ts_labels.json').open() as f:
     TPC_INTERNAL_NAMES = json.load(f)
 
 
-class NC_TS:
-    """Class for interfacing with a TUFLOW NetCDF time series file."""
+class NCTS:
+    """Class for interfacing with a TUFLOW NetCDF time series file directly rather than
+    going through the :class:`TPC<pytuflow.outputs.TPC>` class."""
 
     def __init__(self, nc: Union[PathLike, Dataset]) -> None:
         """
@@ -55,7 +56,7 @@ class NC_TS:
         list[str]
             List of node names.
         """
-        cls = NC_TS(ncfpath)
+        cls = NCTS(ncfpath)
         if 'node_names' not in cls.nc.variables:
             return []
         return [b''.join(x).decode().strip() for x in cls.nc.variables['node_names']]
@@ -74,7 +75,7 @@ class NC_TS:
         list[str]
             List of channel names.
         """
-        cls = NC_TS(ncfpath)
+        cls = NCTS(ncfpath)
         if 'channel_names' not in cls.nc.variables:
             return []
         return [b''.join(x).decode().strip() for x in cls.nc.variables['channel_names']]
@@ -93,7 +94,7 @@ class NC_TS:
         list[float]
             List of times.
         """
-        cls = NC_TS(ncfpath)
+        cls = NCTS(ncfpath)
         if 'time' not in cls.nc.variables:
             return []
         return cls.nc.variables['time'][:]
@@ -112,7 +113,7 @@ class NC_TS:
         list[str]
             List of data types.
         """
-        cls = NC_TS(ncfpath)
+        cls = NCTS(ncfpath)
         data_types = []
         for var in cls.nc.variables:
             if re.findall(r'_2d$', var) and not var.startswith('name_'):
@@ -137,7 +138,7 @@ class NC_TS:
         pd.DataFrame
             The extracted results.
         """
-        cls = NC_TS(ncfpath)
+        cls = NCTS(ncfpath)
         if domain.lower() == '1d':
             var = TPC_INTERNAL_NAMES['1d_labels'].get(data_type, None)
         elif domain.lower() == 'rl':

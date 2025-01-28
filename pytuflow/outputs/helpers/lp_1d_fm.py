@@ -2,10 +2,10 @@ from typing import Generator, Union
 
 import pandas as pd
 
-from .lp_1d import LP_1D, Connectivity
+from .lp_1d import LP1D, Connectivity
 
 
-class LP_1D_FM(LP_1D):
+class LP1D_FM(LP1D):
     """Override :class:`LP_1D<pytuflow.outputs.helpers.lp_1d.LP_1D>` for Flood Modeller
     long profiles because the start and end locations will be nodes and not channels.
     """

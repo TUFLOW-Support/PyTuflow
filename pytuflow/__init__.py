@@ -29,4 +29,4 @@ from .TUFLOW import *
 
 
 name = 'PyTuflow'
-__version__ = '0.0.96'
+__version__ = '0.0.97'

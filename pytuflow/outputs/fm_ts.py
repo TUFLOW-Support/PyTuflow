@@ -10,7 +10,7 @@ from pytuflow.outputs.helpers.get_standard_data_type_name import get_standard_da
 from pytuflow.outputs.info import INFO
 from pytuflow.pytuflow_types import PathLike, FileTypeError, TimeLike, ResultError
 from pytuflow.outputs.helpers.fm_res_driver import FM_ResultDriver
-from pytuflow.outputs.helpers.lp_1d_fm import LP_1D_FM
+from pytuflow.outputs.helpers.lp_1d_fm import LP1D_FM
 from pytuflow.fm import GXY
 from pytuflow.fm import DAT
 from pytuflow.util.time_util import closest_time_index
@@ -530,7 +530,7 @@ class FMTS(INFO):
 
     def connectivity(self, ids: Union[str, list[str]]) -> pd.DataFrame:
         # docstring inherited
-        lp = LP_1D_FM(ids, self.node_info, self.channel_info)
+        lp = LP1D_FM(ids, self.node_info, self.channel_info)
         if self._lp is not None and lp == self._lp:
             return self._lp.df
 
@@ -540,17 +540,20 @@ class FMTS(INFO):
 
     def id_to_uid(self, id_: str) -> str:
         """Converts a unit ID to its UID. Only searches through units that
-        contain results. If multiple units are found, the first instance
+        contain results. If multiple units are found, it will first preference units that have bed level information
+        (requires that the class was initialised with a DAT file) as this will preference units such as
+        rivers, conduits, structures etc. over units such as junctions. If multiple are still found, the first instance
         is returned. If no unit is found, :code:`None` is returned
 
         Parameters
         ----------
-        id_: str
+        id\_: str
             The unit ID to convert.
 
         Returns
         -------
-            The uid of teh unit.
+        str:
+            The uid of the unit.
         """
         # check if id is already a uid
         if id_.lower() in self.node_info.index.str.lower():

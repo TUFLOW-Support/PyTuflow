@@ -3,7 +3,7 @@ from typing import Union, Generator
 import pandas as pd
 
 
-class LP_1D:
+class LP1D:
     """Class for generating long profiles for 1D channels."""
 
     def __init__(self, ids: list[str], node_info: pd.DataFrame, chan_info: pd.DataFrame) -> None:

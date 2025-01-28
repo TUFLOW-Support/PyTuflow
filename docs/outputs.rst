@@ -1,4 +1,4 @@
-outputs
+Outputs
 =======
 
 TUFLOW outputs and check files. The :code:`outputs` module acts as an abstraction
@@ -19,3 +19,4 @@ The classes listed below are the top level classes that act as entry points to l
    outputs.GPKG1D
    outputs.GPKG2D
    outputs.GPKGRL
+   outputs.FMTS

@@ -5,7 +5,7 @@ import pandas as pd
 
 from pytuflow.outputs.helpers.get_standard_data_type_name import get_standard_data_type_name
 from pytuflow.pytuflow_types import PathLike
-from pytuflow.outputs.helpers.lp_1d import LP_1D
+from pytuflow.outputs.helpers.lp_1d import LP1D
 
 
 class ITimeSeries1D(ABC):
@@ -62,7 +62,7 @@ class ITimeSeries1D(ABC):
         pd.DataFrame
             The connectivity information.
         """
-        lp = LP_1D(ids, self.node_info, self.channel_info)
+        lp = LP1D(ids, self.node_info, self.channel_info)
         if self._lp is not None and lp == self._lp:
             return self._lp.df
 

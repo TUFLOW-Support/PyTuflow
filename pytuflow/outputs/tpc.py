@@ -10,7 +10,7 @@ from pytuflow.outputs.gpkg_1d import GPKG1D
 from pytuflow.outputs.gpkg_2d import GPKG2D
 from pytuflow.outputs.gpkg_rl import GPKGRL
 from pytuflow.outputs.helpers.get_standard_data_type_name import get_standard_data_type_name
-from pytuflow.outputs.helpers.nc_ts import NC_TS
+from pytuflow.outputs.helpers.nc_ts import NCTS
 from pytuflow.outputs.helpers.time_series_extractor import maximum_extractor, time_series_extractor
 from pytuflow.outputs.info import INFO
 from pytuflow.outputs.itime_series_2d import ITimeSeries2D
@@ -667,7 +667,7 @@ class TPC(INFO, ITimeSeries2D):
                 logger.warning(f'TPC._load_time_series_from_property(): Error loading from {prop}: {e}')
 
     def _load_time_series_nc(self, dtype: str, domain: str) -> pd.DataFrame:
-        df = NC_TS.extract_result(self._ncid, dtype, domain)
+        df = NCTS.extract_result(self._ncid, dtype, domain)
         if df is None or df.empty:
             logger.warning(f'TPC._load_time_series_nc(): No data found in NetCDF file for {dtype} for domain {domain}.')
         return df
