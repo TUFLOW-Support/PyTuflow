@@ -13,7 +13,7 @@ class LP_1D:
         self._temp_types = []
 
         # get the case-sensitive ID from the chan_info index
-        self._init_ids(ids, chan_info, node_info)
+        ids = self._init_ids(ids, chan_info, node_info)
 
         #: list[str]: The IDs to trace for connectivity
         self.ids = ids
@@ -132,7 +132,7 @@ class LP_1D:
                 ids1.append(id1)
             except IndexError:
                 raise ValueError(f'Could not find ID: {id_}')
-        return ids
+        return ids1
 
 
 class Connectivity:
