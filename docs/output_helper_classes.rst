@@ -16,3 +16,6 @@ This module contains the API for the output helper classes.
    outputs.helpers.LP1D_FM
    outputs.helpers.Connectivity
    outputs.helpers.Connectivity_FM
+   outputs.helpers.FVBCTideProvider
+   outputs.helpers.FVBCTideGISProvider
+   outputs.helpers.FVBCTideNCProvider

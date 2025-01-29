@@ -208,7 +208,7 @@ class TPC(INFO, ITimeSeries2D):
         --------
         >>> res.times()
         [0.0, 0.016666666666666666, ..., 3.0]
-        >>> res.times('absolute')
+        >>> res.times(fmt='absolute')
         [Timestamp('2021-01-01 00:00:00'), Timestamp('2021-01-01 00:01:00'), ..., Timestamp('2021-01-01 03:00:00')]
         """
         return super().times(context, fmt)

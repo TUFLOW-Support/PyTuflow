@@ -104,11 +104,6 @@ class ITimeSeries1D(ABC):
             df = df[df['geometry'] == 'line']
             ctx.remove('channel')
 
-        # if no domain (including 2d/rl) specified then get everything and let other filters do the work
-        if not filtered_something and '0d' not in context and '2d' not in context and 'po' not in context and 'rl' not in context:
-            df = self.oned_objs.copy()
-            df['domain'] = '1d'
-
         # data types
         ctx1 = [get_standard_data_type_name(x) for x in ctx]
         ctx1 = [x for x in ctx1 if x in df['data_type'].unique()]

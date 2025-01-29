@@ -20,3 +20,4 @@ The classes listed below are the top level classes that act as entry points to l
    outputs.GPKG2D
    outputs.GPKGRL
    outputs.FMTS
+   outputs.FVBCTide

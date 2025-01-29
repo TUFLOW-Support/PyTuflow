@@ -13,7 +13,7 @@ from pytuflow.outputs.gpkg_1d import GPKG1D
 from pytuflow.outputs.gpkg_2d import GPKG2D
 from pytuflow.outputs.gpkg_rl import GPKGRL
 from pytuflow.outputs.fm_ts import FMTS
-from pytuflow.results.fv_bc_tide_curtain.fv_bc_tide import FVBCTide
+from pytuflow.outputs.fv_bc_tide import FVBCTide
 
 
 class Test_Info_2013(unittest.TestCase):
@@ -1238,7 +1238,8 @@ class Test_FVBCTide(unittest.TestCase):
         nc = './tests/fv_bc_tide/Cudgen_Nodestrings_MGA56/Cudgen_Tide.nc'
         ns = './tests/fv_bc_tide/Cudgen_Nodestrings_MGA56/2d_ns_Cudgen_004_OceanBoundary_L.shp'
         res = FVBCTide(nc, ns)
-        self.assertEqual('Cudgen_Tide[TZ:UTC]', res.sim_id)
+        self.assertEqual('Cudgen_Tide', res.name)
+        self.assertEqual('Cudgen_Tide[TZ:UTC]', res.name_tz)
 
     def test_not_fv_bc_tide(self):
         p = './tests/hyd_tables/EG14_001_1d_ta_tables_check.csv'
@@ -1259,66 +1260,72 @@ class Test_FVBCTide(unittest.TestCase):
         nc = './tests/fv_bc_tide/Cudgen_Nodestrings_MGA56/Cudgen_Tide.nc'
         ns = './tests/fv_bc_tide/Cudgen_Nodestrings_MGA56/2d_ns_Cudgen_004_OceanBoundary_L.shp'
         res = FVBCTide(nc, ns)
-        ids = res.node_ids()
-        self.assertEqual(12, len(ids))
-        ids = res.node_ids('h')
+        ids = res.ids('node')
         self.assertEqual(12, len(ids))
 
     def test_node_count(self):
         nc = './tests/fv_bc_tide/Cudgen_Nodestrings_MGA56/Cudgen_Tide.nc'
         ns = './tests/fv_bc_tide/Cudgen_Nodestrings_MGA56/2d_ns_Cudgen_004_OceanBoundary_L.shp'
         res = FVBCTide(nc, ns)
-        self.assertEqual(12, res.node_count())
+        self.assertEqual(12, res.node_count)
 
     def test_node_string_ids(self):
         nc = './tests/fv_bc_tide/Cudgen_Nodestrings_MGA56/Cudgen_Tide.nc'
         ns = './tests/fv_bc_tide/Cudgen_Nodestrings_MGA56/2d_ns_Cudgen_004_OceanBoundary_L.shp'
         res = FVBCTide(nc, ns)
-        ids = res.node_string_ids()
+        ids = res.ids('line')
         self.assertEqual(1, len(ids))
 
     def test_node_string_count(self):
         nc = './tests/fv_bc_tide/Cudgen_Nodestrings_MGA56/Cudgen_Tide.nc'
         ns = './tests/fv_bc_tide/Cudgen_Nodestrings_MGA56/2d_ns_Cudgen_004_OceanBoundary_L.shp'
         res = FVBCTide(nc, ns)
-        self.assertEqual(1, res.node_string_count())
+        self.assertEqual(1, res.node_string_count)
 
     def test_result_types(self):
         nc = './tests/fv_bc_tide/Cudgen_Nodestrings_MGA56/Cudgen_Tide.nc'
         ns = './tests/fv_bc_tide/Cudgen_Nodestrings_MGA56/2d_ns_Cudgen_004_OceanBoundary_L.shp'
         res = FVBCTide(nc, ns)
-        rts = res.result_types()
+        rts = res.data_types()
         self.assertEqual(1, len(rts))
 
     def test_node_result_types(self):
         nc = './tests/fv_bc_tide/Cudgen_Nodestrings_MGA56/Cudgen_Tide.nc'
         ns = './tests/fv_bc_tide/Cudgen_Nodestrings_MGA56/2d_ns_Cudgen_004_OceanBoundary_L.shp'
         res = FVBCTide(nc, ns)
-        rts = res.node_result_types()
+        rts = res.data_types('node')
         self.assertEqual(1, len(rts))
-        rts = res.node_result_types('Ocean_pt_1')
+        rts = res.data_types('Ocean_pt_1')
         self.assertEqual(1, len(rts))
 
     def test_node_string_result_types(self):
         nc = './tests/fv_bc_tide/Cudgen_Nodestrings_MGA56/Cudgen_Tide.nc'
         ns = './tests/fv_bc_tide/Cudgen_Nodestrings_MGA56/2d_ns_Cudgen_004_OceanBoundary_L.shp'
         res = FVBCTide(nc, ns)
-        rts = res.node_string_result_types()
-        self.assertEqual(0, len(rts))
+        rts = res.data_types('nodestring')
+        self.assertEqual(1, len(rts))
 
     def test_long_plot_result_types(self):
         nc = './tests/fv_bc_tide/Cudgen_Nodestrings_MGA56/Cudgen_Tide.nc'
         ns = './tests/fv_bc_tide/Cudgen_Nodestrings_MGA56/2d_ns_Cudgen_004_OceanBoundary_L.shp'
         res = FVBCTide(nc, ns)
-        rts = res.long_plot_result_types()
-        self.assertEqual(['Water Level'], rts)
+        rts = res.data_types('section')
+        self.assertEqual(['water level'], rts)
 
     def test_timesteps(self):
         nc = './tests/fv_bc_tide/Cudgen_Nodestrings_MGA56/Cudgen_Tide.nc'
         ns = './tests/fv_bc_tide/Cudgen_Nodestrings_MGA56/2d_ns_Cudgen_004_OceanBoundary_L.shp'
         res = FVBCTide(nc, ns)
-        timesteps = res.timesteps()
+        timesteps = res.times()
         self.assertEqual(3073, len(timesteps))
+        timesteps = res.times(fmt='absolute')
+
+    def test_maximums(self):
+        nc = './tests/fv_bc_tide/Cudgen_Nodestrings_MGA56/Cudgen_Tide.nc'
+        ns = './tests/fv_bc_tide/Cudgen_Nodestrings_MGA56/2d_ns_Cudgen_004_OceanBoundary_L.shp'
+        res = FVBCTide(nc, ns)
+        mx = res.maximum('Ocean_pt_1', 'h')
+        self.assertEqual((1, 2), mx.shape)
 
     def test_time_series(self):
         nc = './tests/fv_bc_tide/Cudgen_Nodestrings_MGA56/Cudgen_Tide.nc'
@@ -1331,5 +1338,5 @@ class Test_FVBCTide(unittest.TestCase):
         nc = './tests/fv_bc_tide/Cudgen_Nodestrings_MGA56/Cudgen_Tide.nc'
         ns = './tests/fv_bc_tide/Cudgen_Nodestrings_MGA56/2d_ns_Cudgen_004_OceanBoundary_L.shp'
         res = FVBCTide(nc, ns)
-        lp = res.long_plot('Ocean', 'h', 12083.9795)
-        self.assertEqual((12, 1), lp.shape)
+        lp = res.section('Ocean', 'h', 12083.9795)
+        self.assertEqual((12, 4), lp.shape)
