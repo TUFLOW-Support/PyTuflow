@@ -1,7 +1,8 @@
 Output Helper Classes
 =====================
 
-This module contains the API for the output helper classes.
+This module contains the API for the output helper classes. These generally do not need to be used directly or
+explicitly by the user, but are documented here for reference.
 
 .. currentmodule:: pytuflow
 

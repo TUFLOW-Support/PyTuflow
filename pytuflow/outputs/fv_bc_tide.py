@@ -27,7 +27,7 @@ class FVBCTide(TimeSeries):
     e.g. A nodestring called :code:`Ocean` with 5 chainages along the line with water level data will have the following
     point names: :code:`Ocean_pt_0`, :code:`Ocean_pt_1`, :code:`Ocean_pt_2`, :code:`Ocean_pt_3`, :code:`Ocean_pt_4`.
 
-    By default, UTC time is used, but local time can be used (if it is available in the NetCDF file)
+    By default, locat time is used if it is available in the NetCDF file. This can be changed to use UTC time instead
     by setting :code:`use_local_time=True` within the constructor.
 
     This class does not need to be explicitly closed as it will load the results into memory and closes any open files
@@ -45,11 +45,11 @@ class FVBCTide(TimeSeries):
     Raises
     ------
     FileNotFoundError
-        Raised if the .info file does not exist.
+        Raised if the input files do not exist.
     FileTypeError
         Raises :class:`pytuflow.pytuflow_types.FileTypeError` if the file does not look like a time series .info file.
     EOFError
-        Raised if the .info file is empty or incomplete.
+        Raised if either of the input files are empty or incomplete.
 
     Examples
     --------
