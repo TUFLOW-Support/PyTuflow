@@ -135,7 +135,9 @@ class TimeSeries(TabularOutput):
            The available times in the requested format.
        """
         def generate_times(row):
-            a = np.arange(row['start'], row['end'] + row['dt'] / 3600., row['dt'] / 3600.)
+            a = np.arange(row['start'], row['end'], row['dt'] / 3600.)
+            if not np.isclose(a[-1], row['end'], rtol=0., atol=0.001):
+                a = np.append(a, np.reshape(row['end'], (1,)), axis=0)
             return a[a <= row['end']]
 
         # generate a DataFrame with all a combination of result types that meet the context

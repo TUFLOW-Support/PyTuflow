@@ -243,7 +243,7 @@ class FM_ZZNResult(FM_ResultDriver):
         # docstring inherited
         self.zzn = ZZN(self.fpath)
         self.ids = self.zzn.labels()
-        self.timesteps = [(x * self.zzn.output_interval()) / 3600 for x in range(self.zzn.timestep_count())]
+        self.timesteps = self.zzn.timesteps()
         self.result_types = ['Flow', 'Stage', 'Froude', 'Velocity', 'Mode',  'State']
         for res_type in self.result_types:
             df = pd.DataFrame(self.zzn.get_time_series_data(res_type))

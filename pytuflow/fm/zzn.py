@@ -69,8 +69,10 @@ class ZZL:
             #: float: Last timestep.
             self.timestep_last = struct.unpack('I', f.read(4))[0]
             f.seek(pOUT_INTERVAL)
+            #: int: Save multiple
+            self.save_multiple = struct.unpack('I', f.read(4))[0]
             #: float: Output interval.
-            self.output_interval = float(struct.unpack('I', f.read(4))[0])
+            self.output_interval = float(self.save_multiple) * self.dt
             f.seek(pLABEL_LEN)
             #: int: Character length of node labels
             self.label_len = struct.unpack('I', f.read(4))[0]
@@ -204,7 +206,23 @@ class ZZN:
         int
             Timestep count.
         """
-        return int((self.zzl.timestep_last - self.zzl.timestep_first) / self.zzl.output_interval) + 1
+        model_duration = (self.zzl.timestep_last - self.zzl.timestep_first + 1) * self.zzl.dt  # in seconds
+        return int(np.round(model_duration / self.zzl.output_interval)) + 1
+
+    def timesteps(self):
+        """Return the timesteps.
+
+        Returns
+        -------
+        list[float]
+            Timesteps.
+        """
+        start_time = (self.zzl.timestep_first - 1) * self.zzl.dt / 3600
+        end_time = self.zzl.timestep_last * self.zzl.dt / 3600
+        a = np.arange(start_time, end_time, self.zzl.output_interval / 3600)
+        if not np.isclose(a[-1], end_time, rtol=0., atol=0.001):
+            a = np.append(a, np.reshape(end_time, (1,)), axis=0)
+        return a.tolist()
 
     def result_type_count(self) -> int:
         """Return result type count.
