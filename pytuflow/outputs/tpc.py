@@ -299,7 +299,7 @@ class TPC(INFO, ITimeSeries2D):
 
         Combine contexts:
 
-        * :code:`[context1]/[context2] ...`: Combine multiple contexts to filter the times further ('/' delim).
+        * :code:`[context1]/[context2] ...`: Combine multiple contexts to filter the IDs further ('/' delim).
 
         Parameters
         ----------

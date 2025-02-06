@@ -61,6 +61,20 @@
     "temperature": ["temp(?:\\s|_|-)?(?:levels?)?", "temperature(?:\\s|_|-)?(?:levels?)?", "temperatures?"],
     "salinity": ["sal(?:\\s|_|-)?(?:levels?)?", "salinity(?:\\s|_|-)?(?:levels?)?", "salinities?"],
     "sediment fraction \\d concentration": ["sed(?:\\s|_|-)?\\d(?:\\s|_|-)?fraction(?:\\s|_|-)?concentrations?", "sed(?:\\s|_|-)?\\d(?:\\s|_|-)?fraction(?:\\s|_|-)?conc(?:s)?", "sed(?:\\s|_|-)?\\d(?:\\s|_|-)?fraction(?:\\s|_|-)?conc(?:s)?", "sed(?:\\s|_|-)?\\d(?:\\s|_|-)?fraction(?:\\s|_|-)?concs?"],
-    "tracer \\d concentration": ["tracer?(?:\\s|_|-)?\\d(?:\\s|_|-)?concentrations?", "tracer?(?:\\s|_|-)?\\d(?:\\s|_|-)?conc(?:s)?", "tracer?(?:\\s|_|-)?\\d(?:\\s|_|-)?conc(?:s)?", "tracer?(?:\\s|_|-)?\\d(?:\\s|_|-)?concs?"]
+    "tracer \\d concentration": ["tracer?(?:\\s|_|-)?\\d(?:\\s|_|-)?concentrations?", "tracer?(?:\\s|_|-)?\\d(?:\\s|_|-)?conc(?:s)?", "tracer?(?:\\s|_|-)?\\d(?:\\s|_|-)?conc(?:s)?", "tracer?(?:\\s|_|-)?\\d(?:\\s|_|-)?concs?"],
+    "elevation": ["elevations?", "elevs?"],
+    "point": ["points?", "pts?"],
+    "manning n": ["mannings?(?:\\s|_|-)?n?", "n"],
+    "width": ["widths?"],
+    "storage width": ["storage(?:\\s|_|-)?widths?"],
+    "flow width": ["flow(?:\\s|_|-)?widths?", "q(?:\\s|_|-)?widths?"],
+    "effective width": ["eff(?:ective)?(?:\\s|_|-)?widths?"],
+    "area": ["areas?"],
+    "effective area": ["eff(?:ective)?(?:\\s|_|-)?areas?"],
+    "wetted perimeter": ["wet(?:ted)?(?:\\s|_|-)?per(?:imeter)s?", "p"],
+    "effective wetted perimeter": ["eff(?:ective)?(?:\\s|_|-)?wet(?:ted)?(?:\\s|_|-)?per(?:imeter)?s?", "eff(?:ective)?(?:\\s|_|-)?wet(?:ted)?(?:\\s|_|-)?p"],
+    "radius": ["r", "rad", "radius","hyd(?:raulic)?(?:\\s|_|-)?rad(?:ius)?"],
+    "vertex resistance factor": ["vert(?:ex)?(?:\\s|_|-)?res(?:istance)?(?:\\s|_|-)?factors?"],
+    "k": ["k"]
   }
 }

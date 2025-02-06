@@ -20,3 +20,5 @@ explicitly by the user, but are documented here for reference.
    outputs.helpers.FVBCTideProvider
    outputs.helpers.FVBCTideGISProvider
    outputs.helpers.FVBCTideNCProvider
+   outputs.helpers.HydTablesCrossSectionProvider
+   outputs.helpers.HydTablesChannelProvider

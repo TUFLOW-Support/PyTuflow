@@ -2,11 +2,12 @@ import unittest
 from datetime import datetime
 from unittest import TestCase
 
+from pytuflow.pytuflow_types import FileTypeError
 from pytuflow.results.bc_tables.bc_tables import BCTables
 from pytuflow.results.fm.fm import FM_TS
 from pytuflow.results.fm.fm_nodes import FMNodes
 from pytuflow.fm import GXY
-from pytuflow.results.hyd_tables.hyd_tables import HydTables
+from pytuflow.outputs.hyd_tables_check import HydTablesCheck
 from pytuflow.outputs.info import INFO
 from pytuflow.outputs.tpc import TPC
 from pytuflow.outputs.gpkg_1d import GPKG1D
@@ -968,179 +969,156 @@ class Test_HydTables(unittest.TestCase):
 
     def test_load(self):
         p = './tests/hyd_tables/EG14_001_1d_ta_tables_check.csv'
-        res = HydTables(p)
-        self.assertEqual(res.sim_id, 'EG14_001')
-        self.assertEqual((55, 3), res.cross_sections.df.shape)
-        self.assertEqual((52, 13), res.channels.df.shape)
-        self.assertEqual(52, len(res.channels.database))
-        self.assertEqual(res.cross_sections.df['Name'].loc['XS00001'], '1d_xs_M14_C99')
+        res = HydTablesCheck(p)
+        self.assertEqual(res.name, 'EG14_001')
 
     def test_load_2(self):  # all cross-sections are in one CSV file
         p = './tests/hyd_tables/EG14_CONCAT_001_1d_ta_tables_check.csv'
-        res = HydTables(p)
-        self.assertEqual(res.sim_id, 'EG14_CONCAT_001')
-        self.assertEqual((55, 3), res.cross_sections.df.shape)
-        self.assertEqual((52, 13), res.channels.df.shape)
-        self.assertEqual(52, len(res.channels.database))
-        self.assertEqual(res.cross_sections.df['Name'].loc['XS00001'], '1d_xs_M14_C99')
+        res = HydTablesCheck(p)
+        self.assertEqual(res.name, 'EG14_CONCAT_001')
 
     def test_load_3(self):  # HW table mingled in
         p = './tests/hyd_tables/EG14_CONCAT_HW_001_1d_ta_tables_check.csv'
-        res = HydTables(p)
-        self.assertEqual(res.sim_id, 'EG14_CONCAT_HW_001')
-        self.assertEqual((55, 3), res.cross_sections.df.shape)
-        self.assertEqual((52, 13), res.channels.df.shape)
-        self.assertEqual(52, len(res.channels.database))
-        self.assertEqual(res.cross_sections.df['Name'].loc['XS00043'], '1d_xs_M14_C143')
-        self.assertEqual(res.cross_sections.df['Type'].loc['XS00043'], 'HW')
+        res = HydTablesCheck(p)
+        self.assertEqual(res.name, 'EG14_CONCAT_HW_001')
 
     def test_not_hyd_tables(self):
         p = './tests/bc_tables/EG14_001_1d_bc_tables_check.csv'
         try:
-            res = HydTables(p)
+            res = HydTablesCheck(p)
             raise AssertionError('Should have raised an exception')
-        except ValueError:
+        except FileTypeError:
             pass
 
     def test_empty_hyd_tables(self):
         p = './tests/hyd_tables/EG14_001_empty_1d_ta_tables_check.csv'
         try:
-            res = HydTables(p)
+            res = HydTablesCheck(p)
             raise AssertionError('Should have raised an exception')
-        except ValueError:
+        except EOFError:
             pass
+
+    def test_cross_section_count(self):
+        p = './tests/hyd_tables/EG14_001_1d_ta_tables_check.csv'
+        res = HydTablesCheck(p)
+        self.assertEqual(55, res.cross_section_count)
+
+    def test_cross_section_count_2(self):
+        p = './tests/hyd_tables/EG14_CONCAT_001_1d_ta_tables_check.csv'
+        res = HydTablesCheck(p)
+        self.assertEqual(55, res.cross_section_count)
+
+    def test_cross_section_count_3(self):
+        p = './tests/hyd_tables/EG14_CONCAT_HW_001_1d_ta_tables_check.csv'
+        res = HydTablesCheck(p)
+        self.assertEqual(55, res.cross_section_count)
 
     def test_channel_count(self):
         p = './tests/hyd_tables/EG14_001_1d_ta_tables_check.csv'
-        res = HydTables(p)
-        self.assertEqual(52, res.channel_count())
-
-    def test_node_count(self):
-        p = './tests/hyd_tables/EG14_001_1d_ta_tables_check.csv'
-        res = HydTables(p)
-        self.assertEqual(0, res.node_count())
+        res = HydTablesCheck(p)
+        self.assertEqual(52, res.channel_count)
 
     def test_ids(self):
         p = './tests/hyd_tables/EG14_001_1d_ta_tables_check.csv'
-        res = HydTables(p)
+        res = HydTablesCheck(p)
         ids = res.ids()
-        self.assertEqual(107, len(ids))
-        self.assertEqual('1d_xs_M14_C99', ids[0])
-        ids = res.ids('Elevation')
-        self.assertEqual(55, len(ids))
-        self.assertEqual('1d_xs_M14_C99', ids[0])
-        ids = res.ids('area')
-        self.assertEqual(52, len(ids))
-        ids = res.ids('K')
         self.assertEqual(107, len(ids))
 
     def test_ids_2(self):
         p = './tests/hyd_tables/EG14_CONCAT_001_1d_ta_tables_check.csv'
-        res = HydTables(p)
+        res = HydTablesCheck(p)
         ids = res.ids()
         self.assertEqual(107, len(ids))
-        self.assertEqual('1d_xs_M14_C99', ids[0])
 
     def test_ids_3(self):
         p = './tests/hyd_tables/EG14_CONCAT_HW_001_1d_ta_tables_check.csv'
-        res = HydTables(p)
+        res = HydTablesCheck(p)
         ids = res.ids()
         self.assertEqual(107, len(ids))
-        self.assertEqual('1d_xs_M14_C99', ids[0])
 
-    def test_result_types(self):
+    def test_ids_ctx(self):
         p = './tests/hyd_tables/EG14_001_1d_ta_tables_check.csv'
-        res = HydTables(p)
-        rts = res.result_types()
-        self.assertEqual(14, len(rts))
-        rts = res.result_types('1d_xs_M14_C99')
-        self.assertEqual(10, len(rts))
-        rts = res.result_types('FC01.39')
-        self.assertEqual(8, len(rts))
-
-    def test_time_series(self):
-        p = './tests/hyd_tables/EG14_001_1d_ta_tables_check.csv'
-        res = HydTables(p)
-        df = res.time_series('1d_xs_M14_C99', 'Elevation')
-        self.assertEqual((29, 1), df.shape)
-
-    def test_time_series_2(self):
-        p = './tests/hyd_tables/EG14_001_1d_ta_tables_check.csv'
-        res = HydTables(p)
-        df = res.time_series('1d_xs_M14_C99', ['Elevation', 'Width'])
-        self.assertEqual((29, 4), df.shape)
-
-    def test_time_series_3(self):
-        p = './tests/hyd_tables/EG14_001_1d_ta_tables_check.csv'
-        res = HydTables(p)
-        df = res.time_series('1d_xs_M14_C99', ['Eff Width', 'Eff Area'])
-        self.assertEqual((27, 2), df.shape)
-
-    def test_time_series_4(self):
-        p = './tests/hyd_tables/EG14_001_1d_ta_tables_check.csv'
-        res = HydTables(p)
-        df = res.time_series(['1d_xs_M14_C99', '1d_xs_M14_C100'], ['Eff Width', 'Eff Area'])
-        self.assertEqual((30, 8), df.shape)
-
-    def test_time_series_5(self):
-        p = './tests/hyd_tables/EG14_001_1d_ta_tables_check.csv'
-        res = HydTables(p)
-        df = res.time_series('FC01.39', 'area')
-        self.assertEqual((35, 1), df.shape)
-
-    def test_time_series_6(self):
-        p = './tests/hyd_tables/EG14_001_1d_ta_tables_check.csv'
-        res = HydTables(p)
-        df = res.time_series(['FC01.39', '1d_xs_M14_C99'], ['area', 'eff area'])
-        self.assertEqual((35, 4), df.shape)
-
-    def test_time_series_7(self):
-        p = './tests/hyd_tables/EG14_001_1d_ta_tables_check.csv'
-        res = HydTables(p)
-        df = res.time_series(['FC01.39', '1d_xs_M14_C99'], ['area', 'Eff Width', 'Eff Area', 'Radius'])
-        self.assertEqual((35, 10), df.shape)
-
-    def test_time_series_8(self):
-        p = './tests/hyd_tables/EG14_001_1d_ta_tables_check.csv'
-        res = HydTables(p)
-        df = res.time_series(None, ['Eff Width'])
-        self.assertEqual((49, 110), df.shape)
-
-    def test_maximum_types(self):
-        p = './tests/hyd_tables/EG14_001_1d_ta_tables_check.csv'
-        res = HydTables(p)
-        result_types = res.maximum_result_types()
-        self.assertEqual(0, len(result_types))
-
-    def test_maximums(self):
-        p = './tests/hyd_tables/EG14_001_1d_ta_tables_check.csv'
-        res = HydTables(p)
-        try:
-            df = res.maximum('1d_xs_M14_C99', 'Elevation')
-            raise AssertionError('Should have raised an exception')
-        except NotImplementedError:
-            pass
-
-    def test_long_plot(self):
-        p = './tests/hyd_tables/EG14_001_1d_ta_tables_check.csv'
-        res = HydTables(p)
-        try:
-            df = res.long_plot('1d_xs_M14_C99', ['Elevation', 'Width'], 1)
-            raise Exception('Should have raised a NotImplementedError')
-        except NotImplementedError as e:
-            pass
-
-    def test_cross_section_ids(self):
-        p = './tests/hyd_tables/EG14_001_1d_ta_tables_check.csv'
-        res = HydTables(p)
-        ids = res.cross_section_ids()
+        res = HydTablesCheck(p)
+        ids = res.ids('channel')
+        self.assertEqual(52, len(ids))
+        ids = res.ids('xs')
         self.assertEqual(55, len(ids))
+        ids = res.ids('proc')
+        self.assertEqual(55, len(ids))
+        ids = res.ids('elevation')
+        self.assertEqual(55, len(ids))
+        ids = res.ids('xz')
+        self.assertEqual(55, len(ids))
+        ids = res.ids('hw')
+        self.assertEqual(0, len(ids))
 
-    def test_cross_section_ids_2(self):
+    def test_ids_ctx_2(self):
+        p = './tests/hyd_tables/EG14_CONCAT_001_1d_ta_tables_check.csv'
+        res = HydTablesCheck(p)
+        ids = res.ids('channel')
+        self.assertEqual(52, len(ids))
+        ids = res.ids('xs')
+        self.assertEqual(55, len(ids))
+        ids = res.ids('proc')
+        self.assertEqual(55, len(ids))
+        ids = res.ids('elevation')
+        self.assertEqual(55, len(ids))
+        ids = res.ids('xz')
+        self.assertEqual(55, len(ids))
+        ids = res.ids('hw')
+        self.assertEqual(0, len(ids))
+
+    def test_ids_ctx_3(self):
         p = './tests/hyd_tables/EG14_CONCAT_HW_001_1d_ta_tables_check.csv'
-        res = HydTables(p)
-        ids = res.cross_section_ids('Elevation')
+        res = HydTablesCheck(p)
+        ids = res.ids('channel')
+        self.assertEqual(52, len(ids))
+        ids = res.ids('xs')
         self.assertEqual(54, len(ids))
+        ids = res.ids('proc')
+        self.assertEqual(55, len(ids))
+        ids = res.ids('elevation')
+        self.assertEqual(54, len(ids))
+        ids = res.ids('xz')
+        self.assertEqual(54, len(ids))
+        ids = res.ids('hw')
+        self.assertEqual(1, len(ids))
+
+    def test_data_types(self):
+        p = './tests/hyd_tables/EG14_001_1d_ta_tables_check.csv'
+        res = HydTablesCheck(p)
+        dtypes = res.data_types()
+        self.assertEqual(14, len(dtypes))
+
+    def test_data_types_2(self):
+        p = './tests/hyd_tables/EG14_CONCAT_001_1d_ta_tables_check.csv'
+        res = HydTablesCheck(p)
+        dtypes = res.data_types()
+        self.assertEqual(14, len(dtypes))
+
+    def test_data_types_3(self):
+        p = './tests/hyd_tables/EG14_CONCAT_HW_001_1d_ta_tables_check.csv'
+        res = HydTablesCheck(p)
+        dtypes = res.data_types()
+        self.assertEqual(14, len(dtypes))
+
+    def test_data_types_ctx(self):
+        p = './tests/hyd_tables/EG14_001_1d_ta_tables_check.csv'
+        res = HydTablesCheck(p)
+        dtypes = res.data_types('xs')
+        self.assertEqual(2, len(dtypes))
+        dtypes = res.data_types('processed')
+        self.assertEqual(8, len(dtypes))
+        dtypes = res.data_types('XZ')
+        self.assertEqual(10, len(dtypes))
+        dtypes = res.data_types('FC01.25')
+        self.assertEqual(8, len(dtypes))
+
+    def test_section(self):
+        p = './tests/hyd_tables/EG14_001_1d_ta_tables_check.csv'
+        res = HydTablesCheck(p)
+        df = res.section(['FC01.25', 'FC01.39'], 'flow width')
+        self.assertEqual((39, 4), df.shape)
 
 
 class Test_BC_Tables(unittest.TestCase):
