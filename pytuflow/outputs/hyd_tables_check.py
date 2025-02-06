@@ -337,6 +337,7 @@ class HydTablesCheck(CheckTable):
         """
         # figure out locations and data types
         locations, data_types = self._figure_out_loc_and_data_types(locations, data_types)
+        dtypes = [get_standard_data_type_name(x) for x in data_types]
 
         # get more context on the inputs - e.g. what stage of processing they are from
         ctx = '/'.join(locations + data_types)
@@ -347,15 +348,19 @@ class HydTablesCheck(CheckTable):
             for proc_type in ['xs', 'processed', 'channel']:
                 if df[(df.id == loc) & (df.geometry == proc_type)].empty:
                     continue
-                if proc_type == 'xs':
-                    df_ = self.cross_sections.database[loc].df_xs
-                elif proc_type == 'processed':
-                    df_ = self.cross_sections.database[loc].df_proc[data_types]
+                if proc_type in ['xs', 'processed']:
+                    loc1 = self.cross_sections.name2id(loc) if loc not in self.cross_sections.database else loc
+                    if proc_type == 'xs':
+                        df_ = self.cross_sections.database[loc1].df_xs
+                    else:
+                        df_ = self.cross_sections.database[loc1].df_proc[data_types]
                 else:
                     df_ = self.channels.database[loc][data_types]
 
-                dtypes = [x for x in data_types if x in df_.columns]
-                df_ = df_[dtypes]
+                dtypes1 = [x for x in dtypes if x in df_.columns]
+                dtypes2 = [data_types[i] for i, x in enumerate(dtypes) if x in df_.columns]
+                df_ = df_[dtypes1]
+                df_.columns = dtypes2
                 if df_ is None or df_.empty:
                     continue
                 df_.reset_index(inplace=True)
@@ -477,7 +482,8 @@ class HydTablesCheck(CheckTable):
             valid_types = self.data_types()
             data_types1 = []
             for dtype in data_types:
-                if get_standard_data_type_name(dtype) not in valid_types:
+                stndname = get_standard_data_type_name(dtype)
+                if stndname not in valid_types:
                     logger.warning(
                         f'HydTablesCheck.section(): Data type "{dtype}" is not a valid section data type or '
                         f'not in output - removing.'

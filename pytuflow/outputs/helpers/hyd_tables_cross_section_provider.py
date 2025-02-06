@@ -15,6 +15,12 @@ class HydTablesCrossSectionProvider:
         #: dict: The database of cross-sections
         self.database = {}
 
+    def name2id(self, name: str) -> str:
+        for xs_id, xs in self.database.items():
+            if xs.name == name:
+                return xs_id
+        return ''
+
     def read_next(self, fo: TextIO):
         buffer = io.StringIO()
         while True:  # must use while loop as using for loop disables tell() which means we can't rewind a line
