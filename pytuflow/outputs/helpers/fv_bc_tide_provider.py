@@ -3,8 +3,8 @@ from pathlib import Path
 import numpy as np
 
 from pytuflow.pytuflow_types import PathLike, TimeLike
-from pytuflow.results.fv_bc_tide_curtain.fv_bc_tide_gis_provider import FVBCTideGISProvider
-from pytuflow.results.fv_bc_tide_curtain.fv_bc_tide_nc_provider import FVBCTideNCProvider
+from .fv_bc_tide_gis_provider import FVBCTideGISProvider
+from .fv_bc_tide_nc_provider import FVBCTideNCProvider
 from pytuflow.util.gis import has_gdal
 
 try:

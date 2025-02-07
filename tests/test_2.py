@@ -1,11 +1,8 @@
 import unittest
-from datetime import datetime
 from unittest import TestCase
 
 from pytuflow.pytuflow_types import FileTypeError
 from pytuflow.outputs.bc_tables_check import BCTablesCheck
-from pytuflow.results.fm.fm import FM_TS
-from pytuflow.results.fm.fm_nodes import FMNodes
 from pytuflow.fm import GXY
 from pytuflow.outputs.hyd_tables_check import HydTablesCheck
 from pytuflow.outputs.info import INFO
