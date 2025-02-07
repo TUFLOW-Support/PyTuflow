@@ -120,7 +120,7 @@ class GPKGRL(GPKG2D):
         # docstring inherited
         locations, data_types = self._loc_data_types_to_list(locations, data_types)
         context = '/'.join(locations + data_types)
-        ctx = self.context_combinations(context)
+        ctx = self.context_filter(context)
         if ctx.empty:
             return pd.DataFrame()
 
@@ -134,7 +134,7 @@ class GPKGRL(GPKG2D):
         # docstring inherited
         locations, data_types = self._loc_data_types_to_list(locations, data_types)
         context = '/'.join(locations + data_types)
-        ctx = self.context_combinations(context)
+        ctx = self.context_filter(context)
         if ctx.empty:
             return pd.DataFrame()
 

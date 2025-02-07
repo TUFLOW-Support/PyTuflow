@@ -1,11 +1,12 @@
 import re
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Union
 
 import numpy as np
 import pandas as pd
 
-from .check_table import CheckTable
+from .tabular_output import TabularOutput
 from .helpers.get_standard_data_type_name import get_standard_data_type_name
 from .helpers.hyd_tables_cross_section_provider import HydTablesCrossSectionProvider
 from .helpers.hyd_tables_channel_provider import HydTablesChannelProvider
@@ -16,7 +17,7 @@ from pytuflow.util.logging import get_logger
 logger = get_logger()
 
 
-class HydTablesCheck(CheckTable):
+class HydTablesCheck(TabularOutput):
     """Class for reading the TUFLOW check file for 1D hydraulic tables.
     These are file that end with :code:`_1d_ta_tables_check.csv`, found in the 1D check folder.
 
@@ -50,6 +51,8 @@ class HydTablesCheck(CheckTable):
     def __init__(self, fpath: PathLike) -> None:
         super().__init__(fpath)
 
+        self.reference_time = datetime(2000, 1, 1, tzinfo=timezone.utc)
+        self.units = ''
         #: Path: The path to the source output file.
         self.fpath = Path(fpath)
         #: Path: Path to the parent TCF file
@@ -109,7 +112,7 @@ class HydTablesCheck(CheckTable):
         """
         pass  # no files are left open
 
-    def context_combinations(self, context: str) -> pd.DataFrame:
+    def context_filter(self, context: str) -> pd.DataFrame:
         # docstring inherited
         # split context into components
         ctx = [x.strip().lower() for x in context.split('/') if x] if context else []
@@ -172,7 +175,7 @@ class HydTablesCheck(CheckTable):
             if not df.empty:
                 j = len(ctx) - 1
                 for i, x in enumerate(reversed(ctx.copy())):
-                    if df['id'].str.lower().isin([x.lower()]).any():
+                    if df['id'].str.lower().isin([x.lower()]).any() or df['uid'].str.lower().isin([x.lower()]).any():
                         ctx.pop(j - i)
                 if ctx and not filtered_something:
                     df = pd.DataFrame()
@@ -231,7 +234,7 @@ class HydTablesCheck(CheckTable):
         >>> hyd_tables.ids('channel')
         ['RD_weir', 'FC01.39', 'FC01.38'  ...  FC01.37', 'FC01.36', 'FC01.34']
         """
-        df = self.context_combinations(context)
+        df = self.context_filter(context)
         return df.id.unique().tolist()
 
     def data_types(self, context: str = None) -> list[str]:
@@ -284,7 +287,7 @@ class HydTablesCheck(CheckTable):
         ['depth', 'storage width', 'flow width', 'area', 'wetted perimeter',
         'radius', 'vertex resistance factor', 'k ']
         """
-        df = self.context_combinations(context)
+        df = self.context_filter(context)
         return df.data_type.unique().tolist()
 
     def section(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
@@ -341,7 +344,7 @@ class HydTablesCheck(CheckTable):
 
         # get more context on the inputs - e.g. what stage of processing they are from
         ctx = '/'.join(locations + data_types)
-        df = self.context_combinations(ctx)
+        df = self.context_filter(ctx)
 
         df1 = pd.DataFrame()
         for loc in locations:

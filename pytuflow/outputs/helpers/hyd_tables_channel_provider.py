@@ -7,6 +7,7 @@ import pandas as pd
 
 
 class HydTablesChannelProvider:
+    """Provider class for reading and storing channel data from a TUFLOW 1d_ta_tables check file."""
 
     def __init__(self):
         #: bool: Whether the provider is finished reading
@@ -14,8 +15,15 @@ class HydTablesChannelProvider:
         #: dict: The database of channels
         self.database = {}
 
-
     def read_next(self, fo: TextIO):
+        """Read the next channel from the open file object. Check the :code:`finished` attribute to see if the provider
+        has finished reading.
+
+        Parameters
+        ----------
+        fo : TextIO
+            Open file object to read the channel from.
+        """
         buffer = io.StringIO()
         while True:
             marker = fo.tell()
@@ -48,7 +56,16 @@ class HydTablesChannelProvider:
                 self.finished = True
                 return
 
-    def add_channel_entry(self, fo: TextIO, channel_id: str, xs1: str, xs2: str):
+    def add_channel_entry(self, fo: TextIO, channel_id: str):
+        """Add a channel entry to the database.
+
+        Parameters
+        ----------
+        fo : TextIO
+            Open file object containing the channel data.
+        channel_id : str
+            The channel ID.
+        """
         df = pd.read_csv(fo)
         df.columns = df.columns.str.lower()
         df.drop(df.columns[df.columns.str.contains('unnamed')], axis=1, inplace=True)

@@ -152,7 +152,7 @@ class TPC(INFO, ITimeSeries2D):
         except Exception as e:
             return True
 
-    def context_combinations(self, context: str) -> pd.DataFrame:
+    def context_filter(self, context: str) -> pd.DataFrame:
         # docstring inherited
         # split context into components
         ctx = [x.strip().lower() for x in context.split('/')] if context else []
@@ -401,7 +401,7 @@ class TPC(INFO, ITimeSeries2D):
         """
         locations, data_types = self._loc_data_types_to_list(locations, data_types)
         context = '/'.join(locations + data_types)
-        ctx = self.context_combinations(context)
+        ctx = self.context_filter(context)
         if ctx.empty:
             return pd.DataFrame()
 
@@ -515,7 +515,7 @@ class TPC(INFO, ITimeSeries2D):
         """
         locations, data_types = self._loc_data_types_to_list(locations, data_types)
         context = '/'.join(locations + data_types)
-        ctx = self.context_combinations(context)
+        ctx = self.context_filter(context)
         if ctx.empty:
             return pd.DataFrame()
 

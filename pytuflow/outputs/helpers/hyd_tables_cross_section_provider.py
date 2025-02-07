@@ -8,6 +8,7 @@ import pandas as pd
 
 
 class HydTablesCrossSectionProvider:
+    """Provider class for reading raw and processed cross-section data from a TUFLOW 1d_ta_tables check file."""
 
     def __init__(self):
         #: bool: Whether the provider is finished reading
@@ -16,12 +17,34 @@ class HydTablesCrossSectionProvider:
         self.database = {}
 
     def name2id(self, name: str) -> str:
+        """Return cross-section ID from name.
+
+        e.g. '1d_xs_C109' -> 'XS00001'
+
+        Parameters
+        ----------
+        name : str
+            Name of the cross-section.
+
+        Returns
+        -------
+        str
+            Cross-section ID.
+        """
         for xs_id, xs in self.database.items():
             if xs.name == name:
                 return xs_id
         return ''
 
     def read_next(self, fo: TextIO):
+        """Read the next cross-section from the open file object. Check the :code:`finished`
+        attribute to see if the provider.
+
+        Parameters
+        ----------
+        fo : TextIO
+            Open file object to read the cross-section from.
+        """
         buffer = io.StringIO()
         while True:  # must use while loop as using for loop disables tell() which means we can't rewind a line
             marker = fo.tell()
@@ -63,6 +86,19 @@ class HydTablesCrossSectionProvider:
                 return
 
     def add_cross_section_entry(self, fo: TextIO, xs_id: str, xs_name: str, xs_type: str):
+        """Add a cross-section entry to the database. Extracts and stores the raw and processed cross-section data.
+
+        Parameters
+        ----------
+        fo : TextIO
+            Open file object containing the cross-section data.
+        xs_id : str
+            Cross-section ID (e.g. XS00001).
+        xs_name : str
+            Name of the cross-section.
+        xs_type : str
+            Type attribute of the cross-section (XZ, HW, etc).
+        """
         df = pd.read_csv(fo)
         df.columns = df.columns.str.lower()
         if xs_type == 'XZ':

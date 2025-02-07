@@ -166,7 +166,7 @@ class FVBCTide(TimeSeries):
         """
         pass  # no files are left open
 
-    def context_combinations(self, context: str) -> pd.DataFrame:
+    def context_filter(self, context: str) -> pd.DataFrame:
         # docstring inherited
         # split context into list
         ctx = [x.strip().lower() for x in context.split('/')] if context else []
@@ -352,7 +352,7 @@ class FVBCTide(TimeSeries):
         """
         locations, data_types = self._loc_data_types_to_list(locations, data_types)
         context = '/'.join(locations + data_types)
-        ctx = self.context_combinations(context)
+        ctx = self.context_filter(context)
         if ctx.empty:
             return pd.DataFrame()
 
@@ -409,7 +409,7 @@ class FVBCTide(TimeSeries):
         """
         locations, data_types = self._loc_data_types_to_list(locations, data_types)
         context = '/'.join(locations + data_types)
-        ctx = self.context_combinations(context)
+        ctx = self.context_filter(context)
         if ctx.empty:
             return pd.DataFrame()
 

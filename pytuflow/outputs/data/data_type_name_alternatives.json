@@ -75,6 +75,8 @@
     "effective wetted perimeter": ["eff(?:ective)?(?:\\s|_|-)?wet(?:ted)?(?:\\s|_|-)?per(?:imeter)?s?", "eff(?:ective)?(?:\\s|_|-)?wet(?:ted)?(?:\\s|_|-)?p"],
     "radius": ["r", "rad", "radius","hyd(?:raulic)?(?:\\s|_|-)?rad(?:ius)?"],
     "vertex resistance factor": ["vert(?:ex)?(?:\\s|_|-)?res(?:istance)?(?:\\s|_|-)?factors?"],
-    "k": ["k"]
+    "k": ["k"],
+    "rating curve": ["rating(?:\\s|_|-)?curves?", "rating(?:\\s|_|-)?tables?", "hq"],
+    "rainfall": ["rf", "rain(?:\\s|_|-)?falls?"]
   }
 }

@@ -66,54 +66,8 @@ class TimeSeries(TabularOutput):
         """
         pass
 
-    def context_combinations(self, context: str) -> pd.DataFrame:
-        """Returns a DataFrame with the output combinations for the given context string.
-
-        Parameters
-        ----------
-        context : str
-            The context to extract the combinations for.
-
-        Returns
-        -------
-        pd.DataFrame
-            The context combinations.
-
-        Examples
-        --------
-        Extracting the available :code:`channel` output combinations. The returned DataFrame contains a row for each
-        :code:`id` / :code:`data_type` combination that is available for :code:`channel` types.
-
-        >>> res.context_combinations('channel')
-                   id data_type geometry  start  end    dt domain
-        55        ds1      flow     line    0.0  3.0  60.0     1d
-        56        ds2      flow     line    0.0  3.0  60.0     1d
-        57        ds3      flow     line    0.0  3.0  60.0     1d
-        58        ds4      flow     line    0.0  3.0  60.0     1d
-        59        ds5      flow     line    0.0  3.0  60.0     1d
-        ..        ...       ...      ...    ...  ...   ...    ...
-        158   FC02.04  velocity     line    0.0  3.0  60.0     1d
-        159   FC02.05  velocity     line    0.0  3.0  60.0     1d
-        160   FC02.06  velocity     line    0.0  3.0  60.0     1d
-        161  FC04.1_C  velocity     line    0.0  3.0  60.0     1d
-        162  FC_weir1  velocity     line    0.0  3.0  60.0     1d
-
-        Similarly, extracting combinations for :code:`flow`:
-
-        >>> res.context_combinations('flow')
-                           id data_type geometry  start  end    dt domain
-        55        ds1      flow     line    0.0  3.0  60.0     1d
-        56        ds2      flow     line    0.0  3.0  60.0     1d
-        57        ds3      flow     line    0.0  3.0  60.0     1d
-        58        ds4      flow     line    0.0  3.0  60.0     1d
-        59        ds5      flow     line    0.0  3.0  60.0     1d
-        ..        ...       ...      ...    ...  ...   ...    ...
-        104   FC02.04      flow     line    0.0  3.0  60.0     1d
-        105   FC02.05      flow     line    0.0  3.0  60.0     1d
-        106   FC02.06      flow     line    0.0  3.0  60.0     1d
-        107  FC04.1_C      flow     line    0.0  3.0  60.0     1d
-        108  FC_weir1      flow     line    0.0  3.0  60.0     1d
-        """
+    def context_filter(self, context: str) -> pd.DataFrame:
+        # docstring inherited
         return pd.DataFrame(columns=['id', 'data_type', 'geometry', 'start', 'end', 'dt', 'domain'])
 
     def times(self, context: str = None, fmt: str = 'relative') -> list[TimeLike]:
@@ -141,7 +95,7 @@ class TimeSeries(TabularOutput):
             return a[a <= row['end']]
 
         # generate a DataFrame with all a combination of result types that meet the context
-        ctx = self.context_combinations(context)
+        ctx = self.context_filter(context)
         if ctx.empty:
             return []
 
@@ -172,7 +126,7 @@ class TimeSeries(TabularOutput):
             The available data types.
         """
         # generate a DataFrame with all a combination of result types that meet the context
-        ctx = self.context_combinations(context)
+        ctx = self.context_filter(context)
         if ctx.empty:
             return []
 
@@ -195,7 +149,7 @@ class TimeSeries(TabularOutput):
             The available IDs.
         """
         # generate a DataFrame with all a combination of result types that meet the context
-        ctx = self.context_combinations(context)
+        ctx = self.context_filter(context)
         if ctx.empty:
             return []
 

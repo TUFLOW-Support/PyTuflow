@@ -140,7 +140,7 @@ class INFO(TimeSeries, ITimeSeries1D):
             return True
         return False
 
-    def context_combinations(self, context: str) -> pd.DataFrame:
+    def context_filter(self, context: str) -> pd.DataFrame:
         # docstring inherited
         # split context into components
         ctx = [x.strip().lower() for x in context.split('/')] if context else []
@@ -149,7 +149,7 @@ class INFO(TimeSeries, ITimeSeries1D):
     def times(self, context: str = None, fmt: str = 'relative') -> list[TimeLike]:
         """Returns all the available times for the given context.
 
-        The context is an optional input that can be used to filter the return further.Valid contexts
+        The context is an optional input that can be used to filter the return further. Valid contexts
         for this class are:
 
         * :code:`None`: default - returns all available times
@@ -344,7 +344,7 @@ class INFO(TimeSeries, ITimeSeries1D):
         """
         locations, data_types = self._loc_data_types_to_list(locations, data_types)
         context = '/'.join(locations + data_types)
-        ctx = self.context_combinations(context)
+        ctx = self.context_filter(context)
         if ctx.empty:
             return pd.DataFrame()
 
@@ -423,7 +423,7 @@ class INFO(TimeSeries, ITimeSeries1D):
         """
         locations, data_types = self._loc_data_types_to_list(locations, data_types)
         context = '/'.join(locations + data_types)
-        ctx = self.context_combinations(context)
+        ctx = self.context_filter(context)
         if ctx.empty:
             return pd.DataFrame()
 

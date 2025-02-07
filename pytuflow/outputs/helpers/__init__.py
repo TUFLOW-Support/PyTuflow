@@ -7,3 +7,6 @@ from .fv_bc_tide_gis_provider import FVBCTideGISProvider
 from .fv_bc_tide_nc_provider import FVBCTideNCProvider
 from .hyd_tables_cross_section_provider import HydTablesCrossSectionProvider
 from .hyd_tables_channel_provider import HydTablesChannelProvider
+from .bc_check_provider import BCCheckProvider
+from .boundary_type import (BoundaryType, BoundaryTypeBC, BoundaryTypeQT, BoundaryTypeHQ, BoundaryTypeHT,
+                            BoundaryTypeSA, BoundaryTypeRF)

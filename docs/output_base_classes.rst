@@ -18,5 +18,4 @@ For information on the user entry points, please see the :doc:`outputs` page.
    outputs.TimeSeries
    outputs.ITimeSeries1D
    outputs.ITimeSeries2D
-   outputs.CheckTable
 

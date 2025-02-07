@@ -3,7 +3,7 @@ from datetime import datetime
 from unittest import TestCase
 
 from pytuflow.pytuflow_types import FileTypeError
-from pytuflow.results.bc_tables.bc_tables import BCTables
+from pytuflow.outputs.bc_tables_check import BCTablesCheck
 from pytuflow.results.fm.fm import FM_TS
 from pytuflow.results.fm.fm_nodes import FMNodes
 from pytuflow.fm import GXY
@@ -1124,93 +1124,116 @@ class Test_HydTables(unittest.TestCase):
         p = './tests/hyd_tables/EG14_001_1d_ta_tables_check.csv'
         res = HydTablesCheck(p)
         df = res.section('1d_xs_M14_C121', 'elev')
-        self.assertEqual((39, 2), df.shape)
+        self.assertEqual((30, 2), df.shape)
 
 
 class Test_BC_Tables(unittest.TestCase):
 
     def test_load_2d_bc_tables(self):
         p = './tests/bc_tables/EG00_001_2d_bc_tables_check.csv'
-        res = BCTables(p)
-        self.assertIsNotNone(res.boundary)
+        res = BCTablesCheck(p)
+        self.assertEqual('EG00_001', res.name)
 
     def test_load_1d_bc_tables(self):
         p = './tests/bc_tables/EG14_001_1d_bc_tables_check.csv'
-        res = BCTables(p)
-        self.assertIsNotNone(res.boundary)
+        res = BCTablesCheck(p)
+        self.assertEqual('EG14_001', res.name)
 
     def test_not_bc_tables(self):
         p = './tests/hyd_tables/EG14_001_1d_ta_tables_check.csv'
         try:
-            res = BCTables(p)
+            res = BCTablesCheck(p)
             raise AssertionError('Should have raised an exception')
-        except ValueError:
+        except FileTypeError:
             pass
 
     def test_emtpy_bc_tables(self):
         p = './tests/bc_tables/EG00_001_empty_2d_bc_tables_check.csv'
         try:
-            res = BCTables(p)
+            res = BCTablesCheck(p)
             raise AssertionError('Should have raised an exception')
-        except ValueError:
+        except EOFError:
             pass
+
+    def test_times(self):
+        p = './tests/bc_tables/EG00_001_2d_bc_tables_check.csv'
+        res = BCTablesCheck(p)
+        times = res.times()
+        self.assertEqual(41, len(times))
+
+    def test_times_ctx(self):
+        p = './tests/bc_tables/EG14_001_1d_bc_tables_check.csv'
+        res = BCTablesCheck(p)
+        times = res.times('QT')
+        self.assertEqual(41, len(times))
+        times = res.times('FC01')
+        self.assertEqual(41, len(times))
 
     def test_ids(self):
         p = './tests/bc_tables/EG00_001_2d_bc_tables_check.csv'
-        res = BCTables(p)
-        ids = res.boundary_ids()
+        res = BCTablesCheck(p)
+        ids = res.ids()
         self.assertEqual(2, len(ids))
 
     def test_ids_2(self):
         p = './tests/bc_tables/EG00_001_2d_bc_tables_check.csv'
-        res = BCTables(p)
-        ids = res.boundary_ids('QT')
+        res = BCTablesCheck(p)
+        ids = res.ids('QT')
         self.assertEqual(1, len(ids))
 
     def test_ids_3(self):
-        p = './tests/bc_tables/EG00_001_2d_bc_tables_check.csv'
-        res = BCTables(p)
+        p = './tests/bc_tables/EG14_001_1d_bc_tables_check.csv'
+        res = BCTablesCheck(p)
         ids = res.ids()
         self.assertEqual(2, len(ids))
 
-    def test_result_types(self):
+    def test_ids_4(self):
+        p = './tests/bc_tables/EG14_001_1d_bc_tables_check.csv'
+        res = BCTablesCheck(p)
+        ids = res.ids('BC000001')
+        self.assertEqual(1, len(ids))
+
+    def test_data_types(self):
         p = './tests/bc_tables/EG00_001_2d_bc_tables_check.csv'
-        res = BCTables(p)
-        rts = res.result_types()
+        res = BCTablesCheck(p)
+        rts = res.data_types()
         self.assertEqual(2, len(rts))
 
-    def test_result_types_2(self):
+    def test_data_types_2(self):
         p = './tests/bc_tables/EG00_001_2d_bc_tables_check.csv'
-        res = BCTables(p)
-        rts = res.result_types('FC01')
+        res = BCTablesCheck(p)
+        rts = res.data_types('FC01')
         self.assertEqual(1, len(rts))
 
     def test_time_series(self):
         p = './tests/bc_tables/EG00_001_2d_bc_tables_check.csv'
-        res = BCTables(p)
+        res = BCTablesCheck(p)
         df = res.time_series('FC01', 'QT')
-        self.assertEqual((41, 1), df.shape)
+        self.assertEqual((41, 2), df.shape)
 
     def test_time_series_2(self):
         p = './tests/bc_tables/EG00_001_2d_bc_tables_check.csv'
-        res = BCTables(p)
-        df = res.time_series(None, ['HQ', 'QT'])
+        res = BCTablesCheck(p)
+        df = res.time_series(None, None)
         self.assertEqual((102, 4), df.shape)
 
     def test_maximums(self):
         p = './tests/bc_tables/EG00_001_2d_bc_tables_check.csv'
-        res = BCTables(p)
-        try:
-            df = res.maximum('FC01', 'HQ')
-            raise AssertionError('Should have raised an exception')
-        except NotImplementedError:
-            pass
+        res = BCTablesCheck(p)
+        df = res.maximum('FC01', None)
+        self.assertEqual((1, 2), df.shape)
 
-    def test_long_plot(self):
+    def test_maximums_2(self):
         p = './tests/bc_tables/EG00_001_2d_bc_tables_check.csv'
-        res = BCTables(p)
+        res = BCTablesCheck(p)
+        df = res.maximum(None, None)
+        self.assertEqual((1, 2), df.shape)
+
+    def test_section(self):
+        p = './tests/bc_tables/EG00_001_2d_bc_tables_check.csv'
+        res = BCTablesCheck(p)
         try:
-            df = res.long_plot('FC01', ['HQ'], 1)
+            df = res.section('FC01', ['HQ'], 1)
             raise Exception('Should have raised a NotImplementedError')
         except NotImplementedError as e:
             pass
