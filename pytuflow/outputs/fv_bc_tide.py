@@ -4,7 +4,12 @@ from typing import Union
 
 import numpy as np
 import pandas as pd
-from netCDF4 import Dataset
+
+try:
+    from netCDF4 import Dataset
+    has_netcdf4 = True
+except ImportError:
+    has_netcdf4 = False
 
 from .helpers.get_standard_data_type_name import get_standard_data_type_name
 from .helpers.time_series_extractor import time_series_extractor, maximum_extractor
@@ -97,6 +102,9 @@ class FVBCTide(TimeSeries):
 
     def __init__(self, nc_fpath: PathLike, node_string_gis_fpath: PathLike, use_local_time: bool = True) -> None:
         super().__init__(nc_fpath)
+
+        if not has_netcdf4:
+            raise ImportError('NetCDF4 is not installed, unable to initialise FVBCTide class.')
 
         #: Path: Path to the FV tide netCDF file.
         self.nc_fpath = Path(nc_fpath)

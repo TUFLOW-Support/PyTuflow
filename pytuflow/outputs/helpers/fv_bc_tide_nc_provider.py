@@ -3,7 +3,12 @@ from pathlib import Path
 import re
 
 import numpy as np
-from netCDF4 import Dataset
+
+try:
+    from netCDF4 import Dataset
+    has_netcdf4 = True
+except ImportError:
+    has_netcdf4 = False
 
 from pytuflow.pytuflow_types import TimeLike
 from pytuflow.util.logging import get_logger
@@ -21,6 +26,8 @@ class FVBCTideNCProvider:
         use_local_time : bool
             Use local time.
         """
+        if not has_netcdf4:
+            raise ImportError('NetCDF4 is not installed, unable to initialise FVBCTideNCProvider class.')
         #: Path: Path to the netCDF file.
         self.path = path
         #: list: List of result labels.

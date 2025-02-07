@@ -4,7 +4,11 @@ from typing import Union
 
 import numpy as np
 import pandas as pd
-from netCDF4 import Dataset
+try:
+    from netCDF4 import Dataset
+    has_netcdf4 = True
+except ImportError:
+    has_netcdf4 = False
 
 from pytuflow.outputs.gpkg_1d import GPKG1D
 from pytuflow.outputs.gpkg_2d import GPKG2D
@@ -557,6 +561,8 @@ class TPC(INFO, ITimeSeries2D):
             self.format = 'CSV'  # it is possible to have both CSV and NC and CSV is a more complete format
 
         if self.format == 'NC':
+            if not has_netcdf4:
+                raise ImportError('NetCDF4 is required to read NetCDF files. Please install it using `pip install netCDF4`.')
             self._nc_file = self._expand_property_path('NetCDF Time Series')
             self._ncid = Dataset(self._nc_file, 'r')
 

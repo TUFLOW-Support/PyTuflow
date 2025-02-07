@@ -5,10 +5,14 @@ from typing import Union
 
 import numpy as np
 import pandas as pd
-from netCDF4 import Dataset
+try:
+    from netCDF4 import Dataset
+    has_netcdf4 = True
+except ImportError:
+    has_netcdf4 = False
+    Dataset = 'Dataset'
 
 from pytuflow.pytuflow_types import PathLike
-from pytuflow.util import flatten
 
 with (Path(__file__).parents[1] / 'data' / 'ts_labels.json').open() as f:
     TPC_INTERNAL_NAMES = json.load(f)
@@ -35,6 +39,8 @@ class NCTS:
             self.nc = nc
             self._responsible_for_close = False
         else:
+            if not has_netcdf4:
+                raise ImportError('NetCDF4 is not installed, unable to initialise NCTS class.')
             self.nc = Dataset(nc)
             self._responsible_for_close = True
 

@@ -3,7 +3,11 @@ from pathlib import Path
 from typing import Union
 
 import pandas as pd
-from netCDF4 import Dataset
+try:
+    from netCDF4 import Dataset
+    has_netcdf4 = True
+except ImportError:
+    has_netcdf4 = False
 
 from .fv_bc_tide_node_strings import FVBCTideNodeStrings
 from .fv_bc_tide_nodes import FVBCTideNodes
@@ -29,6 +33,10 @@ class FVBCTide(TimeSeriesResult):
         self.node_strings = None
         #: FVBCTideNCProvider: FV BC Tide provider object.
         self.provider = None
+
+        if not has_netcdf4:
+            raise ImportError('NetCDF4 is not installed, unable to initialise FVBCTide class.')
+
         super().__init__(nc_fpath)
 
     @staticmethod

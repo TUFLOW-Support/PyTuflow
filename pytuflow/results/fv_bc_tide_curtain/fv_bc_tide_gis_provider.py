@@ -1,8 +1,18 @@
 from pathlib import Path
 
 import numpy as np
-import shapely
-from osgeo import ogr
+
+try:
+    import shapely
+    has_shapely = True
+except ImportError:
+    has_shapely = False
+
+try:
+    from osgeo import ogr
+    has_gdal = True
+except ImportError:
+    has_gdal = False
 
 from pytuflow.pytuflow_types import PathLike, TuflowPath
 from pytuflow.util.gis import get_driver_name_from_extension
@@ -26,6 +36,11 @@ class FVBCTideGISProvider:
         self._ds = None
         self._lyr = None
         self._points = {}
+
+        if not has_shapely:
+            raise ImportError('Shapely is not installed, unable to initialise FVBCTideGISProvider class.')
+        if not has_gdal:
+            raise ImportError('GDAL is not installed, unable to initialise FVBCTideGISProvider class.')
 
     def __repr__(self) -> str:
         return f'FVBCTideGISProvider({self.path.name})'
