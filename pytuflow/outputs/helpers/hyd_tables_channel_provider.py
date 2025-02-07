@@ -50,7 +50,7 @@ class HydTablesChannelProvider:
                             line_ = ','.join(a)
                     buffer.write(line_)
                 buffer.seek(0)
-                self.add_channel_entry(buffer, channel_id, xs1, xs2)
+                self.add_channel_entry(buffer, channel_id)
                 return
             elif not line:
                 self.finished = True
