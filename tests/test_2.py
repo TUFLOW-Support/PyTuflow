@@ -1,3 +1,4 @@
+import os
 import unittest
 from unittest import TestCase
 
@@ -12,6 +13,7 @@ from pytuflow.outputs.gpkg_2d import GPKG2D
 from pytuflow.outputs.gpkg_rl import GPKGRL
 from pytuflow.outputs.fm_ts import FMTS
 from pytuflow.outputs.fv_bc_tide import FVBCTide
+from pytuflow.outputs.cross_sections import CrossSections
 
 
 class Test_Info_2013(unittest.TestCase):
@@ -1344,3 +1346,52 @@ class Test_FVBCTide(unittest.TestCase):
         res = FVBCTide(nc, ns)
         lp = res.section('Ocean', 'h', 12083.9795)
         self.assertEqual((12, 4), lp.shape)
+
+
+class Test_CrossSections(unittest.TestCase):
+
+    def test_load(self):
+        p = './tests/cross_sections/gis/1d_xs_EG14_001_L.shp'
+        res = CrossSections(p)
+        self.assertEqual('1d_xs_EG14_001_L', res.name)
+        self.assertEqual(55, res.cross_section_count)
+
+    def test_ids(self):
+        p = './tests/cross_sections/gis/1d_xs_EG14_001_L.shp'
+        res = CrossSections(p)
+        ids = res.ids()
+        self.assertEqual(55, len(ids))
+
+    def test_ids_ctx(self):
+        p = './tests/cross_sections/gis/1d_xs_EG14_001_L.shp'
+        res = CrossSections(p)
+        ids = res.ids('1d_xs_M14_C100.csv')
+        self.assertEqual(1, len(ids))
+        ids = res.ids('xz')
+        self.assertEqual(55, len(ids))
+
+    def test_data_types(self):
+        p = './tests/cross_sections/gis/1d_xs_EG14_001_L.shp'
+        res = CrossSections(p)
+        dtypes = res.data_types()
+        self.assertEqual(1, len(dtypes))
+
+    def test_section(self):
+        p = './tests/cross_sections/gis/1d_xs_EG14_001_L.shp'
+        res = CrossSections(p)
+        df = res.section('1d_xs_M14_C100.csv', None)
+        self.assertEqual((30, 2), df.shape)
+
+    def test_section_2(self):
+        p = './tests/cross_sections/gis/1d_xs_EG14_001_L.shp'
+        res = CrossSections(p)
+        df = res.section(['1d_xs_M14_C100.csv', r'..\csv\1d_xs_M14_C130.csv:1d_xs_M14_C130'], None)
+        self.assertEqual((30, 4), df.shape)
+
+    def test_section_3(self):
+        p = './tests/cross_sections/gis/1d_xs_EG14_001_L.shp'
+        res = CrossSections(p)
+        xs = './tests/cross_sections/csv/1d_xs_M14_C100.csv'
+        xs = os.path.abspath(xs)
+        df = res.section(xs, None)
+        self.assertEqual((30, 2), df.shape)

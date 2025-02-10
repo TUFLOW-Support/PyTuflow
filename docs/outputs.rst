@@ -10,7 +10,7 @@ The classes listed below are the top level classes that act as entry points to l
 .. currentmodule:: pytuflow
 
 .. autosummary::
-   :toctree: generated
+   :toctree: ./outputs
    :nosignatures:
    :template: custom-class-template.rst
 
@@ -23,3 +23,4 @@ The classes listed below are the top level classes that act as entry points to l
    outputs.FVBCTide
    outputs.HydTablesCheck
    outputs.BCTablesCheck
+   outputs.CrossSections

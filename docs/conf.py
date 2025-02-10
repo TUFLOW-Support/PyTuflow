@@ -30,6 +30,7 @@ extensions = [
     'tuflowlexer',
 ]
 autosummary_generate = True
+autosummary_output = 'api'
 autodoc_typehints = 'description'
 
 templates_path = ['_templates']

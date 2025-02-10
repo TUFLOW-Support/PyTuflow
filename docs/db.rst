@@ -7,7 +7,7 @@ Database classes within the :mod:`tmf` module.
 
 
 .. autosummary::
-   :toctree: generated
+   :toctree: ./tmf
    :template: custom-class-template.rst
    :nosignatures:
 

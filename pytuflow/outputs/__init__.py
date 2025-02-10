@@ -8,6 +8,7 @@ from .fm_ts import FMTS
 from .fv_bc_tide import FVBCTide
 from .hyd_tables_check import HydTablesCheck
 from .bc_tables_check import BCTablesCheck
+from .cross_sections import CrossSections
 
 # base classes
 from .itime_series_1d import ITimeSeries1D

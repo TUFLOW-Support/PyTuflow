@@ -8,7 +8,7 @@ Module to handle some of the Flood Modeller classes.
 .. rubric:: Classes
 
 .. autosummary::
-   :toctree: generated
+   :toctree: ./outputs
    :template: custom-class-template.rst
    :nosignatures:
 
