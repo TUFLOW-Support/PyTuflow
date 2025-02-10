@@ -32,7 +32,7 @@ For more detailed examples, see the :doc:`cookbook` page.
 
    .. code-block:: python
 
-      from pytuflow.tmf import TCF
+      from pytuflow import TCF
 
       tcf = TCF('path/to/tcf_file.tcf')
 
@@ -80,7 +80,7 @@ For more detailed examples, see the :doc:`cookbook` page.
 
    .. code-block:: python
 
-      from pytuflow.results import TPC
+      from pytuflow import TPC
 
       fpath = tcf.context('-s EXG -e 1AEP').tpc()
       res = TPC(fpath)

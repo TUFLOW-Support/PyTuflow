@@ -8,7 +8,7 @@ A collection of useful utilities.
 .. rubric:: Modules
 
 .. autosummary::
-   :toctree: generated
+   :toctree: util
    :template: custom-module-template.rst
    :recursive:
 

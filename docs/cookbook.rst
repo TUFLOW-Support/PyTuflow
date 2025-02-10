@@ -20,7 +20,7 @@ from the `TUFLOW example model dataset <https://wiki.tuflow.com/TUFLOW_Example_M
 
 .. code-block:: pycon
 
-   from pytuflow.tmf import TCF
+   from pytuflow import TCF
 
 
    tcf = TCF('path/to/EG00_001.tcf')
@@ -258,7 +258,7 @@ demonstration on the :code:`callback` argument.
 
 .. code-block:: pycon
 
-   >>> from pytuflow.tmf import Scope
+   >>> from pytuflow import Scope
    >>> tcf = TCF('path/to/EG16_~s1~_~s2~_002.tcf')
    >>> for inp in tcf.find_input(callback=lambda x: Scope('scenario', 'D01') in x.scope()):
    ...     inp
@@ -358,7 +358,7 @@ The purpose of this example is to showcase the process and can be expanded on wi
 .. code-block:: python
    :linenos:
 
-    from pytuflow.tmf import TCF
+    from pytuflow import TCF
     from shutil import copy, copyfile
     from pathlib import Path
 
@@ -448,7 +448,7 @@ For example, using :code:`EG16_~s1~_~s2~_002.tcf` from the example model dataset
 
 .. code-block:: pycon
 
-   >>> from pytuflow.tmf import TCF
+   >>> from pytuflow import TCF
    >>> tcf = TCF('path/to/EG16_~s1~_~s2~_002.tcf')
    >>> code = tcf.find_input('Read GIS Code')[0]
    >>> print(code)
@@ -540,7 +540,7 @@ on whether a given input is within a given scenario/event block.
 
 .. code-block:: pycon
 
-   >>> from pytuflow.tmf import Scope
+   >>> from pytuflow import Scope
    >>> inp = tcf.find_input('Read Grid Zpts')[0]
    >>> scope = inp.scope()[0]
    >>> print(inp, ';', scope)
@@ -566,7 +566,7 @@ consider the following TGC command:
 
 .. code-block:: pycon
 
-   >>> from pytuflow.tmf import Scope
+   >>> from pytuflow import Scope
    >>> inp = tcf.find_input('Read GIS Z Shape')[0]
    >>> print(inp, ';', inp.scope())
    Read GIS Z Shape == gis\2d_zsh_EG07_006_R.shp ; [<ScenarioScope> D01 | D02]
@@ -970,7 +970,7 @@ called on the :class:`TCF <pytuflow.tmf.TCF>` object since the TEF file is requi
 
 .. code-block:: python
 
-   from pytuflow.tmf import TCF
+   from pytuflow import TCF
 
 
    tcf = TCF('path/to/model.tcf')
@@ -1014,7 +1014,7 @@ This includes:
 .. code-block:: python
 
    # to load a TPC result file
-   from pytuflow.results import TPC
+   from pytuflow import TPC
    res = TPC('path/to/results.tpc')
 
    # the tpc file path can also be obtained from the TCF class
@@ -1051,7 +1051,7 @@ This example is using example model :code:`EG14_001 - 1D river (1d_nwk), 2D floo
 
 .. code-block:: python
 
-   from pytuflow.results import TPC
+   from pytuflow import TPC
    import matplotlib.pyplot as plt
 
 
@@ -1210,7 +1210,7 @@ from the `TUFLOW example model dataset <https://wiki.tuflow.com/TUFLOW_Example_M
 
 .. code-block:: python
 
-   from pytuflow.results import TPC
+   from pytuflow import TPC
    import matplotlib.pyplot as plt
    import pandas as pd
 
