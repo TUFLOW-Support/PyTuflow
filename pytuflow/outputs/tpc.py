@@ -180,21 +180,25 @@ class TPC(INFO, ITimeSeries2D):
         for TPC results are:
 
         Domain contexts:
-        - 1d: 1D result times - nodes and channels will always have the same times
-        - node - times for node types (note, there will be no difference between nodes and channels)
-        - channel - times for channel types (note, there will be no difference between nodes and channels)
-        - 2d (or po): 2D result times - 2D results can have varying times between result types and locations. This
-         will return all unique times
-        - rl (or 0d): Reporting locations result times. RL results will have the same times for all RL types
+
+        * 1d: 1D result times - nodes and channels will always have the same times
+        * node - times for node types (note, there will be no difference between nodes and channels)
+        * channel - times for channel types (note, there will be no difference between nodes and channels)
+        * 2d (or po): 2D result times - 2D results can have varying times between result types and locations. This
+          will return all unique times
+        * rl (or 0d): Reporting locations result times. RL results will have the same times for all RL types
 
         Data type contexts:
-        - [data type]: The data type to filter the times by. This will return all times for the given data type.
+
+        * [data type]: The data type to filter the times by. This will return all times for the given data type.
 
         Location contexts:
-        - [location]: The location to filter the times by. This will return all times for the given location.
+
+        * [location]: The location to filter the times by. This will return all times for the given location.
 
         Combine contexts:
-        - [context1]/[context2] ...: Combine multiple contexts to filter the times further ('/' delim).
+
+        * [context1]/[context2] ...: Combine multiple contexts to filter the times further ('/' delim).
 
         Parameters
         ----------
@@ -355,7 +359,7 @@ class TPC(INFO, ITimeSeries2D):
         * :code:`channel`
         * :code:`point` - (for 2d and rl domains only - use :code:`node` for 1d domain)
         * :code:`line` - (for 2d and rl domains only - use :code:`channel` for 1d domain)
-        * :code:``polygon` (or :code:`region`)
+        * :code:`polygon` (or :code:`region`)
 
         Combine contexts:
 

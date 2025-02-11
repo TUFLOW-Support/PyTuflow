@@ -36,8 +36,8 @@ from the `TUFLOW example model dataset <https://wiki.tuflow.com/TUFLOW_Example_M
 Viewing All Command Inputs
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Inputs can be accessed using the :meth:`get_inputs() <pytuflow.tmf.TCF.get_inputs>` method. This method returns a list of
-:class:`Input <pytuflow.tmf.Input>` objects. By default the :meth:`get_inputs() <pytuflow.tmf.TCF.get_inputs>` method
+Inputs can be accessed using the :meth:`get_inputs() <pytuflow.TCF.get_inputs>` method. This method returns a list of
+:class:`Input <pytuflow.Input>` objects. By default the :meth:`get_inputs() <pytuflow.TCF.get_inputs>` method
 is recursive, meaning that it will also return inputs from any control files that are read in from the TCF.
 
 .. code-block:: pycon
@@ -129,7 +129,7 @@ doesn't make much difference since no control files are read in from anything ot
 Finding Specific Inputs
 ^^^^^^^^^^^^^^^^^^^^^^^
 
-To find specific inputs, the :meth:`find_input() <pytuflow.tmf.TCF.find_input>` method can be used. This method returns
+To find specific inputs, the :meth:`find_input() <pytuflow.TCF.find_input>` method can be used. This method returns
 a list of inputs found in the TCF (recursive by default) that match the search parameters.
 
 The simplest method is to pass in a string and that string will be matched against the entire input string
@@ -191,8 +191,8 @@ Advanced Input Filtering
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
 Inputs have various properties such as associated files, GIS geometry types, scope, and whether any files are missing.
-The available properties are dependent on the input type. E.g. a :class:`FileInput <pytuflow.tmf.FileInput>` will have
-a :code:`files` property but a :class:`SettingInput <pytuflow.tmf.SettingInput>` will not.
+The available properties are dependent on the input type. E.g. a :class:`FileInput <pytuflow.FileInput>` will have
+a :code:`files` property but a :class:`SettingInput <pytuflow.SettingInput>` will not.
 
 It's possible to use search the inputs and filter by their properties using the :code:`tags` argument. The :code:`tags`
 argument is a list of tuples with a :code:`key` and :code:`value` pair. The :code:`key` is the property name and the
@@ -247,13 +247,13 @@ the callable will take a list argument, so we can check whether the value 2 is i
 
 A callable function can also be passed in via the :code:`callback` argument. This is useful when wanting to apply
 more complex logic to the filtering, or calling methods that are not directly available as a property. A simple
-example is to query an inputs scope which can be done via the :meth:`scope() <pytuflow.tmf.Input.scope>` method.
+example is to query an inputs scope which can be done via the :meth:`scope() <pytuflow.Input.scope>` method.
 For more information on scope checking, see the section below :ref:`Check Input Scope <checking_scope>`.
 
 Using the following example model: :code:`EG16_~s1~_~s2~_002.tcf`, we can find all inputs that are used within a
 :code:`If Scenario == D01` block. As discussed later in the :ref:`Check Input Scope <checking_scope>` section, this isn't a perfect
 way of finding inputs for a given scenario due to the way :code:`Else If/Else` logic works and a more robust method
-is to use :meth:`context() <pytuflow.tmf.TCF.context>` and check the available inputs. However this is just a
+is to use :meth:`context() <pytuflow.TCF.context>` and check the available inputs. However this is just a
 demonstration on the :code:`callback` argument.
 
 .. code-block:: pycon
@@ -267,7 +267,7 @@ demonstration on the :code:`callback` argument.
 Finding Input for a Specific Event / Scenario
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-To view the inputs in a given scenario/event, use the :meth:`context() <pytuflow.tmf.TCF.context>` method to
+To view the inputs in a given scenario/event, use the :meth:`context() <pytuflow.TCF.context>` method to
 resolve the inputs first.
 
 Continuing on from the previous example using :code:`EG16_~s1~_~s2~_002.tcf`, there are two scenario
@@ -321,7 +321,7 @@ This time :code:`Cell Size` input is resolved to :code:`Cell Size == 2.5`. And t
 
 .. note::
 
-   It's possible to call the :meth:`context() <pytuflow.tmf.TCF.context>` method on the :class:`TGC <pytuflow.tmf.TGC>`
+   It's possible to call the :meth:`context() <pytuflow.TCF.context>` method on the :class:`TGC <pytuflow.TGC>`
    class to resolve inputs in the TGC file
    e.g. :code:`tcf.tgc().context('-s1 5m -s2 D01').get_inputs()`
    however this could skip important steps that are required to resolve
@@ -329,7 +329,7 @@ This time :code:`Cell Size` input is resolved to :code:`Cell Size == 2.5`. And t
    the TCF using :code:`Set Variable ==`).
 
 Each input has a unique ID which can be used to track the input through the model using
-the :meth:`input() <pytuflow.tmf.TCF.input>` method.
+the :meth:`input() <pytuflow.TCF.input>` method.
 
 Continuing from the previous example using :code:`EG16_~s1~_~s2~_002.tcf`, we can check if an input is present in
 different scenario combinations. In this case, we expect that the :code:`Create TIN Zpts` input is only present in
@@ -415,9 +415,9 @@ The purpose of this example is to showcase the process and can be expanded on wi
             _ = copyfile(fpath, dest)
 
 It can be useful to copy specific files from a model, which can be done by filtering the inputs and using
-:meth:`find_input() <pytuflow.tmf.TCF.find_input>` rather than :meth:`get_files() <pytuflow.tmf.TCF.get_files>`.
+:meth:`find_input() <pytuflow.TCF.find_input>` rather than :meth:`get_files() <pytuflow.TCF.get_files>`.
 
-A specific scenario/event combination can also be copied using the :meth:`context() <pytuflow.tmf.TCF.context>` method
+A specific scenario/event combination can also be copied using the :meth:`context() <pytuflow.TCF.context>` method
 to resolve the inputs first e.g. :code:`for file in tcf.context('-s1 5m -s2 D01').get_files():...`.
 
 
@@ -426,7 +426,7 @@ to resolve the inputs first e.g. :code:`for file in tcf.context('-s1 5m -s2 D01'
 Check Input Scope
 ~~~~~~~~~~~~~~~~~
 
-Scope is a key concept in the :doc:`tmf` module. Certain commands in the TUFLOW control files are not recorded
+Certain commands in the TUFLOW control files are not recorded
 as inputs, namely commands that define blocks within the control file. Examples of these include:
 
 * :code:`If Scenario == ...`
@@ -464,7 +464,7 @@ For example, using :code:`EG16_~s1~_~s2~_002.tcf` from the example model dataset
 Scope List
 ^^^^^^^^^^
 
-The return from the :meth:`scope() <pytuflow.tmf.GisInput.scope>` method is a :class:`ScopeList <pytuflow.tmf.ScopeList>`.
+The return from the :meth:`scope() <pytuflow.GisInput.scope>` method is a :class:`ScopeList <pytuflow.tmf.ScopeList>`.
 Additional items in the list are associated with nested blocks.
 
 For example, consider the following command in the TGC.
@@ -654,7 +654,7 @@ a :code:`subprocess.Popen` object.
 
 .. code-block:: pycon
 
-   >>> from pytuflow.tmf import TCF
+   >>> from pytuflow import TCF
    >>> tcf = TCF('path/to/model.tcf')
    >>> proc = tcf.context().run('path/to/TUFLOW_iSP_w64.exe')
 
@@ -744,7 +744,7 @@ Editing a Model
 Editing an Input
 ^^^^^^^^^^^^^^^^
 
-An :doc:`input's <inp>` "command" (left-hand side) and "value" (right-hand side) can be edited. The value can be edited
+An input's "command" (left-hand side) and "value" (right-hand side) can be edited. The value can be edited
 using :meth:`update_value() <pytuflow.tmf.InputBuildState.update_value>`:
 
 .. code-block:: pycon
@@ -773,21 +773,21 @@ should be used to tweak the command slightly:
 
 .. note::
 
-   Editing an input does not overwrite the TCF file until the :meth:`write() <pytuflow.tmf.TCF.write>` method is called.
-   See the :ref:`saving edits <saving_edits>` section for more information. The :meth:`undo() <pytuflow.tmf.TCF.undo>` method can be used to
-   unwind changes and the :meth:`reset() <pytuflow.tmf.TCF.reset>` method can be used to reset the control file
+   Editing an input does not overwrite the TCF file until the :meth:`write() <pytuflow.TCF.write>` method is called.
+   See the :ref:`saving edits <saving_edits>` section for more information. The :meth:`undo() <pytuflow.TCF.undo>` method can be used to
+   unwind changes and the :meth:`reset() <pytuflow.TCF.reset>` method can be used to reset the control file
    to it's original state.
 
 Adding a New Input
 ^^^^^^^^^^^^^^^^^^
 
-A new input can be added by using either :meth:`append_input() <pytuflow.tmf.TCF.append_input>` to add an input to the
-end of the control file, or :meth:`insert_input() <pytuflow.tmf.TCF.insert_input>` to add an input after, or before,
+A new input can be added by using either :meth:`append_input() <pytuflow.TCF.append_input>` to add an input to the
+end of the control file, or :meth:`insert_input() <pytuflow.TCF.insert_input>` to add an input after, or before,
 an existing input.
 
 .. note::
 
-   The current control file content (including unsaved edits and comments) can be viewed using the :meth:`preview() <pytuflow.tmf.TCF.preview>` method, which
+   The current control file content (including unsaved edits and comments) can be viewed using the :meth:`preview() <pytuflow.TCF.preview>` method, which
    can be useful when using PyTuflow to edit control files interactively.
 
 The below TCF (starting with a single command input) is used for the examples:
@@ -815,7 +815,7 @@ A line gap can be added between command inputs by using the :code:`gap` argument
 
    SGS == ON
 
-Inputs can be inserted into a particular location using the :meth:`insert_input() <pytuflow.tmf.TCF.insert_input>` method.
+Inputs can be inserted into a particular location using the :meth:`insert_input() <pytuflow.TCF.insert_input>` method.
 By default the input is inserted before the reference input, however this can be changed by setting the :code:`after`
 argument to :code:`True`.
 
@@ -833,7 +833,7 @@ argument to :code:`True`.
 Removing an Input
 ^^^^^^^^^^^^^^^^^
 
-Inputs can be removed using the :meth:`remove_input() <pytuflow.tmf.TCF.remove_input>` method.
+Inputs can be removed using the :meth:`remove_input() <pytuflow.TCF.remove_input>` method.
 
 .. code-block:: tuflow
    :linenos:
@@ -850,7 +850,7 @@ Inputs can be removed using the :meth:`remove_input() <pytuflow.tmf.TCF.remove_i
    Solution Scheme == HPC
    Hardware == GPU
 
-Alternatively, inputs can be commented out using the :meth:`comment_out() <pytuflow.tmf.TCF.comment_out>` method.
+Alternatively, inputs can be commented out using the :meth:`comment_out() <pytuflow.TCF.comment_out>` method.
 
 .. code-block:: pycon
 
@@ -861,7 +861,7 @@ Alternatively, inputs can be commented out using the :meth:`comment_out() <pytuf
    Hardware == GPU
    ! SGS == ON
 
-:meth:`uncomment() <pytuflow.tmf.TCF.uncomment>` can be used to reverse a commented out command.
+:meth:`uncomment() <pytuflow.TCF.uncomment>` can be used to reverse a commented out command.
 
 .. code-block:: pycon
 
@@ -877,12 +877,12 @@ Alternatively, inputs can be commented out using the :meth:`comment_out() <pytuf
 Saving Edits
 ^^^^^^^^^^^^
 
-Editing, adding, or removing inputs are not saved to the file until the :meth:`write() <pytuflow.tmf.TCF.write>` method is called.
-By default, the :meth:`write() <pytuflow.tmf.TCF.write>` method will save the TCF to a new file with an auto-incremented
+Editing, adding, or removing inputs are not saved to the file until the :meth:`write() <pytuflow.TCF.write>` method is called.
+By default, the :meth:`write() <pytuflow.TCF.write>` method will save the TCF to a new file with an auto-incremented
 name. The :code:`inc` argument can be set to :code:`'inplace'` to save the changes to the original file, or a string
 to save the changes to a new file with a user-defined suffix.
 
-Other control files will automatically have the :meth:`write() <pytuflow.tmf.TCF.write>` method called
+Other control files will automatically have the :meth:`write() <pytuflow.TCF.write>` method called
 if they have edits if the :code:`TCF` is the object being saved/written. If 'inplace' isn't being used, any control files
 saved with new names will be automatically updated in the TCF object.
 
@@ -912,14 +912,14 @@ saved with new names will be automatically updated in the TCF object.
 
 .. note::
 
-   Once a control file is saved, all edits that were being tracked are cleared. This means that the :meth:`undo() <pytuflow.tmf.TCF.undo>`
-   and :meth:`reset() <pytuflow.tmf.TCF.reset>` methods will be reset to the state of the saved file.
+   Once a control file is saved, all edits that were being tracked are cleared. This means that the :meth:`undo() <pytuflow.TCF.undo>`
+   and :meth:`reset() <pytuflow.TCF.reset>` methods will be reset to the state of the saved file.
 
 Querying a Database
 ~~~~~~~~~~~~~~~~~~~
 
-The below are examples of how to query a :class:`database <pytuflow.tmf.Database>` in a TUFLOW control file. For example
-getting the boundary time series from a :class:`bc_dbase <pytuflow.tmf.BCDatabase>`
+The below are examples of how to query a :class:`database <pytuflow.Database>` in a TUFLOW control file. For example
+getting the boundary time series from a :class:`bc_dbase <pytuflow.BCDatabase>`
 
 It is worth first mentioning how to view the database itself. Database data is stored in a Pandas DataFrame and can
 be retrieved using the :meth:`db() <pytuflow.tmf.Database.db>` method.
@@ -937,8 +937,8 @@ be retrieved using the :meth:`db() <pytuflow.tmf.Database.db>` method.
 Simple Boundary Value Example
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-This simple example shows how to query a :class:`bc_dbase <pytuflow.tmf.BCDatabase>` that is not using any
-event variables using the :meth:`value() <pytuflow.tmf.BCDatabase.value>`.
+This simple example shows how to query a :class:`bc_dbase <pytuflow.BCDatabase>` that is not using any
+event variables using the :meth:`value() <pytuflow.BCDatabase.value>`.
 
 .. code-block:: pycon
 
@@ -956,13 +956,13 @@ event variables using the :meth:`value() <pytuflow.tmf.BCDatabase.value>`.
 Boundary Value with Event Variables
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The best way to extract a specific event from a :class:`bc_dbase <pytuflow.tmf.BCDatabase>` that is using event variables,
-is to use the :meth:`context() <pytuflow.tmf.TCF.context>` method to resolve the event variables first. This should be
-called on the :class:`TCF <pytuflow.tmf.TCF>` object since the TEF file is required to resolve the event variables.
+The best way to extract a specific event from a :class:`bc_dbase <pytuflow.BCDatabase>` that is using event variables,
+is to use the :meth:`context() <pytuflow.TCF.context>` method to resolve the event variables first. This should be
+called on the :class:`TCF <pytuflow.TCF>` object since the TEF file is required to resolve the event variables.
 
 .. code-block:: pycon
 
-   from pytuflow.tmf import TCF
+   from pytuflow import TCF
 
    tcf = TCF('path/to/model.tcf')
    q100 = tcf.context('-e1 Q100').bc_dbase().value('FC01')
@@ -1018,7 +1018,7 @@ This includes:
    res = TPC('path/to/results.tpc')
 
    # the tpc file path can also be obtained from the TCF class
-   from pytuflow.tmf import TCF
+   from pytuflow import TCF
    tcf = TCF('path/to/model.tcf')
    tpc = tcf.context().tpc()  # returns file path
    res = TPC(tpc)

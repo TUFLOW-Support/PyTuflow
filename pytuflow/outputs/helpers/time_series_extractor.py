@@ -4,7 +4,7 @@ import pandas as pd
 from typing import TYPE_CHECKING
 
 from pytuflow.outputs.helpers.get_standard_data_type_name import get_standard_data_type_name
-from pytuflow.util import flatten
+from pytuflow.util.misc_tools import flatten
 
 if TYPE_CHECKING:
     from sqlite3 import Cursor

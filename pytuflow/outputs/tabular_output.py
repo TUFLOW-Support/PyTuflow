@@ -13,11 +13,11 @@ class TabularOutput(Output):
     def __init__(self, *fpath: PathLike) -> None:
         # docstring inherited
         super().__init__(*fpath)
-        #: :doc:`TuflowPath <pytuflow.pytuflow_types.TuflowPath>`: The path to the point GIS layer file
+        #: TuflowPath: The path to the point GIS layer file
         self.gis_layer_p_fpath = None
-        #: :doc:`TuflowPath <pytuflow.pytuflow_types.TuflowPath>`: The path to the line GIS layer file
+        #: TuflowPath: The path to the line GIS layer file
         self.gis_layer_l_fpath = None
-        #: :doc:`TuflowPath <pytuflow.pytuflow_types.TuflowPath>`: The path to the polygon GIS layer file
+        #: TuflowPath: The path to the polygon GIS layer file
         self.gis_layer_r_fpath = None
         #: Layer: The point GIS layer
         self.gis_layer_p = None

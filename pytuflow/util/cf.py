@@ -32,10 +32,3 @@ Multiple commands can be build using :func:`build_gis_commands_from_file` which 
 from pytuflow.tmf.tmf.tuflow_model_files.utils.commands import (build_tuflow_command_string,
                                                                 build_gis_commands_from_file, guess_command_from_text,
                                                                 try_find_control_file)
-
-
-# nasty hack to get autosummary automodule to work
-build_tuflow_command_string.__module__ = 'pytuflow.util.cf'
-build_gis_commands_from_file.__module__ = 'pytuflow.util.cf'
-guess_command_from_text.__module__ = 'pytuflow.util.cf'
-try_find_control_file.__module__ = 'pytuflow.util.cf'

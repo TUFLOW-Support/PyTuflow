@@ -1,6 +1,8 @@
 API
 ===
 
+This page gives an overview of the public modules, classes, and functions within PyTUFLOW.
+
 
 .. toctree::
    :maxdepth: 2
@@ -39,6 +41,23 @@ API
    RainfallDatabase
    SoilDatabase
    CrossSectionDatabase
+
+.. rubric:: Input Classes
+
+.. autosummary::
+   :toctree: ./api
+   :template: custom-class-template.rst
+   :nosignatures:
+
+   SettingInput
+   AttrInput
+   FileInput
+   GisInput
+   GridInput
+   TinInput
+   ControlFileInput
+   DatabaseInput
+   CommentInput
 
 .. rubric:: Output Classes
 

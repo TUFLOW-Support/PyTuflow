@@ -72,7 +72,7 @@ class BCTablesCheck(TimeSeries):
         self.fpath = Path(fpath)
         #: Path: Path to the parent TCF file
         self.tcf = Path()
-        #: :class:`BCCheckProvider`<pytuflow.outputs.helpers.bc_check.BCCheckProvider>: BC Check Provider class
+        #: BCCheckProvider: BC Check Provider class
         self.provider = BCCheckProvider(self.fpath)
         #: pd.DataFrame: DataFrame with all the data combinations
         self.objs = pd.DataFrame()
@@ -196,7 +196,7 @@ class BCTablesCheck(TimeSeries):
         Combine contexts:
 
         * :code:`[context1]/[context2] ...`: Combine multiple contexts to filter the times further
-        (use :code:`/` delim).
+          (use :code:`/` delim).
 
         Parameters
         ----------
@@ -263,7 +263,7 @@ class BCTablesCheck(TimeSeries):
         Combine contexts:
 
         * :code:`[context1]/[context2] ...`: Combine multiple contexts to filter the times further
-        (use :code:`/` delim).
+          (use :code:`/` delim).
 
         Parameters
         ----------
@@ -318,7 +318,7 @@ class BCTablesCheck(TimeSeries):
         Combine contexts:
 
         * :code:`[context1]/[context2] ...`: Combine multiple contexts to filter the times further
-        (use :code:`/` delim).
+          (use :code:`/` delim).
 
         Parameters
         ----------

@@ -22,16 +22,3 @@ from pytuflow.tmf.tmf.tuflow_model_files.utils.patterns import (extract_names_fr
                                                                 name_without_number_part, auto_increment_name,
                                                                 increment_new_name, increment_fpath, contains_variable,
                                                                 expand_and_get_files)
-
-# nasty hack to get autosummary automodule to work
-extract_names_from_pattern.__module__ = 'pytuflow.util.patterns'
-identify_expanded_name.__module__ = 'pytuflow.util.patterns'
-replace_exact_names.__module__ = 'pytuflow.util.patterns'
-get_geom_ext.__module__ = 'pytuflow.util.patterns'
-get_iter_number.__module__ = 'pytuflow.util.patterns'
-name_without_number_part.__module__ = 'pytuflow.util.patterns'
-auto_increment_name.__module__ = 'pytuflow.util.patterns'
-increment_new_name.__module__ = 'pytuflow.util.patterns'
-increment_fpath.__module__ = 'pytuflow.util.patterns'
-contains_variable.__module__ = 'pytuflow.util.patterns'
-expand_and_get_files.__module__ = 'pytuflow.util.patterns'

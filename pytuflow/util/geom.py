@@ -35,9 +35,3 @@ def calc_spherical_length(points: list[tuple[float, float]]) -> float:
     df['c'] = 2 * np.arcsin(np.sqrt(df['a']))
     df['km'] = 6371 * df['c']
     return df['km'].sum() * 1_000
-
-
-Point.__module__ = 'pytuflow.util.geom'
-Line.__module__ = 'pytuflow.util.geom'
-Polygon.__module__ = 'pytuflow.util.geom'
-get_right_angle_line.__module__ = 'pytuflow.util.geom'

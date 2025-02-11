@@ -54,7 +54,7 @@ class CrossSections(TabularOutput):
 
         self.reference_time = datetime(2000, 1, 1, tzinfo=timezone.utc)
         self.units = ''
-        #: :doc:`TuflowPath <pytuflow.pytuflow_types.TuflowPath>`: The path to the source output file.
+        #: TuflowPath: The path to the source output file.
         self.fpath = TuflowPath(fpath)
         #: List: List of loaded cross-sections.
         self.cross_sections = []

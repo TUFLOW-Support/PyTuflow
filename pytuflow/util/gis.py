@@ -45,11 +45,3 @@ except ImportError:
     vector_geometry_as_array = None
     get_driver_name_from_extension = None
     has_gdal = False
-
-
-GPKG.__module__ = 'pytuflow.util.gis'
-GISAttributes.__module__ = 'pytuflow.util.gis'
-
-if has_gdal:
-    vector_geometry_as_array.__module__ = 'pytuflow.util.gis'
-    get_driver_name_from_extension.__module__ = 'pytuflow.util.gis'

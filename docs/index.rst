@@ -17,10 +17,11 @@ Check out the :doc:`usage` section for further information, including how to :re
    This project is under active development.
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
    :caption: Contents:
 
    usage
+   cookbook
    api
 
 
