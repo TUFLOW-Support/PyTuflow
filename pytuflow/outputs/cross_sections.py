@@ -95,12 +95,6 @@ class CrossSections(TabularOutput):
         with GISAttributes(fpath) as attrs:
             return len(list(attrs)) == 0
 
-    def close(self) -> None:
-        """Close the result and any open files associated with the result.
-        Not required to be called for the INFO output class as all files are closed after initialisation.
-        """
-        pass  # no files are left open
-
     def context_filter(self, context: str) -> pd.DataFrame:
         # docstring inherited
         ctx = [x.strip().lower() for x in context.split('/') if x] if context else []
@@ -289,35 +283,17 @@ class CrossSections(TabularOutput):
 
     def time_series(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
                     time_fmt: str = 'relative') -> pd.DataFrame:
-        """Not supported for CrossSection results. Raises a :code:`NotImplementedError`.
-
-        See Also
-        --------
-        :meth:`has_plotting_capability` : Check if a given output class supports a given plotting capability before
-           trying to use it.
-        """
+        """Not supported for CrossSection results. Raises a :code:`NotImplementedError`."""
         raise NotImplementedError(f'{__class__.__name__} does not support time-series plotting.')
 
     def curtain(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
                 time: TimeLike) -> pd.DataFrame:
-        """Not supported for CrossSection results. Raises a :code:`NotImplementedError`.
-
-        See Also
-        --------
-        :meth:`has_plotting_capability` : Check if a given output class supports a given plotting capability before
-           trying to use it.
-        """
+        """Not supported for CrossSection results. Raises a :code:`NotImplementedError`."""
         raise NotImplementedError(f'{__class__.__name__} does not support curtain plotting.')
 
     def profile(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
                 time: TimeLike) -> pd.DataFrame:
-        """Not supported for CrossSection results. Raises a :code:`NotImplementedError`.
-
-        See Also
-        --------
-        :meth:`has_plotting_capability` : Check if a given output class supports a given plotting capability before
-           trying to use it.
-        """
+        """Not supported for CrossSection results. Raises a :code:`NotImplementedError`."""
         raise NotImplementedError(f'{__class__.__name__} does not support vertical profile plotting.')
 
     def _load(self):

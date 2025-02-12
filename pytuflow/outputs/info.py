@@ -24,9 +24,6 @@ class INFO(TimeSeries, ITimeSeries1D):
     that are output by the 2013 TUFLOW release. The format is similar to the TPC format, however
     does not include :code:`2d_po` or Reporting Location (:code:`0d_rl`) results.
 
-    This class does not need to be explicitly closed as it will load the results into memory and closes any open files
-    after initialisation.
-
     Parameters
     ----------
     fpath : :class:`PathLike <pytuflow.pytuflow_types.PathLike>`
@@ -77,8 +74,6 @@ class INFO(TimeSeries, ITimeSeries1D):
     For more examples, see the documentation for the individual methods.
     """
 
-    _PLOTTING_CAPABILITY = ['timeseries', 'section']
-
     def __init__(self, fpath: PathLike):
         super(INFO, self).__init__(fpath)
 
@@ -105,12 +100,6 @@ class INFO(TimeSeries, ITimeSeries1D):
         self._nd_res_types = []
 
         self._load()
-
-    def close(self) -> None:
-        """Close the result and any open files associated with the result.
-        Not required to be called for the INFO output class as all files are closed after initialisation.
-        """
-        pass  # no files are left open
 
     @staticmethod
     def looks_like_this(fpath: PathLike) -> bool:
@@ -551,24 +540,12 @@ class INFO(TimeSeries, ITimeSeries1D):
 
     def curtain(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
                 time: TimeLike) -> pd.DataFrame:
-        """Not supported for INFO results. Raises a :code:`NotImplementedError`.
-
-        See Also
-        --------
-        :meth:`has_plotting_capability` : Check if a given output class supports a given plotting capability before
-           trying to use it.
-        """
+        """Not supported for INFO results. Raises a :code:`NotImplementedError`."""
         raise NotImplementedError(f'{__class__.__name__} does not support curtain plotting.')
 
     def profile(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
                 time: TimeLike) -> pd.DataFrame:
-        """Not supported for INFO results. Raises a :code:`NotImplementedError`.
-
-        See Also
-        --------
-        :meth:`has_plotting_capability` : Check if a given output class supports a given plotting capability before
-           trying to use it.
-        """
+        """Not supported for INFO results. Raises a :code:`NotImplementedError`."""
         raise NotImplementedError(f'{__class__.__name__} does not support vertical profile plotting.')
 
     def _load(self) -> None:

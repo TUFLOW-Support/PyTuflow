@@ -10,8 +10,6 @@ from pytuflow.pytuflow_types import PathLike, TimeLike, PlotExtractionLocation
 class Output(ABC):
     """Base class for all TUFLOW output classes. This class should not be initialised directly."""
 
-    _PLOTTING_CAPABILITY = []
-
     @abstractmethod
     def __init__(self, *fpath: PathLike) -> None:
         super().__init__()
@@ -30,11 +28,6 @@ class Output(ABC):
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.close()
-
-    @abstractmethod
-    def close(self) -> None:
-        """Close the results."""
-        pass
 
     @staticmethod
     @abstractmethod
@@ -194,25 +187,3 @@ class Output(ABC):
             The profile data.
         """
         pass
-
-    def has_plotting_capability(self, capability: str) -> bool:
-        """Check if the output has a given plotting capability.
-
-        The capability options are:
-
-        * :code:`timeseries`
-        * :code:`section`
-        * :code:`curtain`
-        * :code:`profile`
-
-        Parameters
-        ----------
-        capability : str
-            The capability to check for
-
-        Returns
-        -------
-        bool
-            True if the capability is present.
-        """
-        return capability.lower() in [x.lower() for x in self._PLOTTING_CAPABILITY]

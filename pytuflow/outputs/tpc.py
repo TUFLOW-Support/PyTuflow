@@ -39,9 +39,6 @@ class TPC(INFO, ITimeSeries2D):
     * Supports duplicate IDs across domains e.g. a 1D node called :code:`test`, a PO point called :code:`test`,
       and an RL point called :code:`test` - these can all have the same ID with a :code:`Water Level` result attached.
 
-    This class does not need to be explicitly closed as it will load the results into memory and closes any open files
-    after initialisation.
-
     Parameters
     ----------
     fpath : :class:`PathLike <pytuflow.pytuflow_types.PathLike>`
@@ -114,10 +111,6 @@ class TPC(INFO, ITimeSeries2D):
         if self._ncid:
             self._ncid.close()
             self._ncid = None
-
-    def close(self) -> None:
-        """Close the result and any open files. Not required to be called explicitly for the TPC output class."""
-        pass  # no files are left open
 
     @staticmethod
     def looks_like_this(fpath: PathLike) -> bool:

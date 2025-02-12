@@ -63,7 +63,6 @@ class BCTablesCheck(TimeSeries):
     39      3.250     1.60
     40      3.333     1.45
     """
-    _PLOTTING_CAPABILITY = ['timeseries']
 
     def __init__(self, fpath: PathLike):
         super().__init__(fpath)
@@ -114,12 +113,6 @@ class BCTablesCheck(TimeSeries):
         except Exception:
             return True
         return False
-
-    def close(self) -> None:
-        """Close the result and any open files associated with the result.
-        Not required to be called for the INFO output class as all files are closed after initialisation.
-        """
-        pass  # no files are left open
 
     def context_filter(self, context: str) -> pd.DataFrame:
         # docstring inherited
@@ -463,35 +456,17 @@ class BCTablesCheck(TimeSeries):
 
     def section(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
                 time: TimeLike = -1) -> pd.DataFrame:
-        """Not supported for BCTablesCheck results. Raises a :code:`NotImplementedError`.
-
-        See Also
-        --------
-        :meth:`has_plotting_capability` : Check if a given output class supports a given plotting capability before
-           trying to use it.
-        """
+        """Not supported for BCTablesCheck results. Raises a :code:`NotImplementedError`."""
         raise NotImplementedError(f'{__class__.__name__} does not support section plotting.')
 
     def curtain(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
                 time: TimeLike) -> pd.DataFrame:
-        """Not supported for BCTablesCheck results. Raises a :code:`NotImplementedError`.
-
-        See Also
-        --------
-        :meth:`has_plotting_capability` : Check if a given output class supports a given plotting capability before
-           trying to use it.
-        """
+        """Not supported for BCTablesCheck results. Raises a :code:`NotImplementedError`."""
         raise NotImplementedError(f'{__class__.__name__} does not support curtain plotting.')
 
     def profile(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
                 time: TimeLike) -> pd.DataFrame:
-        """Not supported for BCTablesCheck results. Raises a :code:`NotImplementedError`.
-
-        See Also
-        --------
-        :meth:`has_plotting_capability` : Check if a given output class supports a given plotting capability before
-           trying to use it.
-        """
+        """Not supported for BCTablesCheck results. Raises a :code:`NotImplementedError`."""
         raise NotImplementedError(f'{__class__.__name__} does not support vertical profile plotting.')
 
     def _load(self):

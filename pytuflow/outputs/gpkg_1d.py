@@ -27,9 +27,6 @@ class GPKG1D(INFO):
     domains automatically (i.e. :code:`GPKG1D`, :code:`GPKG2D`, :code:`GPKGRL`). Note: the :code:`swmm_ts.gpkg` is not
     referenced in the TPC file, so will always require to be initialised with this class.
 
-    This class does not need to be explicitly closed as it will load the results into memory and closes any open files
-    after initialisation.
-
     Parameters
     ----------
     fpath : :class:`PathLike <pytuflow.pytuflow_types.PathLike>`
@@ -93,12 +90,6 @@ class GPKG1D(INFO):
         self._is_swmm = False
 
         super().__init__(fpath)
-
-    def close(self) -> None:
-        """Close the result and any open files associated with the result.
-        Not required to be called for the GPKG TS output class as all files are closed after initialisation.
-        """
-        pass  # no files are left open
 
     @staticmethod
     def looks_like_this(fpath: PathLike) -> bool:
@@ -176,24 +167,12 @@ class GPKG1D(INFO):
 
     def curtain(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
                 time: TimeLike) -> pd.DataFrame:
-        """Not supported for GPKG1D results. Raises a :code:`NotImplementedError`.
-
-        See Also
-        --------
-        :meth:`has_plotting_capability` : Check if a given output class supports a given plotting capability before
-           trying to use it.
-        """
+        """Not supported for GPKG1D results. Raises a :code:`NotImplementedError`."""
         return super().curtain(locations, data_types, time)
 
     def profile(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
                 time: TimeLike) -> pd.DataFrame:
-        """Not supported for GPKG1D results. Raises a :code:`NotImplementedError`.
-
-        See Also
-        --------
-        :meth:`has_plotting_capability` : Check if a given output class supports a given plotting capability before
-           trying to use it.
-        """
+        """Not supported for GPKG1D results. Raises a :code:`NotImplementedError`."""
         return super().profile(locations, data_types, time)
 
     def _load(self):

@@ -123,7 +123,6 @@ class FMTS(INFO):
     6           0      42   FC01.26  200.826        41.493999
     13          0      42   FC01.25  233.658        41.021000
     """
-    _PLOTTING_CAPABILITY = ['timeseries', 'section']
 
     def __init__(self, fpath: Union[PathLike, list[PathLike]], dat: PathLike = None, gxy: PathLike = None):
         # private
@@ -508,24 +507,12 @@ class FMTS(INFO):
 
     def curtain(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
                 time: TimeLike) -> pd.DataFrame:
-        """Not supported for FMTS results. Raises a :code:`NotImplementedError`.
-
-        See Also
-        --------
-        :meth:`has_plotting_capability` : Check if a given output class supports a given plotting capability before
-           trying to use it.
-        """
+        """Not supported for FMTS results. Raises a :code:`NotImplementedError`."""
         return super().curtain(locations, data_types, time)
 
     def profile(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
                 time: TimeLike) -> pd.DataFrame:
-        """Not supported for FMTS results. Raises a :code:`NotImplementedError`.
-
-        See Also
-        --------
-        :meth:`has_plotting_capability` : Check if a given output class supports a given plotting capability before
-           trying to use it.
-        """
+        """Not supported for FMTS results. Raises a :code:`NotImplementedError`."""
         return super().profile(locations, data_types, time)
 
     def connectivity(self, ids: Union[str, list[str]]) -> pd.DataFrame:

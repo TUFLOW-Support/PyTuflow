@@ -35,9 +35,6 @@ class FVBCTide(TimeSeries):
     By default, locat time is used if it is available in the NetCDF file. This can be changed to use UTC time instead
     by setting :code:`use_local_time=True` within the constructor.
 
-    This class does not need to be explicitly closed as it will load the results into memory and closes any open files
-    after initialisation.
-
     Parameters
     ----------
     nc_fpath : PathLike
@@ -98,7 +95,6 @@ class FVBCTide(TimeSeries):
     10          0       Ocean  26652.363281    -0.138558
     11          0       Ocean  29317.599609    -0.138558
     """
-    _PLOTTING_CAPABILITY = ['timeseries', 'section']
 
     def __init__(self, nc_fpath: PathLike, node_string_gis_fpath: PathLike, use_local_time: bool = True) -> None:
         super().__init__(nc_fpath)
@@ -167,12 +163,6 @@ class FVBCTide(TimeSeries):
         # docstring inherited
         with Dataset(fpath) as nc:
             return len(nc.dimensions['time']) == 0
-
-    def close(self):
-        """Close the result and any open files associated with the result.
-        Not required to be called for the FVBCTide output class as all files are closed after initialisation.
-        """
-        pass  # no files are left open
 
     def context_filter(self, context: str) -> pd.DataFrame:
         # docstring inherited
@@ -492,24 +482,12 @@ class FVBCTide(TimeSeries):
 
     def curtain(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
                 time: TimeLike) -> pd.DataFrame:
-        """Not supported for FVBCTide results. Raises a :code:`NotImplementedError`.
-
-        See Also
-        --------
-        :meth:`has_plotting_capability` : Check if a given output class supports a given plotting capability before
-           trying to use it.
-        """
+        """Not supported for FVBCTide results. Raises a :code:`NotImplementedError`."""
         raise NotImplementedError(f'{__class__.__name__} does not support curtain plotting.')
 
     def profile(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
                 time: TimeLike) -> pd.DataFrame:
-        """Not supported for FVBCTide results. Raises a :code:`NotImplementedError`.
-
-        See Also
-        --------
-        :meth:`has_plotting_capability` : Check if a given output class supports a given plotting capability before
-           trying to use it.
-        """
+        """Not supported for FVBCTide results. Raises a :code:`NotImplementedError`."""
         raise NotImplementedError(f'{__class__.__name__} does not support vertical profile plotting.')
 
     def _load(self):

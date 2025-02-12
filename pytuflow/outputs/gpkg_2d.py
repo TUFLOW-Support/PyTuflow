@@ -86,7 +86,6 @@ class GPKG2D(TimeSeries, ITimeSeries2D):
     2.983333                   40.506
     3.000000                   40.485
     """
-    _PLOTTING_CAPABILITY = ['timeseries']
 
     def __init__(self, fpath: PathLike):
         super(GPKG2D, self).__init__(fpath)
@@ -118,12 +117,6 @@ class GPKG2D(TimeSeries, ITimeSeries2D):
         self._gis_layer_r_name = None
 
         self._load()
-
-    def close(self) -> None:
-        """Close the result and any open files associated with the result.
-        Not required to be called for this output class as all files are closed after initialisation.
-        """
-        pass  # no files are left open
 
     @staticmethod
     def looks_like_this(fpath: PathLike) -> bool:
@@ -418,35 +411,17 @@ class GPKG2D(TimeSeries, ITimeSeries2D):
 
     def section(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
                 time: TimeLike) -> pd.DataFrame:
-        """Not supported for GPKG2D results. Raises a :code:`NotImplementedError`.
-
-        See Also
-        --------
-        :meth:`has_plotting_capability` : Check if a given output class supports a given plotting capability before
-           trying to use it.
-        """
+        """Not supported for GPKG2D results. Raises a :code:`NotImplementedError`."""
         raise NotImplementedError(f'{__class__.__name__} files do not support section plotting.')
 
     def curtain(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
                 time: TimeLike) -> pd.DataFrame:
-        """Not supported for GPKG2D results. Raises a :code:`NotImplementedError`.
-
-        See Also
-        --------
-        :meth:`has_plotting_capability` : Check if a given output class supports a given plotting capability before
-           trying to use it.
-        """
+        """Not supported for GPKG2D results. Raises a :code:`NotImplementedError`."""
         raise NotImplementedError(f'{__class__.__name__} files do not support curtain plotting.')
 
     def profile(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
                 time: TimeLike) -> pd.DataFrame:
-        """Not supported for GPKG2D results. Raises a :code:`NotImplementedError`.
-
-        See Also
-        --------
-        :meth:`has_plotting_capability` : Check if a given output class supports a given plotting capability before
-           trying to use it.
-        """
+        """Not supported for GPKG2D results. Raises a :code:`NotImplementedError`."""
         raise NotImplementedError(f'{__class__.__name__} files do not support vertical profile plotting.')
 
     def _load(self):

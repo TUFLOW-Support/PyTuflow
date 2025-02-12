@@ -21,9 +21,6 @@ class HydTablesCheck(TabularOutput):
     """Class for reading the TUFLOW check file for 1D hydraulic tables.
     These are file that end with :code:`_1d_ta_tables_check.csv`, found in the 1D check folder.
 
-    This class does not need to be explicitly closed as it will load the results into memory and closes any open files
-    after initialisation.
-
     Parameters
     ----------
     fpath : :class:`PathLike <pytuflow.pytuflow_types.PathLike>`
@@ -45,8 +42,6 @@ class HydTablesCheck(TabularOutput):
     >>> from pytuflow.outputs import HydTablesCheck
     >>> hyd_tables = HydTablesCheck('path/to/1d_ta_tables_check.csv')
     """
-
-    _PLOTTING_CAPABILITY = ['section']
 
     def __init__(self, fpath: PathLike) -> None:
         super().__init__(fpath)
@@ -105,12 +100,6 @@ class HydTablesCheck(TabularOutput):
         except Exception:
             return True
         return False
-
-    def close(self) -> None:
-        """Close the result and any open files associated with the result.
-        Not required to be called for the INFO output class as all files are closed after initialisation.
-        """
-        pass  # no files are left open
 
     def context_filter(self, context: str) -> pd.DataFrame:
         # docstring inherited
@@ -374,35 +363,17 @@ class HydTablesCheck(TabularOutput):
 
     def time_series(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
                     time_fmt: str = 'relative') -> pd.DataFrame:
-        """Not supported for HydraulicTableCheck1D results. Raises a :code:`NotImplementedError`.
-
-        See Also
-        --------
-        :meth:`has_plotting_capability` : Check if a given output class supports a given plotting capability before
-           trying to use it.
-        """
+        """Not supported for HydraulicTableCheck1D results. Raises a :code:`NotImplementedError`."""
         raise NotImplementedError(f'{__class__.__name__} does not support time-series plotting.')
 
     def curtain(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
                 time: TimeLike) -> pd.DataFrame:
-        """Not supported for HydraulicTableCheck1D results. Raises a :code:`NotImplementedError`.
-
-        See Also
-        --------
-        :meth:`has_plotting_capability` : Check if a given output class supports a given plotting capability before
-           trying to use it.
-        """
+        """Not supported for HydraulicTableCheck1D results. Raises a :code:`NotImplementedError`."""
         raise NotImplementedError(f'{__class__.__name__} does not support curtain plotting.')
 
     def profile(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
                 time: TimeLike) -> pd.DataFrame:
-        """Not supported for HydraulicTableCheck1D results. Raises a :code:`NotImplementedError`.
-
-        See Also
-        --------
-        :meth:`has_plotting_capability` : Check if a given output class supports a given plotting capability before
-           trying to use it.
-        """
+        """Not supported for HydraulicTableCheck1D results. Raises a :code:`NotImplementedError`."""
         raise NotImplementedError(f'{__class__.__name__} does not support vertical profile plotting.')
 
     def _load(self):

@@ -24,9 +24,6 @@ class GPKGRL(GPKG2D):
     loading GPKG results via the :class:`TPC <pytuflow.outputs.TPC>` class which will load all
     domains automatically (i.e. :code:`GPKG1D`, :code:`GPKG2D`, :code:`GPKGRL`).
 
-    This class does not need to be explicitly closed as it will load the results into memory and closes any open files
-    after initialisation.
-
     Parameters
     ----------
     fpath : :class:`PathLike <pytuflow.pytuflow_types.PathLike>`
