@@ -13,7 +13,6 @@ except ImportError:
 from pytuflow.outputs.gpkg_1d import GPKG1D
 from pytuflow.outputs.gpkg_2d import GPKG2D
 from pytuflow.outputs.gpkg_rl import GPKGRL
-from pytuflow.outputs.helpers.get_standard_data_type_name import get_standard_data_type_name
 from pytuflow.outputs.helpers.nc_ts import NCTS
 from pytuflow.outputs.info import INFO
 from pytuflow.outputs.itime_series_2d import ITimeSeries2D
@@ -656,7 +655,7 @@ class TPC(INFO, ITimeSeries2D):
             data_type = prop.replace('1D', '').strip()
             df = self._load_time_series_from_property(prop, data_type, '1D')
             if df is not None:
-                data_type = get_standard_data_type_name(data_type)
+                data_type = self._get_standard_data_type_name(data_type)
                 self._time_series_data[data_type] = df
                 if df.columns.isin(self._node_info.index).all():
                     self._nd_res_types.append(data_type)
@@ -670,14 +669,14 @@ class TPC(INFO, ITimeSeries2D):
                     for dtype in ['Channel Entry Losses', 'Channel Additional Losses', 'Channel Exit Losses']:
                         df1 = self._post_process_channel_losses(df, dtype)
                         if df1 is not None:
-                            dtype = get_standard_data_type_name(dtype)
+                            dtype = self._get_standard_data_type_name(dtype)
                             self._time_series_data[dtype] = df1
                     df1 = self._post_process_channel_losses_2(df)
                     if df1 is not None:
-                        dtype = get_standard_data_type_name('Channel Losses')
+                        dtype = self._get_standard_data_type_name('Channel Losses')
                         self._time_series_data[dtype] = df1
                 else:
-                    data_type = get_standard_data_type_name(data_type)
+                    data_type = self._get_standard_data_type_name(data_type)
                     self._time_series_data[data_type] = df
 
         # reporting locations
@@ -700,7 +699,7 @@ class TPC(INFO, ITimeSeries2D):
             df = self._load_time_series_from_property(prop, data_type, '2D', value)
             if df is not None:
                 if not prop.startswith('2D Region Max Water Level'):
-                    data_type = get_standard_data_type_name(data_type)
+                    data_type = self._get_standard_data_type_name(data_type)
                 self._time_series_data_2d[data_type.lower()] = df
 
     def _load_time_series_from_property(self, prop: str, data_type: str, domain: str, value: str = None) -> pd.DataFrame:
@@ -767,7 +766,7 @@ class TPC(INFO, ITimeSeries2D):
         if df is not None:
             for col in df.columns[::2]:
                 data_type, df1 = self._split_maximum_columns(df, col)
-                data_type = get_standard_data_type_name(data_type)
+                data_type = self._get_standard_data_type_name(data_type)
                 self._maximum_data[data_type] = df1
 
         # channel maximums
@@ -775,24 +774,24 @@ class TPC(INFO, ITimeSeries2D):
         if df is not None:
             for col in df.columns[::2]:
                 data_type, df1 = self._split_maximum_columns(df, col)
-                data_type = get_standard_data_type_name(data_type)
+                data_type = self._get_standard_data_type_name(data_type)
                 self._maximum_data[data_type] = df1
 
         # rl maximums
         df = self._load_maximum_from_property('Reporting Location Points Maximums')
         if df is not None:
             data_type, df1 = self._split_maximum_columns(df, 'Hmax')
-            data_type = get_standard_data_type_name(data_type)
+            data_type = self._get_standard_data_type_name(data_type)
             self._maximum_data_rl[data_type] = df1
         df = self._load_maximum_from_property('Reporting Location Lines Maximums')
         if df is not None:
             data_type, df1 = self._split_maximum_columns(df, 'Qmax')
-            data_type = get_standard_data_type_name(data_type)
+            data_type = self._get_standard_data_type_name(data_type)
             self._maximum_data_rl[data_type] = df1
         df = self._load_maximum_from_property('Reporting Location Regions Maximums')
         if df is not None:
             data_type, df1 = self._split_maximum_columns(df, 'Vol max')
-            data_type = get_standard_data_type_name(data_type)
+            data_type = self._get_standard_data_type_name(data_type)
             self._maximum_data_rl[data_type] = df1
 
         # 2d results do not have maximums, so need to be post-processed.
@@ -817,7 +816,7 @@ class TPC(INFO, ITimeSeries2D):
 
     def _split_maximum_columns(self, df: pd.DataFrame, col_name: str) -> tuple[str, pd.DataFrame]:
         name = col_name.replace('max', '').strip()
-        data_type = get_standard_data_type_name(name)
+        data_type = self._get_standard_data_type_name(name)
         if data_type != 'energy':
             df1 = df.loc[:, [col_name, f'Time {col_name}']].copy()
         else:
@@ -875,7 +874,7 @@ class TPC(INFO, ITimeSeries2D):
         for prop, value in self._tpc_reader.iter_properties('^2D', regex=True):
             data_type = re.sub(r'^2D (Point|Line|Region)', '', prop).split('[', 1)[0].strip()
             geom = re.findall('(Point|Line|Region)', prop)[0][0]
-            dtype = get_standard_data_type_name(data_type)
+            dtype = self._get_standard_data_type_name(data_type)
             d[dtype] = geom
             i = len(d[dtype]) - 1
             df1 = self._time_series_data_2d[dtype][i]

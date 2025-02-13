@@ -7,7 +7,6 @@ import numpy as np
 import pandas as pd
 
 from .tabular_output import TabularOutput
-from .helpers.get_standard_data_type_name import get_standard_data_type_name
 from .helpers.hyd_tables_cross_section_provider import HydTablesCrossSectionProvider
 from .helpers.hyd_tables_channel_provider import HydTablesChannelProvider
 from ..pytuflow_types import PathLike, TimeLike, FileTypeError
@@ -259,7 +258,7 @@ class HydTablesCheck(TabularOutput):
         """
         # figure out locations and data types
         locations, data_types = self._figure_out_loc_and_data_types(locations, data_types)
-        dtypes = [get_standard_data_type_name(x) for x in data_types]
+        dtypes = [self._get_standard_data_type_name(x) for x in data_types]
 
         # get more filters on the inputs - e.g. what stage of processing they are from
         ctx = '/'.join(locations + data_types)
@@ -360,14 +359,14 @@ class HydTablesCheck(TabularOutput):
                     ctx.pop(j - i)
 
         # data types
-        ctx1 = [get_standard_data_type_name(x) for x in ctx]
+        ctx1 = [self._get_standard_data_type_name(x) for x in ctx]
         ctx1 = [x for x in ctx1 if x in df['data_type'].unique()]
         if ctx1:
             filtered_something = True
             df = df[df['data_type'].isin(ctx1)]
             j = len(ctx) - 1
             for i, x in enumerate(reversed(ctx.copy())):
-                if get_standard_data_type_name(x) in ctx1:
+                if self._get_standard_data_type_name(x) in ctx1:
                     ctx.pop(j - i)
 
         # ids
@@ -407,13 +406,13 @@ class HydTablesCheck(TabularOutput):
                     if col in ['point', 'message']:
                         continue
                     add_xs_prop(d, xs)
-                    d['data_type'].append(get_standard_data_type_name(col))
+                    d['data_type'].append(self._get_standard_data_type_name(col))
                     d['geometry'].append('xs')
             for col in xs.df_proc.columns:
                 if col in ['point', 'message']:
                     continue
                 add_xs_prop(d, xs)
-                d['data_type'].append(get_standard_data_type_name(col))
+                d['data_type'].append(self._get_standard_data_type_name(col))
                 d['geometry'].append('processed')
 
         # channels
@@ -424,7 +423,7 @@ class HydTablesCheck(TabularOutput):
                 d['id'].append(id_)
                 d['uid'].append('')
                 d['type'].append('')
-                d['data_type'].append(get_standard_data_type_name(col))
+                d['data_type'].append(self._get_standard_data_type_name(col))
                 d['geometry'].append('channel')
 
         self._objs = pd.DataFrame(d)
@@ -456,7 +455,7 @@ class HydTablesCheck(TabularOutput):
             valid_types = self.data_types()
             data_types1 = []
             for dtype in data_types:
-                stndname = get_standard_data_type_name(dtype)
+                stndname = self._get_standard_data_type_name(dtype)
                 if stndname not in valid_types:
                     logger.warning(
                         f'HydTablesCheck.section(): Data type "{dtype}" is not a valid section data type or '

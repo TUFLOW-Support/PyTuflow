@@ -6,7 +6,6 @@ from typing import Union
 import numpy as np
 import pandas as pd
 
-from pytuflow.outputs.helpers.get_standard_data_type_name import get_standard_data_type_name
 from pytuflow.outputs.helpers.tpc_reader import TPCReader
 from pytuflow.outputs.itime_series_1d import ITimeSeries1D
 from pytuflow.outputs.time_series import TimeSeries
@@ -519,7 +518,7 @@ class INFO(TimeSeries, ITimeSeries1D):
 
         # loop through data types and add them to the data frame
         for dtype in data_types:
-            dtype1 = get_standard_data_type_name(dtype)
+            dtype1 = self._get_standard_data_type_name(dtype)
 
             if dtype1 == 'bed level':
                 df1 = self._lp.melt_2_columns(dfconn, ['us_invert', 'ds_invert'], dtype)
@@ -675,7 +674,7 @@ class INFO(TimeSeries, ITimeSeries1D):
             if p is not None:
                 try:
                     df = self._load_time_series_csv(p)
-                    stnd = get_standard_data_type_name(res)  # convert to a standard data type name
+                    stnd = self._get_standard_data_type_name(res)  # convert to a standard data type name
                     self._time_series_data[stnd] = df
                 except Exception as e:
                     logger.warning(f'INFO._load_time_series(): Error loading time series from {p}: {e}')
@@ -715,7 +714,7 @@ class INFO(TimeSeries, ITimeSeries1D):
             x1 = x.split('/')
             t = len(x1) > 2  # is time column
             dtype = x1[1] if t else x1[0]
-            dtype = get_standard_data_type_name(dtype)
+            dtype = self._get_standard_data_type_name(dtype)
             c = 'node' if dtype in self._nd_res_types else 'channel'
             return f'{x1[0]}/{c}/{x1[1]}/{x1[2]}' if t else f'{c}/{x1[0]}/{x1[1]}'
 
@@ -758,7 +757,7 @@ class INFO(TimeSeries, ITimeSeries1D):
             valid_types = self.data_types('section')
             data_types1 = []
             for dtype in data_types:
-                if get_standard_data_type_name(dtype) not in valid_types:
+                if self._get_standard_data_type_name(dtype) not in valid_types:
                     logger.warning(
                         f'INFO.section(): Data type "{dtype}" is not a valid section data type or '
                         f'not in output - removing.'

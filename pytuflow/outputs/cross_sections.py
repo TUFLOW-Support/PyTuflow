@@ -4,7 +4,6 @@ from typing import Union
 
 import pandas as pd
 
-from .helpers.get_standard_data_type_name import get_standard_data_type_name
 from .tabular_output import TabularOutput
 from pytuflow.tmf import TuflowCrossSection
 from pytuflow.util.gis import GISAttributes
@@ -345,7 +344,7 @@ class CrossSections(TabularOutput):
             valid_types = self.data_types()
             data_types1 = []
             for dtype in data_types:
-                stndname = get_standard_data_type_name(dtype)
+                stndname = self._get_standard_data_type_name(dtype)
                 if stndname not in valid_types:
                     logger.warning(
                         f'HydTablesCheck.section(): Data type "{dtype}" is not a valid section data type or '

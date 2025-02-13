@@ -8,7 +8,6 @@ import pandas as pd
 from packaging.version import Version
 
 from pytuflow.outputs.gpkg_base import GPKGBase
-from pytuflow.outputs.helpers.get_standard_data_type_name import get_standard_data_type_name
 from pytuflow.outputs.time_series import TimeSeries
 from pytuflow.outputs.itime_series_2d import ITimeSeries2D
 from pytuflow.pytuflow_types import PathLike, AppendDict, FileTypeError, TimeLike, TuflowPath
@@ -488,7 +487,7 @@ class GPKG2D(TimeSeries, ITimeSeries2D, GPKGBase):
             cur.execute(f'SELECT Column_name FROM Timeseries_info WHERE Table_name = "{self._gis_layer_p_name}";')
             data_types = [row[0] for row in cur.fetchall()]
             for dtype in data_types:
-                dtype1 = get_standard_data_type_name(dtype)
+                dtype1 = self._get_standard_data_type_name(dtype)
                 storage[dtype1] = self._gpkg_time_series_extractor(cur, dtype, self._gis_layer_p_name)
                 self._geoms[dtype1] = 'point'
 
@@ -496,7 +495,7 @@ class GPKG2D(TimeSeries, ITimeSeries2D, GPKGBase):
             cur.execute(f'SELECT Column_name FROM Timeseries_info WHERE Table_name = "{self._gis_layer_l_name}";')
             data_types = [row[0] for row in cur.fetchall()]
             for dtype in data_types:
-                dtype1 = get_standard_data_type_name(dtype)
+                dtype1 = self._get_standard_data_type_name(dtype)
                 storage[dtype1] = self._gpkg_time_series_extractor(cur, dtype, self._gis_layer_l_name)
                 self._geoms[dtype1] = 'line'
 
@@ -504,7 +503,7 @@ class GPKG2D(TimeSeries, ITimeSeries2D, GPKGBase):
             cur.execute(f'SELECT Column_name FROM Timeseries_info WHERE Table_name = "{self._gis_layer_r_name}";')
             data_types = [row[0] for row in cur.fetchall()]
             for dtype in data_types:
-                dtype1 = 'max water level' if dtype.lower() == 'max water level' else get_standard_data_type_name(dtype)
+                dtype1 = 'max water level' if dtype.lower() == 'max water level' else self._get_standard_data_type_name(dtype)
                 storage[dtype1] = self._gpkg_time_series_extractor(cur, dtype, self._gis_layer_r_name)
                 self._geoms[dtype1] = 'poly'
 

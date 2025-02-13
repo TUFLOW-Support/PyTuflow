@@ -6,7 +6,6 @@ import numpy as np
 import pandas as pd
 
 from pytuflow.outputs.helpers import TPCReader
-from pytuflow.outputs.helpers.get_standard_data_type_name import get_standard_data_type_name
 from pytuflow.outputs.info import INFO
 from pytuflow.pytuflow_types import PathLike, FileTypeError, TimeLike, ResultError
 from pytuflow.outputs.helpers.fm_res_driver import FM_ResultDriver
@@ -526,7 +525,7 @@ class FMTS(INFO):
 
         # loop through data types and add them to the data frame
         for dtype in data_types:
-            dtype1 = get_standard_data_type_name(dtype)
+            dtype1 = self._get_standard_data_type_name(dtype)
 
             if dtype1 == 'bed level':
                 df1 = self._lp.melt_2_columns(dfconn, ['us_invert', 'ds_invert'], dtype)
@@ -644,7 +643,7 @@ class FMTS(INFO):
         # load time series
         for driver in self._storage:
             for res_type in driver.result_types:
-                stnd = get_standard_data_type_name(res_type)
+                stnd = self._get_standard_data_type_name(res_type)
                 self._nd_res_types.append(stnd)  # all results are stored on nodes in flood modeller results
                 df = driver.df.loc[:,driver.df.columns.str.contains(f'^{res_type}::')]
                 df.columns = [x.split('::')[1] for x in df.columns]

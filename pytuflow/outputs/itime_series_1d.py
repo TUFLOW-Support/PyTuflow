@@ -3,7 +3,6 @@ from typing import Union
 
 import pandas as pd
 
-from pytuflow.outputs.helpers.get_standard_data_type_name import get_standard_data_type_name
 from pytuflow.pytuflow_types import PathLike
 from pytuflow.outputs.helpers.lp_1d import LP1D
 
@@ -105,14 +104,14 @@ class ITimeSeries1D(ABC):
             ctx.remove('channel')
 
         # data types
-        ctx1 = [get_standard_data_type_name(x) for x in ctx]
+        ctx1 = [self._get_standard_data_type_name(x) for x in ctx]
         ctx1 = [x for x in ctx1 if x in df['data_type'].unique()]
         if ctx1:
             filtered_something = True
             df = df[df['data_type'].isin(ctx1)]
             j = len(ctx) - 1
             for i, x in enumerate(reversed(ctx.copy())):
-                if get_standard_data_type_name(x) in ctx1:
+                if self._get_standard_data_type_name(x) in ctx1:
                     ctx.pop(j - i)
 
         # ids

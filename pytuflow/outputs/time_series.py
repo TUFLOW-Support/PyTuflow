@@ -5,7 +5,6 @@ from typing import Union
 import numpy as np
 import pandas as pd
 
-from .helpers.get_standard_data_type_name import get_standard_data_type_name
 from .tabular_output import TabularOutput
 from ..pytuflow_types import TimeLike
 from ..util.misc_tools import flatten
@@ -187,7 +186,7 @@ class TimeSeries(TabularOutput):
         """
         df = pd.DataFrame()
         for dtype2 in data_types:
-            dtype = [x for x in custom_names if get_standard_data_type_name(x) == dtype2]
+            dtype = [x for x in custom_names if self._get_standard_data_type_name(x) == dtype2]
             dtype = dtype[0] if dtype else dtype2
             if dtype2 not in time_series_data:
                 continue
@@ -238,7 +237,7 @@ class TimeSeries(TabularOutput):
         """
         df = pd.DataFrame()
         for dtype2 in data_types:
-            dtype = [x for x in custom_names if get_standard_data_type_name(x) == dtype2]
+            dtype = [x for x in custom_names if self._get_standard_data_type_name(x) == dtype2]
             dtype = dtype[0] if dtype else dtype2
             if dtype2 not in maximum_data:
                 continue

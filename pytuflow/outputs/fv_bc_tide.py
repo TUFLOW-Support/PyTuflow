@@ -11,9 +11,8 @@ try:
 except ImportError:
     has_netcdf4 = False
 
-from .helpers.get_standard_data_type_name import get_standard_data_type_name
 from .time_series import TimeSeries
-from ..pytuflow_types import PathLike, FileTypeError, TuflowPath, PlotExtractionLocation, TimeLike
+from ..pytuflow_types import PathLike, FileTypeError, TuflowPath, TimeLike
 from .helpers.fv_bc_tide_provider import FVBCTideProvider
 from pytuflow.util.gis import has_gdal
 from ..tmf.tmf.tuflow_model_files.dataclasses.append_dict import AppendDict
@@ -477,14 +476,14 @@ class FVBCTide(TimeSeries):
             filter_by.remove('line')
 
         # data types
-        ctx1 = [get_standard_data_type_name(x) for x in filter_by]
+        ctx1 = [self._get_standard_data_type_name(x) for x in filter_by]
         ctx1 = [x for x in ctx1 if x in df['data_type'].unique()]
         if ctx1:
             filtered_something = True
             df = df[df['data_type'].isin(ctx1)]
             j = len(filter_by) - 1
             for i, x in enumerate(reversed(filter_by.copy())):
-                if get_standard_data_type_name(x) in ctx1:
+                if self._get_standard_data_type_name(x) in ctx1:
                     filter_by.pop(j - i)
 
         # ids
@@ -588,7 +587,7 @@ class FVBCTide(TimeSeries):
             valid_types = self.data_types('section')
             data_types1 = []
             for dtype in data_types:
-                if get_standard_data_type_name(dtype) not in valid_types:
+                if self._get_standard_data_type_name(dtype) not in valid_types:
                     logger.warning(
                         f'FVBCTide.section(): Data type "{dtype}" is not a valid section data type or '
                         f'not in output - removing.'
