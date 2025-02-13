@@ -6,6 +6,7 @@ from packaging.version import Version
 import numpy as np
 import pandas as pd
 
+from pytuflow.outputs.gpkg_base import GPKGBase
 from pytuflow.outputs.helpers import TPCReader
 from pytuflow.outputs.info import INFO
 from pytuflow.outputs.helpers.get_standard_data_type_name import get_standard_data_type_name
@@ -17,7 +18,7 @@ if TYPE_CHECKING:
     from sqlite3 import Cursor
 
 
-class GPKG1D(INFO):
+class GPKG1D(INFO, GPKGBase):
     """Class for handling 1D GeoPackage time series results (:code:`.gpkg` - typically ending with :code:`_1D.gpkg`
     or :code:`_swmm_ts.gpkg`). The GPKG time series format is a specific format published by TUFLOW built
     on the GeoPackage standard.
@@ -26,6 +27,11 @@ class GPKG1D(INFO):
     not required to be used if loading results via the :class:`TPC <pytuflow.outputs.TPC>` class which will load all
     domains automatically (i.e. :code:`GPKG1D`, :code:`GPKG2D`, :code:`GPKGRL`). Note: the :code:`swmm_ts.gpkg` is not
     referenced in the TPC file, so will always require to be initialised with this class.
+
+    The ``GPKG1D`` class will only load basic properties on initialisation. These are typically properties
+    that are easy to obtain from the file without having to load any of the time-series results. Once a method
+    requiring more detailed information is called, the full results will be loaded. This makes the ``GPKG1D`` class
+    very cheap to initialise.
 
     Parameters
     ----------
@@ -484,12 +490,7 @@ class GPKG1D(INFO):
         return super().profile(locations, data_types, time)
 
     def _initial_load(self):
-        import sqlite3
-        try:
-            conn = sqlite3.connect(self.fpath)
-        except Exception as e:
-            raise Exception(f'Error connecting to sqlite database: {e}')
-        try:
+        with self._connect() as conn:
             cur = conn.cursor()
             cur.execute('SELECT Version FROM TUFLOW_timeseries_version;')
             self.format_version = Version(cur.fetchone()[0])
@@ -517,21 +518,22 @@ class GPKG1D(INFO):
             if reference_time is not None:
                 self.reference_time = reference_time
 
+            self.gis_layer_p_fpath = TuflowPath(self.fpath.parent) / f'{self.fpath.name} >> {self._gis_layer_p_name}'
+            self.gis_layer_l_fpath = TuflowPath(self.fpath.parent) / f'{self.fpath.name} >> {self._gis_layer_l_name}'
+
+    def _load(self):
+        if self._loaded:
+            return
+
+        with self._connect() as conn:
+            cur = conn.cursor()
             self._load_channel_info(cur)
             self._load_node_info(cur)
             self._load_time_series(cur)
             self._load_maximums()
             self._load_1d_info()
 
-            self.gis_layer_p_fpath = TuflowPath(self.fpath.parent) / f'{self.fpath.name} >> {self._gis_layer_p_name}'
-            self.gis_layer_l_fpath = TuflowPath(self.fpath.parent) / f'{self.fpath.name} >> {self._gis_layer_l_name}'
-        except Exception as e:
-            raise Exception(f'Error loading GPKG1D: {e}')
-        finally:
-            conn.close()
-
-    def _load(self):
-        return
+        self._loaded = True
 
     def _init_tpc_reader(self) -> TPCReader:
         pass

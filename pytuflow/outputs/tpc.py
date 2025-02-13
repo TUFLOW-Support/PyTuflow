@@ -116,7 +116,7 @@ class TPC(INFO, ITimeSeries2D):
         #: str: format of the results - options are 'CSV' or 'NC'. If both are specified, the NC will be preferred.
         self.format = 'CSV'
 
-        super(TPC, self).__init__(fpath)
+        super().__init__(fpath)
 
     @property
     def po_point_count(self) -> int:
@@ -728,10 +728,13 @@ class TPC(INFO, ITimeSeries2D):
         for prop, value in self._tpc_reader.iter_properties('GPKG Time Series'):
             if str(value).lower().endswith('_1d.gpkg'):
                 self._gpkg1d = GPKG1D(self._expand_property_path(prop, value=value))
+                self._gpkg1d._load()
             elif str(value).lower().endswith('_2d.gpkg'):
                 self._gpkg2d = GPKG2D(self._expand_property_path(prop, value=value))
+                self._gpkg2d._load()
             elif str(value).lower().endswith('_rl.gpkg'):
                 self._gpkgrl = GPKGRL(self._expand_property_path(prop, value=value))
+                self._gpkgrl._load()
 
         if self._gpkg1d is not None:
             self._time_series_data = self._gpkg1d._time_series_data

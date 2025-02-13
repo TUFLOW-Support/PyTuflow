@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 from packaging.version import Version
 
+from pytuflow.outputs.gpkg_base import GPKGBase
 from pytuflow.outputs.helpers.get_standard_data_type_name import get_standard_data_type_name
 from pytuflow.outputs.helpers.time_series_extractor import gpkg_time_series_extractor, time_series_extractor, \
     maximum_extractor
@@ -19,13 +20,18 @@ if typing.TYPE_CHECKING:
     from sqlite3 import Cursor
 
 
-class GPKG2D(TimeSeries, ITimeSeries2D):
+class GPKG2D(TimeSeries, ITimeSeries2D, GPKGBase):
     """Class for handling 2D GeoPackage time series results (:code:`.gpkg` - typically ending with :code:`_2D.gpkg`).
     The GPKG time series format is a specific format published by TUFLOW built on the GeoPackage standard.
 
     This class can be used to initialise stand-alone GPKG result files, however it is  not required to be used if
     loading GPKG results via the :class:`TPC <pytuflow.outputs.TPC>` class which will load all
     domains automatically (i.e. :code:`GPKG1D`, :code:`GPKG2D`, :code:`GPKGRL`).
+
+    The ``GPKG2D`` class will only load basic properties on initialisation. These are typically properties
+    that are easy to obtain from the file without having to load any of the time-series results. Once a method
+    requiring more detailed information is called, the full results will be loaded. This makes the ``GPKG2D`` class
+    very cheap to initialise.
 
     Parameters
     ----------
@@ -85,7 +91,7 @@ class GPKG2D(TimeSeries, ITimeSeries2D):
     """
 
     def __init__(self, fpath: PathLike):
-        super(GPKG2D, self).__init__(fpath)
+        super().__init__(fpath)
 
         #: Path: The path to the source output file.
         self.fpath = Path(fpath)
@@ -113,7 +119,8 @@ class GPKG2D(TimeSeries, ITimeSeries2D):
         self._gis_layer_l_name = None
         self._gis_layer_r_name = None
 
-        self._load()
+        self._loaded = False
+        self._initial_load()
 
     @staticmethod
     def _looks_like_this(fpath: PathLike) -> bool:
@@ -200,6 +207,7 @@ class GPKG2D(TimeSeries, ITimeSeries2D):
         >>> res.times(fmt='absolute')
         [Timestamp('2021-01-01 00:00:00'), Timestamp('2021-01-01 00:01:00'), ..., Timestamp('2021-01-01 03:00:00')]
         """
+        self._load()
         return super().times(filter_by, fmt)
 
     def ids(self, filter_by: str = None) -> list[str]:
@@ -242,6 +250,7 @@ class GPKG2D(TimeSeries, ITimeSeries2D):
         >>> res.ids('h')
         ['po_point']
         """
+        self._load()
         return super().ids(filter_by)
 
     def data_types(self, filter_by: str = None) -> list[str]:
@@ -284,6 +293,7 @@ class GPKG2D(TimeSeries, ITimeSeries2D):
         >>> res.data_types('po_point')
         ['water level']
         """
+        self._load()
         return super().data_types(filter_by)
 
     def maximum(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
@@ -329,6 +339,7 @@ class GPKG2D(TimeSeries, ITimeSeries2D):
                   po/flow/max       po/flow/tmax
         ds1            59.423           1.383333
         """
+        self._load()
         locations, data_types = self._loc_data_types_to_list(locations, data_types)
         filter_by = '/'.join(locations + data_types)
         ctx = self._filter(filter_by)
@@ -387,6 +398,7 @@ class GPKG2D(TimeSeries, ITimeSeries2D):
         2.983334           8.670
         3.000000           8.391
         """
+        self._load()
         locations, data_types = self._loc_data_types_to_list(locations, data_types)
         filter_by = '/'.join(locations + data_types)
         ctx = self._filter(filter_by)
@@ -415,16 +427,9 @@ class GPKG2D(TimeSeries, ITimeSeries2D):
         """Not supported for ``GPKG2D`` results. Raises a :code:`NotImplementedError`."""
         raise NotImplementedError(f'{__class__.__name__} files do not support vertical profile plotting.')
 
-    def _load(self):
-        import sqlite3
-        try:
-            conn = sqlite3.connect(self.fpath)
-        except Exception as e:
-            raise Exception(f'Error connecting to sqlite database: {e}')
-
-        try:
-            self.name = re.sub(r'_TS_2D$', '', self.fpath.stem)
-
+    def _initial_load(self):
+        self.name = re.sub(r'_TS_2D$', '', self.fpath.stem)
+        with self._connect() as conn:
             cur = conn.cursor()
             cur.execute('SELECT Version FROM TUFLOW_timeseries_version;')
             self.format_version = Version(cur.fetchone()[0])
@@ -462,19 +467,23 @@ class GPKG2D(TimeSeries, ITimeSeries2D):
                 self.po_poly_count = cur.fetchone()[0]
                 self.gis_layer_r_fpath = TuflowPath(self.fpath.parent) / f'{self.fpath.name} >> {self._gis_layer_r_name}'
 
+    def _load(self):
+        if self._loaded:
+            return
+
+        with self._connect() as conn:
+            cur = conn.cursor()
             self._load_time_series(cur, self._time_series_data_2d)
             self._load_maximums(self._time_series_data_2d, self._maximum_data_2d)
             self._load_po_info(cur)
-        except Exception as e:
-            raise Exception(f'Error loading GPKG2D: {e}')
-        finally:
-            conn.close()
+
+        self._loaded = True
 
     def _filter(self, filter_by: str) -> pd.DataFrame:
         # docstring inherited
         # split filter into components
-        ctx = [x.strip().lower() for x in filter_by.split('/')] if filter_by else []
-        return super()._combinations_2d(ctx)
+        filter_by = [x.strip().lower() for x in filter_by.split('/')] if filter_by else []
+        return super()._combinations_2d(filter_by)
 
     def _load_time_series(self, cur: 'Cursor', storage: AppendDict):
         if self._gis_layer_p_name:

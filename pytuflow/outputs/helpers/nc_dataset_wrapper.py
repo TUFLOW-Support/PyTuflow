@@ -5,7 +5,7 @@ except ImportError:
     has_netcdf4 = False
 
 
-class DatasetWrapper():
+class DatasetWrapper:
     """Wrap ``Dataset``class so that it can be called with context manager regardless of whether file exists."""
 
     def __init__(self, filename, mode='r', clobber=True, format='NETCDF4',

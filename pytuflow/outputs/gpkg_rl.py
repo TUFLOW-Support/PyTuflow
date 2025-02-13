@@ -24,6 +24,11 @@ class GPKGRL(GPKG2D):
     loading GPKG results via the :class:`TPC <pytuflow.outputs.TPC>` class which will load all
     domains automatically (i.e. :code:`GPKG1D`, :code:`GPKG2D`, :code:`GPKGRL`).
 
+    The ``GPKGRL`` class will only load basic properties on initialisation. These are typically properties
+    that are easy to obtain from the file without having to load any of the time-series results. Once a method
+    requiring more detailed information is called, the full results will be loaded. This makes the ``GPKGRL`` class
+    very cheap to initialise.
+
     Parameters
     ----------
     fpath : PathLike
@@ -273,6 +278,7 @@ class GPKGRL(GPKG2D):
                   rl/flow/max       rl/flow/tmax
         ds1            59.423           1.383333
         """
+        self._load()
         locations, data_types = self._loc_data_types_to_list(locations, data_types)
         context = '/'.join(locations + data_types)
         ctx = self._filter(context)
@@ -331,6 +337,7 @@ class GPKGRL(GPKG2D):
         2.983334           8.670
         3.000000           8.391
         """
+        self._load()
         locations, data_types = self._loc_data_types_to_list(locations, data_types)
         context = '/'.join(locations + data_types)
         ctx = self._filter(context)
@@ -359,60 +366,21 @@ class GPKGRL(GPKG2D):
         """Not supported for ``GPKGRL`` results. Raises a :code:`NotImplementedError`."""
         raise NotImplementedError(f'{__class__.__name__} files do not support vertical profile plotting.')
 
+    def _initial_load(self):
+        super()._initial_load()
+        self.name = re.sub(r'_TS_RL$', '', self.fpath.stem)
+
     def _load(self):
-        import sqlite3
-        try:
-            conn = sqlite3.connect(self.fpath)
-        except Exception as e:
-            raise Exception(f'Error connecting to sqlite database: {e}')
+        if self._loaded:
+            return
 
-        try:
-            self.name = re.sub(r'_TS_RL$', '', self.fpath.stem)
-
+        with self._connect() as conn:
             cur = conn.cursor()
-            cur.execute('SELECT Version FROM TUFLOW_timeseries_version;')
-            self.format_version = Version(cur.fetchone()[0])
-
-            reference_time = None
-            cur.execute(
-                'SELECT DISTINCT Table_name, Count, Series_name, Series_units, Reference_time FROM Timeseries_info;')
-            for table_name, count, series_name, units, rt in cur.fetchall():
-                if reference_time is None:
-                    reference_time, _ = parse_time_units_string(rt, r'\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}',
-                                                                '%Y-%m-%d %H:%M:%S')
-                if re.findall('_P$', table_name):
-                    self._gis_layer_p_name = table_name
-                elif re.findall('_L$', table_name):
-                    self._gis_layer_l_name = table_name
-                else:
-                    self._gis_layer_r_name = table_name
-
-                if 'ft' in units.lower():
-                    self.units = 'us imperial'
-
-            if reference_time is not None:
-                self.reference_time = reference_time
-
-            if self._gis_layer_p_name:
-                cur.execute('SELECT COUNT(*) FROM Geom_P;')
-                self.rl_point_count = cur.fetchone()[0]
-                self.gis_layer_p_fpath = TuflowPath(self.fpath.parent) / f'{self.fpath.name} >> {self._gis_layer_p_name}'
-            if self._gis_layer_l_name:
-                cur.execute('SELECT COUNT(*) FROM Geom_L;')
-                self.rl_line_count = cur.fetchone()[0]
-                self.gis_layer_l_fpath = TuflowPath(self.fpath.parent) / f'{self.fpath.name} >> {self._gis_layer_l_name}'
-            if self._gis_layer_r_name:
-                cur.execute('SELECT COUNT(*) FROM Geom_R;')
-                self.rl_poly_count = cur.fetchone()[0]
-                self.gis_layer_r_fpath = TuflowPath(self.fpath.parent) / f'{self.fpath.name} >> {self._gis_layer_r_name}'
-
             self._load_time_series(cur, self._time_series_data_rl)
             self._load_maximums(self._time_series_data_rl, self._maximum_data_rl)
             self._load_rl_info(cur)
-        except Exception as e:
-            raise Exception(f'Error loading GPKGRL: {e}')
-        finally:
-            conn.close()
+
+        self._loaded = True
 
     def _load_rl_info(self, cur: 'Cursor'):
         rl_info = {'id': [], 'data_type': [], 'geometry': [], 'start': [], 'end': [], 'dt': []}

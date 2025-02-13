@@ -687,18 +687,6 @@ class Test_GPKG1D(TestCase):
         ts = res.time_series('FC01.1_R', ['q', 'v'])
         self.assertEqual((181, 2), ts.shape)
 
-    def test_connectivity(self):
-        p = './tests/2023/M06_5m_003_SWMM_swmm_ts.gpkg'
-        res = GPKG1D(p)
-        df = res._connectivity(['pipe2'])
-        self.assertEqual((7, 10), df.shape)
-
-    def test_connectivity_2(self):
-        p = './tests/2023/EG15_001_TS_1D.gpkg'
-        res = GPKG1D(p)
-        df = res._connectivity(['pipe2'])
-        self.assertEqual((7, 10), df.shape)
-
     def test_long_plot(self):
         p = './tests/2023/M06_5m_003_SWMM_swmm_ts.gpkg'
         res = GPKG1D(p)

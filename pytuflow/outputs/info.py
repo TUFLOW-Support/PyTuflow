@@ -80,7 +80,7 @@ class INFO(TimeSeries, ITimeSeries1D):
     """
 
     def __init__(self, fpath: PathLike):
-        super(INFO, self).__init__(fpath)
+        super().__init__(fpath)
 
         #: Path: The path to the source output file.
         self.fpath = Path(fpath)
