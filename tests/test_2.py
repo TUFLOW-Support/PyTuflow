@@ -106,7 +106,7 @@ class Test_Info_2013(unittest.TestCase):
     def test_connectivity(self):
         p = './tests/2013/M04_5m_001_1d.info'
         res = INFO(p)
-        df = res.connectivity(['ds1', 'ds2'])
+        df = res._connectivity(['ds1', 'ds2'])
         self.assertEqual((2, 10), df.shape)
 
     def test_data_types_section(self):
@@ -310,7 +310,7 @@ class Test_TPC_2016(TestCase):
     def test_connectivity(self):
         p = './tests/2016/EG14_001.tpc'
         res = TPC(p)
-        df = res.connectivity(['ds1', 'ds4'])
+        df = res._connectivity(['ds1', 'ds4'])
         self.assertEqual((4, 10), df.shape)
 
     def test_long_plot(self):
@@ -702,13 +702,13 @@ class Test_GPKG1D(TestCase):
     def test_connectivity(self):
         p = './tests/2023/M06_5m_003_SWMM_swmm_ts.gpkg'
         res = GPKG1D(p)
-        df = res.connectivity(['pipe2'])
+        df = res._connectivity(['pipe2'])
         self.assertEqual((7, 10), df.shape)
 
     def test_connectivity_2(self):
         p = './tests/2023/EG15_001_TS_1D.gpkg'
         res = GPKG1D(p)
-        df = res.connectivity(['pipe2'])
+        df = res._connectivity(['pipe2'])
         self.assertEqual((7, 10), df.shape)
 
     def test_long_plot(self):

@@ -53,11 +53,11 @@ class HydTablesCheck(TabularOutput):
         #: Path: Path to the parent TCF file
         self.tcf = Path()
         #: :class:`HydTablesCrossSectionProvider <pytuflow.outputs.helpers.hyd_tables_cross_sections.HydTablesCrossSectionProvider>`: Cross-section data provider
-        self.cross_sections = HydTablesCrossSectionProvider()
+        self._cross_sections = HydTablesCrossSectionProvider()
         #: :class:`HydTablesChannelProvider <pytuflow.outputs.helpers.hyd_tables_channel_provider.HydTablesChannelProvider>`: Channel data provider
-        self.channels = HydTablesChannelProvider()
+        self._channels = HydTablesChannelProvider()
         #: pd.DataFrame: DataFrame with all the data combinations
-        self.objs = pd.DataFrame()
+        self._objs = pd.DataFrame()
         #: int: Number of cross-sections
         self.cross_section_count = 0
         #: int: Number of channels
@@ -66,16 +66,16 @@ class HydTablesCheck(TabularOutput):
         if not self.fpath.exists():
             raise FileNotFoundError(f'File does not exist: {fpath}')
 
-        if not self.looks_like_this(self.fpath):
+        if not self._looks_like_this(self.fpath):
             raise FileTypeError(f'File does not look like a {self.__class__.__name__} file: {fpath}')
 
-        if self.looks_empty(self.fpath):
+        if self._looks_empty(self.fpath):
             raise EOFError(f'File is empty or incomplete: {fpath}')
 
         self._load()
 
     @staticmethod
-    def looks_like_this(fpath: Path) -> bool:
+    def _looks_like_this(fpath: Path) -> bool:
         # docstring inherited
         try:
             if not re.findall(r'_1d_ta_tables_check$', fpath.stem):
@@ -89,7 +89,7 @@ class HydTablesCheck(TabularOutput):
         return True
 
     @staticmethod
-    def looks_empty(fpath: Path) -> bool:
+    def _looks_empty(fpath: Path) -> bool:
         # docstring inherited
         try:
             with fpath.open() as f:
@@ -101,110 +101,40 @@ class HydTablesCheck(TabularOutput):
             return True
         return False
 
-    def context_filter(self, context: str) -> pd.DataFrame:
-        # docstring inherited
-        # split context into components
-        ctx = [x.strip().lower() for x in context.split('/') if x] if context else []
-
-        # domain - xs, processed, or channel
-        ctx_ = []
-        filtered_something = False
-        if np.intersect1d(ctx, ['xs', 'cross-section', 'cross_section', 'cross section']).size:
-            filtered_something = True
-            ctx_.append('xs')
-            ctx = [x for x in ctx if x not in ['xs', 'cross-section', 'cross_section', 'cross section']]
-        if np.intersect1d(ctx, ['processed', 'proc']).size:
-            filtered_something = True
-            ctx_.append('processed')
-            ctx = [x for x in ctx if x not in ['processed', 'proc']]
-        if np.intersect1d(ctx, ['channel']).size:
-            filtered_something = True
-            ctx_.append('channel')
-            ctx = [x for x in ctx if x not in  ['channel']]
-        if filtered_something:
-            df = self.objs[self.objs['geometry'].isin(ctx_)]
-        else:
-            df = self.objs.copy()
-
-        # type
-        possible_types = ['xz', 'hw', 'cs', 'bg', 'lc']
-        ctx1 = [x for x in ctx if x in possible_types]
-        ctx1 = [x for x in ctx1 if x in df['type'].str.lower().unique()]
-        if ctx1:
-            filtered_something = True
-            df = df[df['type'].str.lower().isin(ctx1)]
-            j = len(ctx) - 1
-            for i, x in enumerate(reversed(ctx.copy())):
-                if x in ctx1:
-                    ctx.pop(j - i)
-
-        # data types
-        ctx1 = [get_standard_data_type_name(x) for x in ctx]
-        ctx1 = [x for x in ctx1 if x in df['data_type'].unique()]
-        if ctx1:
-            filtered_something = True
-            df = df[df['data_type'].isin(ctx1)]
-            j = len(ctx) - 1
-            for i, x in enumerate(reversed(ctx.copy())):
-                if get_standard_data_type_name(x) in ctx1:
-                    ctx.pop(j - i)
-
-        # ids
-        if ctx and not df.empty:
-            df1 = df[df['id'].str.lower().isin(ctx)]
-            df2 = df[df['uid'].str.lower().isin(ctx)]
-            if not df1.empty and not df2.empty:
-                df = pd.concat([df1, df2], axis=0)
-            elif not df1.empty:
-                df = df1
-            elif not df2.empty:
-                df = df2
-            else:
-                df = pd.DataFrame()
-            if not df.empty:
-                j = len(ctx) - 1
-                for i, x in enumerate(reversed(ctx.copy())):
-                    if df['id'].str.lower().isin([x.lower()]).any() or df['uid'].str.lower().isin([x.lower()]).any():
-                        ctx.pop(j - i)
-                if ctx and not filtered_something:
-                    df = pd.DataFrame()
-
-        return df if not df.empty else pd.DataFrame(columns=['id', 'uid', 'type', 'data_type', 'geometry'])
-
-    def times(self, context: str = None, fmt: str = 'relative') -> list[TimeLike]:
+    def times(self, filter_by: str = None, fmt: str = 'relative') -> list[TimeLike]:
         """HydraulicTableCheck1D results are static and will not return any times."""
         return []  # data is static - no times exist
 
-    def ids(self, context: str = None) -> list[str]:
-        """Returns all the available IDs for the given context.
+    def ids(self, filter_by: str = None) -> list[str]:
+        """Returns all the available IDs for the given filter.
 
-        The context argument can be used to add a filter to the returned IDs. Available context objects for this
-        class are:
+        The ``filter_by`` argument can be used to add a filter to the returned IDs. Available filters for the
+        ``HydTablesCheck`` class are:
 
         * :code:`None` - returns all IDs
 
-        Process step contexts:
+        Process step filters:
 
         * :code:`xs` - returns the IDs that have raw cross-section data
         * :code:`processed` - returns the IDs that have processed cross-section data
         * :code:`channel` - returns the IDs for the processed channels
 
-        Type contexts:
+        Type filters:
 
         * :code:`[type]` - returns the IDs that match the given cross-section type (e.g. "XZ" or "HW")
 
-        Data type contexts:
+        Data type filters:
 
         * :code:`[data type]` - returns the IDs that match the given data type (e.g. "Storage Width")
 
-        Combine contexts:
+        Combine filters:
 
-        * :code:`[context1]/[context2] ...`: Combine multiple contexts to filter the IDs further ('/' delim).
+        * [filter1]/[filter2] ...: (use ``/`` to delim).
 
         Parameters
         ----------
-        context : str, optional
-            The context to filter the IDs by.
+        filter_by : str, optional
+            The string to filter the IDs by.
 
         Returns
         -------
@@ -223,39 +153,39 @@ class HydTablesCheck(TabularOutput):
         >>> hyd_tables.ids('channel')
         ['RD_weir', 'FC01.39', 'FC01.38'  ...  FC01.37', 'FC01.36', 'FC01.34']
         """
-        df = self.context_filter(context)
+        df = self._filter(filter_by)
         return df.id.unique().tolist()
 
-    def data_types(self, context: str = None) -> list[str]:
-        """Returns all the available data types for the given context.
+    def data_types(self, filter_by: str = None) -> list[str]:
+        """Returns all the available data types for the given filter.
 
-        The context argument can be used to add a filter to the returned IDs. Available context objects for this
-        class are:
+        The argument ``filter_by`` can be used to add a filter to the returned IDs. Available filters for the
+        ``HydTablesCheck`` class are:
 
         * :code:`None` - returns all data types
 
-        Process step contexts:
+        Process step filters:
 
         * :code:`xs` - returns the available data types for the raw cross-sections
         * :code:`processed` - returns the data types available for the processed cross-sections
         * :code:`channel` - returns the data types available for the processed channels
 
-        Type contexts:
+        Type filters:
 
         * :code:`[type]` - returns the available data types that match the given cross-section type (e.g. "XZ" or "HW")
 
-        Data type contexts:
+        Data type filters:
 
         * :code:`[id]` - returns the available data types for the given ID
 
-        Combine contexts:
+        Combine filters:
 
-        * :code:`[context1]/[context2] ...`: Combine multiple contexts to filter the data types further ('/' delim).
+        * [filter1]/[filter2] ...: (use ``/`` to delim).
 
         Parameters
         ----------
-        context : str, optional
-            The context to filter the data types by.
+        filter_by : str, optional
+            The string to filter the data types by.
 
         Returns
         -------
@@ -276,7 +206,7 @@ class HydTablesCheck(TabularOutput):
         ['depth', 'storage width', 'flow width', 'area', 'wetted perimeter',
         'radius', 'vertex resistance factor', 'k ']
         """
-        df = self.context_filter(context)
+        df = self._filter(filter_by)
         return df.data_type.unique().tolist()
 
     def section(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
@@ -331,9 +261,9 @@ class HydTablesCheck(TabularOutput):
         locations, data_types = self._figure_out_loc_and_data_types(locations, data_types)
         dtypes = [get_standard_data_type_name(x) for x in data_types]
 
-        # get more context on the inputs - e.g. what stage of processing they are from
+        # get more filters on the inputs - e.g. what stage of processing they are from
         ctx = '/'.join(locations + data_types)
-        df = self.context_filter(ctx)
+        df = self._filter(ctx)
 
         df1 = pd.DataFrame()
         for loc in locations:
@@ -341,13 +271,13 @@ class HydTablesCheck(TabularOutput):
                 if df[(df.id == loc) & (df.geometry == proc_type)].empty:
                     continue
                 if proc_type in ['xs', 'processed']:
-                    loc1 = self.cross_sections.name2id(loc) if loc not in self.cross_sections.database else loc
+                    loc1 = self._cross_sections.name2id(loc) if loc not in self._cross_sections.database else loc
                     if proc_type == 'xs':
-                        df_ = self.cross_sections.database[loc1].df_xs
+                        df_ = self._cross_sections.database[loc1].df_xs
                     else:
-                        df_ = self.cross_sections.database[loc1].df_proc[data_types]
+                        df_ = self._cross_sections.database[loc1].df_proc[data_types]
                 else:
-                    df_ = self.channels.database[loc][data_types]
+                    df_ = self._channels.database[loc][data_types]
 
                 dtypes1 = [x for x in dtypes if x in df_.columns]
                 dtypes2 = [data_types[i] for i, x in enumerate(dtypes) if x in df_.columns]
@@ -363,17 +293,17 @@ class HydTablesCheck(TabularOutput):
 
     def time_series(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
                     time_fmt: str = 'relative') -> pd.DataFrame:
-        """Not supported for HydraulicTableCheck1D results. Raises a :code:`NotImplementedError`."""
+        """Not supported for ``HydTablesCheck`` results. Raises a :code:`NotImplementedError`."""
         raise NotImplementedError(f'{__class__.__name__} does not support time-series plotting.')
 
     def curtain(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
                 time: TimeLike) -> pd.DataFrame:
-        """Not supported for HydraulicTableCheck1D results. Raises a :code:`NotImplementedError`."""
+        """Not supported for ``HydTablesCheck`` results. Raises a :code:`NotImplementedError`."""
         raise NotImplementedError(f'{__class__.__name__} does not support curtain plotting.')
 
     def profile(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
                 time: TimeLike) -> pd.DataFrame:
-        """Not supported for HydraulicTableCheck1D results. Raises a :code:`NotImplementedError`."""
+        """Not supported for ``HydTablesCheck`` results. Raises a :code:`NotImplementedError`."""
         raise NotImplementedError(f'{__class__.__name__} does not support vertical profile plotting.')
 
     def _load(self):
@@ -384,13 +314,83 @@ class HydTablesCheck(TabularOutput):
             i = 1 if 'generated by' not in s[1].lower() else 3
             self.tcf = s[i].strip()
             self.tcf = Path(self.tcf)
-            while not self.cross_sections.finished:
-                self.cross_sections.read_next(f)
-            self.cross_section_count = len(self.cross_sections.database)
-            while not self.channels.finished:
-                self.channels.read_next(f)
-            self.channel_count = len(self.channels.database)
+            while not self._cross_sections.finished:
+                self._cross_sections.read_next(f)
+            self.cross_section_count = len(self._cross_sections.database)
+            while not self._channels.finished:
+                self._channels.read_next(f)
+            self.channel_count = len(self._channels.database)
         self._load_objs()
+
+    def _filter(self, filter_by: str) -> pd.DataFrame:
+        # docstring inherited
+        # split filter into components
+        ctx = [x.strip().lower() for x in filter_by.split('/') if x] if filter_by else []
+
+        # domain - xs, processed, or channel
+        ctx_ = []
+        filtered_something = False
+        if np.intersect1d(ctx, ['xs', 'cross-section', 'cross_section', 'cross section']).size:
+            filtered_something = True
+            ctx_.append('xs')
+            ctx = [x for x in ctx if x not in ['xs', 'cross-section', 'cross_section', 'cross section']]
+        if np.intersect1d(ctx, ['processed', 'proc']).size:
+            filtered_something = True
+            ctx_.append('processed')
+            ctx = [x for x in ctx if x not in ['processed', 'proc']]
+        if np.intersect1d(ctx, ['channel']).size:
+            filtered_something = True
+            ctx_.append('channel')
+            ctx = [x for x in ctx if x not in  ['channel']]
+        if filtered_something:
+            df = self._objs[self._objs['geometry'].isin(ctx_)]
+        else:
+            df = self._objs.copy()
+
+        # type
+        possible_types = ['xz', 'hw', 'cs', 'bg', 'lc']
+        ctx1 = [x for x in ctx if x in possible_types]
+        ctx1 = [x for x in ctx1 if x in df['type'].str.lower().unique()]
+        if ctx1:
+            filtered_something = True
+            df = df[df['type'].str.lower().isin(ctx1)]
+            j = len(ctx) - 1
+            for i, x in enumerate(reversed(ctx.copy())):
+                if x in ctx1:
+                    ctx.pop(j - i)
+
+        # data types
+        ctx1 = [get_standard_data_type_name(x) for x in ctx]
+        ctx1 = [x for x in ctx1 if x in df['data_type'].unique()]
+        if ctx1:
+            filtered_something = True
+            df = df[df['data_type'].isin(ctx1)]
+            j = len(ctx) - 1
+            for i, x in enumerate(reversed(ctx.copy())):
+                if get_standard_data_type_name(x) in ctx1:
+                    ctx.pop(j - i)
+
+        # ids
+        if ctx and not df.empty:
+            df1 = df[df['id'].str.lower().isin(ctx)]
+            df2 = df[df['uid'].str.lower().isin(ctx)]
+            if not df1.empty and not df2.empty:
+                df = pd.concat([df1, df2], axis=0)
+            elif not df1.empty:
+                df = df1
+            elif not df2.empty:
+                df = df2
+            else:
+                df = pd.DataFrame()
+            if not df.empty:
+                j = len(ctx) - 1
+                for i, x in enumerate(reversed(ctx.copy())):
+                    if df['id'].str.lower().isin([x.lower()]).any() or df['uid'].str.lower().isin([x.lower()]).any():
+                        ctx.pop(j - i)
+                if ctx and not filtered_something:
+                    df = pd.DataFrame()
+
+        return df if not df.empty else pd.DataFrame(columns=['id', 'uid', 'type', 'data_type', 'geometry'])
 
     def _load_objs(self):
         def add_xs_prop(d, xs):
@@ -401,7 +401,7 @@ class HydTablesCheck(TabularOutput):
         d = {'id': [], 'type': [], 'uid': [], 'data_type': [], 'geometry': []}
 
         # cross-sections
-        for id_, xs in self.cross_sections.database.items():
+        for id_, xs in self._cross_sections.database.items():
             if xs.has_xs:
                 for col in xs.df_xs.columns:
                     if col in ['point', 'message']:
@@ -417,7 +417,7 @@ class HydTablesCheck(TabularOutput):
                 d['geometry'].append('processed')
 
         # channels
-        for id_, ch in self.channels.database.items():
+        for id_, ch in self._channels.database.items():
             for col in ch.columns:
                 if col in ['point', 'message']:
                     continue
@@ -427,7 +427,7 @@ class HydTablesCheck(TabularOutput):
                 d['data_type'].append(get_standard_data_type_name(col))
                 d['geometry'].append('channel')
 
-        self.objs = pd.DataFrame(d)
+        self._objs = pd.DataFrame(d)
 
     def _figure_out_loc_and_data_types(self, locations: Union[str, list[str]],
                                        data_types: Union[str, list[str], None]) -> tuple[list[str], list[str]]:

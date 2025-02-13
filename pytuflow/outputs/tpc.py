@@ -41,7 +41,7 @@ class TPC(INFO, ITimeSeries2D):
 
     Parameters
     ----------
-    fpath : :class:`PathLike <pytuflow.pytuflow_types.PathLike>`
+    fpath :`PathLike
         The path to the output (.tpc) file.
 
     Raises
@@ -113,7 +113,7 @@ class TPC(INFO, ITimeSeries2D):
             self._ncid = None
 
     @staticmethod
-    def looks_like_this(fpath: PathLike) -> bool:
+    def _looks_like_this(fpath: PathLike) -> bool:
         # docstring inherited
         fpath = Path(fpath)
         if fpath.suffix.upper() != '.TPC':
@@ -128,7 +128,7 @@ class TPC(INFO, ITimeSeries2D):
         return True
 
     @staticmethod
-    def looks_empty(fpath: PathLike) -> bool:
+    def _looks_empty(fpath: PathLike) -> bool:
         # docstring inherited
         target_line_count = 10  # fairly arbitrary
         try:
@@ -149,30 +149,13 @@ class TPC(INFO, ITimeSeries2D):
         except Exception as e:
             return True
 
-    def context_filter(self, context: str) -> pd.DataFrame:
-        # docstring inherited
-        # split context into components
-        ctx = [x.strip().lower() for x in context.split('/')] if context else []
-
-        # 1D
-        df = super().context_combinations_1d(ctx)
-
-        # 2D
-        df1 = self.context_combinations_2d(ctx)
-
-        if df.empty:
-            return df1
-        if df1.empty:
-            return df
-        return pd.concat([df, df1], axis=0, ignore_index=True)
-
-    def times(self, context: str = None, fmt: str = 'relative') -> list[TimeLike]:
+    def times(self, filter_by: str = None, fmt: str = 'relative') -> list[TimeLike]:
         """Returns all the available times for the output.
 
-        The context is an optional input that can be used to filter the return further. Valid contexts
-        for TPC results are:
+        The ``filter_by`` is an optional input that can be used to filter the return further. Valid filters
+        for the ``TPC`` results are:
 
-        Domain contexts:
+        Domain filters:
 
         * 1d: 1D result times - nodes and channels will always have the same times
         * node - times for node types (note, there will be no difference between nodes and channels)
@@ -181,22 +164,22 @@ class TPC(INFO, ITimeSeries2D):
           will return all unique times
         * rl (or 0d): Reporting locations result times. RL results will have the same times for all RL types
 
-        Data type contexts:
+        Data type filters:
 
         * [data type]: The data type to filter the times by. This will return all times for the given data type.
 
-        Location contexts:
+        Location filters:
 
         * [location]: The location to filter the times by. This will return all times for the given location.
 
-        Combine contexts:
+        Combine filters:
 
-        * [context1]/[context2] ...: Combine multiple contexts to filter the times further ('/' delim).
+        * [filter1]/[filter2] ...: (use ``/`` to delim).
 
         Parameters
         ----------
-        context : str, optional
-            The context to filter the times by.
+        filter_by : str, optional
+            The string to filter the times by.
         fmt : str, optional
             The format for the times. Options are 'relative' or 'absolute'.
 
@@ -212,21 +195,21 @@ class TPC(INFO, ITimeSeries2D):
         >>> res.times(fmt='absolute')
         [Timestamp('2021-01-01 00:00:00'), Timestamp('2021-01-01 00:01:00'), ..., Timestamp('2021-01-01 03:00:00')]
         """
-        return super().times(context, fmt)
+        return super().times(filter_by, fmt)
 
-    def data_types(self, context: str = None) -> list[str]:
-        """Returns all the available data types (result types) for the output given the context.
+    def ids(self, filter_by: str = None) -> list[str]:
+        """Returns all the available IDs for the output.
 
-        The context is an optional input that can be used to filter the return further. Available
-        context are:
+        The ``filter_by`` is an optional input that can be used to filter the return further. Valid
+        filters for the ``TPC`` class are:
 
-        Domain contexts:
+        Domain filters:
 
         * :code:`1d`
         * :code:`2d` (or :code:`po`)
         * :code:`rl` (or :code:`0d`)
 
-        Geometry contexts (note: they are not plural):
+        Geometry filters (note: they are not plural):
 
         * :code:`node`
         * :code:`channel`
@@ -234,18 +217,70 @@ class TPC(INFO, ITimeSeries2D):
         * :code:`line` - (for 2d and rl domains only - use :code:`channel` for 1d domain)
         * :code:`polygon` (or :code:`region`)
 
-        Location contexts:
+        Data type filters:
 
-        * :code:`[location]`: The location to filter the data_types by.
+        * :code:`[data_type]`: The data_type to filter the ids by.
 
-        Combine contexts:
+        Combine filters:
 
-        * :code:`[context1]/[context2] ...`  Combine multiple contexts to filter the times further ('/' delim).
+        * [filter1]/[filter2] ...: (use ``/`` to delim).
 
         Parameters
         ----------
-        context : str, optional
-            The context to filter the data types by.
+        filter_by : str, optional
+            The string to filter the IDs by.
+
+        Returns
+        -------
+        list[str]
+            The available IDs.
+
+        Examples
+        --------
+        Get the IDs for all :code:`po` results:
+
+        >>> res.ids('po')
+        ['po_poly', 'po_point', 'po_line']
+
+        Get the IDs for all :code:`rl line` results:
+
+        >>> res.ids('rl/line')
+        ['rl_line']
+        """
+        return super().ids(filter_by)
+
+    def data_types(self, filter_by: str = None) -> list[str]:
+        """Returns all the available data types (result types) for the output given the filter.
+
+        The ``filter_by`` is an optional input that can be used to filter the return further. Available
+        filters for the ``TPC`` are:
+
+        Domain filters:
+
+        * :code:`1d`
+        * :code:`2d` (or :code:`po`)
+        * :code:`rl` (or :code:`0d`)
+
+        Geometry filters (note: they are not plural):
+
+        * :code:`node`
+        * :code:`channel`
+        * :code:`point` - (for 2d and rl domains only - use :code:`node` for 1d domain)
+        * :code:`line` - (for 2d and rl domains only - use :code:`channel` for 1d domain)
+        * :code:`polygon` (or :code:`region`)
+
+        Location filters:
+
+        * :code:`[location]`: The location to filter the data_types by.
+
+        Combine filters:
+
+        * [filter1]/[filter2] ...: (use ``/`` to delim).
+
+        Parameters
+        ----------
+        filter_by : str, optional
+            The string to filter the data types by.
 
         Returns
         -------
@@ -272,59 +307,7 @@ class TPC(INFO, ITimeSeries2D):
         The above could also be accomplished with just :code:`region` (or :code:`polygon`) since it's only
         applicable for :code:`po` and :code:`rl` domains.
         """
-        return super().data_types(context)
-
-    def ids(self, context: str = None) -> list[str]:
-        """Returns all the available IDs for the output.
-
-        The context is an optional input that can be used to filter the return further. Available
-        context are:
-
-        Domain contexts:
-
-        * :code:`1d`
-        * :code:`2d` (or :code:`po`)
-        * :code:`rl` (or :code:`0d`)
-
-        Geometry contexts (note: they are not plural):
-
-        * :code:`node`
-        * :code:`channel`
-        * :code:`point` - (for 2d and rl domains only - use :code:`node` for 1d domain)
-        * :code:`line` - (for 2d and rl domains only - use :code:`channel` for 1d domain)
-        * :code:`polygon` (or :code:`region`)
-
-        Data type contexts:
-
-        * :code:`[data_type]`: The data_type to filter the ids by.
-
-        Combine contexts:
-
-        * :code:`[context1]/[context2] ...`: Combine multiple contexts to filter the IDs further ('/' delim).
-
-        Parameters
-        ----------
-        context : str, optional
-            The context to filter the IDs by.
-
-        Returns
-        -------
-        list[str]
-            The available IDs.
-
-        Examples
-        --------
-        Get the IDs for all :code:`po` results:
-
-        >>> res.ids('po')
-        ['po_poly', 'po_point', 'po_line']
-
-        Get the IDs for all :code:`rl line` results:
-
-        >>> res.ids('rl/line')
-        ['rl_line']
-        """
-        return super().ids(context)
+        return super().data_types(filter_by)
 
     def maximum(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
                 time_fmt: str = 'relative') -> pd.DataFrame:
@@ -333,20 +316,20 @@ class TPC(INFO, ITimeSeries2D):
 
         It's possible to pass in a well known shorthand for the data type e.g. 'q' for flow.
 
-        The location can be an ID or contextual string, e.g. 'channel' to extract the maximum values
-        for all channels. An ID can be used alongside a contextual string since there can be duplicate IDs across
-        domains e.g. 'test/channel' - where 'test' is the name and 'channel' is additional context. Note, the order
-        does not matter, but it doesn't work very well if your ID has a '/' or has the same name as a contextual string
+        The location can be an ID or filter string, e.g. ``channel`` to extract the maximum values
+        for all channels. An ID can be used alongside a filter string since there can be duplicate IDs across
+        domains e.g. 'test/channel' - where 'test' is the name and 'channel' is an additional filter. Note, the order
+        does not matter, but it doesn't work very well if your ID has a '/' or has the same name as a filter string
         (e.g. calling a po line 'line').
-        For the TPC result class, the following contexts are available:
+        For the ``TPC`` result class, the following filters are available:
 
-        Domain contexts:
+        Domain filters:
 
         * :code:`1d`
         * :code:`2d` (or :code:`po`)
         * :code:`rl` (or :code:`0d`)
 
-        Geometry contexts (note: they are not plural):
+        Geometry filters (note: they are not plural):
 
         * :code:`node`
         * :code:`channel`
@@ -354,12 +337,12 @@ class TPC(INFO, ITimeSeries2D):
         * :code:`line` - (for 2d and rl domains only - use :code:`channel` for 1d domain)
         * :code:`polygon` (or :code:`region`)
 
-        Combine contexts:
+        Combine filters:
 
-        * :code:`[context1]/[context2] ...`: Combine multiple contexts to filter the times further ('/' delim).
+        * [filter1]/[filter2] ...: (use ``/`` to delim).
 
         The returned DataFrame will have an index column corresponding to the location ids, and the columns
-        will be in the format :code:`context/data_type/[max|tmax]`,
+        will be in the format :code:`obj/data_type/[max|tmax]`,
         e.g. :code:`channel/flow/max`, :code:`channel/flow/tmax`.
 
         Parameters
@@ -401,8 +384,8 @@ class TPC(INFO, ITimeSeries2D):
         FC_weir1            67.995           0.966667
         """
         locations, data_types = self._loc_data_types_to_list(locations, data_types)
-        context = '/'.join(locations + data_types)
-        ctx = self.context_filter(context)
+        filter_by = '/'.join(locations + data_types)
+        ctx = self._filter(filter_by)
         if ctx.empty:
             return pd.DataFrame()
 
@@ -431,25 +414,25 @@ class TPC(INFO, ITimeSeries2D):
 
     def time_series(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
                     time_fmt: str = 'relative') -> pd.DataFrame:
-        """Returns a time series dataframe for the given location(s) and data type(s). INFO result types will
-        always share a common time index.
+        """Returns a time series dataframe for the given location(s) and data type(s).
 
         It's possible to pass in a well known shorthand for the data type e.g. :code:`q` for :code:`flow`.
 
-        The location can be an ID or contextual string, e.g. :code:`channel` to extract the maximum values
-        for all channels. An ID can be used alongside a contextual string since there can be duplicate IDs across
-        domains e.g. :code:`test/channel` - where :code:`test` is the name and :code:`channel` is additional context.
+        The location can be an ID or filter string, e.g. :code:`channel` to extract the maximum values
+        for all channels. An ID can be used alongside a filter string since there can be duplicate IDs across
+        domains e.g. :code:`test/channel` - where :code:`test` is the name and :code:`channel` is an additional filter.
         Note, the order does not matter, but it doesn't work very well if your ID has a '/' or has the same name as a
-        contextual string (e.g. calling a po line 'line').
-        For the TPC result class, the following contexts are available:
+        filter string (e.g. calling a po line 'line').
 
-        Domain contexts:
+        The following filters are available for the ``TPC`` class:
+
+        Domain filters:
 
         * :code:`1d`
         * :code:`2d` (or :code:`po`)
         * :code:`rl` (or :code:`0d`)
 
-        Geometry contexts (note: they are not plural):
+        Geometry filters (note: they are not plural):
 
         * :code: `node`
         * :code: `channel`
@@ -457,11 +440,11 @@ class TPC(INFO, ITimeSeries2D):
         * :code: `line` - (for 2d and rl domains only - use :code:`channel` for 1d domain)
         * :code: `polygon` (or :code:`region`)
 
-        Combine contexts:
+        Combine filters:
 
-        * :code:`[context1]/[context2] ...`: Combine multiple contexts to filter the times further ('/' delim).
+        * [filter1]/[filter2] ...: (use ``/`` to delim).
 
-        The returned column names will be in the format :code:¬context/data_type/location`
+        The returned column names will be in the format :code:`obj/data_type/location`
         e.g. :code:`channel/flow/FC01.1_R`. The data_type name in the column heading will be identical to the data type
         name passed into the function e.g. if :code:`h` is used instead of :code:`water level`,
         then the return will be :code:`node/h/FC01.1_R.1`.
@@ -515,8 +498,8 @@ class TPC(INFO, ITimeSeries2D):
         3.000000             8.391  ...                    0.0
         """
         locations, data_types = self._loc_data_types_to_list(locations, data_types)
-        context = '/'.join(locations + data_types)
-        ctx = self.context_filter(context)
+        filter_by = '/'.join(locations + data_types)
+        ctx = self._filter(filter_by)
         if ctx.empty:
             return pd.DataFrame()
 
@@ -551,6 +534,16 @@ class TPC(INFO, ITimeSeries2D):
 
         return df
 
+    def curtain(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
+                time: TimeLike) -> pd.DataFrame:
+        """Not supported for ``TPC`` results. Raises a :code:`NotImplementedError`."""
+        raise NotImplementedError(f'{__class__.__name__} does not support curtain plotting.')
+
+    def profile(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
+                time: TimeLike) -> pd.DataFrame:
+        """Not supported for ``TPC`` results. Raises a :code:`NotImplementedError`."""
+        raise NotImplementedError(f'{__class__.__name__} does not support vertical profile plotting.')
+
     def _load(self) -> None:
         """Load the TPC file into memory. Called by the __init__ method."""
         self.format = self._tpc_reader.get_property('Time Series Output Format', 'CSV')
@@ -574,14 +567,14 @@ class TPC(INFO, ITimeSeries2D):
         super()._load()
 
         # po
-        self.po_objs = self._load_po_info()
-        if not self.po_objs.empty:
-            self.po_point_count = self.po_objs[self.po_objs['geometry'] == 'point']['id'].unique().size
-            self.po_line_count = self.po_objs[self.po_objs['geometry'] == 'line']['id'].unique().size
-            self.po_poly_count = self.po_objs[self.po_objs['geometry'] == 'polygon']['id'].unique().size
+        self._po_objs = self._load_po_info()
+        if not self._po_objs.empty:
+            self.po_point_count = self._po_objs[self._po_objs['geometry'] == 'point']['id'].unique().size
+            self.po_line_count = self._po_objs[self._po_objs['geometry'] == 'line']['id'].unique().size
+            self.po_poly_count = self._po_objs[self._po_objs['geometry'] == 'polygon']['id'].unique().size
 
         # rl
-        self.rl_objs = self._load_rl_info()
+        self._rl_objs = self._load_rl_info()
 
         # gis layers
         self.gis_layer_p_fpath = self._expand_property_path('GIS Plot Layer Points')
@@ -592,6 +585,23 @@ class TPC(INFO, ITimeSeries2D):
         if self._ncid:
             self._ncid.close()
             self._ncid = None
+
+    def _filter(self, filter_by: str) -> pd.DataFrame:
+        # docstring inherited
+        # split filter into components
+        ctx = [x.strip().lower() for x in filter_by.split('/')] if filter_by else []
+
+        # 1D
+        df = super()._combinations_1d(ctx)
+
+        # 2D
+        df1 = self._combinations_2d(ctx)
+
+        if df.empty:
+            return df1
+        if df1.empty:
+            return df
+        return pd.concat([df, df1], axis=0, ignore_index=True)
 
     def _info_name_correction(self, name: str) -> str:
         # override this as it isn't needed for TPC
@@ -610,7 +620,7 @@ class TPC(INFO, ITimeSeries2D):
             if df is not None:
                 data_type = get_standard_data_type_name(data_type)
                 self._time_series_data[data_type] = df
-                if df.columns.isin(self.node_info.index).all():
+                if df.columns.isin(self._node_info.index).all():
                     self._nd_res_types.append(data_type)
 
         # load channel time series
@@ -780,7 +790,7 @@ class TPC(INFO, ITimeSeries2D):
         po_info = {'id': [], 'data_type': [], 'geometry': [], 'start': [], 'end': [], 'dt': []}
         if self.format.lower() == 'gpkg':
             if self._gpkg2d is not None:
-                return self._gpkg2d.po_objs
+                return self._gpkg2d._po_objs
             else:
                 return pd.DataFrame(po_info)
 
@@ -838,7 +848,7 @@ class TPC(INFO, ITimeSeries2D):
         rl_info = {'id': [], 'data_type': [], 'geometry': [], 'start': [], 'end': [], 'dt': []}
         if self.format.lower() == 'gpkg':
             if self._gpkgrl is not None:
-                return self._gpkgrl.rl_objs
+                return self._gpkgrl._rl_objs
             else:
                 return pd.DataFrame(rl_info)
 

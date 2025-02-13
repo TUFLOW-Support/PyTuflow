@@ -14,25 +14,19 @@ class TabularOutput(Output):
         # docstring inherited
         super().__init__(*fpath)
         #: TuflowPath: The path to the point GIS layer file
-        self.gis_layer_p_fpath = None
+        self._gis_layer_p_fpath = None
         #: TuflowPath: The path to the line GIS layer file
-        self.gis_layer_l_fpath = None
+        self._gis_layer_l_fpath = None
         #: TuflowPath: The path to the polygon GIS layer file
-        self.gis_layer_r_fpath = None
-        #: Layer: The point GIS layer
-        self.gis_layer_p = None
-        #: Layer: The line GIS layer
-        self.gis_layer_l = None
-        #: Layer: The polygon GIS layer
-        self.gis_layer_r = None
+        self._gis_layer_r_fpath = None
 
     @abstractmethod
-    def context_filter(self, context: str) -> pd.DataFrame:
-        """Returns a DataFrame with the output combinations for the given context string.
+    def _filter(self, filter_by: str) -> pd.DataFrame:
+        """Returns a DataFrame with the output combinations for the given filter string.
 
         Parameters
         ----------
-        context : str
+        filter_by : str
             The context to extract the combinations for.
 
         Returns
@@ -45,7 +39,7 @@ class TabularOutput(Output):
         Extracting the available :code:`channel` output combinations. The returned DataFrame contains a row for each
         :code:`id` / :code:`data_type` combination that is available for :code:`channel` types.
 
-        >>> res.context_filter('channel')
+        >>> res._filter('channel')
                    id data_type geometry  start  end    dt domain
         55        ds1      flow     line    0.0  3.0  60.0     1d
         56        ds2      flow     line    0.0  3.0  60.0     1d
@@ -61,7 +55,7 @@ class TabularOutput(Output):
 
         Similarly, extracting combinations for :code:`flow`:
 
-        >>> res.context_filter('flow')
+        >>> res._filter('flow')
                            id data_type geometry  start  end    dt domain
         55        ds1      flow     line    0.0  3.0  60.0     1d
         56        ds2      flow     line    0.0  3.0  60.0     1d
@@ -78,15 +72,15 @@ class TabularOutput(Output):
         pass
 
     @abstractmethod
-    def ids(self, context: str = None) -> list[str]:
+    def ids(self, filter_by: str = None) -> list[str]:
         """Returns all the available IDs for the output.
 
-        The context argument can be used to add a filter to the returned IDs. E.g. passing in a data type will return
-        all the ids that contain that results for that data type.
+        The ``filter_by`` argument can be used to add a filter to the returned IDs.
+        E.g. passing in a data type will return all the ids that contain that results for that data type.
 
         Parameters
         ----------
-        context : str, optional
+        filter_by : str, optional
             The context to filter the IDs by.
 
         Returns

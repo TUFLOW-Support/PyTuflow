@@ -26,7 +26,7 @@ class INFO(TimeSeries, ITimeSeries1D):
 
     Parameters
     ----------
-    fpath : :class:`PathLike <pytuflow.pytuflow_types.PathLike>`
+    fpath : PathLike
         The path to the output (.info) file.
 
     Raises
@@ -86,11 +86,11 @@ class INFO(TimeSeries, ITimeSeries1D):
             raise FileNotFoundError(f'File not found: {self.fpath}')
 
         # call before tpc_reader is initialised to give a clear error message if it isn't actually a .info time series file
-        if not self.looks_like_this(self.fpath):
+        if not self._looks_like_this(self.fpath):
             raise FileTypeError(f'File does not look like a time series {self.__class__.__name__} file: {fpath}')
 
         # call after tpc_reader has been initialised so that we know the file can be loaded by the reader
-        if self.looks_empty(fpath):
+        if self._looks_empty(fpath):
             raise EOFError(f'File is empty or incomplete: {fpath}')
 
         # private properties
@@ -102,7 +102,7 @@ class INFO(TimeSeries, ITimeSeries1D):
         self._load()
 
     @staticmethod
-    def looks_like_this(fpath: PathLike) -> bool:
+    def _looks_like_this(fpath: PathLike) -> bool:
         # docstring inherited
         fpath = Path(fpath)
         if fpath.suffix.upper() != '.INFO':
@@ -117,7 +117,7 @@ class INFO(TimeSeries, ITimeSeries1D):
         return True
 
     @staticmethod
-    def looks_empty(fpath: PathLike) -> bool:
+    def _looks_empty(fpath: PathLike) -> bool:
         # docstring inherited
         tpc_reader = TPCReader(fpath)
         target_line_count = 10  # fairly arbitrary
@@ -129,17 +129,11 @@ class INFO(TimeSeries, ITimeSeries1D):
             return True
         return False
 
-    def context_filter(self, context: str) -> pd.DataFrame:
-        # docstring inherited
-        # split context into components
-        ctx = [x.strip().lower() for x in context.split('/')] if context else []
-        return super().context_combinations_1d(ctx)
+    def times(self, filter_by: str = None, fmt: str = 'relative') -> list[TimeLike]:
+        """Returns all the available times for the given filter.
 
-    def times(self, context: str = None, fmt: str = 'relative') -> list[TimeLike]:
-        """Returns all the available times for the given context.
-
-        The context is an optional input that can be used to filter the return further. Valid contexts
-        for this class are:
+        The ``filter_by`` is an optional input that can be used to filter the return further. Valid filters
+        for the ``INFO`` class are:
 
         * :code:`None`: default - returns all available times
         * :code:`1d`
@@ -150,8 +144,8 @@ class INFO(TimeSeries, ITimeSeries1D):
 
         Parameters
         ----------
-        context : str, optional
-            The context to filter the times by.
+        filter_by : str, optional
+            The string to filter the times by.
         fmt : str, optional
             The format for the times. Options are :code:`relative` or :code:`absolute`.
 
@@ -167,13 +161,61 @@ class INFO(TimeSeries, ITimeSeries1D):
         >>> res.times(fmt='absolute')
         [Timestamp('2021-01-01 00:00:00'), Timestamp('2021-01-01 00:01:00'), ..., Timestamp('2021-01-01 03:00:00')]
         """
-        return super().times(context, fmt)
+        return super().times(filter_by, fmt)
 
-    def data_types(self, context: str = None) -> list[str]:
-        """Returns all the available data types (result types) for the given context.
+    def ids(self, filter_by: str = None) -> list[str]:
+        """Returns all the available IDs for the given filter.
 
-        The context is an optional input that can be used to filter the return further. Available
-        context objects for this class are:
+        The ``filter_by`` argument can be used to add a filter to the returned IDs. Available filters for the ``INFO``
+        class are:
+
+        * :code:`None`: default - returns all :code:`timeseries` IDs
+        * :code:`1d`: same as :code:`None` as class only contains 1D data
+        * :code:`node`
+        * :code:`channel`
+        * :code:`timeseries`: returns only IDs that have time series data.
+        * :code:`section`: returns only IDs that have section data (i.e. long plot data).
+        * :code:`[data_type]`: returns only IDs for the given data type. Shorthand data type names can be used.
+
+        Parameters
+        ----------
+        filter_by : str, optional
+            The string to filter the IDs by.
+
+        Returns
+        -------
+        list[str]
+            The available IDs.
+
+        Examples
+        --------
+        The below examples demonstrate how to use the ``filter_by`` argument to filter the returned IDs.
+        The first example returns all IDs:
+
+        >>> res.ids()
+        ['FC01.1_R', 'FC01.2_R', 'FC04.1_C', 'FC01.1_R.1', 'FC01.1_R.2', 'FC01.2_R.1', 'FC01.2_R.2', 'FC04.1_C.1', 'FC04.1_C.2']
+
+        Return only node IDs:
+
+        >>> res.ids('node')
+        ['FC01.1_R.1', 'FC01.1_R.2', 'FC01.2_R.1', 'FC01.2_R.2', 'FC04.1_C.1', 'FC04.1_C.2']
+
+        Return IDs that have water level results:
+
+        >>> res.ids('h')
+        ['FC01.1_R.1', 'FC01.1_R.2', 'FC01.2_R.1', 'FC01.2_R.2', 'FC04.1_C.1', 'FC04.1_C.2']
+        """
+        if filter_by and 'section' in filter_by:
+            filter_by = 'node'
+        elif filter_by and 'timeseries' in filter_by:
+            filter_by = None
+        return super().ids(filter_by)
+
+    def data_types(self, filter_by: str = None) -> list[str]:
+        """Returns all the available data types (result types) for the given filter.
+
+        The ``filter_by`` is an optional input that can be used to filter the return further. Available
+        filters for the ``INFO`` class are:
 
         * :code:`None`: default - returns all :code:`timeseries` data types
         * :code:`1d`: same as :code:`None` as class only contains 1D data
@@ -185,8 +227,8 @@ class INFO(TimeSeries, ITimeSeries1D):
 
         Parameters
         ----------
-        context : str, optional
-            The context to filter the data types by.
+        filter_by : str, optional
+            The string to filter the data types by.
 
         Returns
         -------
@@ -195,7 +237,7 @@ class INFO(TimeSeries, ITimeSeries1D):
 
         Examples
         --------
-        The below examples demonstrate how to use the context argument to filter the returned data types. The first
+        The below examples demonstrate how to use the filter argument to filter the returned data types. The first
         example returns all data types:
 
         >>> res.data_types()
@@ -216,61 +258,13 @@ class INFO(TimeSeries, ITimeSeries1D):
         >>> res.data_types('section')
         ['bed level', 'pipes', 'pits', 'water level', 'max water level']
         """
-        if context and 'section' in context:
+        if filter_by and 'section' in filter_by:
             dtypes = super().data_types('node')
             dtypes += [f'max {x}' for x in dtypes if x in self._maximum_data]
             return ['bed level', 'pipes', 'pits'] + dtypes
-        elif context and 'timeseries' in context:
-            context = None
-        return super().data_types(context)
-
-    def ids(self, context: str = None) -> list[str]:
-        """Returns all the available IDs for the given context.
-
-        The context argument can be used to add a filter to the returned IDs. Available context objects for this
-        class are:
-
-        * :code:`None`: default - returns all :code:`timeseries` IDs
-        * :code:`1d`: same as :code:`None` as class only contains 1D data
-        * :code:`node`
-        * :code:`channel`
-        * :code:`timeseries`: returns only IDs that have time series data.
-        * :code:`section`: returns only IDs that have section data (i.e. long plot data).
-        * :code:`[data_type]`: returns only IDs for the given data type. Shorthand data type names can be used.
-
-        Parameters
-        ----------
-        context : str, optional
-            The context to filter the IDs by.
-
-        Returns
-        -------
-        list[str]
-            The available IDs.
-
-        Examples
-        --------
-        The below examples demonstrate how to use the context argument to filter the returned IDs. The first example
-        returns all IDs:
-
-        >>> res.ids()
-        ['FC01.1_R', 'FC01.2_R', 'FC04.1_C', 'FC01.1_R.1', 'FC01.1_R.2', 'FC01.2_R.1', 'FC01.2_R.2', 'FC04.1_C.1', 'FC04.1_C.2']
-
-        Return only node IDs:
-
-        >>> res.ids('node')
-        ['FC01.1_R.1', 'FC01.1_R.2', 'FC01.2_R.1', 'FC01.2_R.2', 'FC04.1_C.1', 'FC04.1_C.2']
-
-        Return IDs that have water level results:
-
-        >>> res.ids('h')
-        ['FC01.1_R.1', 'FC01.1_R.2', 'FC01.2_R.1', 'FC01.2_R.2', 'FC04.1_C.1', 'FC04.1_C.2']
-        """
-        if context and 'section' in context:
-            context = 'node'
-        elif context and 'timeseries' in context:
-            context = None
-        return super().ids(context)
+        elif filter_by and 'timeseries' in filter_by:
+            filter_by = None
+        return super().data_types(filter_by)
 
     def maximum(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
                 time_fmt: str = 'relative') -> pd.DataFrame:
@@ -279,8 +273,8 @@ class INFO(TimeSeries, ITimeSeries1D):
 
         It's possible to pass in a well known shorthand for the data type e.g. :code:`q` for :code:`flow`.
 
-        The location can also be a contextual string, e.g. :code:`channel` to extract the maximum values for all
-        channels. The following contexts are available for this class:
+        The location can also be a filter string, e.g. :code:`channel` to extract the maximum values for all
+        channels. The following filters are available for the ``INFO`` class:
 
         * :code:`None`: returns all maximum values
         * :code:`1d`: returns all maximum values (same as passing in None for locations)
@@ -288,7 +282,7 @@ class INFO(TimeSeries, ITimeSeries1D):
         * :code:`channel`
 
         The returned DataFrame will have an index column corresponding to the location IDs, and the columns
-        will be in the format :code:`context/data_type/[max|tmax]`,
+        will be in the format :code:`obj/data_type/[max|tmax]`,
         e.g. :code:`channel/flow/max`, :code:`channel/flow/tmax`
 
         Parameters
@@ -332,8 +326,8 @@ class INFO(TimeSeries, ITimeSeries1D):
         FC_weir1            67.995           0.966667
         """
         locations, data_types = self._loc_data_types_to_list(locations, data_types)
-        context = '/'.join(locations + data_types)
-        ctx = self.context_filter(context)
+        filter_by = '/'.join(locations + data_types)
+        ctx = self._filter(filter_by)
         if ctx.empty:
             return pd.DataFrame()
 
@@ -349,15 +343,15 @@ class INFO(TimeSeries, ITimeSeries1D):
 
         It's possible to pass in a well known shorthand for the data type e.g. :code:`q` for :code:`flow`.
 
-        The location can also be a contextual string, e.g. :code:`channel` to extract the time-series values for all
-        channels. The following contexts are available for this class:
+        The location can also be a filter string, e.g. :code:`channel` to extract the time-series values for all
+        channels. The following filters are available for the ``INFO`` class:
 
         * :code:`None`: returns all locations
         * :code:`1d`: returns all locations (same as passing in None for locations)
         * :code:`node`
         * :code:`channel`
 
-        The returned column names will be in the format :code:`context/data_type/location`
+        The returned column names will be in the format :code:`obj/data_type/location`
         e.g. :code:`channel/flow/FC01.1_R`. The :code:`data_type` name in the column heading will be identical to the
         data type  name passed into the function e.g. if :code:`h` is used instead of :code:`water level`, then the
         return will be :code:`node/h/FC01.1_R.1`.
@@ -411,8 +405,8 @@ class INFO(TimeSeries, ITimeSeries1D):
         3.000000             8.391  ...                    0.0
         """
         locations, data_types = self._loc_data_types_to_list(locations, data_types)
-        context = '/'.join(locations + data_types)
-        ctx = self.context_filter(context)
+        filter_by = '/'.join(locations + data_types)
+        ctx = self._filter(filter_by)
         if ctx.empty:
             return pd.DataFrame()
 
@@ -428,7 +422,7 @@ class INFO(TimeSeries, ITimeSeries1D):
         """Returns a long plot for the given location and data types at the given time. If one location is given,
         the long plot will connect the given location down to the outlet. If 2 locations are given, then the
         long plot will connect the two locations (they must be connectable). If more than 2 locations are given,
-        multiple long plot will be produced (each long plot will be given a unique :code:`branch_id`),
+        multiple long plots will be produced (each long plot will be given a unique :code:`branch_id`),
         however one channel must be a common downstream location and the other
         channels must be upstream of this location.
 
@@ -507,7 +501,7 @@ class INFO(TimeSeries, ITimeSeries1D):
         timeidx = closest_time_index(times, time)
 
         # get connectivity
-        dfconn = self.connectivity(locations)
+        dfconn = self._connectivity(locations)
 
         # init long plot DataFrame
         df = self._lp.init_lp(dfconn)
@@ -521,7 +515,7 @@ class INFO(TimeSeries, ITimeSeries1D):
                 df[dtype] = df1[dtype]
             elif dtype1 == 'pipes':
                 df1 = self._lp.melt_2_columns(dfconn, ['lbus_obvert', 'lbds_obvert'], dtype)
-                df1 = df1.join(self.channel_info['ispipe'], on='channel')
+                df1 = df1.join(self._channel_info['ispipe'], on='channel')
                 df1.loc[~df1['ispipe'], dtype] = np.nan
                 df[dtype] = df1[dtype]
             elif dtype1 == 'pits':
@@ -540,12 +534,12 @@ class INFO(TimeSeries, ITimeSeries1D):
 
     def curtain(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
                 time: TimeLike) -> pd.DataFrame:
-        """Not supported for INFO results. Raises a :code:`NotImplementedError`."""
+        """Not supported for ``INFO`` results. Raises a :code:`NotImplementedError`."""
         raise NotImplementedError(f'{__class__.__name__} does not support curtain plotting.')
 
     def profile(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
                 time: TimeLike) -> pd.DataFrame:
-        """Not supported for INFO results. Raises a :code:`NotImplementedError`."""
+        """Not supported for ``INFO`` results. Raises a :code:`NotImplementedError`."""
         raise NotImplementedError(f'{__class__.__name__} does not support vertical profile plotting.')
 
     def _load(self) -> None:
@@ -559,6 +553,12 @@ class INFO(TimeSeries, ITimeSeries1D):
         self._load_time_series()
         self._load_maximums()
         self._load_1d_info()
+
+    def _filter(self, filter_by: str) -> pd.DataFrame:
+        # docstring inherited
+        # split filter into components
+        ctx = [x.strip().lower() for x in filter_by.split('/')] if filter_by else []
+        return super()._combinations_1d(ctx)
 
     def _init_tpc_reader(self) -> TPCReader:
         """Initialise the TPCReader object."""
@@ -581,7 +581,7 @@ class INFO(TimeSeries, ITimeSeries1D):
         node_info_csv = self._expand_property_path(r'(?:1D\s)?Node Info', regex=True)
         if node_info_csv is not None:
             try:
-                self.node_info = pd.read_csv(
+                self._node_info = pd.read_csv(
                     node_info_csv,
                     engine='python',
                     index_col='id',
@@ -589,13 +589,13 @@ class INFO(TimeSeries, ITimeSeries1D):
                     header=None,
                     on_bad_lines=lambda x: x[:5] + [tuple(x[5:])],
                 )
-                self.node_info.drop('no', axis=1, inplace=True)
-                self.node_info.drop('Node', axis=0, inplace=True)
-                self.node_info.replace({'bed_level': '**********'}, np.nan, inplace=True)
-                self.node_info.replace({'top_level': '**********'}, np.nan, inplace=True)
-                self.node_info['bed_level'] = self.node_info['bed_level'].astype(float)
-                self.node_info['top_level'] = self.node_info['bed_level'].astype(float)
-                self.node_info['nchannel'] = self.node_info['nchannel'].astype(int)
+                self._node_info.drop('no', axis=1, inplace=True)
+                self._node_info.drop('Node', axis=0, inplace=True)
+                self._node_info.replace({'bed_level': '**********'}, np.nan, inplace=True)
+                self._node_info.replace({'top_level': '**********'}, np.nan, inplace=True)
+                self._node_info['bed_level'] = self._node_info['bed_level'].astype(float)
+                self._node_info['top_level'] = self._node_info['bed_level'].astype(float)
+                self._node_info['nchannel'] = self._node_info['nchannel'].astype(int)
             except Exception as e:
                 logger.warning(f'INFO._load_node_info(): Error loading node info: {e}')
 
@@ -604,7 +604,7 @@ class INFO(TimeSeries, ITimeSeries1D):
         chan_info_csv = self._expand_property_path(r'(?:1D\s)?Channel Info', regex=True)
         if chan_info_csv is not None:
             try:
-                self.channel_info = pd.read_csv(
+                self._channel_info = pd.read_csv(
                     chan_info_csv,
                     engine='python',
                     index_col='id',
@@ -628,8 +628,8 @@ class INFO(TimeSeries, ITimeSeries1D):
                         'pblockage': float,
                     }
                 )
-                self.channel_info.drop('no', axis=1, inplace=True)
-                self.channel_info['ispipe'] = self.channel_info['flags'].str.match(r'.*[CR].*', False)
+                self._channel_info.drop('no', axis=1, inplace=True)
+                self._channel_info['ispipe'] = self._channel_info['flags'].str.match(r'.*[CR].*', False)
             except Exception as e:
                 logger.warning(f'INFO._load_chan_info(): Error loading channel info: {e}')
 
@@ -649,7 +649,7 @@ class INFO(TimeSeries, ITimeSeries1D):
                     info['end'].append(end)
                     info['dt'].append(dt)
 
-        self.oned_objs = pd.DataFrame(info)
+        self._oned_objs = pd.DataFrame(info)
 
     def _load_time_series(self) -> None:
         """Load time-series data into memory."""
@@ -716,13 +716,13 @@ class INFO(TimeSeries, ITimeSeries1D):
 
     def _figure_out_loc_and_data_types_lp(self, locations: Union[str, list[str]],
                                           data_types: Union[str, list[str], None],
-                                          context: str) -> tuple[list[str], list[str]]:
+                                          filter_by: str) -> tuple[list[str], list[str]]:
         """Figure out the locations and data types to use - long profile edition."""
         # sort out locations and data types
         if not locations:
             raise ValueError('No locations provided.')
         else:
-            valid_loc = self.ids(context)
+            valid_loc = self.ids(filter_by)
             valid_loc_lower = [x.lower() for x in valid_loc]
             locations1 = []
             locations = [locations] if not isinstance(locations, list) else locations
@@ -760,20 +760,20 @@ class INFO(TimeSeries, ITimeSeries1D):
         y = []
         for i, row in dfconn.iterrows():
             nd = row['us_node']
-            pits = self.channel_info[
-                (self.channel_info['ds_node'] == nd) & (self.channel_info['us_channel'] == '------')
-                & (self.channel_info['ds_channel'] == '------')].index.tolist()
+            pits = self._channel_info[
+                (self._channel_info['ds_node'] == nd) & (self._channel_info['us_channel'] == '------')
+                & (self._channel_info['ds_channel'] == '------')].index.tolist()
             if pits:
-                y.append(self.channel_info.loc[pits[0], 'lbus_obvert'])
+                y.append(self._channel_info.loc[pits[0], 'lbus_obvert'])
             else:
                 y.append(np.nan)
             if i + 1 == dfconn.shape[0]:
                 nd = row['ds_node']
-                pits = self.channel_info[
-                    (self.channel_info['us_node'] == nd) & (self.channel_info['us_channel'] == '------')
-                    & (self.channel_info['ds_channel'] == '------')].index.tolist()
+                pits = self._channel_info[
+                    (self._channel_info['us_node'] == nd) & (self._channel_info['us_channel'] == '------')
+                    & (self._channel_info['ds_channel'] == '------')].index.tolist()
                 if pits:
-                    y.append(self.channel_info.loc[pits[0], 'lbus_obvert'])
+                    y.append(self._channel_info.loc[pits[0], 'lbus_obvert'])
                 else:
                     y.append(np.nan)
             else:

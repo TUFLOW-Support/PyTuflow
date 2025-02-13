@@ -79,16 +79,16 @@ class BCTablesCheck(TimeSeries):
         if not self.fpath.exists():
             raise FileNotFoundError(f'File does not exist: {fpath}')
 
-        if not self.looks_like_this(self.fpath):
+        if not self._looks_like_this(self.fpath):
             raise FileTypeError(f'File does not look like a {self.__class__.__name__} file: {fpath}')
 
-        if self.looks_empty(self.fpath):
+        if self._looks_empty(self.fpath):
             raise EOFError(f'File is empty or incomplete: {fpath}')
 
         self._load()
 
     @staticmethod
-    def looks_like_this(fpath: Path) -> bool:
+    def _looks_like_this(fpath: Path) -> bool:
         # docstring inherited
         try:
             if not re.findall(r'_[12]d_bc_tables_check$', fpath.stem):
@@ -102,7 +102,7 @@ class BCTablesCheck(TimeSeries):
         return True
 
     @staticmethod
-    def looks_empty(fpath: Path) -> bool:
+    def _looks_empty(fpath: Path) -> bool:
         # docstring inherited
         try:
             with fpath.open() as f:
@@ -114,9 +114,9 @@ class BCTablesCheck(TimeSeries):
             return True
         return False
 
-    def context_filter(self, context: str) -> pd.DataFrame:
+    def _filter(self, filter_by: str) -> pd.DataFrame:
         # docstring inherited
-        ctx = [x.strip().lower() for x in context.split('/') if x] if context else []
+        ctx = [x.strip().lower() for x in filter_by.split('/') if x] if filter_by else []
 
         df = self.objs.copy()
         filtered_something = False
@@ -166,7 +166,7 @@ class BCTablesCheck(TimeSeries):
 
         return df if not df.empty else pd.DataFrame(columns=['id', 'uid', 'type', 'data_type'])
 
-    def times(self, context: str = None, fmt: str = 'relative') -> list[TimeLike]:
+    def times(self, filter_by: str = None, fmt: str = 'relative') -> list[TimeLike]:
         """Returns a list of unique times in the BC Tables Check file for the given context.
 
         The context is an optional input that can be used to filter the return further. Valid contexts for this
@@ -193,7 +193,7 @@ class BCTablesCheck(TimeSeries):
 
         Parameters
         ----------
-        context : str, optional
+        filter_by : str, optional
             Context to filter the times.
         fmt : str, optional
             Format of the times. Can be :code:`relative` or :code:`absolute`. Default is :code:`relative`.
@@ -210,7 +210,7 @@ class BCTablesCheck(TimeSeries):
         >>> bndry.times('FC01')
         [0.0, 0.08, 0.17 ... 3.17, 3.25, 3.33]
         """
-        df = self.context_filter(context)
+        df = self._filter(filter_by)
         times = []
         if df.empty:
             return times
@@ -233,7 +233,7 @@ class BCTablesCheck(TimeSeries):
             times = [self.reference_time + timedelta(hours=x) for x in times]
         return times
 
-    def ids(self, context: str = None, internal_id: bool = False) -> list[str]:
+    def ids(self, filter_by: str = None, internal_id: bool = False) -> list[str]:
         """Returns all the available IDs for the given context.
 
         The context is an optional input that can be used to filter the return further. Valid contexts for this
@@ -260,7 +260,7 @@ class BCTablesCheck(TimeSeries):
 
         Parameters
         ----------
-        context : str, optional
+        filter_by : str, optional
             Context to filter the IDs.
         internal_id : bool, optional
             Return the internal ID instead of the name e.g. :code:`BC000001`. Default is :code:`False`.
@@ -287,12 +287,12 @@ class BCTablesCheck(TimeSeries):
         >>> bndry.ids('FC01')
         ['QT']
         """
-        df = self.context_filter(context)
+        df = self._filter(filter_by)
         if internal_id:
             return df.uid.unique().tolist()
         return df.id.unique().tolist()
 
-    def data_types(self, context: str = None, bndry_type: bool = True) -> list[str]:
+    def data_types(self, filter_by: str = None, bndry_type: bool = True) -> list[str]:
         """Returns all the available data types for the given context.
 
         The context is an optional input that can be used to filter the return further. Valid contexts for this
@@ -315,7 +315,7 @@ class BCTablesCheck(TimeSeries):
 
         Parameters
         ----------
-        context : str, optional
+        filter_by : str, optional
             Context to filter the IDs.
         bndry_type : bool, optional
             Return the boundary type instead of the data type. e.g. return :code:`QT` rather than :code:`flow`.
@@ -338,7 +338,7 @@ class BCTablesCheck(TimeSeries):
         >>> bndry.ids('flow')
         ['FC01', 'FC04']
         """
-        df = self.context_filter(context)
+        df = self._filter(filter_by)
         if bndry_type:
             return df.type.unique().tolist()
         return df.data_type.unique().tolist()
@@ -436,7 +436,7 @@ class BCTablesCheck(TimeSeries):
         """
         locations, data_types = self._loc_data_types_to_list(locations, data_types)
         context = '/'.join(locations + data_types)
-        ctx = self.context_filter(context)
+        ctx = self._filter(context)
         if ctx.empty:
             return pd.DataFrame()
 
@@ -456,17 +456,17 @@ class BCTablesCheck(TimeSeries):
 
     def section(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
                 time: TimeLike = -1) -> pd.DataFrame:
-        """Not supported for BCTablesCheck results. Raises a :code:`NotImplementedError`."""
+        """Not supported for ``BCTablesCheck`` results. Raises a :code:`NotImplementedError`."""
         raise NotImplementedError(f'{__class__.__name__} does not support section plotting.')
 
     def curtain(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
                 time: TimeLike) -> pd.DataFrame:
-        """Not supported for BCTablesCheck results. Raises a :code:`NotImplementedError`."""
+        """Not supported for ``BCTablesCheck`` results. Raises a :code:`NotImplementedError`."""
         raise NotImplementedError(f'{__class__.__name__} does not support curtain plotting.')
 
     def profile(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
                 time: TimeLike) -> pd.DataFrame:
-        """Not supported for BCTablesCheck results. Raises a :code:`NotImplementedError`."""
+        """Not supported for ``BCTablesCheck`` results. Raises a :code:`NotImplementedError`."""
         raise NotImplementedError(f'{__class__.__name__} does not support vertical profile plotting.')
 
     def _load(self):

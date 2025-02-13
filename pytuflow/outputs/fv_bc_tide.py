@@ -125,7 +125,7 @@ class FVBCTide(TimeSeries):
             raise ImportError('GDAL is required for FVBCTideProvider')
 
         # call before tpc_reader is initialised to give a clear error message if it isn't actually a .info time series file
-        if not self.looks_like_this(self.nc_fpath):
+        if not self._looks_like_this(self.nc_fpath):
             raise FileTypeError(f'File does not look like a time series {self.__class__.__name__} file: {nc_fpath}')
 
         try:
@@ -135,7 +135,7 @@ class FVBCTide(TimeSeries):
             raise Exception(e)
 
         # call after tpc_reader has been initialised so that we know the file can be loaded by the reader
-        if self.looks_empty(nc_fpath):
+        if self._looks_empty(nc_fpath):
             raise EOFError(f'File is empty or incomplete: {nc_fpath}')
 
         # private
@@ -145,7 +145,7 @@ class FVBCTide(TimeSeries):
         self._load()
 
     @staticmethod
-    def looks_like_this(fpath: Path) -> bool:
+    def _looks_like_this(fpath: Path) -> bool:
         # docstring inherited
         try:
             with Dataset(fpath) as nc:
@@ -159,68 +159,16 @@ class FVBCTide(TimeSeries):
             return False
 
     @staticmethod
-    def looks_empty(fpath: Path) -> bool:
+    def _looks_empty(fpath: Path) -> bool:
         # docstring inherited
         with Dataset(fpath) as nc:
             return len(nc.dimensions['time']) == 0
 
-    def context_filter(self, context: str) -> pd.DataFrame:
-        # docstring inherited
-        # split context into list
-        ctx = [x.strip().lower() for x in context.split('/')] if context else []
-        df = self.objs.copy()
-        df['domain'] = '2d'
+    def times(self, filter_by: str = None, fmt: str = 'relative') -> list[TimeLike]:
+        """Returns all the available times for the given filter.
 
-        # domain
-        filtered_something = False
-        if '2d' in ctx:
-            filtered_something = True
-            ctx.remove('2d')
-        if 'timeseries' in ctx:
-            ctx.remove('timeseries')
-            ctx.append('node')
-        if 'section' in ctx or 'nodestring' in ctx:
-            ctx.remove('section') if 'section' in ctx else ctx.remove('nodestring')
-            ctx.append('line')
-        if 'node' in ctx or 'point' in ctx:
-            filtered_something = True
-            df = df[(df['geometry'] == 'point')]
-            ctx.remove('node') if 'node' in ctx else ctx.remove('point')
-        if 'line' in ctx:
-            filtered_something = True
-            df = df[(df['geometry'] == 'line')]
-            ctx.remove('line')
-
-        # data types
-        ctx1 = [get_standard_data_type_name(x) for x in ctx]
-        ctx1 = [x for x in ctx1 if x in df['data_type'].unique()]
-        if ctx1:
-            filtered_something = True
-            df = df[df['data_type'].isin(ctx1)]
-            j = len(ctx) - 1
-            for i, x in enumerate(reversed(ctx.copy())):
-                if get_standard_data_type_name(x) in ctx1:
-                    ctx.pop(j - i)
-
-        # ids
-        if ctx and not df.empty:
-            df = df[df['id'].str.lower().isin(ctx)] if not df.empty else pd.DataFrame()
-            if not df.empty:
-                j = len(ctx) - 1
-                for i, x in enumerate(reversed(ctx.copy())):
-                    if df['id'].str.lower().isin([x.lower()]).any():
-                        ctx.pop(j - i)
-                if ctx and not filtered_something:
-                    df = pd.DataFrame()
-
-        return df if not df.empty else pd.DataFrame(
-            columns=['id', 'data_type', 'geometry', 'start', 'end', 'dt', 'domain'])
-
-    def times(self, context: str = None, fmt: str = 'relative') -> list[TimeLike]:
-        """Returns all the available times for the given context.
-
-        The context is an optional input that can be used to filter the return further. Valid contexts
-        for this class are:
+        The ``filter_by`` is an optional input that can be used to filter the return further. Valid filters
+        for the ``FVBCTide`` class are:
 
         * :code:`None`: default - returns all available times
         * :code:`2d`: same as :code:`None` as class only contains 2D data
@@ -231,8 +179,8 @@ class FVBCTide(TimeSeries):
 
         Parameters
         ----------
-        context : str, optional
-            The context to filter the times by.
+        filter_by : str, optional
+            The string to filter the times by.
         fmt : str, optional
             The format for the times. Options are :code:`relative` or :code:`absolute`.
 
@@ -248,42 +196,13 @@ class FVBCTide(TimeSeries):
         >>> bndry.times(fmt='absolute')
         [Timestamp('2021-01-01 00:00:00'), Timestamp('2021-01-01 00:01:00'), ..., Timestamp('2021-01-01 03:00:00')]
         """
-        return super().times(context, fmt)
+        return super().times(filter_by, fmt)
 
-    def data_types(self, context: str = None) -> list[str]:
-        """Returns all the available data types (result types) for the given context.
+    def ids(self, filter_by: str = None) -> list[str]:
+        """Returns all the available IDs for the given filter.
 
-        The context is an optional input that can be used to filter the return further. Available
-        context objects for this class are:
-
-        * :code:`None`: default - returns all available data types
-        * :code:`2d`: same as :code:`None` as class only contains 2D data
-        * :code:`node` / code:`point`: returns only node data types
-        * :code:`nodestring` / code:`line`: returns only nodestring data types
-        * :code:`[id]`: returns only data types for the given ID.
-
-        Parameters
-        ----------
-        context : str, optional
-            The context to filter the data types by.
-
-        Returns
-        -------
-        list[str]
-            The available data types.
-
-        Examples
-        --------
-        >>> bndry.data_types()
-        ['water level']
-        """
-        return super().data_types(context)
-
-    def ids(self, context: str = None) -> list[str]:
-        """Returns all the available IDs for the given context.
-
-        The context argument can be used to add a filter to the returned IDs. Available context objects for this
-        class are:
+        The ``filter_by`` argument can be used to add a filter to the returned IDs. Available filters objects for the
+        ``FVBCTide`` class are:
 
         * :code:`None`: default - returns all IDs
         * :code:`2d`: same as :code:`None` as class only contains 2D data
@@ -295,8 +214,8 @@ class FVBCTide(TimeSeries):
 
         Parameters
         ----------
-        context : str, optional
-            The context to filter the IDs by.
+        filter_by : str, optional
+            The string to filter the IDs by.
 
         Returns
         -------
@@ -305,13 +224,42 @@ class FVBCTide(TimeSeries):
 
         Examples
         --------
-        The below examples demonstrate how to use the context argument to filter the returned IDs. The first example
+        The below examples demonstrate how to use the filter argument to filter the returned IDs. The first example
         returns all IDs:
 
         >>> bndry.ids()
         ['Ocean_pt_0', 'Ocean_pt_1', 'Ocean_pt_2', 'Ocean_pt_3', 'Ocean_pt_4', 'Ocean']
         """
-        return super().ids(context)
+        return super().ids(filter_by)
+
+    def data_types(self, filter_by: str = None) -> list[str]:
+        """Returns all the available data types (result types) for the given filter.
+
+        The ``filter_by`` is an optional input that can be used to filter the return further. Available
+        filters for the ``FVBCTide`` class are:
+
+        * :code:`None`: default - returns all available data types
+        * :code:`2d`: same as :code:`None` as class only contains 2D data
+        * :code:`node` / code:`point`: returns only node data types
+        * :code:`nodestring` / code:`line`: returns only nodestring data types
+        * :code:`[id]`: returns only data types for the given ID.
+
+        Parameters
+        ----------
+        filter_by : str, optional
+            The string to filter the data types by.
+
+        Returns
+        -------
+        list[str]
+            The available data types.
+
+        Examples
+        --------
+        >>> bndry.data_types()
+        ['water level']
+        """
+        return super().data_types(filter_by)
 
     def maximum(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
                 time_fmt: str = 'relative') -> pd.DataFrame:
@@ -321,7 +269,7 @@ class FVBCTide(TimeSeries):
         It's possible to pass in a well known shorthand for the data type e.g. :code:`h` for :code:`water level`.
 
         The returned DataFrame will have an index column corresponding to the location IDs, and the columns
-        will be in the format :code:`context/data_type/[max|tmax]`,
+        will be in the format :code:`obj/data_type/[max|tmax]`,
         e.g. :code:`point/water level/max`, :code:`point/water level/tmax`
 
         Parameters
@@ -349,8 +297,8 @@ class FVBCTide(TimeSeries):
         Ocean_pt_0         1.191989         289784.25
         """
         locations, data_types = self._loc_data_types_to_list(locations, data_types)
-        context = '/'.join(locations + data_types)
-        ctx = self.context_filter(context)
+        filter_by = '/'.join(locations + data_types)
+        ctx = self._filter(filter_by)
         if ctx.empty:
             return pd.DataFrame()
 
@@ -366,7 +314,7 @@ class FVBCTide(TimeSeries):
 
         It's possible to pass in a well known shorthand for the data type e.g. :code:`h` for :code:`water level`.
 
-        The returned column names will be in the format :code:`context/data_type/location`
+        The returned column names will be in the format :code:`obj/data_type/location`
         e.g. :code:`point/level/Ocean_pt_0`. The :code:`data_type` name in the column heading will be identical to the
         data type  name passed into the function e.g. if :code:`h` is used instead of :code:`water level`, then the
         return will be :code:`point/h/Ocean_pt_0`.
@@ -406,8 +354,8 @@ class FVBCTide(TimeSeries):
         290026.00               -0.133717
         """
         locations, data_types = self._loc_data_types_to_list(locations, data_types)
-        context = '/'.join(locations + data_types)
-        ctx = self.context_filter(context)
+        filter_by = '/'.join(locations + data_types)
+        ctx = self._filter(filter_by)
         if ctx.empty:
             return pd.DataFrame()
 
@@ -482,12 +430,12 @@ class FVBCTide(TimeSeries):
 
     def curtain(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
                 time: TimeLike) -> pd.DataFrame:
-        """Not supported for FVBCTide results. Raises a :code:`NotImplementedError`."""
+        """Not supported for ``FVBCTide`` results. Raises a :code:`NotImplementedError`."""
         raise NotImplementedError(f'{__class__.__name__} does not support curtain plotting.')
 
     def profile(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
                 time: TimeLike) -> pd.DataFrame:
-        """Not supported for FVBCTide results. Raises a :code:`NotImplementedError`."""
+        """Not supported for ``FVBCTide`` results. Raises a :code:`NotImplementedError`."""
         raise NotImplementedError(f'{__class__.__name__} does not support vertical profile plotting.')
 
     def _load(self):
@@ -501,6 +449,58 @@ class FVBCTide(TimeSeries):
         self._load_obj_df()
         self.node_count = int(self.objs['geometry'].value_counts().get('point', 0))
         self.node_string_count = int(self.objs['geometry'].value_counts().get('line', 0))
+
+    def _filter(self, filter_by: str) -> pd.DataFrame:
+        # docstring inherited
+        # split filter into list
+        filter_by = [x.strip().lower() for x in filter_by.split('/')] if filter_by else []
+        df = self.objs.copy()
+        df['domain'] = '2d'
+
+        # domain
+        filtered_something = False
+        if '2d' in filter_by:
+            filtered_something = True
+            filter_by.remove('2d')
+        if 'timeseries' in filter_by:
+            filter_by.remove('timeseries')
+            filter_by.append('node')
+        if 'section' in filter_by or 'nodestring' in filter_by:
+            filter_by.remove('section') if 'section' in filter_by else filter_by.remove('nodestring')
+            filter_by.append('line')
+        if 'node' in filter_by or 'point' in filter_by:
+            filtered_something = True
+            df = df[(df['geometry'] == 'point')]
+            filter_by.remove('node') if 'node' in filter_by else filter_by.remove('point')
+        if 'line' in filter_by:
+            filtered_something = True
+            df = df[(df['geometry'] == 'line')]
+            filter_by.remove('line')
+
+        # data types
+        ctx1 = [get_standard_data_type_name(x) for x in filter_by]
+        ctx1 = [x for x in ctx1 if x in df['data_type'].unique()]
+        if ctx1:
+            filtered_something = True
+            df = df[df['data_type'].isin(ctx1)]
+            j = len(filter_by) - 1
+            for i, x in enumerate(reversed(filter_by.copy())):
+                if get_standard_data_type_name(x) in ctx1:
+                    filter_by.pop(j - i)
+
+        # ids
+        if filter_by and not df.empty:
+            df = df[df['id'].str.lower().isin(filter_by)] if not df.empty else pd.DataFrame()
+            if not df.empty:
+                j = len(filter_by) - 1
+                for i, x in enumerate(reversed(filter_by.copy())):
+                    if df['id'].str.lower().isin([x.lower()]).any():
+                        filter_by.pop(j - i)
+                if filter_by and not filtered_something:
+                    df = pd.DataFrame()
+
+        return df if not df.empty else pd.DataFrame(
+            columns=['id', 'data_type', 'geometry', 'start', 'end', 'dt', 'domain'])
 
     def _load_time_series(self):
         df = pd.DataFrame()
@@ -563,13 +563,13 @@ class FVBCTide(TimeSeries):
 
     def _figure_out_loc_and_data_types_lp(self, locations: Union[str, list[str]],
                                           data_types: Union[str, list[str], None],
-                                          context: str) -> tuple[list[str], list[str]]:
+                                          filter_by: str) -> tuple[list[str], list[str]]:
         """Figure out the locations and data types to use - long profile edition."""
         # sort out locations and data types
         if not locations:
             raise ValueError('No locations provided.')
         else:
-            valid_loc = self.ids(context)
+            valid_loc = self.ids(filter_by)
             valid_loc_lower = [x.lower() for x in valid_loc]
             locations1 = []
             locations = [locations] if not isinstance(locations, list) else locations

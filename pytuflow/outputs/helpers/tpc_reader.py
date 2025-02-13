@@ -15,7 +15,7 @@ class TPCReader:
 
     Parameters
     ----------
-    fpath : :class:`PathLike <pytuflow.pytuflow_types.PathLike>`
+    fpath : PathLike
         The path to the TPC output file.
     """
 

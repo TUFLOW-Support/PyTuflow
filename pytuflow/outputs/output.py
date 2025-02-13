@@ -31,12 +31,12 @@ class Output(ABC):
 
     @staticmethod
     @abstractmethod
-    def looks_like_this(*fpath: PathLike) -> bool:
+    def _looks_like_this(*fpath: PathLike) -> bool:
         """Check if the given file(s) look like this output type.
 
         Parameters
         ----------
-        fpath : :class:`PathLike <pytuflow.pytuflow_types.PathLike>`
+        fpath : PathLike
             The path to the output file(s).
 
         Returns
@@ -48,12 +48,12 @@ class Output(ABC):
 
     @staticmethod
     @abstractmethod
-    def looks_empty(*fpath: PathLike) -> bool:
+    def _looks_empty(*fpath: PathLike) -> bool:
         """Check if the given file(s) look empty or incomplete.
 
         Parameters
         ----------
-        fpath : :class:`PathLike <pytuflow.pytuflow_types.PathLike>`
+        fpath : PathLike
             The path to the output file(s).
 
         Returns
@@ -64,15 +64,15 @@ class Output(ABC):
         pass
 
     @abstractmethod
-    def times(self, context: str = None, fmt: str = 'relative') -> list[TimeLike]:
+    def times(self, filter_by: str = None, fmt: str = 'relative') -> list[TimeLike]:
         """Returns all the available times for the output.
 
-        The context is an optional input that can be used to filter the return further. E.g. this can be used to
-        get the times only for a given 1D channel.
+        The ``filter_by`` argument is an optional input that can be used to filter the return further.
+        E.g. this can be used to get the times only for a given 1D channel.
 
         Parameters
         ----------
-        context : str, optional
+        filter_by : str, optional
             The context to filter the times by.
         fmt : str, optional
             The format for the times. Options are 'relative' or 'absolute'.
@@ -85,15 +85,15 @@ class Output(ABC):
         pass
 
     @abstractmethod
-    def data_types(self, context: str = None) -> list[str]:
+    def data_types(self, filter_by: str = None) -> list[str]:
         """Returns all the available data types (result types) for the output given the context.
 
-        The context is an optional input that can be used to filter the return further. E.g. this can be used to
+        The ``filter_by`` is an optional input that can be used to filter the return further. E.g. this can be used to
         return only data types that contain maximum results.
 
         Parameters
         ----------
-        context : str, optional
+        filter_by : str, optional
             The context to filter the data types by.
 
         Returns

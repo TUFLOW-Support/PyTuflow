@@ -35,13 +35,13 @@ class FMTS(INFO):
 
     Parameters
     ----------
-    fpath : :class:`PathLike <pytuflow.pytuflow_types.PathLike>`
+    fpath : PathLike
         The path to the flood modeller result file(s). Multiple files can be passed if not using the :code:`.zzn`
         result format. Multiple files are required to be for different result types for the same event, and not
         for multiple events.
-    dat : :class:`PathLike <pytuflow.pytuflow_types.PathLike>`, optional
+    dat : PathLike, optional
         Path to the DAT file. Required for connectivity information (i.e. required for :meth:`section` plotting).
-    gxy : :class:`PathLike <pytuflow.pytuflow_types.PathLike>`, optional
+    gxy : PathLike, optional
         Path to the GXY file. Required for spatial coordinates.
 
     Raises
@@ -76,7 +76,7 @@ class FMTS(INFO):
     >>> res = FMTS('path/to/result.zzn', dat='path/to/result.dat', gxy='path/to/result.gxy')
 
     Return all node IDs - Only nodes that contain results will be return by default and will be returned with just
-    the node name. To return all nodes with unique IDs (:code:`TYPE_SUBTYPE_NAME`), use the :code:`context` parameter:
+    the node name. To return all nodes with unique IDs (:code:`TYPE_SUBTYPE_NAME`), use the :code:`filter_by` parameter:
 
     >>> res.ids()
     ['FC01.36', 'FC01.35', 'FC01.351cu',... 'FC02', 'ds2_S', 'FC01']
@@ -131,7 +131,7 @@ class FMTS(INFO):
         self._support_section_plotting = False
 
         #: list[FM_ResultDriver]: Storage for the result drivers.
-        self.storage = []
+        self._storage = []
 
         #: Path: Path to the DAT file if one was provided
         self.dat_fpath = Path(dat) if dat is not None else None
@@ -140,54 +140,44 @@ class FMTS(INFO):
         self.gxy_fpath = Path(gxy) if gxy is not None else None
 
         #: DAT: DAT object.
-        self.dat = None
+        self._dat = None
 
         #: GXY: GXY object.
-        self.gxy = None
+        self._gxy = None
 
         for f in self._fpaths:
             if not f.exists():
                 raise FileNotFoundError(f'File not found: {f}')
-            if not self.looks_like_this(f):
+            if not self._looks_like_this(f):
                 raise FileTypeError(f'File does not look like a Flood Modeller time series result: {f}')
-            if self.looks_empty(f):
+            if self._looks_empty(f):
                 raise EOFError(f'File is empty or incomplete: {f}')
 
         super().__init__(self._fpaths[0])
 
     @staticmethod
-    def looks_like_this(fpath: Path) -> bool:
+    def _looks_like_this(fpath: Path) -> bool:
         # docstring inherited
         driver = FM_ResultDriver(fpath)
         return driver.driver_name != ''
 
     @staticmethod
-    def looks_empty(fpath: PathLike) -> bool:
+    def _looks_empty(fpath: PathLike) -> bool:
         # docstring inherited
         driver = FM_ResultDriver(fpath)
         return driver.df is None or driver.df.empty
 
-    def times(self, context: str = None, fmt: str = 'relative') -> list[TimeLike]:
+    def times(self, filter_by: str = None, fmt: str = 'relative') -> list[TimeLike]:
         # docstring inherited
-        return super().times(context, fmt)
+        return super().times(filter_by, fmt)
 
-    def data_types(self, context: str = None) -> list[str]:
-        # docstring inherited
-        dat_types = super().data_types(context)
-        if context and 'section' in context:
-            if not self._support_section_plotting:
-                return []
-            if 'pits' in dat_types:
-                dat_types.remove('pits')
-        return dat_types
-
-    def ids(self, context: str = None) -> list[str]:
-        """Returns all the available IDs for the given context. By default, only IDs that contain results are returned.
+    def ids(self, filter_by: str = None) -> list[str]:
+        """Returns all the available IDs for the given filter. By default, only IDs that contain results are returned.
         The returned IDs are also returned as just their name e.g. :code:`FC01.1_R` rather than the full ID
         e.g. :code:`CONDUIT_CIRCULAR_FC01.1_R`.
 
-        The context argument can be used to add a filter to the returned IDs. Available context objects for this
-        class are:
+        The ``filter_by`` argument can be used to add a filter to the returned IDs. Available
+        filters for the ``FMTS`` class are:
 
         * :code:`None`: default - returns all :code:`timeseries` IDs (i.e. IDs that contain results).
         * :code:`1d`: same as :code:`None` as class only contains 1D data
@@ -201,8 +191,8 @@ class FMTS(INFO):
 
         Parameters
         ----------
-        context : str, optional
-            The context to filter the IDs by.
+        filter_by : str, optional
+            The string to filter the IDs by.
 
         Returns
         -------
@@ -216,11 +206,60 @@ class FMTS(INFO):
         >>> res.ids('node')
         ['QTBDY__FC01', 'JUNCTION_OPEN_FC01', 'RIVER_SECTION_FC01.40',... 'JUNCTION_OPEN_ds2', 'SPILL__ds2_S']
         """
-        if context and context.lower() == 'channel':
-            return self.channel_info.index.tolist()
-        if context and context.lower() == 'node':
-            return self.node_info.index.tolist()
-        return super().ids(context)
+        if filter_by and filter_by.lower() == 'channel':
+            return self._channel_info.index.tolist()
+        if filter_by and filter_by.lower() == 'node':
+            return self._node_info.index.tolist()
+        return super().ids(filter_by)
+
+    def data_types(self, filter_by: str = None) -> list[str]:
+        """Returns all the available data types (result types) for the output given the filter.
+
+        The ``filter_by`` is an optional input that can be used to filter the return further. Available
+        filters for the ``FMTS`` class are:
+
+        Domain filters:
+
+        * :code:`1d`
+        * :code:`2d` (or :code:`po`)
+        * :code:`rl` (or :code:`0d`)
+
+        Geometry filters (note: they are not plural):
+
+        * :code:`node`
+        * :code:`channel`
+        * :code:`point` - (for 2d and rl domains only - use :code:`node` for 1d domain)
+        * :code:`line` - (for 2d and rl domains only - use :code:`channel` for 1d domain)
+        * :code:`polygon` (or :code:`region`)
+
+        Location filters:
+
+        * :code:`[location]`: The location to filter the data_types by.
+
+        Combine filters:
+
+        * [filter1]/[filter2] ...: (use ``/`` to delim).
+
+        Parameters
+        ----------
+        filter_by : str, optional
+            The string to filter the data types by.
+
+        Returns
+        -------
+        list[str]
+            The available data types.
+
+        Examples
+        --------
+        """
+        dat_types = super().data_types(filter_by)
+        if filter_by and 'section' in filter_by:
+            if not self._support_section_plotting:
+                return []
+            if 'pits' in dat_types:
+                dat_types.remove('pits')
+        return dat_types
 
     def maximum(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
                 time_fmt: str = 'relative') -> pd.DataFrame:
@@ -229,15 +268,15 @@ class FMTS(INFO):
 
         It's possible to pass in a well known shorthand for the data type e.g. :code:`q` for :code:`flow`.
 
-        The location can also be a contextual string, e.g. :code:`channel` to extract the maximum values for all
-        channels. The following contexts are available for this class:
+        The location can also be a filter string, e.g. :code:`channel` to extract the maximum values for all
+        channels. The following filters are available for the ``FMTS`` class:
 
         * :code:`None`: returns all maximum values
         * :code:`1d`: returns all maximum values (same as passing in None for locations)
         * :code:`node`
 
         The returned DataFrame will have an index column corresponding to the location IDs, and the columns
-        will be in the format :code:`context/data_type/[max|tmax]`,
+        will be in the format :code:`obj/data_type/[max|tmax]`,
         e.g. :code:`node/flow/max`, :code:`node/flow/tmax`
 
         Parameters
@@ -294,14 +333,14 @@ class FMTS(INFO):
 
         It's possible to pass in a well known shorthand for the data type e.g. :code:`q` for :code:`flow`.
 
-        The location can also be a contextual string, e.g. :code:`channel` to extract the time-series values for all
-        channels. The following contexts are available for this class:
+        The location can also be a filter string, e.g. :code:`channel` to extract the time-series values for all
+        channels. The following filters are available for the ``FMTS`` class:
 
         * :code:`None`: returns all locations
         * :code:`1d`: returns all locations (same as passing in None for locations)
         * :code:`node`
 
-        The returned column names will be in the format :code:`context/data_type/location`
+        The returned column names will be in the format :code:`obj/data_type/location`
         e.g. :code:`channel/flow/FC01.1_R`. The :code:`data_type` name in the column heading will be identical to the
         data type  name passed into the function e.g. if :code:`h` is used instead of :code:`water level`, then the
         return will be :code:`node/h/FC01.1_R.1`.
@@ -458,7 +497,7 @@ class FMTS(INFO):
         locations = [locations] if not isinstance(locations, list) else locations
 
         # convert ids to uids
-        locs = [self.id_to_uid(x) for x in locations]
+        locs = [self._id_to_uid(x) for x in locations]
         for i, x in enumerate(reversed(locs)):
             j = len(locations) - 1
             if x is None:
@@ -475,7 +514,7 @@ class FMTS(INFO):
         timeidx = closest_time_index(times, time)
 
         # get connectivity
-        dfconn = self.connectivity(locs)
+        dfconn = self._connectivity(locs)
 
         # init long plot DataFrame
         df = self._lp.init_lp(dfconn)
@@ -490,7 +529,7 @@ class FMTS(INFO):
                 df[dtype] = df1[dtype]
             elif dtype1 == 'pipes':
                 df1 = self._lp.melt_2_columns(dfconn, ['lbus_obvert', 'lbds_obvert'], dtype)
-                df1 = df1.join(self.channel_info['ispipe'], on='channel')
+                df1 = df1.join(self._channel_info['ispipe'], on='channel')
                 df1.loc[~df1['ispipe'], dtype] = np.nan
                 df[dtype] = df1[dtype]
             elif 'tmax' in dtype1:
@@ -507,17 +546,17 @@ class FMTS(INFO):
 
     def curtain(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
                 time: TimeLike) -> pd.DataFrame:
-        """Not supported for FMTS results. Raises a :code:`NotImplementedError`."""
+        """Not supported for ``FMTS`` results. Raises a :code:`NotImplementedError`."""
         return super().curtain(locations, data_types, time)
 
     def profile(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
                 time: TimeLike) -> pd.DataFrame:
-        """Not supported for FMTS results. Raises a :code:`NotImplementedError`."""
+        """Not supported for ``FMTS`` results. Raises a :code:`NotImplementedError`."""
         return super().profile(locations, data_types, time)
 
-    def connectivity(self, ids: Union[str, list[str]]) -> pd.DataFrame:
+    def _connectivity(self, ids: Union[str, list[str]]) -> pd.DataFrame:
         # docstring inherited
-        lp = LP1D_FM(ids, self.node_info, self.channel_info)
+        lp = LP1D_FM(ids, self._node_info, self._channel_info)
         if self._lp is not None and lp == self._lp:
             return self._lp.df
 
@@ -525,7 +564,7 @@ class FMTS(INFO):
         self._lp = lp
         return self._lp.df
 
-    def id_to_uid(self, id_: str) -> str:
+    def _id_to_uid(self, id_: str) -> str:
         """Converts a unit ID to its UID. Only searches through units that
         contain results. If multiple units are found, it will first preference units that have bed level information
         (requires that the class was initialised with a DAT file) as this will preference units such as
@@ -534,7 +573,7 @@ class FMTS(INFO):
 
         Parameters
         ----------
-        id\_: str
+        id_: str
             The unit ID to convert.
 
         Returns
@@ -543,9 +582,9 @@ class FMTS(INFO):
             The uid of the unit.
         """
         # check if id is already a uid
-        if id_.lower() in self.node_info.index.str.lower():
+        if id_.lower() in self._node_info.index.str.lower():
             return id_
-        df = self.node_info[self.node_info['has_results']].copy()
+        df = self._node_info[self._node_info['has_results']].copy()
         df['id2'] = df.index.str.split('_', n=2).str[-1].str.lower()
         df = df[df['id2'] == id_.lower()]
         if df.empty:
@@ -579,24 +618,24 @@ class FMTS(INFO):
                 if np.intersect1d(res_types, driver.result_types).size:
                     raise ResultError('Duplicate result types found in the result files')
 
-            self.storage.append(driver)
+            self._storage.append(driver)
 
-        self.name = self.storage[0].display_name
-        for driver in self.storage:
+        self.name = self._storage[0].display_name
+        for driver in self._storage:
             driver.reference_time = self.reference_time
 
         # Initialise DAT
         if self.dat_fpath is not None:
-            self.dat = DAT(self.dat_fpath)
+            self._dat = DAT(self.dat_fpath)
             self._support_section_plotting = True
 
         # Initialise GXY
         if self.gxy_fpath is not None:
-            self.gxy = GXY(self.gxy_fpath)
+            self._gxy = GXY(self.gxy_fpath)
             self._support_section_plotting = True
 
         # load time series
-        for driver in self.storage:
+        for driver in self._storage:
             for res_type in driver.result_types:
                 stnd = get_standard_data_type_name(res_type)
                 self._nd_res_types.append(stnd)  # all results are stored on nodes in flood modeller results
@@ -612,15 +651,15 @@ class FMTS(INFO):
         self._load_channels()
         self._load_1d_info()
 
-        self.node_count = self.node_info.shape[0]
-        self.channel_count = self.channel_info.shape[0]
+        self.node_count = self._node_info.shape[0]
+        self.channel_count = self._channel_info.shape[0]
 
     def _load_nodes(self):
         """Loads FM Nodes into node_info pd.DataFrame."""
         d = {'id': [], 'bed_level': [], 'top_level': [], 'nchannel': [], 'channels': [], 'type': [], 'has_results': [],
              'name': []}
-        if self.dat:
-            for unit in self.dat.units:
+        if self._dat:
+            for unit in self._dat.units:
                 d['id'].append(unit.uid)
                 d['bed_level'].append(unit.bed_level)
                 d['top_level'].append(np.nan)
@@ -630,25 +669,25 @@ class FMTS(INFO):
                 else:
                     d['channels'].append([str(x) for x in unit.ups_link_ids] + [str(x) for x in unit.dns_link_ids])
                 d['type'].append(f'{unit.type}_{unit.sub_type}')
-                d['has_results'].append(unit.id in self.storage[0].ids)
+                d['has_results'].append(unit.id in self._storage[0].ids)
                 d['name'].append(unit.id)
-        elif self.gxy:
-            for unit in self.gxy._nodes:
+        elif self._gxy:
+            for unit in self._gxy._nodes:
                 d['id'].append(unit.uid)
                 d['bed_level'].append(np.nan)
                 d['top_level'].append(np.nan)
-                ups_links = self.gxy.link_df[self.gxy.link_df['dns_node'] == unit.uid]
-                dns_links = self.gxy.link_df[self.gxy.link_df['ups_node'] == unit.uid]
+                ups_links = self._gxy.link_df[self._gxy.link_df['dns_node'] == unit.uid]
+                dns_links = self._gxy.link_df[self._gxy.link_df['ups_node'] == unit.uid]
                 d['nchannel'].append(len(ups_links) + len(dns_links))
                 if d['nchannel'][-1] == 1:
                     d['channels'].append(str(ups_links.index.tolist()[0]) if not ups_links.empty else str(dns_links.index.tolist()[0]))
                 else:
                     d['channels'].append([str(x) for x in ups_links.index.tolist()] + [str(x) for x in dns_links.index.tolist()])
                 d['type'].append(unit.type)
-                d['has_results'].append(unit.id in self.storage[0].ids)
+                d['has_results'].append(unit.id in self._storage[0].ids)
                 d['name'].append(unit.id)
         else:
-            d['id'] = self.storage[0].ids
+            d['id'] = self._storage[0].ids
             d['bed_level'] = [np.nan for _ in d['id']]
             d['top_level'] = [np.nan for _ in d['id']]
             d['nchannel'] = [0 for _ in d['id']]
@@ -657,16 +696,16 @@ class FMTS(INFO):
             d['has_results'] = True
             d['name'] = d['id']
 
-        self.node_info = pd.DataFrame(d)
-        self.node_info.set_index('id', inplace=True)
+        self._node_info = pd.DataFrame(d)
+        self._node_info.set_index('id', inplace=True)
 
     def _load_channels(self):
         """LoadsFM Channels into channel_info pd.DataFrame."""
         d = {'id': [], 'us_node': [], 'ds_node': [], 'us_chan': [], 'ds_chan': [], 'ispipe': [], 'length': [],
                 'us_invert': [], 'ds_invert': [], 'lbus_obvert': [], 'rbus_obvert': [], 'lbds_obvert': [],
                 'rbds_obvert': []}
-        if self.dat:
-            for link in self.dat.links:
+        if self._dat:
+            for link in self._dat.links:
                 d['id'].append(str(link.id))
                 if link.ups_unit:
                     d['us_node'].append(link.ups_unit.uid)
@@ -713,17 +752,17 @@ class FMTS(INFO):
                 d['rbus_obvert'].append(us_obv)
                 d['lbds_obvert'].append(ds_obv)
                 d['rbds_obvert'].append(ds_obv)
-        elif self.gxy:
-            for index, row in self.gxy.link_df.iterrows():
+        elif self._gxy:
+            for index, row in self._gxy.link_df.iterrows():
                 d['id'].append(str(index))
                 d['us_node'].append(row['ups_node'])
                 d['ds_node'].append(row['dns_node'])
-                ups_links = self.gxy.link_df[self.gxy.link_df['dns_node'] == row['ups_node']]
+                ups_links = self._gxy.link_df[self._gxy.link_df['dns_node'] == row['ups_node']]
                 if not ups_links.empty:
                     d['us_chan'].append(str(ups_links.index.tolist()[0]))
                 else:
                     d['us_chan'].append('')
-                dns_links = self.gxy.link_df[self.gxy.link_df['ups_node'] == row['dns_node']]
+                dns_links = self._gxy.link_df[self._gxy.link_df['ups_node'] == row['dns_node']]
                 if not dns_links.empty:
                     d['ds_chan'].append(str(dns_links.index.tolist()[0]))
                 else:
@@ -737,5 +776,5 @@ class FMTS(INFO):
                 d['lbds_obvert'].append(np.nan)
                 d['rbds_obvert'].append(np.nan)
 
-        self.channel_info = pd.DataFrame(d)
-        self.channel_info.set_index('id', inplace=True)
+        self._channel_info = pd.DataFrame(d)
+        self._channel_info.set_index('id', inplace=True)

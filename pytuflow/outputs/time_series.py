@@ -66,11 +66,11 @@ class TimeSeries(TabularOutput):
         """
         pass
 
-    def context_filter(self, context: str) -> pd.DataFrame:
+    def _filter(self, filter_by: str) -> pd.DataFrame:
         # docstring inherited
         return pd.DataFrame(columns=['id', 'data_type', 'geometry', 'start', 'end', 'dt', 'domain'])
 
-    def times(self, context: str = None, fmt: str = 'relative') -> list[TimeLike]:
+    def times(self, filter_by: str = None, fmt: str = 'relative') -> list[TimeLike]:
         """Returns all the available times for the given context.
 
        The context is an optional input that can be used to filter the return further. E.g. this can be used to
@@ -78,7 +78,7 @@ class TimeSeries(TabularOutput):
 
        Parameters
        ----------
-       context : str, optional
+       filter_by : str, optional
            The context to filter the times by.
        fmt : str, optional
            The format for the times. Options are 'relative' or 'absolute'.
@@ -95,7 +95,7 @@ class TimeSeries(TabularOutput):
             return a[a <= row['end']]
 
         # generate a DataFrame with all a combination of result types that meet the context
-        ctx = self.context_filter(context)
+        ctx = self._filter(filter_by)
         if ctx.empty:
             return []
 
@@ -109,7 +109,7 @@ class TimeSeries(TabularOutput):
             return [self.reference_time + timedelta(hours=x) for x in unique_sorted_times.tolist()]
         return unique_sorted_times.tolist()
 
-    def data_types(self, context: str = None) -> list[str]:
+    def data_types(self, filter_by: str = None) -> list[str]:
         """Returns all the available data types (result types) for the given context.
 
         The context is an optional input that can be used to filter the return further. E.g. this can be used to
@@ -117,7 +117,7 @@ class TimeSeries(TabularOutput):
 
         Parameters
         ----------
-        context : str, optional
+        filter_by : str, optional
             The context to filter the data types by.
 
         Returns
@@ -126,13 +126,13 @@ class TimeSeries(TabularOutput):
             The available data types.
         """
         # generate a DataFrame with all a combination of result types that meet the context
-        ctx = self.context_filter(context)
+        ctx = self._filter(filter_by)
         if ctx.empty:
             return []
 
         return ctx['data_type'].unique().tolist()
 
-    def ids(self, context: str = None) -> list[str]:
+    def ids(self, filter_by: str = None) -> list[str]:
         """Returns all the available IDs for the given context.
 
         The context argument can be used to add a filter to the returned IDs. E.g. passing in a data type will return
@@ -140,7 +140,7 @@ class TimeSeries(TabularOutput):
 
         Parameters
         ----------
-        context : str, optional
+        filter_by : str, optional
             The context to filter the IDs by.
 
         Returns
@@ -149,7 +149,7 @@ class TimeSeries(TabularOutput):
             The available IDs.
         """
         # generate a DataFrame with all a combination of result types that meet the context
-        ctx = self.context_filter(context)
+        ctx = self._filter(filter_by)
         if ctx.empty:
             return []
 

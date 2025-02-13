@@ -27,12 +27,9 @@ class GPKG2D(TimeSeries, ITimeSeries2D):
     loading GPKG results via the :class:`TPC <pytuflow.outputs.TPC>` class which will load all
     domains automatically (i.e. :code:`GPKG1D`, :code:`GPKG2D`, :code:`GPKGRL`).
 
-    This class does not need to be explicitly closed as it will load the results into memory and closes any open files
-    after initialisation.
-
     Parameters
     ----------
-    fpath : :class:`PathLike <pytuflow.pytuflow_types.PathLike>`
+    fpath : PathLike
         The path to the output (.gpkg) file.
 
     Raises
@@ -101,11 +98,11 @@ class GPKG2D(TimeSeries, ITimeSeries2D):
             raise FileNotFoundError(f'File not found: {self.fpath}')
 
         # call before tpc_reader is initialised to give a clear error message if it isn't actually a .info time series file
-        if not self.looks_like_this(self.fpath):
+        if not self._looks_like_this(self.fpath):
             raise FileTypeError(f'File does not look like a time series {self.__class__.__name__} file: {fpath}')
 
         # call after tpc_reader has been initialised so that we know the file can be loaded by the reader
-        if self.looks_empty(fpath):
+        if self._looks_empty(fpath):
             raise EOFError(f'File is empty or incomplete: {fpath}')
 
         # private
@@ -119,7 +116,7 @@ class GPKG2D(TimeSeries, ITimeSeries2D):
         self._load()
 
     @staticmethod
-    def looks_like_this(fpath: PathLike) -> bool:
+    def _looks_like_this(fpath: PathLike) -> bool:
         # docstring inherited
         import sqlite3
         try:
@@ -153,7 +150,7 @@ class GPKG2D(TimeSeries, ITimeSeries2D):
         return valid
 
     @staticmethod
-    def looks_empty(fpath: PathLike) -> bool:
+    def _looks_empty(fpath: PathLike) -> bool:
         # docstring inherited
         import sqlite3
         try:
@@ -171,17 +168,11 @@ class GPKG2D(TimeSeries, ITimeSeries2D):
             conn.close()
         return empty
 
-    def context_filter(self, context: str) -> pd.DataFrame:
-        # docstring inherited
-        # split context into components
-        ctx = [x.strip().lower() for x in context.split('/')] if context else []
-        return super().context_combinations_2d(ctx)
+    def times(self, filter_by: str = None, fmt: str = 'relative') -> list[TimeLike]:
+        """Returns all the available times for the given filter.
 
-    def times(self, context: str = None, fmt: str = 'relative') -> list[TimeLike]:
-        """Returns all the available times for the given context.
-
-        The context is an optional input that can be used to filter the return further.Valid contexts
-        for this class are:
+        The ``filter_by`` is an optional argument that can be used to filter the return further.Available filters
+        for the ``GPKG2D`` class are:
 
         * :code:`None`: default - returns all available times
         * :code:`point`:
@@ -192,8 +183,8 @@ class GPKG2D(TimeSeries, ITimeSeries2D):
 
         Parameters
         ----------
-        context : str, optional
-            The context to filter the times by.
+        filter_by : str, optional
+            The string to filter the times by.
         fmt : str, optional
             The format for the times. Options are :code:`relative` or :code:`absolute`.
 
@@ -209,55 +200,13 @@ class GPKG2D(TimeSeries, ITimeSeries2D):
         >>> res.times(fmt='absolute')
         [Timestamp('2021-01-01 00:00:00'), Timestamp('2021-01-01 00:01:00'), ..., Timestamp('2021-01-01 03:00:00')]
         """
-        return super().times(context, fmt)
+        return super().times(filter_by, fmt)
 
-    def data_types(self, context: str = None) -> list[str]:
-        """Returns all the available data types (result types) for the given context.
+    def ids(self, filter_by: str = None) -> list[str]:
+        """Returns all the available IDs for the given filter.
 
-        The context is an optional input that can be used to filter the return further. Available
-        context objects for this class are:
-
-        * :code:`None`: default - returns all available times
-        * :code:`point`:
-        * :code:`line`:
-        * :code:`polygon`: (or :code:`region`)
-        * :code:`[id]`: returns only data types for the given ID.
-
-        Parameters
-        ----------
-        context : str, optional
-            The context to filter the data types by.
-
-        Returns
-        -------
-        list[str]
-            The available data types.
-
-        Examples
-        --------
-        The below examples demonstrate how to use the context argument to filter the returned data types. The first
-        example returns all data types:
-
-        >>> res.data_types()
-        ['water level', 'flow', 'velocity']
-
-        Returning only the :code:`point` data types:
-
-        >>> res.data_types('point')
-        ['water level', 'velocity']
-
-        Return only data types for the channel :code:`FC01.1_R`:
-
-        >>> res.data_types('po_point')
-        ['water level']
-        """
-        return super().data_types(context)
-
-    def ids(self, context: str = None) -> list[str]:
-        """Returns all the available IDs for the given context.
-
-        The context argument can be used to add a filter to the returned IDs. Available context objects for this
-        class are:
+        The ``filter_by`` argument can be used to add a filter to the returned IDs. Available filters for the
+        ``GPKG2D`` class are:
 
         * :code:`None`: default - returns all available times
         * :code:`point`:
@@ -267,8 +216,8 @@ class GPKG2D(TimeSeries, ITimeSeries2D):
 
         Parameters
         ----------
-        context : str, optional
-            The context to filter the IDs by.
+        filter_by : str, optional
+            The string to filter the IDs by.
 
         Returns
         -------
@@ -277,8 +226,8 @@ class GPKG2D(TimeSeries, ITimeSeries2D):
 
         Examples
         --------
-        The below examples demonstrate how to use the context argument to filter the returned IDs. The first example
-        returns all IDs:
+        The below examples demonstrate how to use the ``filter_by`` argument to filter the returned IDs.
+        The first example returns all IDs:
 
         >>> res.ids()
         ['po_point', 'po_line', 'po_polygon']
@@ -293,7 +242,49 @@ class GPKG2D(TimeSeries, ITimeSeries2D):
         >>> res.ids('h')
         ['po_point']
         """
-        return super().ids(context)
+        return super().ids(filter_by)
+
+    def data_types(self, filter_by: str = None) -> list[str]:
+        """Returns all the available data types (result types) for the given filter.
+
+        The ``filter_by`` is an optional input that can be used to filter the return further. Available
+        filters for the ``GPKG2D`` class are:
+
+        * :code:`None`: default - returns all available times
+        * :code:`point`:
+        * :code:`line`:
+        * :code:`polygon`: (or :code:`region`)
+        * :code:`[id]`: returns only data types for the given ID.
+
+        Parameters
+        ----------
+        filter_by : str, optional
+            The string to filter the data types by.
+
+        Returns
+        -------
+        list[str]
+            The available data types.
+
+        Examples
+        --------
+        The below examples demonstrate how to use the ``filter_by`` argument to filter the returned data types.
+        The first example returns all data types:
+
+        >>> res.data_types()
+        ['water level', 'flow', 'velocity']
+
+        Returning only the :code:`point` data types:
+
+        >>> res.data_types('point')
+        ['water level', 'velocity']
+
+        Return only data types for the channel :code:`FC01.1_R`:
+
+        >>> res.data_types('po_point')
+        ['water level']
+        """
+        return super().data_types(filter_by)
 
     def maximum(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
                 time_fmt: str = 'relative') -> pd.DataFrame:
@@ -302,8 +293,8 @@ class GPKG2D(TimeSeries, ITimeSeries2D):
 
         It's possible to pass in a well known shorthand for the data type e.g. :code:`q` for :code:`flow`.
 
-        The location can also be a contextual string, e.g. :code:`line` to extract the maximum values for all
-        line geometries. The following contexts are available for this class:
+        The location can also be a filter string, e.g. :code:`line` to extract the maximum values for all
+        line geometries. The following filters are available for the ``GPKG2D`` class:
 
         * :code:`None`: default - returns all available times
         * :code:`point`:
@@ -311,7 +302,7 @@ class GPKG2D(TimeSeries, ITimeSeries2D):
         * :code:`polygon`: (or :code:`region`)
 
         The returned DataFrame will have an index column corresponding to the location IDs, and the columns
-        will be in the format :code:`context/data_type/[max|tmax]`,
+        will be in the format :code:`obj/data_type/[max|tmax]`,
         e.g. :code:`po/flow/max`, :code:`po/flow/tmax`
 
         Parameters
@@ -339,8 +330,8 @@ class GPKG2D(TimeSeries, ITimeSeries2D):
         ds1            59.423           1.383333
         """
         locations, data_types = self._loc_data_types_to_list(locations, data_types)
-        context = '/'.join(locations + data_types)
-        ctx = self.context_filter(context)
+        filter_by = '/'.join(locations + data_types)
+        ctx = self._filter(filter_by)
         if ctx.empty:
             return pd.DataFrame()
 
@@ -355,15 +346,15 @@ class GPKG2D(TimeSeries, ITimeSeries2D):
 
         It's possible to pass in a well known shorthand for the data type e.g. :code:`q` for :code:`flow`.
 
-        The location can also be a contextual string, e.g. :code:`line` to extract the time-series values for all
-        line geometry types. The following contexts are available for this class:
+        The location can also be a filter string, e.g. :code:`line` to extract the time-series values for all
+        line geometry types. The following filters are available for the ``GPKG2D`` class:
 
         * :code:`None`: default - returns all available times
         * :code:`point`:
         * :code:`line`:
         * :code:`polygon`: (or :code:`region`)
 
-        The returned column names will be in the format :code:`context/data_type/location`
+        The returned column names will be in the format :code:`obj/data_type/location`
         e.g. :code:`po/flow/FC01.1_R`. The :code:`data_type` name in the column heading will be identical to the
         data type  name passed into the function e.g. if :code:`h` is used instead of :code:`water level`, then the
         return will be :code:`po/h/FC01.1_R.1`.
@@ -386,7 +377,7 @@ class GPKG2D(TimeSeries, ITimeSeries2D):
 
         Examples
         --------
-        Extracting flow for a given channel.
+        Extracting flow for a given line.
 
         >>> res.time_series('po_line', 'q')
         Time (h)        po/q/ds1
@@ -397,8 +388,8 @@ class GPKG2D(TimeSeries, ITimeSeries2D):
         3.000000           8.391
         """
         locations, data_types = self._loc_data_types_to_list(locations, data_types)
-        context = '/'.join(locations + data_types)
-        ctx = self.context_filter(context)
+        filter_by = '/'.join(locations + data_types)
+        ctx = self._filter(filter_by)
         if ctx.empty:
             return pd.DataFrame()
 
@@ -411,17 +402,17 @@ class GPKG2D(TimeSeries, ITimeSeries2D):
 
     def section(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
                 time: TimeLike) -> pd.DataFrame:
-        """Not supported for GPKG2D results. Raises a :code:`NotImplementedError`."""
+        """Not supported for ``GPKG2D`` results. Raises a :code:`NotImplementedError`."""
         raise NotImplementedError(f'{__class__.__name__} files do not support section plotting.')
 
     def curtain(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
                 time: TimeLike) -> pd.DataFrame:
-        """Not supported for GPKG2D results. Raises a :code:`NotImplementedError`."""
+        """Not supported for ``GPKG2D`` results. Raises a :code:`NotImplementedError`."""
         raise NotImplementedError(f'{__class__.__name__} files do not support curtain plotting.')
 
     def profile(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
                 time: TimeLike) -> pd.DataFrame:
-        """Not supported for GPKG2D results. Raises a :code:`NotImplementedError`."""
+        """Not supported for ``GPKG2D`` results. Raises a :code:`NotImplementedError`."""
         raise NotImplementedError(f'{__class__.__name__} files do not support vertical profile plotting.')
 
     def _load(self):
@@ -479,6 +470,12 @@ class GPKG2D(TimeSeries, ITimeSeries2D):
         finally:
             conn.close()
 
+    def _filter(self, filter_by: str) -> pd.DataFrame:
+        # docstring inherited
+        # split filter into components
+        ctx = [x.strip().lower() for x in filter_by.split('/')] if filter_by else []
+        return super()._combinations_2d(ctx)
+
     def _load_time_series(self, cur: 'Cursor', storage: AppendDict):
         if self._gis_layer_p_name:
             cur.execute(f'SELECT Column_name FROM Timeseries_info WHERE Table_name = "{self._gis_layer_p_name}";')
@@ -531,7 +528,7 @@ class GPKG2D(TimeSeries, ITimeSeries2D):
                     po_info['end'].append(end)
                     po_info['dt'].append(dt)
 
-        self.po_objs = pd.DataFrame(po_info)
+        self._po_objs = pd.DataFrame(po_info)
 
     def _geom_from_id(self, cur: 'Cursor', id_: str) -> str:
         if self._gis_layer_p_name:

@@ -11,7 +11,7 @@ class ITimeSeries2D(ABC):
 
     Parameters
     ----------
-    fpath : :class:`PathLike <pytuflow.pytuflow_types.PathLike>`
+    fpath : PathLike
         The file path to the TUFLOW output file.
     """
 
@@ -19,9 +19,9 @@ class ITimeSeries2D(ABC):
     def __init__(self, *fpath: PathLike) -> None:
         super().__init__()
         #: pd.DataFrame: PO/2D output objects. Column headers are :code:`[id, data_type, geometry, start, end, dt]`
-        self.po_objs = pd.DataFrame(columns=['id', 'data_type', 'geometry', 'start', 'end', 'dt'])
+        self._po_objs = pd.DataFrame(columns=['id', 'data_type', 'geometry', 'start', 'end', 'dt'])
         #: pd.DataFrame: RL output objects. Column headers are :code:`[id, data_type, geometry, start, end, dt]`
-        self.rl_objs = pd.DataFrame(columns=['id', 'data_type', 'geometry', 'start', 'end', 'dt'])
+        self._rl_objs = pd.DataFrame(columns=['id', 'data_type', 'geometry', 'start', 'end', 'dt'])
         #: int: Number of 2d points
         self.po_point_count = 0
         #: int: Number of 2d lines
@@ -35,36 +35,36 @@ class ITimeSeries2D(ABC):
         #: int: Number of reporting location polys
         self.rl_poly_count = 0
 
-    def context_combinations_2d(self, context: list[str]) -> pd.DataFrame:
-        """Returns a DataFrame of all the 2D and RL output objects that match the context.
+    def _combinations_2d(self, filter_by: list[str]) -> pd.DataFrame:
+        """Returns a DataFrame of all the 2D and RL output objects that match the filter.
 
         For example, the context may be :code:`['po']` or :code:`['po', 'flow']`. The return DataFrame
         is a filtered version of the :code:`po_objs` + :code:`rl_objs` DataFrame that matches the context.
 
         Parameters
         ----------
-        context : list[str]
-            The context to filter the 1D objects by.
+        filter_by : list[str]
+            The string to filter the 1D objects by.
 
         Returns
         -------
         pd.DataFrame
             The filtered 1D objects
         """
-        ctx = context.copy() if context else []
+        ctx = filter_by.copy() if filter_by else []
         df = pd.DataFrame(columns=['id', 'data_type', 'geometry', 'start', 'end', 'dt', 'domain'])
 
         # domain
         filtered_something = False
-        if not context or '2d' in ctx or 'po' in ctx:
+        if not filter_by or '2d' in ctx or 'po' in ctx:
             filtered_something = True
-            df = self.po_objs.copy()
+            df = self._po_objs.copy()
             df['domain'] = '2d'
             df = self._context_refine_by_geometry(ctx, df)
             ctx = [x for x in ctx if x not in ['po', '2d']]
-        if not context or '0d' in ctx or 'rl' in ctx:
+        if not filter_by or '0d' in ctx or 'rl' in ctx:
             filtered_something = True
-            df1 = self.rl_objs.copy()
+            df1 = self._rl_objs.copy()
             df1['domain'] = 'rl'
             df1 = self._context_refine_by_geometry(ctx, df1)
             if not df1.empty:
@@ -72,13 +72,13 @@ class ITimeSeries2D(ABC):
             ctx = [x for x in ctx if x not in ['rl', '0d']]
 
         # if no domain (including 1d) specified then get everything and let other filters do the work
-        if not filtered_something and '1d' not in context and 'node' not in context and 'channel' not in context:
+        if not filtered_something and '1d' not in filter_by and 'node' not in filter_by and 'channel' not in filter_by:
             df_ = None
-            if not self.po_objs.empty:
-                df_ = self.po_objs.copy()
+            if not self._po_objs.empty:
+                df_ = self._po_objs.copy()
                 df_['domain'] = '2d'
-            if not self.rl_objs.empty:
-                df1 = self.rl_objs.copy()
+            if not self._rl_objs.empty:
+                df1 = self._rl_objs.copy()
                 df1['domain'] = 'rl'
                 df_ = df1 if df_ is None else pd.concat([df_, df1], axis=0, ignore_index=True)
 

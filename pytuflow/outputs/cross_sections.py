@@ -27,7 +27,7 @@ class CrossSections(TabularOutput):
 
     Parameters
     ----------
-    fpath : :class:`PathLike <pytuflow.pytuflow_types.PathLike>`
+    fpath : PathLike
         The path to the cross-section GIS Layer (i.e. :code:`1d_xs` layer).
 
     Raises
@@ -45,8 +45,6 @@ class CrossSections(TabularOutput):
 
     >>> from pytuflow.outputs import CrossSections
     >>> xs = CrossSections('path/to/1d_xs.shp')
-
-
     """
 
     def __init__(self, fpath: PathLike):
@@ -66,16 +64,16 @@ class CrossSections(TabularOutput):
         if not self.fpath.exists():
             raise FileNotFoundError(f'File does not exist: {fpath}')
 
-        if not self.looks_like_this(self.fpath):
+        if not self._looks_like_this(self.fpath):
             raise FileTypeError(f'File does not look like a {self.__class__.__name__} file: {fpath}')
 
-        if self.looks_empty(self.fpath):
+        if self._looks_empty(self.fpath):
             raise EOFError(f'File is empty or incomplete: {fpath}')
 
         self._load()
 
     @staticmethod
-    def looks_like_this(fpath: Path) -> bool:
+    def _looks_like_this(fpath: Path) -> bool:
         # docstring inherited
         try:
             with GISAttributes(fpath) as attrs:
@@ -90,14 +88,172 @@ class CrossSections(TabularOutput):
         return True
 
     @staticmethod
-    def looks_empty(fpath: Path) -> bool:
+    def _looks_empty(fpath: Path) -> bool:
         # docstring inherited
         with GISAttributes(fpath) as attrs:
             return len(list(attrs)) == 0
 
-    def context_filter(self, context: str) -> pd.DataFrame:
+    def times(self, filter_by: str = None, fmt: str = 'relative') -> list[TimeLike]:
+        """CrossSections results are static and will not return any times."""
+        return []  # data is static - no times exist
+
+    def ids(self, filter_by: str = None) -> list[str]:
+        """Returns the IDs within the filter from the cross-section layer.
+
+        Available filters are:
+
+        - :code:`None` - returns all available IDs.
+        - :code:`[type]` - returns all IDs of the given type (e.g. :code:`xz`).
+        - :code:`[source]` - returns all IDs present in the given source file.
+
+        Parameters
+        ----------
+        filter_by : str, optional
+            The string to filter the IDs by.
+
+        Returns
+        -------
+        list[str]
+            List of IDs.
+
+        Examples
+        --------
+        Return all the cross-section IDs in the layer:
+
+        >>> xs.ids()
+        ['1d_xs_M14_C99', '1d_xs_M14_C100', '1d_xs_M14_C101', ..., '1d_xs_M14_ds_weir', '1d_xs_M14_rd_weir']
+
+        If multiple cross-section tables are present in a given CSV file, the cross-section IDs from a given
+        file can be obtained:
+
+        >>> xs.ids('/path/to/1d_CrossSection.csv')
+        ['1d_xs_M14_C99', '1d_xs_M14_C100']
+
+        Return all the cross-section IDs of a given type:
+
+        >>> xs.ids('xz')
+        ['1d_xs_M14_C99', '1d_xs_M14_C100', '1d_xs_M14_C101', ..., '1d_xs_M14_ds_weir', '1d_xs_M14_rd_weir']
+        """
+        df = self._filter(filter_by)
+        return df['id'].unique().tolist()
+
+    def data_types(self, filter_by: str = None) -> list[str]:
+        """Returns the cross-section types within the filter from the cross-section layer. Types refer to the
+        cross-section type e.g. :code:`xz`, :code:`hw`, :code:`cs`, :code:`bg`, :code:`lc`.
+
+        Available filters are:
+
+        - :code:`None` - returns all available types.
+        - :code:`[id]` - returns all types of the given ID.
+        - :code:`[source]` - returns all types present in the given source file.
+
+        Parameters
+        ----------
+        filter_by : str, optional
+            The string to filter the types by.
+
+        Returns
+        -------
+        list[str]
+            List of types.
+
+        Examples
+        --------
+        Return all the cross-section types in the layer:
+
+        >>> xs.data_types()
+        ['xz', 'hw']
+
+        If multiple cross-section tables are present in a given CSV file, the cross-section types from a given
+        file can be obtained:
+
+        >>> xs.data_types('/path/to/1d_CrossSection.csv')
+        ['xz']
+        """
+        df = self._filter(filter_by)
+        return df['type'].unique().tolist()
+
+    def section(self, locations: Union[str, list[str]], data_types: Union[str, list[str]] = None,
+                time: TimeLike = -1) -> pd.DataFrame:
+        """Return the cross-section data for given location and cross-section type.
+
+        The returned dataframe uses a multi-index with the first level being the cross-section ID and the second level
+        being the returned data from the cross-section.
+
+        Parameters
+        ----------
+        locations : str or list[str]
+            The cross-section ID(s) to return the data for.
+        data_types : str or list[str], optional
+            The cross-section type(s) to return the data for.
+        time : TimeLike, optional
+            The time to return the data for. Not used for cross-sections.
+
+        Returns
+        -------
+        pd.DataFrame
+            DataFrame of cross-section data.
+
+        Examples
+        --------
+        Return the cross-section data for a given location and cross-section type:
+
+        >>> xs.section('1d_xs_M14_C99')
+           1d_xs_M14_C99
+                       x        z
+        0        0.00000  38.4567
+        1        1.16450  38.2227
+        2        6.74383  37.4142
+        3        6.74534  37.4140
+        4        7.58031  36.8805
+        ...        ...        ...
+        24      40.88000  37.6529
+        25      41.44690  37.6526
+        26      42.39770  37.6635
+        27      43.05550  37.6766
+        28      44.40290  37.7324
+        """
+        locations, data_types = self._figure_out_loc_and_data_types(locations, data_types)
+
+        ctx = '/'.join(locations + data_types)
+        df = self._filter(ctx)
+
+        df1 = pd.DataFrame()
+        for i, row in df.iterrows():
+            xs = self.cross_sections[row['ind']]
+            df2 = xs.df.copy()
+            df2.columns = df2.columns.str.lower()
+            df2.columns = pd.MultiIndex.from_product([[row['id']], df2.columns])
+            df1 = pd.concat([df1, df2], axis=1) if not df1.empty else df2
+
+        return df1
+
+    def time_series(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
+                    time_fmt: str = 'relative') -> pd.DataFrame:
+        """Not supported for ``CrossSection`` results. Raises a :code:`NotImplementedError`."""
+        raise NotImplementedError(f'{__class__.__name__} does not support time-series plotting.')
+
+    def curtain(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
+                time: TimeLike) -> pd.DataFrame:
+        """Not supported for ``CrossSection`` results. Raises a :code:`NotImplementedError`."""
+        raise NotImplementedError(f'{__class__.__name__} does not support curtain plotting.')
+
+    def profile(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
+                time: TimeLike) -> pd.DataFrame:
+        """Not supported for ``CrossSection`` results. Raises a :code:`NotImplementedError`."""
+        raise NotImplementedError(f'{__class__.__name__} does not support vertical profile plotting.')
+
+    def _load(self):
+        self.name = self.fpath.stem
+        with GISAttributes(self.fpath) as attrs:
+            self.cross_sections = [TuflowCrossSection(self.fpath.parent, x) for x in attrs]
+            _ = [x.load() for x in self.cross_sections]
+        self.cross_section_count = len(self.cross_sections)
+        self._load_objs()
+
+    def _filter(self, filter_by: str) -> pd.DataFrame:
         # docstring inherited
-        ctx = [x.strip().lower() for x in context.split('/') if x] if context else []
+        ctx = [x.strip().lower() for x in filter_by.split('/') if x] if filter_by else []
 
         df = self.objs.copy()
         filtered_something = False
@@ -145,164 +301,6 @@ class CrossSections(TabularOutput):
                     df = pd.DataFrame()
 
         return df if not df.empty else pd.DataFrame(columns=['id', 'uid', 'type', 'data_type', 'geometry'])
-
-    def times(self, context: str = None, fmt: str = 'relative') -> list[TimeLike]:
-        """CrossSections results are static and will not return any times."""
-        return []  # data is static - no times exist
-
-    def ids(self, context: str = None) -> list[str]:
-        """Returns the IDs within the context from the cross-section layer.
-
-        Available contexts are:
-
-        - :code:`None` - returns all available IDs.
-        - :code:`[type]` - returns all IDs of the given type (e.g. :code:`xz`).
-        - :code:`[source]` - returns all IDs present in the given source file.
-
-        Parameters
-        ----------
-        context : str, optional
-            The context to filter the IDs by.
-
-        Returns
-        -------
-        list[str]
-            List of IDs.
-
-        Examples
-        --------
-        Return all the cross-section IDs in the layer:
-
-        >>> xs.ids()
-        ['1d_xs_M14_C99', '1d_xs_M14_C100', '1d_xs_M14_C101', ..., '1d_xs_M14_ds_weir', '1d_xs_M14_rd_weir']
-
-        If multiple cross-section tables are present in a given CSV file, the cross-section IDs from a given
-        file can be obtained:
-
-        >>> xs.ids('/path/to/1d_CrossSection.csv')
-        ['1d_xs_M14_C99', '1d_xs_M14_C100']
-
-        Return all the cross-section IDs of a given type:
-
-        >>> xs.ids('xz')
-        ['1d_xs_M14_C99', '1d_xs_M14_C100', '1d_xs_M14_C101', ..., '1d_xs_M14_ds_weir', '1d_xs_M14_rd_weir']
-        """
-        df = self.context_filter(context)
-        return df['id'].unique().tolist()
-
-    def data_types(self, context: str = None) -> list[str]:
-        """Returns the cross-section types within the context from the cross-section layer. Types refer to the
-        cross-section type e.g. :code:`xz`, :code:`hw`, :code:`cs`, :code:`bg`, :code:`lc`.
-
-        Available contexts are:
-
-        - :code:`None` - returns all available types.
-        - :code:`[id]` - returns all types of the given ID.
-        - :code:`[source]` - returns all types present in the given source file.
-
-        Parameters
-        ----------
-        context : str, optional
-            The context to filter the types by.
-
-        Returns
-        -------
-        list[str]
-            List of types.
-
-        Examples
-        --------
-        Return all the cross-section types in the layer:
-
-        >>> xs.data_types()
-        ['xz', 'hw']
-
-        If multiple cross-section tables are present in a given CSV file, the cross-section types from a given
-        file can be obtained:
-
-        >>> xs.data_types('/path/to/1d_CrossSection.csv')
-        ['xz']
-        """
-        df = self.context_filter(context)
-        return df['type'].unique().tolist()
-
-    def section(self, locations: Union[str, list[str]], data_types: Union[str, list[str]] = None,
-                time: TimeLike = -1) -> pd.DataFrame:
-        """Return the cross-section data for given location and cross-section type.
-
-        The returned dataframe uses a multi-index with the first level being the cross-section ID and the second level
-        being the returned data from the cross-section.
-
-        Parameters
-        ----------
-        locations : str or list[str]
-            The cross-section ID(s) to return the data for.
-        data_types : str or list[str], optional
-            The cross-section type(s) to return the data for.
-        time : TimeLike, optional
-            The time to return the data for. Not used for cross-sections.
-
-        Returns
-        -------
-        pd.DataFrame
-            DataFrame of cross-section data.
-
-        Examples
-        --------
-        Return the cross-section data for a given location and cross-section type:
-
-        >>> xs.section('1d_xs_M14_C99')
-           1d_xs_M14_C99
-                       x        z
-        0        0.00000  38.4567
-        1        1.16450  38.2227
-        2        6.74383  37.4142
-        3        6.74534  37.4140
-        4        7.58031  36.8805
-        ...        ...        ...
-        24      40.88000  37.6529
-        25      41.44690  37.6526
-        26      42.39770  37.6635
-        27      43.05550  37.6766
-        28      44.40290  37.7324
-        """
-        locations, data_types = self._figure_out_loc_and_data_types(locations, data_types)
-
-        ctx = '/'.join(locations + data_types)
-        df = self.context_filter(ctx)
-
-        df1 = pd.DataFrame()
-        for i, row in df.iterrows():
-            xs = self.cross_sections[row['ind']]
-            df2 = xs.df.copy()
-            df2.columns = df2.columns.str.lower()
-            df2.columns = pd.MultiIndex.from_product([[row['id']], df2.columns])
-            df1 = pd.concat([df1, df2], axis=1) if not df1.empty else df2
-
-        return df1
-
-    def time_series(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
-                    time_fmt: str = 'relative') -> pd.DataFrame:
-        """Not supported for CrossSection results. Raises a :code:`NotImplementedError`."""
-        raise NotImplementedError(f'{__class__.__name__} does not support time-series plotting.')
-
-    def curtain(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
-                time: TimeLike) -> pd.DataFrame:
-        """Not supported for CrossSection results. Raises a :code:`NotImplementedError`."""
-        raise NotImplementedError(f'{__class__.__name__} does not support curtain plotting.')
-
-    def profile(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
-                time: TimeLike) -> pd.DataFrame:
-        """Not supported for CrossSection results. Raises a :code:`NotImplementedError`."""
-        raise NotImplementedError(f'{__class__.__name__} does not support vertical profile plotting.')
-
-    def _load(self):
-        self.name = self.fpath.stem
-        with GISAttributes(self.fpath) as attrs:
-            self.cross_sections = [TuflowCrossSection(self.fpath.parent, x) for x in attrs]
-            _ = [x.load() for x in self.cross_sections]
-        self.cross_section_count = len(self.cross_sections)
-        self._load_objs()
 
     def _load_objs(self):
         d = {'id': [], 'filename': [], 'source': [], 'filepath': [], 'type': [], 'uid': [], 'ind': []}

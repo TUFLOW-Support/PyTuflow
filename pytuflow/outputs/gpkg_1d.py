@@ -29,7 +29,7 @@ class GPKG1D(INFO):
 
     Parameters
     ----------
-    fpath : :class:`PathLike <pytuflow.pytuflow_types.PathLike>`
+    fpath : PathLike
         The path to the output (.gpkg) file.
 
     Raises
@@ -92,7 +92,7 @@ class GPKG1D(INFO):
         super().__init__(fpath)
 
     @staticmethod
-    def looks_like_this(fpath: PathLike) -> bool:
+    def _looks_like_this(fpath: PathLike) -> bool:
         # docstring inherited
         import sqlite3
         try:
@@ -120,7 +120,7 @@ class GPKG1D(INFO):
         return valid
 
     @staticmethod
-    def looks_empty(fpath: PathLike) -> bool:
+    def _looks_empty(fpath: PathLike) -> bool:
         # docstring inherited
         import sqlite3
         try:
@@ -138,41 +138,349 @@ class GPKG1D(INFO):
             conn.close()
         return empty
 
-    def times(self, context: str = None, fmt: str = 'relative') -> list[TimeLike]:
-        # docstring inherited
-        return super().times(context, fmt)
+    def times(self, filter_by: str = None, fmt: str = 'relative') -> list[TimeLike]:
+        """Returns all the available times for the given filter.
 
-    def data_types(self, context: str = None) -> list[str]:
-        # docstring inherited
-        return super().data_types(context)
+        The ``filter_by`` is an optional input that can be used to filter the return further. Valid filters
+        for the ``GPKG1D`` class are:
 
-    def ids(self, context: str = None) -> list[str]:
-        # docstring inherited
-        return super().ids(context)
+        * :code:`None`: default - returns all available times
+        * :code:`1d`
+        * :code:`node`: returns only node times
+        * :code:`channel`: returns only channel times
+        * :code:`[id]`: returns only data types for the given ID.
+        * :code:`[data_type]`: returns only times for the given data type.
+
+        Parameters
+        ----------
+        filter_by : str, optional
+            The string to filter the times by.
+        fmt : str, optional
+            The format for the times. Options are :code:`relative` or :code:`absolute`.
+
+        Returns
+        -------
+        list[TimeLike]
+            The available times in the requested format.
+
+        Examples
+        --------
+        >>> res.times()
+        [0.0, 0.016666666666666666, ..., 3.0]
+        >>> res.times(fmt='absolute')
+        [Timestamp('2021-01-01 00:00:00'), Timestamp('2021-01-01 00:01:00'), ..., Timestamp('2021-01-01 03:00:00')]
+        """
+        return super().times(filter_by, fmt)
+
+    def ids(self, filter_by: str = None) -> list[str]:
+        """Returns all the available IDs for the given filter.
+
+        The ``filter_by`` argument can be used to add a filter to the returned IDs. Available filters for the ``GPKG1D``
+        class are:
+
+        * :code:`None`: default - returns all :code:`timeseries` IDs
+        * :code:`1d`: same as :code:`None` as class only contains 1D data
+        * :code:`node`
+        * :code:`channel`
+        * :code:`timeseries`: returns only IDs that have time series data.
+        * :code:`section`: returns only IDs that have section data (i.e. long plot data).
+        * :code:`[data_type]`: returns only IDs for the given data type. Shorthand data type names can be used.
+
+        Parameters
+        ----------
+        filter_by : str, optional
+            The string to filter the IDs by.
+
+        Returns
+        -------
+        list[str]
+            The available IDs.
+
+        Examples
+        --------
+        The below examples demonstrate how to use the ``filter_by`` argument to filter the returned IDs.
+        The first example returns all IDs:
+
+        >>> res.ids()
+        ['FC01.1_R', 'FC01.2_R', 'FC04.1_C', 'FC01.1_R.1', 'FC01.1_R.2', 'FC01.2_R.1', 'FC01.2_R.2', 'FC04.1_C.1', 'FC04.1_C.2']
+
+        Return only node IDs:
+
+        >>> res.ids('node')
+        ['FC01.1_R.1', 'FC01.1_R.2', 'FC01.2_R.1', 'FC01.2_R.2', 'FC04.1_C.1', 'FC04.1_C.2']
+
+        Return IDs that have water level results:
+
+        >>> res.ids('h')
+        ['FC01.1_R.1', 'FC01.1_R.2', 'FC01.2_R.1', 'FC01.2_R.2', 'FC04.1_C.1', 'FC04.1_C.2']
+        """
+        return super().ids(filter_by)
+
+    def data_types(self, filter_by: str = None) -> list[str]:
+        """Returns all the available data types (result types) for the given filter.
+
+        The ``filter_by`` is an optional input that can be used to filter the return further. Available
+        filters for the ``GPKG1D`` class are:
+
+        * :code:`None`: default - returns all :code:`timeseries` data types
+        * :code:`1d`: same as :code:`None` as class only contains 1D data
+        * :code:`node`
+        * :code:`channel`
+        * :code:`timeseries`: returns only IDs that have time series data.
+        * :code:`section`: returns only IDs that have section data (i.e. long plot data).
+        * :code:`[id]`: returns only data types for the given ID.
+
+        Parameters
+        ----------
+        filter_by : str, optional
+            The string to filter the data types by.
+
+        Returns
+        -------
+        list[str]
+            The available data types.
+
+        Examples
+        --------
+        The below examples demonstrate how to use the filter argument to filter the returned data types. The first
+        example returns all data types:
+
+        >>> res.data_types()
+        ['water level', 'flow', 'velocity']
+
+        Returning only the :code:`node` data types:
+
+        >>> res.data_types('node')
+        ['water level']
+
+        Return only data types for the channel :code:`FC01.1_R`:
+
+        >>> res.data_types('FC01.1_R')
+        ['flow', 'velocity']
+
+        Return data types that are available for plotting section data:
+
+        >>> res.data_types('section')
+        ['bed level', 'pipes', 'pits', 'water level', 'max water level']
+        """
+        return super().data_types(filter_by)
 
     def maximum(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
                 time_fmt: str = 'relative') -> pd.DataFrame:
-        # docstring inherited
+        """Returns a DataFrame containing the maximum values for the given data types. The returned DataFrame
+        will include time of maximum results as well.
+
+        It's possible to pass in a well known shorthand for the data type e.g. :code:`q` for :code:`flow`.
+
+        The location can also be a filter string, e.g. :code:`channel` to extract the maximum values for all
+        channels. The following filters are available for the ``GPKG1D`` class:
+
+        * :code:`None`: returns all maximum values
+        * :code:`1d`: returns all maximum values (same as passing in None for locations)
+        * :code:`node`
+        * :code:`channel`
+
+        The returned DataFrame will have an index column corresponding to the location IDs, and the columns
+        will be in the format :code:`obj/data_type/[max|tmax]`,
+        e.g. :code:`channel/flow/max`, :code:`channel/flow/tmax`
+
+        Parameters
+        ----------
+        locations : str | list[str]
+            The location to extract the maximum values for. :code:`None` will return all locations for the
+            given data_types.
+        data_types : str | list[str]
+            The data types to extract the maximum values for. :code:`None` will return all data types for the
+            given locations.
+        time_fmt : str, optional
+            The format for the time of max result. Options are :code:`relative` or :code:`absolute`
+
+        Returns
+        -------
+        pd.DataFrame
+            The maximum, and time of maximum values
+
+        Examples
+        --------
+        Extracting the maximum flow for a given channel:
+
+        >>> res.maximum('ds1', 'flow')
+             channel/flow/max  channel/flow/tmax
+        ds1            59.423           1.383333
+
+        Extracting all the maximum results for a given channel:
+
+        >>> res.maximum(['ds1'], None)
+             channel/Flow/max  ...  channel/Velocity/tmax
+        ds1            59.423  ...               0.716667
+
+        Extracting the maximum flow for all channels:
+
+        >>> res.maximum(None, 'flow')
+                 channel/flow/max   channel/flow/tmax
+        ds1                 59.423           1.383333
+        ds2                 88.177           1.400000
+        ...                  ...              ...
+        FC04.1_C             9.530           1.316667
+        FC_weir1            67.995           0.966667
+        """
         return super().maximum(locations, data_types, time_fmt)
 
     def time_series(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
                     time_fmt: str = 'relative') -> pd.DataFrame:
-        # docstring inherited
+        """Returns a time-series DataFrame for the given location(s) and data type(s).
+
+        It's possible to pass in a well known shorthand for the data type e.g. :code:`q` for :code:`flow`.
+
+        The location can also be a filter string, e.g. :code:`channel` to extract the time-series values for all
+        channels. The following filters are available for the ``GPKG1D`` class:
+
+        * :code:`None`: returns all locations
+        * :code:`1d`: returns all locations (same as passing in None for locations)
+        * :code:`node`
+        * :code:`channel`
+
+        The returned column names will be in the format :code:`obj/data_type/location`
+        e.g. :code:`channel/flow/FC01.1_R`. The :code:`data_type` name in the column heading will be identical to the
+        data type  name passed into the function e.g. if :code:`h` is used instead of :code:`water level`, then the
+        return will be :code:`node/h/FC01.1_R.1`.
+
+        Parameters
+        ----------
+        locations : str | list[str]
+            The location to extract the time series data for. If :code:`None` is passed in, all locations will be
+            returned for the given data_types.
+        data_types : str | list[str]
+            The data type to extract the time series data for. If :code:`None` is passed in, all data types
+            will be returned for the given locations.
+        time_fmt : str, optional
+            The format for the time column. Options are :code:`relative` or :code:`absolute`.
+
+        Returns
+        -------
+        pd.DataFrame
+            The time series data.
+
+        Examples
+        --------
+        Extracting flow for a given channel.
+
+        >>> res.time_series('ds1', 'q')
+        Time (h)   channel/q/ds1
+        0.000000           0.000
+        0.016667           0.000
+        ...                  ...
+        2.983334           8.670
+        3.000000           8.391
+
+        Extracting all data types for a given location
+
+        >>> res.time_series('ds1', None)
+        Time (h)  channel/Flow/ds1  channel/Velocity/ds1
+        0.000000             0.000                 0.000
+        0.016667             0.000                 0.000
+        ...                    ...                   ...
+        2.983334             8.670                 1.348
+        3.000000             8.391                 1.333
+
+        Extracting all flow results
+
+        >>> res.time_series(None, 'flow')
+        Time (h)  channel/flow/ds1  ...  channel/flow/FC_weir1
+        0.000000             0.000  ...                    0.0
+        0.016667             0.000  ...                    0.0
+        ...                    ...  ...                    ...
+        2.983334             8.670  ...                    0.0
+        3.000000             8.391  ...                    0.0
+        """
         return super().time_series(locations, data_types, time_fmt)
 
     def section(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
                 time: TimeLike) -> pd.DataFrame:
-        # docstring inherited
+        """Returns a long plot for the given location and data types at the given time. If one location is given,
+        the long plot will connect the given location down to the outlet. If 2 locations are given, then the
+        long plot will connect the two locations (they must be connectable). If more than 2 locations are given,
+        multiple long plots will be produced (each long plot will be given a unique :code:`branch_id`),
+        however one channel must be a common downstream location and the other
+        channels must be upstream of this location.
+
+        The order of the locations in the :code:`location` parameter does not matter as both directions are
+        checked, however it will be faster to include the upstream location first as this will be the first connection
+        checked.
+
+        The returned DataFrame will have the following columns:
+
+        * :code:`branch_id`: The branch ID. If more than 2 pipes are provided, or the channels diverge at an intersection,
+          then multiple branches will be returned. The same channel could be in multiple branches. The branch id
+          starts at zero for the first branch, and increments by one for each additional branch.
+        * :code:`channel`: The channel ID.
+        * :code:`node`: The node ID.
+        * :code:`offset`: The offset along the long plot
+        * :code:`[data_types]`: The data types requested.
+
+        Parameters
+        ----------
+        locations : str | list[str]
+            The location to extract the section data for. Unlike other plotting methods, the location cannot be None.
+        data_types : str | list[str]
+            The data type to extract the section data for. If None is passed in, all node data types will be returned.
+        time : TimeLike
+            The time to extract the section data for.
+
+        Returns
+        -------
+        pd.DataFrame
+            The section data.
+
+        Raises
+        ------
+        ValueError
+            Raised if no valid :code:`locations` are provided or if :code:`data_types` is not :code:`None`
+            but the provided :code:`data_types` are all invalid. A value error is also raised if more than one location
+            is provided and the locations are not connected.
+
+        Examples
+        --------
+        Extracting a long plot from a given channel :code:`ds1` to the outlet at :code:`1.0` hours:
+
+        >>> res.section('ds1', ['bed', 'level', 'max level'], 1.)
+            branch_id  channel       node  offset     bed    level  max level
+        0           0      ds1      ds1.1     0.0  35.950  38.7880    39.0671
+        6           0      ds1      ds1.2    30.2  35.900  38.6880    38.9963
+        1           0      ds2      ds1.2    30.2  35.900  38.6880    38.9963
+        7           0      ds2      ds2.2    88.8  35.320  38.1795    38.5785
+        2           0      ds3      ds2.2    88.8  35.320  38.1795    38.5785
+        8           0      ds3      ds3.2   190.0  34.292  37.1793    37.4158
+        3           0      ds4      ds3.2   190.0  34.292  37.1793    37.4158
+        9           0      ds4      ds4.2   301.6  33.189  35.6358    35.9533
+        4           0      ds5      ds4.2   301.6  33.189  35.6358    35.9533
+        10          0      ds5      ds5.2   492.7  31.260  33.9942    34.3672
+        5           0  ds_weir      ds5.2   492.7  32.580  33.9942    34.3672
+        11          0  ds_weir  ds_weir.2   508.9  32.580  32.9532    33.4118
+
+        Extracting a long plot between :code:`ds1` and :code:`ds4` at :code:`1.0` hours:
+
+        >>> res.section(['ds1', 'ds4'], ['bed', 'level', 'max level'], 1.)
+           branch_id channel   node  offset     bed    level  max level
+        0          0     ds1  ds1.1     0.0  35.950  38.7880    39.0671
+        4          0     ds1  ds1.2    30.2  35.900  38.6880    38.9963
+        1          0     ds2  ds1.2    30.2  35.900  38.6880    38.9963
+        5          0     ds2  ds2.2    88.8  35.320  38.1795    38.5785
+        2          0     ds3  ds2.2    88.8  35.320  38.1795    38.5785
+        6          0     ds3  ds3.2   190.0  34.292  37.1793    37.4158
+        3          0     ds4  ds3.2   190.0  34.292  37.1793    37.4158
+        7          0     ds4  ds4.2   301.6  33.189  35.6358    35.9533
+        """
         return super().section(locations, data_types, time)
 
     def curtain(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
                 time: TimeLike) -> pd.DataFrame:
-        """Not supported for GPKG1D results. Raises a :code:`NotImplementedError`."""
+        """Not supported for ``GPKG1D`` results. Raises a :code:`NotImplementedError`."""
         return super().curtain(locations, data_types, time)
 
     def profile(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
                 time: TimeLike) -> pd.DataFrame:
-        """Not supported for GPKG1D results. Raises a :code:`NotImplementedError`."""
+        """Not supported for ``GPKG1D`` results. Raises a :code:`NotImplementedError`."""
         return super().profile(locations, data_types, time)
 
     def _load(self):
@@ -290,17 +598,17 @@ class GPKG1D(INFO):
                         d[col].append(TYPE_MAP[i](row[i]))
                     except (TypeError, ValueError):
                         d[col].append(np.nan)
-            self.channel_info = pd.DataFrame(d)
-            self.channel_info.set_index('id', inplace=True)
-            self.channel_info['flags'].apply(lambda x: x.split('[')[1].strip(']') if '[' in x else x)
+            self._channel_info = pd.DataFrame(d)
+            self._channel_info.set_index('id', inplace=True)
+            self._channel_info['flags'].apply(lambda x: x.split('[')[1].strip(']') if '[' in x else x)
             if self._is_swmm:
-                self.channel_info['ispipe'] = (~np.isnan(self.channel_info['lbus_obvert']) & ~np.isnan(self.channel_info['lbds_obvert']))
-                self.channel_info['ispit'] = False
+                self._channel_info['ispipe'] = (~np.isnan(self._channel_info['lbus_obvert']) & ~np.isnan(self._channel_info['lbds_obvert']))
+                self._channel_info['ispit'] = False
             else:
-                self.channel_info['ispipe'] = self.channel_info['flags'].str.match(r'.*[CR].*', False)
-                self.channel_info['ispit'] = self.channel_info.index == self.channel_info['ds_node']
+                self._channel_info['ispipe'] = self._channel_info['flags'].str.match(r'.*[CR].*', False)
+                self._channel_info['ispit'] = self._channel_info.index == self._channel_info['ds_node']
         else:
-            self.channel_info = pd.DataFrame([], columns=COLUMNS)
+            self._channel_info = pd.DataFrame([], columns=COLUMNS)
 
     def _load_node_info(self, cur: 'Cursor'):
         if self._is_swmm:
@@ -323,64 +631,64 @@ class GPKG1D(INFO):
                             d[col].append(TYPE_MAP[i](row[i]))
                         except (TypeError, ValueError):
                             d[col].append(np.nan)
-                self.node_info = pd.DataFrame(d)
-                self.node_info.set_index('id', inplace=True)
+                self._node_info = pd.DataFrame(d)
+                self._node_info.set_index('id', inplace=True)
             else:
-                self.node_info = pd.DataFrame([], columns=COLUMNS + ['nchannel', 'channels'])
-                self.node_info.set_index('id', inplace=True)
+                self._node_info = pd.DataFrame([], columns=COLUMNS + ['nchannel', 'channels'])
+                self._node_info.set_index('id', inplace=True)
         else:
             cur.execute('SELECT ID as id FROM Geom_P;')
             ret = cur.fetchall()
             if ret:
-                self.node_info = pd.DataFrame(index=[x[0] for x in ret])
-                self.node_info['nchannel'] = 0
-                self.node_info['channels'] = ''
+                self._node_info = pd.DataFrame(index=[x[0] for x in ret])
+                self._node_info['nchannel'] = 0
+                self._node_info['channels'] = ''
             else:
-                self.node_info = pd.DataFrame([], columns=['id', 'nchannel', 'channels'])
-                self.node_info.set_index('id', inplace=True)
+                self._node_info = pd.DataFrame([], columns=['id', 'nchannel', 'channels'])
+                self._node_info.set_index('id', inplace=True)
 
-        if self.node_info.empty:
+        if self._node_info.empty:
             return
 
         # get the number of channels and the channels for each node
-        chan_info = self.channel_info.loc[~self.channel_info['ispit'],:]  # don't include channels that are pits
-        self.node_info['nchannel'] = 0
-        self.node_info['channels'] = ''
-        for node in self.node_info.index:
+        chan_info = self._channel_info.loc[~self._channel_info['ispit'], :]  # don't include channels that are pits
+        self._node_info['nchannel'] = 0
+        self._node_info['channels'] = ''
+        for node in self._node_info.index:
             us = chan_info[chan_info['us_node'] == node].index.tolist()
             ds = chan_info[chan_info['ds_node'] == node].index.tolist()
-            self.node_info.loc[node, 'nchannel'] = len(us) + len(ds)
+            self._node_info.loc[node, 'nchannel'] = len(us) + len(ds)
             if len(us) + len(ds) == 1:  # to match how it's done in the TPC node_info.csv
                 if us:
-                    self.node_info.at[node, 'channels'] = us[0]
+                    self._node_info.at[node, 'channels'] = us[0]
                 else:
-                    self.node_info.at[node, 'channels'] = ds[0]
+                    self._node_info.at[node, 'channels'] = ds[0]
             else:
-                self.node_info.at[node, 'channels'] = us + ds
+                self._node_info.at[node, 'channels'] = us + ds
 
     def _get_pits(self, dfconn: pd.DataFrame) -> np.ndarray:
         if self._is_swmm:
             df = dfconn.copy()
             # get inlet levels at upstream nodes
-            df['pit'] = self.node_info.loc[dfconn['us_node'], 'inlet_level'].tolist()
+            df['pit'] = self._node_info.loc[dfconn['us_node'], 'inlet_level'].tolist()
             # need to get the last downstream node since it won't be accounted for by any upstream node
             df['pit_'] = np.nan
             nd = df.iloc[-1, df.columns.get_loc('ds_node')]
-            df.iloc[-1, df.columns.get_loc('pit_')] = self.node_info.loc[nd, 'inlet_level']
+            df.iloc[-1, df.columns.get_loc('pit_')] = self._node_info.loc[nd, 'inlet_level']
         else:
             df = dfconn.copy()
             pits = []
             for nd in df['us_node']:
-                if nd in self.channel_info.index and self.channel_info.loc[nd, 'ispit']:
-                    pits.append(self.channel_info.loc[nd, 'lbus_obvert'])
+                if nd in self._channel_info.index and self._channel_info.loc[nd, 'ispit']:
+                    pits.append(self._channel_info.loc[nd, 'lbus_obvert'])
                 else:
                     pits.append(np.nan)
             df['pit'] = pits
 
             df['pit_'] = np.nan
             nd = dfconn.iloc[-1, dfconn.columns.get_loc('ds_node')]
-            if nd in self.channel_info.index and self.channel_info.loc[nd, 'ispit']:
-                df.iloc[-1, dfconn.columns.get_loc('pit_')] = self.channel_info.loc[nd, 'lbus_obvert']
+            if nd in self._channel_info.index and self._channel_info.loc[nd, 'ispit']:
+                df.iloc[-1, dfconn.columns.get_loc('pit_')] = self._channel_info.loc[nd, 'lbus_obvert']
 
         df1 = self._lp.melt_2_columns(df, ['pit', 'pit_'], 'pits')
         return df1['pits'].to_numpy()
