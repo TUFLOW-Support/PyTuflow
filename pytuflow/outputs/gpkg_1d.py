@@ -10,7 +10,6 @@ from pytuflow.outputs.gpkg_base import GPKGBase
 from pytuflow.outputs.helpers import TPCReader
 from pytuflow.outputs.info import INFO
 from pytuflow.pytuflow_types import PathLike, TimeLike, TuflowPath
-from pytuflow.util.time_util import parse_time_units_string
 
 if TYPE_CHECKING:
     from sqlite3 import Cursor
@@ -503,7 +502,7 @@ class GPKG1D(INFO, GPKGBase):
                 'SELECT DISTINCT Table_name, Count, Series_name, Series_units, Reference_time FROM Timeseries_info;')
             for table_name, count, series_name, units, rt in cur.fetchall():
                 if reference_time is None:
-                    reference_time, _ = parse_time_units_string(rt, r'\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}',
+                    reference_time, _ = self._parse_time_units_string(rt, r'\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}',
                                                                 '%Y-%m-%d %H:%M:%S')
                 if re.findall('_P$', table_name):
                     self.node_count = count

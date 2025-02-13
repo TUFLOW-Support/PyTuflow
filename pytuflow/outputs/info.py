@@ -11,7 +11,6 @@ from pytuflow.outputs.itime_series_1d import ITimeSeries1D
 from pytuflow.outputs.time_series import TimeSeries
 from pytuflow.pytuflow_types import PathLike, TimeLike, AppendDict, FileTypeError
 from pytuflow.util.logging import get_logger
-from pytuflow.util.time_util import closest_time_index
 
 logger = get_logger()
 
@@ -508,7 +507,7 @@ class INFO(TimeSeries, ITimeSeries1D):
 
         # get the time index
         times = self.times(fmt='absolute') if isinstance(time, datetime) else self.times()
-        timeidx = closest_time_index(times, time)
+        timeidx = self._closest_time_index(times, time)
 
         # get connectivity
         dfconn = self._connectivity(locations)

@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Union
 
+import numpy as np
 import pandas as pd
 
 from pytuflow.pytuflow_types import PathLike, TimeLike, PlotExtractionLocation
@@ -12,6 +13,8 @@ from pytuflow.pytuflow_types import PathLike, TimeLike, PlotExtractionLocation
 
 with (Path(__file__).parent / 'data' / 'data_type_name_alternatives.json').open() as f:
     DATA_TYPE_NAME_ALTERNATIVES = json.load(f)
+
+DEFAULT_REFERENCE_TIME = datetime(1990, 1, 1)
 
 
 class Output(ABC):
@@ -212,3 +215,73 @@ class Output(ABC):
                     return key
 
         return name.lower()
+
+    @staticmethod
+    def _parse_time_units_string(string: str, regex: str, format: str) -> tuple[datetime, str]:
+        """Parses a string containing the time units and reference time
+        e.g. hours since 1990-01-01 00:00:00
+        Returns the reference time as a datetime object, the time units as a single character.
+
+        Parameters
+        ----------
+        string : str
+           String containing the time units and reference time.
+        regex : str
+            Regular expression to match the format of the reference time.
+        format : str
+            Format of the reference time.
+
+        Returns
+        -------
+        tuple[datetime, str]
+            Reference time and time units.
+        """
+        if 'hour' in string:
+            u = 'h'
+        elif 'minute' in string:
+            u = 'm'
+        elif 'second' in string:
+            u = 's'
+        elif 'since' in string:
+            u = string.split(' ')[0]
+        else:
+            u = string
+        time = re.findall(regex, string)
+        if time:
+            return datetime.strptime(time[0], format), u
+        return DEFAULT_REFERENCE_TIME, u
+
+    @staticmethod
+    def _closest_time_index(
+            timesteps: list[TimeLike],
+            time: TimeLike,
+            method: str = 'previous',
+            tol: float = 0.001
+    ) -> int:
+        """Returns the index of the closest time in the provided timesteps.
+        It will try and find any matching time within the given tolerance, otherwise will return the index of the
+        previous or next time depending on the method.
+        """
+        if isinstance(time, datetime):
+            a = np.array([abs((x - time).total_seconds()) for x in timesteps])
+        else:
+            a = np.array([abs(x - time) for x in timesteps])
+
+        isclose = np.isclose(a, 0, rtol=0., atol=tol)
+        if isclose.any():
+            return int(np.argwhere(isclose).flatten()[0])
+
+        if method == 'previous':
+            prev = a < time
+            if prev.any():
+                return int(np.argwhere(prev).flatten()[-1])
+            else:
+                return 0
+        elif method == 'next':
+            next = a > time
+            if next.any():
+                return int(np.argwhere(next).flatten()[0])
+            else:
+                return len(timesteps) - 1
+
+        return 0
