@@ -1,5 +1,5 @@
 import re
-from datetime import timedelta, datetime
+from datetime import datetime
 from pathlib import Path
 from typing import Union
 
@@ -7,7 +7,6 @@ import numpy as np
 import pandas as pd
 
 from pytuflow.outputs.helpers.get_standard_data_type_name import get_standard_data_type_name
-from pytuflow.outputs.helpers.time_series_extractor import time_series_extractor, maximum_extractor
 from pytuflow.outputs.helpers.tpc_reader import TPCReader
 from pytuflow.outputs.itime_series_1d import ITimeSeries1D
 from pytuflow.outputs.time_series import TimeSeries
@@ -341,8 +340,8 @@ class INFO(TimeSeries, ITimeSeries1D):
         if ctx.empty:
             return pd.DataFrame()
 
-        df = maximum_extractor(ctx[ctx['domain'] == '1d'].data_type.unique(), data_types,
-                               self._maximum_data, ctx, time_fmt, self.reference_time)
+        df = self._maximum_extractor(ctx[ctx['domain'] == '1d'].data_type.unique(), data_types,
+                                     self._maximum_data, ctx, time_fmt, self.reference_time)
         df.columns = self._prepend_1d_type_to_column_name(df.columns)
 
         return df
@@ -422,8 +421,8 @@ class INFO(TimeSeries, ITimeSeries1D):
             return pd.DataFrame()
 
         share_idx = ctx[['start', 'end', 'dt']].drop_duplicates().shape[0] < 2
-        df = time_series_extractor(ctx[ctx['domain'] == '1d'].data_type.unique(), data_types,
-                                   self._time_series_data, ctx, time_fmt, share_idx, self.reference_time)
+        df = self._time_series_extractor(ctx[ctx['domain'] == '1d'].data_type.unique(), data_types,
+                                         self._time_series_data, ctx, time_fmt, share_idx, self.reference_time)
         df.columns = self._prepend_1d_type_to_column_name(df.columns)
 
         return df

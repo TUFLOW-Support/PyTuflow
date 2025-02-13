@@ -12,7 +12,6 @@ except ImportError:
     has_netcdf4 = False
 
 from .helpers.get_standard_data_type_name import get_standard_data_type_name
-from .helpers.time_series_extractor import time_series_extractor, maximum_extractor
 from .time_series import TimeSeries
 from ..pytuflow_types import PathLike, FileTypeError, TuflowPath, PlotExtractionLocation, TimeLike
 from .helpers.fv_bc_tide_provider import FVBCTideProvider
@@ -302,8 +301,8 @@ class FVBCTide(TimeSeries):
         if ctx.empty:
             return pd.DataFrame()
 
-        df = maximum_extractor(ctx[ctx['geometry'] == 'point'].data_type.unique(), data_types,
-                               self._maximum_data, ctx, time_fmt, self.reference_time)
+        df = self._maximum_extractor(ctx[ctx['geometry'] == 'point'].data_type.unique(), data_types,
+                                     self._maximum_data, ctx, time_fmt, self.reference_time)
         df.columns = [f'point/{x}' for x in df.columns]
 
         return df
@@ -360,8 +359,8 @@ class FVBCTide(TimeSeries):
             return pd.DataFrame()
 
         share_idx = ctx[['start', 'end', 'dt']].drop_duplicates().shape[0] < 2
-        df = time_series_extractor(ctx[ctx['geometry'] == 'point'].data_type.unique(), data_types,
-                                   self._time_series_data, ctx, time_fmt, share_idx, self.reference_time)
+        df = self._time_series_extractor(ctx[ctx['geometry'] == 'point'].data_type.unique(), data_types,
+                                         self._time_series_data, ctx, time_fmt, share_idx, self.reference_time)
         df.columns = [f'point/{x}' for x in df.columns]
 
         return df

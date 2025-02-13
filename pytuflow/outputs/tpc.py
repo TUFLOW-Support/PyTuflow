@@ -15,7 +15,6 @@ from pytuflow.outputs.gpkg_2d import GPKG2D
 from pytuflow.outputs.gpkg_rl import GPKGRL
 from pytuflow.outputs.helpers.get_standard_data_type_name import get_standard_data_type_name
 from pytuflow.outputs.helpers.nc_ts import NCTS
-from pytuflow.outputs.helpers.time_series_extractor import maximum_extractor, time_series_extractor
 from pytuflow.outputs.info import INFO
 from pytuflow.outputs.itime_series_2d import ITimeSeries2D
 from pytuflow.outputs.helpers.tpc_reader import TPCReader
@@ -427,8 +426,8 @@ class TPC(INFO, ITimeSeries2D):
         df = super().maximum(locations, data_types, time_fmt)
 
         # 2D
-        df1 = maximum_extractor(ctx[ctx['domain'] == '2d'].data_type.unique(), data_types,
-                                self._maximum_data_2d, ctx, time_fmt, self.reference_time)
+        df1 = self._maximum_extractor(ctx[ctx['domain'] == '2d'].data_type.unique(), data_types,
+                                     self._maximum_data_2d, ctx, time_fmt, self.reference_time)
         df1.columns = [f'po/{x}' for x in df1.columns]
         if df.empty and not df1.empty:
             df = df1
@@ -436,8 +435,8 @@ class TPC(INFO, ITimeSeries2D):
             df = pd.concat([df, df1], axis=0)
 
         # rl
-        df1 = maximum_extractor(ctx[ctx['domain'] == 'rl'].data_type.unique(), data_types,
-                                self._maximum_data_rl, ctx, time_fmt, self.reference_time)
+        df1 = self._maximum_extractor(ctx[ctx['domain'] == 'rl'].data_type.unique(), data_types,
+                                      self._maximum_data_rl, ctx, time_fmt, self.reference_time)
         df1.columns = [f'rl/{x}' for x in df1.columns]
         if df.empty and not df1.empty:
             df = df1
@@ -541,13 +540,13 @@ class TPC(INFO, ITimeSeries2D):
         share_idx = ctx[['start', 'end', 'dt']].drop_duplicates().shape[0] < 2
 
         # 1D
-        df = time_series_extractor(ctx[ctx['domain'] == '1d'].data_type.unique(), data_types,
-                                   self._time_series_data, ctx, time_fmt, share_idx, self.reference_time)
+        df = self._time_series_extractor(ctx[ctx['domain'] == '1d'].data_type.unique(), data_types,
+                                         self._time_series_data, ctx, time_fmt, share_idx, self.reference_time)
         df.columns = self._prepend_1d_type_to_column_name(df.columns)
 
         # 2D
-        df1 = time_series_extractor(ctx[ctx['domain'] == '2d'].data_type.unique(), data_types,
-                                    self._time_series_data_2d, ctx, time_fmt, share_idx, self.reference_time)
+        df1 = self._time_series_extractor(ctx[ctx['domain'] == '2d'].data_type.unique(), data_types,
+                                          self._time_series_data_2d, ctx, time_fmt, share_idx, self.reference_time)
         df1.columns = ['{0}/po/{1}/{2}'.format(*x.split('/')) if x.split('/')[0] == 'time' else f'po/{x}' for x in df1.columns]
         if df.empty and not df1.empty:
             df = df1
@@ -557,8 +556,8 @@ class TPC(INFO, ITimeSeries2D):
             df = pd.concat([df, df1], axis=1)
 
         # rl
-        df1 = time_series_extractor(ctx[ctx['domain'] == 'rl'].data_type.unique(), data_types,
-                                    self._time_series_data_rl, ctx, time_fmt, share_idx, self.reference_time)
+        df1 = self._time_series_extractor(ctx[ctx['domain'] == 'rl'].data_type.unique(), data_types,
+                                          self._time_series_data_rl, ctx, time_fmt, share_idx, self.reference_time)
         df1.columns = ['{0}/rl/{1}/{2}'.format(*x.split('/')) if x.split('/')[0] == 'time' else f'rl/{x}' for x in df1.columns]
         if df.empty and not df1.empty:
             df = df1

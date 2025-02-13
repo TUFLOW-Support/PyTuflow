@@ -9,8 +9,6 @@ from packaging.version import Version
 
 from pytuflow.outputs.gpkg_base import GPKGBase
 from pytuflow.outputs.helpers.get_standard_data_type_name import get_standard_data_type_name
-from pytuflow.outputs.helpers.time_series_extractor import gpkg_time_series_extractor, time_series_extractor, \
-    maximum_extractor
 from pytuflow.outputs.time_series import TimeSeries
 from pytuflow.outputs.itime_series_2d import ITimeSeries2D
 from pytuflow.pytuflow_types import PathLike, AppendDict, FileTypeError, TimeLike, TuflowPath
@@ -346,8 +344,8 @@ class GPKG2D(TimeSeries, ITimeSeries2D, GPKGBase):
         if ctx.empty:
             return pd.DataFrame()
 
-        df = maximum_extractor(ctx[ctx['domain'] == '2d'].data_type.unique(), data_types,
-                               self._maximum_data_2d, ctx, time_fmt, self.reference_time)
+        df = self._maximum_extractor(ctx[ctx['domain'] == '2d'].data_type.unique(), data_types,
+                                     self._maximum_data_2d, ctx, time_fmt, self.reference_time)
         df.columns = [f'po/{x}' for x in df.columns]
         return df
 
@@ -406,8 +404,8 @@ class GPKG2D(TimeSeries, ITimeSeries2D, GPKGBase):
             return pd.DataFrame()
 
         share_idx = ctx[['start', 'end', 'dt']].drop_duplicates().shape[0] < 2
-        df = time_series_extractor(ctx[ctx['domain'] == '2d'].data_type.unique(), data_types,
-                                   self._time_series_data_2d, ctx, time_fmt, share_idx, self.reference_time)
+        df = self._time_series_extractor(ctx[ctx['domain'] == '2d'].data_type.unique(), data_types,
+                                         self._time_series_data_2d, ctx, time_fmt, share_idx, self.reference_time)
         df.columns = ['{0}/po/{1}/{2}'.format(*x.split('/')) if x.split('/')[0] == 'time' else f'po/{x}' for x in
                       df.columns]
         return df
@@ -491,7 +489,7 @@ class GPKG2D(TimeSeries, ITimeSeries2D, GPKGBase):
             data_types = [row[0] for row in cur.fetchall()]
             for dtype in data_types:
                 dtype1 = get_standard_data_type_name(dtype)
-                storage[dtype1] = gpkg_time_series_extractor(cur, dtype, self._gis_layer_p_name)
+                storage[dtype1] = self._gpkg_time_series_extractor(cur, dtype, self._gis_layer_p_name)
                 self._geoms[dtype1] = 'point'
 
         if self._gis_layer_l_name:
@@ -499,7 +497,7 @@ class GPKG2D(TimeSeries, ITimeSeries2D, GPKGBase):
             data_types = [row[0] for row in cur.fetchall()]
             for dtype in data_types:
                 dtype1 = get_standard_data_type_name(dtype)
-                storage[dtype1] = gpkg_time_series_extractor(cur, dtype, self._gis_layer_l_name)
+                storage[dtype1] = self._gpkg_time_series_extractor(cur, dtype, self._gis_layer_l_name)
                 self._geoms[dtype1] = 'line'
 
         if self._gis_layer_r_name:
@@ -507,7 +505,7 @@ class GPKG2D(TimeSeries, ITimeSeries2D, GPKGBase):
             data_types = [row[0] for row in cur.fetchall()]
             for dtype in data_types:
                 dtype1 = 'max water level' if dtype.lower() == 'max water level' else get_standard_data_type_name(dtype)
-                storage[dtype1] = gpkg_time_series_extractor(cur, dtype, self._gis_layer_r_name)
+                storage[dtype1] = self._gpkg_time_series_extractor(cur, dtype, self._gis_layer_r_name)
                 self._geoms[dtype1] = 'poly'
 
     def _load_maximums(self, time_series_storage: AppendDict, storage: AppendDict) -> None:

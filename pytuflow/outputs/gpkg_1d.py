@@ -10,7 +10,6 @@ from pytuflow.outputs.gpkg_base import GPKGBase
 from pytuflow.outputs.helpers import TPCReader
 from pytuflow.outputs.info import INFO
 from pytuflow.outputs.helpers.get_standard_data_type_name import get_standard_data_type_name
-from pytuflow.outputs.helpers.time_series_extractor import gpkg_time_series_extractor
 from pytuflow.pytuflow_types import PathLike, TimeLike, TuflowPath
 from pytuflow.util.time_util import parse_time_units_string
 
@@ -545,14 +544,14 @@ class GPKG1D(INFO, GPKGBase):
         for dtype in data_types:
             dtype1 = 'node flow regime' if dtype == 'Flow Regime' else get_standard_data_type_name(dtype)
             self._nd_res_types.append(dtype1)
-            self._time_series_data[dtype1] = gpkg_time_series_extractor(cur, dtype, self._gis_layer_p_name)
+            self._time_series_data[dtype1] = self._gpkg_time_series_extractor(cur, dtype, self._gis_layer_p_name)
 
         # channels
         cur.execute(f'SELECT Column_name FROM Timeseries_info WHERE Table_name = "{self._gis_layer_l_name}";')
         data_types = [x[0] for x in cur.fetchall()]
         for dtype in data_types:
             dtype1 = 'channel flow regime' if dtype == 'Flow Regime' else get_standard_data_type_name(dtype)
-            self._time_series_data[dtype1] = gpkg_time_series_extractor(cur, dtype, self._gis_layer_l_name)
+            self._time_series_data[dtype1] = self._gpkg_time_series_extractor(cur, dtype, self._gis_layer_l_name)
 
     def _load_channel_info(self, cur: 'Cursor'):
         COLUMNS = ['id', 'flags', 'length', 'us_node', 'ds_node', 'us_invert', 'ds_invert',

@@ -7,10 +7,7 @@ import pandas as pd
 from packaging.version import Version
 
 from .gpkg_2d import GPKG2D
-from pytuflow.pytuflow_types import PathLike, AppendDict, TuflowPath, TimeLike
-from pytuflow.outputs.helpers.time_series_extractor import time_series_extractor, \
-    maximum_extractor
-from pytuflow.util.time_util import parse_time_units_string
+from pytuflow.pytuflow_types import PathLike, AppendDict, TimeLike
 
 if typing.TYPE_CHECKING:
     from sqlite3 import Cursor
@@ -285,8 +282,8 @@ class GPKGRL(GPKG2D):
         if ctx.empty:
             return pd.DataFrame()
 
-        df = maximum_extractor(ctx[ctx['domain'] == 'rl'].data_type.unique(), data_types,
-                               self._maximum_data_rl, ctx, time_fmt, self.reference_time)
+        df = self._maximum_extractor(ctx[ctx['domain'] == 'rl'].data_type.unique(), data_types,
+                                     self._maximum_data_rl, ctx, time_fmt, self.reference_time)
         df.columns = [f'rl/{x}' for x in df.columns]
         return df
 
@@ -345,8 +342,8 @@ class GPKGRL(GPKG2D):
             return pd.DataFrame()
 
         share_idx = ctx[['start', 'end', 'dt']].drop_duplicates().shape[0] < 2
-        df = time_series_extractor(ctx[ctx['domain'] == 'rl'].data_type.unique(), data_types,
-                                   self._time_series_data_rl, ctx, time_fmt, share_idx, self.reference_time)
+        df = self._time_series_extractor(ctx[ctx['domain'] == 'rl'].data_type.unique(), data_types,
+                                         self._time_series_data_rl, ctx, time_fmt, share_idx, self.reference_time)
         df.columns = ['{0}/rl/{1}/{2}'.format(*x.split('/')) if x.split('/')[0] == 'time' else f'rl/{x}' for x in
                       df.columns]
         return df
