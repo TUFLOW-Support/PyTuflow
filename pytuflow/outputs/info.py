@@ -24,6 +24,11 @@ class INFO(TimeSeries, ITimeSeries1D):
     that are output by the 2013 TUFLOW release. The format is similar to the TPC format, however
     does not include :code:`2d_po` or Reporting Location (:code:`0d_rl`) results.
 
+    The ``INFO`` class will only load basic properties on initialisation. These are typically properties
+    that are easy to obtain from the file without having to load any of the time-series results. Once a method
+    requiring more detailed information is called, the full results will be loaded. This makes the ``INFO`` class
+    very cheap to initialise.
+
     Parameters
     ----------
     fpath : PathLike
@@ -99,7 +104,8 @@ class INFO(TimeSeries, ITimeSeries1D):
         self._maximum_data = AppendDict()
         self._nd_res_types = []
 
-        self._load()
+        self._loaded = False  # whether the results have been fully loaded
+        self._initial_load()
 
     @staticmethod
     def _looks_like_this(fpath: PathLike) -> bool:
@@ -161,6 +167,7 @@ class INFO(TimeSeries, ITimeSeries1D):
         >>> res.times(fmt='absolute')
         [Timestamp('2021-01-01 00:00:00'), Timestamp('2021-01-01 00:01:00'), ..., Timestamp('2021-01-01 03:00:00')]
         """
+        self._load()
         return super().times(filter_by, fmt)
 
     def ids(self, filter_by: str = None) -> list[str]:
@@ -205,6 +212,7 @@ class INFO(TimeSeries, ITimeSeries1D):
         >>> res.ids('h')
         ['FC01.1_R.1', 'FC01.1_R.2', 'FC01.2_R.1', 'FC01.2_R.2', 'FC04.1_C.1', 'FC04.1_C.2']
         """
+        self._load()
         if filter_by and 'section' in filter_by:
             filter_by = 'node'
         elif filter_by and 'timeseries' in filter_by:
@@ -258,6 +266,7 @@ class INFO(TimeSeries, ITimeSeries1D):
         >>> res.data_types('section')
         ['bed level', 'pipes', 'pits', 'water level', 'max water level']
         """
+        self._load()
         if filter_by and 'section' in filter_by:
             dtypes = super().data_types('node')
             dtypes += [f'max {x}' for x in dtypes if x in self._maximum_data]
@@ -325,6 +334,7 @@ class INFO(TimeSeries, ITimeSeries1D):
         FC04.1_C             9.530           1.316667
         FC_weir1            67.995           0.966667
         """
+        self._load()
         locations, data_types = self._loc_data_types_to_list(locations, data_types)
         filter_by = '/'.join(locations + data_types)
         ctx = self._filter(filter_by)
@@ -404,6 +414,7 @@ class INFO(TimeSeries, ITimeSeries1D):
         2.983334             8.670  ...                    0.0
         3.000000             8.391  ...                    0.0
         """
+        self._load()
         locations, data_types = self._loc_data_types_to_list(locations, data_types)
         filter_by = '/'.join(locations + data_types)
         ctx = self._filter(filter_by)
@@ -493,6 +504,7 @@ class INFO(TimeSeries, ITimeSeries1D):
         3          0     ds4  ds3.2   190.0  34.292  37.1793    37.4158
         7          0     ds4  ds4.2   301.6  33.189  35.6358    35.9533
         """
+        self._load()
         # get locations and data types
         locations, data_types = self._figure_out_loc_and_data_types_lp(locations, data_types, 'channel')
 
@@ -542,17 +554,22 @@ class INFO(TimeSeries, ITimeSeries1D):
         """Not supported for ``INFO`` results. Raises a :code:`NotImplementedError`."""
         raise NotImplementedError(f'{__class__.__name__} does not support vertical profile plotting.')
 
-    def _load(self) -> None:
-        """Load the INFO file into memory. Called by the __init__ method."""
+    def _initial_load(self) -> None:
+        """Does an initial, light-weight, load of some of the basic properties."""
         self.name = self._tpc_reader.get_property('Simulation ID')
         self.units = 'si' if self._tpc_reader.get_property('Units') == 'METRIC' else 'us customary'
         self.node_count = self._tpc_reader.get_property(r'Number (?:1D\s)?Nodes', 0, regex=True)
         self.channel_count = self._tpc_reader.get_property(r'Number (?:1D\s)?Channels', 0, regex=True)
+
+    def _load(self):
+        if self._loaded:
+            return
         self._load_node_info()
         self._load_chan_info()
         self._load_time_series()
         self._load_maximums()
         self._load_1d_info()
+        self._loaded = True
 
     def _filter(self, filter_by: str) -> pd.DataFrame:
         # docstring inherited

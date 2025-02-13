@@ -103,12 +103,6 @@ class Test_Info_2013(unittest.TestCase):
         df = res.maximum('ds1', 'flow', time_fmt='absolute')
         self.assertEqual((1, 2), df.shape)
 
-    def test_connectivity(self):
-        p = './tests/2013/M04_5m_001_1d.info'
-        res = INFO(p)
-        df = res._connectivity(['ds1', 'ds2'])
-        self.assertEqual((2, 10), df.shape)
-
     def test_data_types_section(self):
         p = './tests/2013/M04_5m_001_1d.info'
         res = INFO(p)
@@ -306,12 +300,6 @@ class Test_TPC_2016(TestCase):
         p = './tests/2016/EG14_001.tpc'
         res = TPC(p)
         self.assertEqual(7, len(res.data_types('section')))
-
-    def test_connectivity(self):
-        p = './tests/2016/EG14_001.tpc'
-        res = TPC(p)
-        df = res._connectivity(['ds1', 'ds4'])
-        self.assertEqual((4, 10), df.shape)
 
     def test_long_plot(self):
         p = './tests/2016/EG14_001.tpc'

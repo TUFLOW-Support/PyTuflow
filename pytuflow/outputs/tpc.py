@@ -21,6 +21,7 @@ from pytuflow.outputs.itime_series_2d import ITimeSeries2D
 from pytuflow.outputs.helpers.tpc_reader import TPCReader
 from pytuflow.pytuflow_types import PathLike, AppendDict, TimeLike
 from pytuflow.util.logging import get_logger
+from pytuflow.outputs.helpers.nc_dataset_wrapper import DatasetWrapper
 
 
 logger = get_logger()
@@ -38,6 +39,11 @@ class TPC(INFO, ITimeSeries2D):
       supports, however it is something that can occur in TUFLOW FV.
     * Supports duplicate IDs across domains e.g. a 1D node called :code:`test`, a PO point called :code:`test`,
       and an RL point called :code:`test` - these can all have the same ID with a :code:`Water Level` result attached.
+
+    The ``TPC`` class will only load basic properties on initialisation. These are typically properties
+    that are easy to obtain from the file without having to load any of the time-series results. Once a method
+    requiring more detailed information is called, the full results will be loaded. This makes the ``TPC`` class
+    very cheap to initialise.
 
     Parameters
     ----------
@@ -102,15 +108,42 @@ class TPC(INFO, ITimeSeries2D):
         self._gpkg2d = None
         self._gpkgrl = None
 
+        # PO counts are only known after loading the time-series
+        self._po_point_count = 0
+        self._po_line_count = 0
+        self._po_poly_count = 0
+
         #: str: format of the results - options are 'CSV' or 'NC'. If both are specified, the NC will be preferred.
         self.format = 'CSV'
 
         super(TPC, self).__init__(fpath)
 
-    def __del__(self):
-        if self._ncid:
-            self._ncid.close()
-            self._ncid = None
+    @property
+    def po_point_count(self) -> int:
+        self._load()
+        return self._po_point_count
+
+    @po_point_count.setter
+    def po_point_count(self, count: int):
+        self._po_point_count = count
+
+    @property
+    def po_line_count(self) -> int:
+        self._load()
+        return self._po_line_count
+
+    @po_line_count.setter
+    def po_line_count(self, count: int):
+        self._po_line_count = count
+
+    @property
+    def po_poly_count(self) -> int:
+        self._load()
+        return self._po_poly_count
+
+    @po_poly_count.setter
+    def po_poly_count(self, count: int):
+        self._po_poly_count = count
 
     @staticmethod
     def _looks_like_this(fpath: PathLike) -> bool:
@@ -383,6 +416,7 @@ class TPC(INFO, ITimeSeries2D):
         FC04.1_C             9.530           1.316667
         FC_weir1            67.995           0.966667
         """
+        self._load()
         locations, data_types = self._loc_data_types_to_list(locations, data_types)
         filter_by = '/'.join(locations + data_types)
         ctx = self._filter(filter_by)
@@ -497,6 +531,7 @@ class TPC(INFO, ITimeSeries2D):
         2.983334             8.670  ...                    0.0
         3.000000             8.391  ...                    0.0
         """
+        self._load()
         locations, data_types = self._loc_data_types_to_list(locations, data_types)
         filter_by = '/'.join(locations + data_types)
         ctx = self._filter(filter_by)
@@ -544,17 +579,11 @@ class TPC(INFO, ITimeSeries2D):
         """Not supported for ``TPC`` results. Raises a :code:`NotImplementedError`."""
         raise NotImplementedError(f'{__class__.__name__} does not support vertical profile plotting.')
 
-    def _load(self) -> None:
+    def _initial_load(self) -> None:
         """Load the TPC file into memory. Called by the __init__ method."""
         self.format = self._tpc_reader.get_property('Time Series Output Format', 'CSV')
         if 'CSV' in self.format:
             self.format = 'CSV'  # it is possible to have both CSV and NC and CSV is a more complete format
-
-        if self.format == 'NC':
-            if not has_netcdf4:
-                raise ImportError('NetCDF4 is required to read NetCDF files. Please install it using `pip install netCDF4`.')
-            self._nc_file = self._expand_property_path('NetCDF Time Series')
-            self._ncid = Dataset(self._nc_file, 'r')
 
         self.reference_time = self._tpc_reader.get_property('Reference Time', self.reference_time)
 
@@ -563,39 +592,49 @@ class TPC(INFO, ITimeSeries2D):
         self.rl_line_count = self._tpc_reader.get_property('Number Reporting Location Lines', 0)
         self.rl_poly_count = self._tpc_reader.get_property('Number Reporting Location Regions', 0)
 
-        # 1d
-        super()._load()
-
-        # po
-        self._po_objs = self._load_po_info()
-        if not self._po_objs.empty:
-            self.po_point_count = self._po_objs[self._po_objs['geometry'] == 'point']['id'].unique().size
-            self.po_line_count = self._po_objs[self._po_objs['geometry'] == 'line']['id'].unique().size
-            self.po_poly_count = self._po_objs[self._po_objs['geometry'] == 'polygon']['id'].unique().size
-
-        # rl
-        self._rl_objs = self._load_rl_info()
-
         # gis layers
-        self.gis_layer_p_fpath = self._expand_property_path('GIS Plot Layer Points')
-        self.gis_layer_l_fpath = self._expand_property_path('GIS Plot Layer Lines')
-        self.gis_layer_r_fpath = self._expand_property_path('GIS Plot Layer Regions')
+        self._gis_layer_p_fpath = self._expand_property_path('GIS Plot Layer Points')
+        self._gis_layer_l_fpath = self._expand_property_path('GIS Plot Layer Lines')
+        self._gis_layer_r_fpath = self._expand_property_path('GIS Plot Layer Regions')
 
-        # close open files
-        if self._ncid:
-            self._ncid.close()
-            self._ncid = None
+        # 1d
+        super()._initial_load()
+
+    def _load(self):
+        if self._loaded:
+            return
+
+        self._nc_file = self._expand_property_path('NetCDF Time Series')  # returns None if there is no property
+        if self.format == 'NC':
+            if not has_netcdf4:
+                raise ImportError('NetCDF4 is required to read NetCDF files.')
+
+        with DatasetWrapper(self._nc_file) as self._ncid:
+            super()._load()
+
+            # po
+            self._po_objs = self._load_po_info()
+            if not self._po_objs.empty:
+                self._po_point_count = self._po_objs[self._po_objs['geometry'] == 'point']['id'].unique().size
+                self._po_line_count = self._po_objs[self._po_objs['geometry'] == 'line']['id'].unique().size
+                self._po_poly_count = self._po_objs[self._po_objs['geometry'] == 'polygon']['id'].unique().size
+
+            # rl
+            self._rl_objs = self._load_rl_info()
+
+        self._ncid = None
+        self._loaded = True
 
     def _filter(self, filter_by: str) -> pd.DataFrame:
         # docstring inherited
         # split filter into components
-        ctx = [x.strip().lower() for x in filter_by.split('/')] if filter_by else []
+        filter_by = [x.strip().lower() for x in filter_by.split('/')] if filter_by else []
 
         # 1D
-        df = super()._combinations_1d(ctx)
+        df = super()._combinations_1d(filter_by)
 
         # 2D
-        df1 = self._combinations_2d(ctx)
+        df1 = self._combinations_2d(filter_by)
 
         if df.empty:
             return df1

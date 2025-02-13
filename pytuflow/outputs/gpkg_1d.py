@@ -483,7 +483,7 @@ class GPKG1D(INFO):
         """Not supported for ``GPKG1D`` results. Raises a :code:`NotImplementedError`."""
         return super().profile(locations, data_types, time)
 
-    def _load(self):
+    def _initial_load(self):
         import sqlite3
         try:
             conn = sqlite3.connect(self.fpath)
@@ -529,6 +529,9 @@ class GPKG1D(INFO):
             raise Exception(f'Error loading GPKG1D: {e}')
         finally:
             conn.close()
+
+    def _load(self):
+        return
 
     def _init_tpc_reader(self) -> TPCReader:
         pass

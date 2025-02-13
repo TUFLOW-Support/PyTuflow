@@ -206,6 +206,7 @@ class FMTS(INFO):
         >>> res.ids('node')
         ['QTBDY__FC01', 'JUNCTION_OPEN_FC01', 'RIVER_SECTION_FC01.40',... 'JUNCTION_OPEN_ds2', 'SPILL__ds2_S']
         """
+        self._load()
         if filter_by and filter_by.lower() == 'channel':
             return self._channel_info.index.tolist()
         if filter_by and filter_by.lower() == 'node':
@@ -253,6 +254,7 @@ class FMTS(INFO):
         Examples
         --------
         """
+        self._load()
         dat_types = super().data_types(filter_by)
         if filter_by and 'section' in filter_by:
             if not self._support_section_plotting:
@@ -494,6 +496,8 @@ class FMTS(INFO):
         if not self._support_section_plotting:
             raise ResultError('A DAT or GXY file is required for section plotting')
 
+        self._load()
+
         locations = [locations] if not isinstance(locations, list) else locations
 
         # convert ids to uids
@@ -598,7 +602,10 @@ class FMTS(INFO):
     def _init_tpc_reader(self) -> TPCReader:
         pass
 
-    def _load(self) -> None:
+    def _initial_load(self):
+        if self._loaded:
+            return
+
         # initialise the storage/drivers for each result file
         ids, res_types = None, None
         for fpath in self._fpaths:
@@ -653,6 +660,11 @@ class FMTS(INFO):
 
         self.node_count = self._node_info.shape[0]
         self.channel_count = self._channel_info.shape[0]
+
+        self._loaded = True
+
+    def _load(self) -> None:
+        return
 
     def _load_nodes(self):
         """Loads FM Nodes into node_info pd.DataFrame."""
