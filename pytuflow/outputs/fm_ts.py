@@ -104,22 +104,22 @@ class FMTS(INFO):
 
     Return th maximum :code:`water level` along a section between :code:`FC01.31` and :code:`FC01.25`:
 
-    >>> res.section(['FC01.31', 'FC01.25'], 'stage', 0)
-        branch_id channel      node   offset  max water level
-    0           0      36   FC01.31    0.000        43.308998
-    7           0      36   FC01.30   30.758        43.060001
-    1           0      37   FC01.30   30.758        43.060001
-    8           0      37   FC01.29   62.745        42.870998
-    2           0      38   FC01.29   62.745        42.870998
-    9           0      38  FC01.28B  112.141        42.409000
-    3           0      39  FC01.28B  112.141        42.409000
-    10          0      39   FC01.28  146.031        42.105000
-    4           0      40   FC01.28  146.031        42.105000
-    11          0      40   FC01.27  187.033        41.692001
-    5           0      41   FC01.27  187.033        41.692001
-    12          0      41   FC01.26  200.826        41.493999
-    6           0      42   FC01.26  200.826        41.493999
-    13          0      42   FC01.25  233.658        41.021000
+    >>> res.section(['FC01.31', 'FC01.25'], 'max stage', 0)
+        branch_id channel      node   offset   max stage
+    0           0      36   FC01.31    0.000   43.308998
+    7           0      36   FC01.30   30.758   43.060001
+    1           0      37   FC01.30   30.758   43.060001
+    8           0      37   FC01.29   62.745   42.870998
+    2           0      38   FC01.29   62.745   42.870998
+    9           0      38  FC01.28B  112.141   42.409000
+    3           0      39  FC01.28B  112.141   42.409000
+    10          0      39   FC01.28  146.031   42.105000
+    4           0      40   FC01.28  146.031   42.105000
+    11          0      40   FC01.27  187.033   41.692001
+    5           0      41   FC01.27  187.033   41.692001
+    12          0      41   FC01.26  200.826   41.493999
+    6           0      42   FC01.26  200.826   41.493999
+    13          0      42   FC01.25  233.658   41.021000
     """
 
     def __init__(self, fpath: Union[PathLike, list[PathLike]], dat: PathLike = None, gxy: PathLike = None):
@@ -223,7 +223,7 @@ class FMTS(INFO):
         * :code:`2d` (or :code:`po`)
         * :code:`rl` (or :code:`0d`)
 
-        Geometry filters (note: they are not plural):
+        Geometry filters:
 
         * :code:`node`
         * :code:`channel`
@@ -237,7 +237,7 @@ class FMTS(INFO):
 
         Combine filters:
 
-        * [filter1]/[filter2] ...: (use ``/`` to delim).
+        * ``[filter1]/[filter2]/...``: (use ``/`` to delim).
 
         Parameters
         ----------
@@ -501,10 +501,10 @@ class FMTS(INFO):
         # convert ids to uids
         locs = [self._id_to_uid(x) for x in locations]
         for i, x in enumerate(reversed(locs)):
-            j = len(locations) - 1
+            j = len(locations) - 1 - i
             if x is None:
-                logger.warning(f'FMTS.section(): Could not find a valid UID for {locations[j]}')
-                locs.pop(i)
+                logger.warning(f'FMTS.section(): Could not find a valid UID for {locations[j]} - removing')
+                locs.pop(j)
         if not locs:
             raise ValueError('No valid locations provided.')
 

@@ -120,6 +120,12 @@ class Test_Info_2013(unittest.TestCase):
         df = res.section(['FC01.1_R', 'FC01.36'], ['bed level', 'water level', 'pipes'], 1)
         self.assertEqual((4, 7), df.shape)
 
+    def test_long_plot_incorrect_id(self):
+        p = './tests/2013/M04_5m_001_1d.info'
+        res = INFO(p)
+        df = res.section(['FCo1.1_R', 'FC01.36'], ['bed level', 'water level', 'pipes'], 1)
+        self.assertEqual((168, 7), df.shape)
+
 
 class Test_TPC_2016(TestCase):
 
@@ -938,6 +944,13 @@ class Test_FM_TS(unittest.TestCase):
         self.assertEqual((200, 6), df.shape)
         df = res.section('FC01.11', ['bed level', 'max water level', 'pipes'], -1)
         self.assertEqual((200, 7), df.shape)
+
+    def test_lp_incorrect_id(self):
+        p = './tests/fm/zzn/FMT_M01_001.zzn'
+        dat = './tests/fm/zzn/FMT_M01_001.dat'
+        res = FMTS(p, dat)
+        df = res.section(['fco1.31', 'fc01.25'], 'max stage', -1)
+        self.assertEqual((450, 5), df.shape)
 
 
 class Test_HydTables(unittest.TestCase):
