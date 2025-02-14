@@ -15,7 +15,7 @@ from .time_series import TimeSeries
 from ..pytuflow_types import PathLike, FileTypeError, TuflowPath, TimeLike
 from .helpers.fv_bc_tide_provider import FVBCTideProvider
 from pytuflow.util.gis import has_gdal
-from ..tmf.tmf.tuflow_model_files.dataclasses.append_dict import AppendDict
+from pytuflow._tmf.tmf.tuflow_model_files.dataclasses.append_dict import AppendDict
 from pytuflow.util.logging import get_logger
 
 

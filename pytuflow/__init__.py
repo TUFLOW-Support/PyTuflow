@@ -2,8 +2,8 @@ import os
 import sys
 import logging
 
-sys.path.append(os.path.join(os.path.dirname(__file__), 'fm_to_estry'))
-sys.path.append(os.path.join(os.path.dirname(__file__), 'tmf'))
+sys.path.append(os.path.join(os.path.dirname(__file__), '_fm_to_estry'))
+sys.path.append(os.path.join(os.path.dirname(__file__), '_tmf'))
 
 # setup logging from various modules
 tmf_logger = logging.getLogger('tmf')
@@ -27,7 +27,7 @@ else:  # add pytuflow handlers to the tmf and fm2estry loggers if they aren't th
 
 from .TUFLOW import *
 from .outputs import *
-from .tmf import *
+from ._tmf import *
 
 
 name = 'PyTuflow'

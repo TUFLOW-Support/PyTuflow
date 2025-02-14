@@ -33,8 +33,8 @@ OrderedDict([('Name', 'RL_04')])
 OrderedDict([('Name', 'RL_05')])
 """
 
-from pytuflow.tmf.tmf.convert_tuflow_model_gis_format.conv_tf_gis_format.helpers.gis import GPKG
-from pytuflow.tmf.tmf.tuflow_model_files.db.drivers.gis_attr_driver import GISAttributes
+from pytuflow._tmf.tmf.convert_tuflow_model_gis_format.conv_tf_gis_format.helpers.gis import GPKG
+from pytuflow._tmf.tmf.tuflow_model_files.db.drivers.gis_attr_driver import GISAttributes
 
 try:
     from osgeo import ogr

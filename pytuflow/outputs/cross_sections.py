@@ -5,7 +5,7 @@ from typing import Union
 import pandas as pd
 
 from .tabular_output import TabularOutput
-from pytuflow.tmf import TuflowCrossSection
+from pytuflow._tmf import TuflowCrossSection
 from pytuflow.util.gis import GISAttributes
 from ..pytuflow_types import PathLike, FileTypeError, TimeLike, TuflowPath
 from pytuflow.util.logging import get_logger

@@ -2,9 +2,9 @@ from datetime import datetime
 from pathlib import Path
 from typing import Union, Iterable, Any, Dict
 
-from pytuflow.tmf.tmf.tuflow_model_files.dataclasses.case_insensitive_dict import CaseInsDict
-from pytuflow.tmf.tmf.tuflow_model_files.dataclasses.append_dict import AppendDict
-from pytuflow.tmf.tmf.tuflow_model_files.dataclasses.file import TuflowPath
+from pytuflow._tmf.tmf.tuflow_model_files.dataclasses.case_insensitive_dict import CaseInsDict
+from pytuflow._tmf.tmf.tuflow_model_files.dataclasses.append_dict import AppendDict
+from pytuflow._tmf.tmf.tuflow_model_files.dataclasses.file import TuflowPath
 # from pytuflow.tmf.tmf.tuflow_model_files.dataclasses.types import SearchTagLike, ContextLike, VariableMap
 
 #: :class:`Path` | :code:`str`: Type hint for an object that represents a file path or directory.

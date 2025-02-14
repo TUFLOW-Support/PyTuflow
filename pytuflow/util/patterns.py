@@ -17,7 +17,7 @@ Examples
 """
 
 
-from pytuflow.tmf.tmf.tuflow_model_files.utils.patterns import (extract_names_from_pattern, identify_expanded_name,
+from pytuflow._tmf.tmf.tuflow_model_files.utils.patterns import (extract_names_from_pattern, identify_expanded_name,
                                                                 replace_exact_names, get_geom_ext, get_iter_number,
                                                                 name_without_number_part, auto_increment_name,
                                                                 increment_new_name, increment_fpath, contains_variable,

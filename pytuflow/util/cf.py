@@ -29,6 +29,6 @@ Multiple commands can be build using :func:`build_gis_commands_from_file` which 
 """
 
 
-from pytuflow.tmf.tmf.tuflow_model_files.utils.commands import (build_tuflow_command_string,
+from pytuflow._tmf.tmf.tuflow_model_files.utils.commands import (build_tuflow_command_string,
                                                                 build_gis_commands_from_file, guess_command_from_text,
                                                                 try_find_control_file)
