@@ -6,9 +6,9 @@ from packaging.version import Version
 import numpy as np
 import pandas as pd
 
-from pytuflow.outputs.gpkg_base import GPKGBase
-from pytuflow.outputs.helpers import TPCReader
-from pytuflow.outputs.info import INFO
+from pytuflow._outputs.gpkg_base import GPKGBase
+from pytuflow._outputs.helpers import TPCReader
+from pytuflow._outputs.info import INFO
 from pytuflow.pytuflow_types import PathLike, TimeLike, TuflowPath
 
 if TYPE_CHECKING:

@@ -6,9 +6,9 @@ from typing import Union
 import numpy as np
 import pandas as pd
 
-from pytuflow.outputs.helpers.tpc_reader import TPCReader
-from pytuflow.outputs.itime_series_1d import ITimeSeries1D
-from pytuflow.outputs.time_series import TimeSeries
+from pytuflow._outputs.helpers.tpc_reader import TPCReader
+from pytuflow._outputs.itime_series_1d import ITimeSeries1D
+from pytuflow._outputs.time_series import TimeSeries
 from pytuflow.pytuflow_types import PathLike, TimeLike, AppendDict, FileTypeError
 from pytuflow.util.logging import get_logger
 

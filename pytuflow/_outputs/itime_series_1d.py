@@ -4,7 +4,7 @@ from typing import Union
 import pandas as pd
 
 from pytuflow.pytuflow_types import PathLike
-from pytuflow.outputs.helpers.lp_1d import LP1D
+from pytuflow._outputs.helpers.lp_1d import LP1D
 
 
 class ITimeSeries1D(ABC):

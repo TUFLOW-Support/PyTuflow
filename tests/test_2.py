@@ -3,17 +3,17 @@ import unittest
 from unittest import TestCase
 
 from pytuflow.pytuflow_types import FileTypeError
-from pytuflow.outputs.bc_tables_check import BCTablesCheck
-from pytuflow.fm import GXY
-from pytuflow.outputs.hyd_tables_check import HydTablesCheck
-from pytuflow.outputs.info import INFO
-from pytuflow.outputs.tpc import TPC
-from pytuflow.outputs.gpkg_1d import GPKG1D
-from pytuflow.outputs.gpkg_2d import GPKG2D
-from pytuflow.outputs.gpkg_rl import GPKGRL
-from pytuflow.outputs.fm_ts import FMTS
-from pytuflow.outputs.fv_bc_tide import FVBCTide
-from pytuflow.outputs.cross_sections import CrossSections
+from pytuflow._outputs.bc_tables_check import BCTablesCheck
+from pytuflow._fm import GXY
+from pytuflow._outputs.hyd_tables_check import HydTablesCheck
+from pytuflow._outputs.info import INFO
+from pytuflow._outputs.tpc import TPC
+from pytuflow._outputs.gpkg_1d import GPKG1D
+from pytuflow._outputs.gpkg_2d import GPKG2D
+from pytuflow._outputs.gpkg_rl import GPKGRL
+from pytuflow._outputs.fm_ts import FMTS
+from pytuflow._outputs.fv_bc_tide import FVBCTide
+from pytuflow._outputs.cross_sections import CrossSections
 
 
 class Test_Info_2013(unittest.TestCase):
@@ -823,20 +823,20 @@ class Test_FM_TS(unittest.TestCase):
         self.assertEqual((122, 2), gxy.link_df.shape)
 
     def test_load(self):
-        from pytuflow.fm import DAT
+        from pytuflow._fm import DAT
         p = './tests/fm/zzn/FMT_M01_001.dat'
         dat = DAT(p)
         self.assertEqual(115, len(dat.units))
         self.assertEqual(2, len(dat.unit('JUNCTION_OPEN_FC02.01d').ups_units))
 
     def test_load_2(self):
-        from pytuflow.fm import DAT
+        from pytuflow._fm import DAT
         p = './tests/fm/gui_csv/LBE_TBP3_10PC_350.dat'
         dat = DAT(p)
         self.assertEqual(242, len(dat.units))
 
     def test_load_3(self):
-        from pytuflow.fm import DAT
+        from pytuflow._fm import DAT
         p = './tests/fm/River_Sections_w_Junctions.dat'
         dat = DAT(p)
         self.assertEqual(1, len(dat.unit('RIVER_SECTION_US_2').dns_units))

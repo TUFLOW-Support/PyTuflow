@@ -10,16 +10,16 @@ try:
 except ImportError:
     has_netcdf4 = False
 
-from pytuflow.outputs.gpkg_1d import GPKG1D
-from pytuflow.outputs.gpkg_2d import GPKG2D
-from pytuflow.outputs.gpkg_rl import GPKGRL
-from pytuflow.outputs.helpers.nc_ts import NCTS
-from pytuflow.outputs.info import INFO
-from pytuflow.outputs.itime_series_2d import ITimeSeries2D
-from pytuflow.outputs.helpers.tpc_reader import TPCReader
+from pytuflow._outputs.gpkg_1d import GPKG1D
+from pytuflow._outputs.gpkg_2d import GPKG2D
+from pytuflow._outputs.gpkg_rl import GPKGRL
+from pytuflow._outputs.helpers.nc_ts import NCTS
+from pytuflow._outputs.info import INFO
+from pytuflow._outputs.itime_series_2d import ITimeSeries2D
+from pytuflow._outputs.helpers.tpc_reader import TPCReader
 from pytuflow.pytuflow_types import PathLike, AppendDict, TimeLike
 from pytuflow.util.logging import get_logger
-from pytuflow.outputs.helpers.nc_dataset_wrapper import DatasetWrapper
+from pytuflow._outputs.helpers.nc_dataset_wrapper import DatasetWrapper
 
 
 logger = get_logger()

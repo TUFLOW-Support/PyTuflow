@@ -7,9 +7,9 @@ import numpy as np
 import pandas as pd
 from packaging.version import Version
 
-from pytuflow.outputs.gpkg_base import GPKGBase
-from pytuflow.outputs.time_series import TimeSeries
-from pytuflow.outputs.itime_series_2d import ITimeSeries2D
+from pytuflow._outputs.gpkg_base import GPKGBase
+from pytuflow._outputs.time_series import TimeSeries
+from pytuflow._outputs.itime_series_2d import ITimeSeries2D
 from pytuflow.pytuflow_types import PathLike, AppendDict, FileTypeError, TimeLike, TuflowPath
 
 if typing.TYPE_CHECKING:

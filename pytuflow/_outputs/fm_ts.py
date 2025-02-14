@@ -5,13 +5,13 @@ from typing import Union
 import numpy as np
 import pandas as pd
 
-from pytuflow.outputs.helpers import TPCReader
-from pytuflow.outputs.info import INFO
+from pytuflow._outputs.helpers import TPCReader
+from pytuflow._outputs.info import INFO
 from pytuflow.pytuflow_types import PathLike, FileTypeError, TimeLike, ResultError
-from pytuflow.outputs.helpers.fm_res_driver import FM_ResultDriver
-from pytuflow.outputs.helpers.lp_1d_fm import LP1D_FM
-from pytuflow.fm import GXY
-from pytuflow.fm import DAT
+from pytuflow._outputs.helpers.fm_res_driver import FM_ResultDriver
+from pytuflow._outputs.helpers.lp_1d_fm import LP1D_FM
+from pytuflow._fm import GXY
+from pytuflow._fm import DAT
 from pytuflow.util.logging import get_logger
 
 
