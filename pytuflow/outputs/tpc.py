@@ -45,7 +45,7 @@ class TPC(INFO, ITimeSeries2D):
 
     Parameters
     ----------
-    fpath :`PathLike
+    fpath : PathLike
         The path to the output (.tpc) file.
 
     Raises
@@ -188,24 +188,24 @@ class TPC(INFO, ITimeSeries2D):
 
         Domain filters:
 
-        * 1d: 1D result times - nodes and channels will always have the same times
-        * node - times for node types (note, there will be no difference between nodes and channels)
-        * channel - times for channel types (note, there will be no difference between nodes and channels)
-        * 2d (or po): 2D result times - 2D results can have varying times between result types and locations. This
+        * ``1d``: 1D result times - nodes and channels will always have the same times
+        * ``node`` - times for node types (note, there will be no difference between nodes and channels)
+        * ``channel`` - times for channel types (note, there will be no difference between nodes and channels)
+        * ``2d (or ``po``): 2D result times - 2D results can have varying times between result types and locations. This
           will return all unique times
-        * rl (or 0d): Reporting locations result times. RL results will have the same times for all RL types
+        * ``rl`` (or ``0d``): Reporting locations result times. RL results will have the same times for all RL types
 
         Data type filters:
 
-        * [data type]: The data type to filter the times by. This will return all times for the given data type.
+        * ``[data type]``: The data type to filter the times by. This will return all times for the given data type.
 
         Location filters:
 
-        * [location]: The location to filter the times by. This will return all times for the given location.
+        * ``[location]``: The location to filter the times by. This will return all times for the given location.
 
         Combine filters:
 
-        * [filter1]/[filter2] ...: (use ``/`` to delim).
+        * ``[filter1]/[filter2]/...``: (use ``/`` to delim).
 
         Parameters
         ----------
@@ -240,7 +240,7 @@ class TPC(INFO, ITimeSeries2D):
         * :code:`2d` (or :code:`po`)
         * :code:`rl` (or :code:`0d`)
 
-        Geometry filters (note: they are not plural):
+        Geometry filters:
 
         * :code:`node`
         * :code:`channel`
@@ -254,7 +254,7 @@ class TPC(INFO, ITimeSeries2D):
 
         Combine filters:
 
-        * [filter1]/[filter2] ...: (use ``/`` to delim).
+        * ``[filter1]/[filter2]/...``: (use ``/`` to delim).
 
         Parameters
         ----------
@@ -292,7 +292,7 @@ class TPC(INFO, ITimeSeries2D):
         * :code:`2d` (or :code:`po`)
         * :code:`rl` (or :code:`0d`)
 
-        Geometry filters (note: they are not plural):
+        Geometry filters:
 
         * :code:`node`
         * :code:`channel`
@@ -306,7 +306,7 @@ class TPC(INFO, ITimeSeries2D):
 
         Combine filters:
 
-        * [filter1]/[filter2] ...: (use ``/`` to delim).
+        * ``[filter1]/[filter2]/...``: (use ``/`` to delim).
 
         Parameters
         ----------
@@ -360,7 +360,7 @@ class TPC(INFO, ITimeSeries2D):
         * :code:`2d` (or :code:`po`)
         * :code:`rl` (or :code:`0d`)
 
-        Geometry filters (note: they are not plural):
+        Geometry filters:
 
         * :code:`node`
         * :code:`channel`
@@ -370,7 +370,7 @@ class TPC(INFO, ITimeSeries2D):
 
         Combine filters:
 
-        * [filter1]/[filter2] ...: (use ``/`` to delim).
+        * ``[filter1]/[filter2]/...``: (use ``/`` to delim).
 
         The returned DataFrame will have an index column corresponding to the location ids, and the columns
         will be in the format :code:`obj/data_type/[max|tmax]`,
@@ -460,21 +460,21 @@ class TPC(INFO, ITimeSeries2D):
 
         Domain filters:
 
-        * :code:`1d`
-        * :code:`2d` (or :code:`po`)
-        * :code:`rl` (or :code:`0d`)
+        * ``1d``
+        * ``2d`` (or :code:`po`)
+        * ``rl`` (or :code:`0d`)
 
-        Geometry filters (note: they are not plural):
+        Geometry filters:
 
-        * :code: `node`
-        * :code: `channel`
-        * :code: `point` - (for 2d and rl domains only - use :code:`node` for 1d domain)
-        * :code: `line` - (for 2d and rl domains only - use :code:`channel` for 1d domain)
-        * :code: `polygon` (or :code:`region`)
+        * ``node``
+        * ``channel``
+        * ``point`` - (for 2d and rl domains only - use :code:`node` for 1d domain)
+        * ``line`` - (for 2d and rl domains only - use :code:`channel` for 1d domain)
+        * ``polygon`` (or :code:`region`)
 
         Combine filters:
 
-        * [filter1]/[filter2] ...: (use ``/`` to delim).
+        * ``[filter1]/[filter2]/...``: (use ``/`` to delim).
 
         The returned column names will be in the format :code:`obj/data_type/location`
         e.g. :code:`channel/flow/FC01.1_R`. The data_type name in the column heading will be identical to the data type
