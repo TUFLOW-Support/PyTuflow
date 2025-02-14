@@ -499,7 +499,7 @@ class FMTS(INFO):
         for i, x in enumerate(reversed(locs)):
             j = len(locations) - 1 - i
             if x is None:
-                logger.warning(f'FMTS.section(): Could not find a valid UID for {locations[j]} - removing')
+                logger.warning(f'FMTS.section(): Could not find a valid UID for {locations[j]} - removing.')
                 locs.pop(j)
         if not locs:
             raise ValueError('No valid locations provided.')

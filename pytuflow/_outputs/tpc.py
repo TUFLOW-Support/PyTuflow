@@ -833,7 +833,7 @@ class TPC(INFO, ITimeSeries2D):
         if self._time_series_data_2d:
             plot_objs = self._gis_plot_objects()
             if plot_objs is None or plot_objs.geom.dtype != np.dtype('O'):
-                logger.warning('TPC._load_po_info(): Missing or invalid PLOT.csv. Using TPC to guess PO geometry...')
+                logger.warning('TPC._load_po_info(): Missing or invalid PLOT.csv. Using TPC to guess PO geometry.')
                 plot_objs = self._geom_from_tpc()  # derive geometry from tpc rather than the gis/[...]_PLOT.csv
 
         for dtype, vals in self._time_series_data_2d.items():

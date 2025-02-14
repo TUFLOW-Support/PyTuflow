@@ -44,25 +44,21 @@ from pytuflow._pytuflow_types import PathLike
 def get_logger() -> logging.Logger:
     """Setup and return the standard logger used throughout the pytuflow package.
 
-    Ensures that all loggers are prefixed with the 'pytuflow' name, to ensure that
-    the logger can be easily disabled by client code if needed.
-
     To use, add the following lines to the top of any module in the library:
-
-    ::
-
-
-        import pytuflow.utils.logging pytuflow_logging
-        logger = pytuflow_logging.get_logger()
-
-    The logger instance can be used the same as any other standard python logger.
 
     Returns
     -------
-    Logger
-        Logger instance with the name 'tmf' and a TMFHandler added.
+    logging.Logger
+        Logger instance with the name 'pytuflow'
+
+    Example
+    -------
+    >>> import pytuflow
+    >>> logger = pytuflow.get_logger()
+
+    The logger instance can be used the same as any other standard python logger.
     """
-    logger = logging.getLogger('pytuflow.' + __name__)
+    logger = logging.getLogger('pytuflow')
 
     # logger.addHandler(TMFHandler())
     return logger

@@ -1,5 +1,7 @@
 import os
 import unittest
+from contextlib import contextmanager
+from logging import StreamHandler
 from unittest import TestCase
 
 from pytuflow.results import ResultTypeError
@@ -14,6 +16,41 @@ from pytuflow._outputs.gpkg_rl import GPKGRL
 from pytuflow._outputs.fm_ts import FMTS
 from pytuflow._outputs.fv_bc_tide import FVBCTide
 from pytuflow._outputs.cross_sections import CrossSections
+from pytuflow import get_logger
+
+
+class CustomLoggingHandler(StreamHandler):
+    """Custom log handler so that logging can be checked. Use global instance below."""
+
+    def __init__(self):
+        super().__init__()
+        self.msg_filters = []
+        self.msg_count = 0
+
+    @contextmanager
+    def with_filter(self, msgs):
+        """Use a context manager so that the previous handlers can be restored no matter how the test exits."""
+        self.msg_filters = msgs
+        logger = get_logger()
+        exist_hdlrs = logger.handlers
+        for hdlr in exist_hdlrs:
+            logger.removeHandler(hdlr)
+        logger.addHandler(self)
+        yield self
+        logger.removeHandler(self)
+        for hdlr in exist_hdlrs:
+            logger.addHandler(hdlr)
+        self.msg_filters.clear()
+        self.msg_count = 0
+
+    def handle(self, record):
+        if record.msg in self.msg_filters:
+            self.msg_count += 1
+        else:
+            super().handle(record)
+
+
+custom_log_handler = CustomLoggingHandler()
 
 
 class Test_Info_2013(unittest.TestCase):
@@ -121,10 +158,13 @@ class Test_Info_2013(unittest.TestCase):
         self.assertEqual((4, 7), df.shape)
 
     def test_long_plot_incorrect_id(self):
-        p = './tests/2013/M04_5m_001_1d.info'
-        res = INFO(p)
-        df = res.section(['FCo1.1_R', 'FC01.36'], ['bed level', 'water level', 'pipes'], 1)
-        self.assertEqual((168, 7), df.shape)
+        expected_msgs = ['INFO.section(): Location "FCo1.1_R" not found in the output - removing.']
+        with custom_log_handler.with_filter(expected_msgs) as custom_logger:
+            p = './tests/2013/M04_5m_001_1d.info'
+            res = INFO(p)
+            df = res.section(['FCo1.1_R', 'FC01.36'], ['bed level', 'water level', 'pipes'], 1)
+            self.assertEqual((168, 7), df.shape)
+            self.assertEqual(1, custom_logger.msg_count)
 
 
 class Test_TPC_2016(TestCase):
@@ -326,22 +366,26 @@ class Test_TPC_2016(TestCase):
         self.assertEqual((12, 7), df.shape)
 
     def test_long_plot_error(self):
-        p = './tests/2016/EG14_001.tpc'
-        res = TPC(p)
-        try:
-            df = res.section('ds0', ['bed level', 'water level'], 1)
-            raise AssertionError('Should have raised an exception')
-        except ValueError:
-            pass
+        msgs = ['INFO.section(): Location "ds0" not found in the output - removing.']
+        with custom_log_handler.with_filter(msgs) as custom_logger:
+            p = './tests/2016/EG14_001.tpc'
+            res = TPC(p)
+            try:
+                df = res.section('ds0', ['bed level', 'water level'], 1)
+                raise AssertionError('Should have raised an exception')
+            except ValueError:
+                self.assertEqual(1, custom_logger.msg_count)
 
     def test_long_plot_error_2(self):
-        p = './tests/2016/EG14_001.tpc'
-        res = TPC(p)
-        try:
-            df = res.section('ds1', 'lvl', 1)
-            raise AssertionError('Should have raised an exception')
-        except ValueError:
-            pass
+        msgs = ['INFO.section(): Data type "lvl" is not a valid section data type or not in output - removing.']
+        with custom_log_handler.with_filter(msgs) as custom_logger:
+            p = './tests/2016/EG14_001.tpc'
+            res = TPC(p)
+            try:
+                df = res.section('ds1', 'lvl', 1)
+                raise AssertionError('Should have raised an exception')
+            except ValueError:
+                self.assertEqual(1, custom_logger.msg_count)
 
 
 class Test_TPC_NC(TestCase):
@@ -352,55 +396,67 @@ class Test_TPC_NC(TestCase):
         self.assertEqual('EG15_001', res.name)
 
     def test_times(self):
-        p = './tests/nc_ts/EG15_001.tpc'
-        res = TPC(p)
-        self.assertEqual(181, len(res.times()))
-        self.assertEqual(181, len(res.times(fmt='absolute')))
-        self.assertEqual(181, len(res.times('channel')))
-        self.assertEqual(181, len(res.times('node')))
-        self.assertEqual(181, len(res.times('po')))
-        self.assertEqual(181, len(res.times('rl')))
+        msgs = ['TPC._load_time_series_nc(): No data found in NetCDF file for Flow Areas for domain 1D.']
+        with custom_log_handler.with_filter(msgs) as custom_logger:
+            p = './tests/nc_ts/EG15_001.tpc'
+            res = TPC(p)
+            self.assertEqual(181, len(res.times()))
+            self.assertEqual(181, len(res.times(fmt='absolute')))
+            self.assertEqual(181, len(res.times('channel')))
+            self.assertEqual(181, len(res.times('node')))
+            self.assertEqual(181, len(res.times('po')))
+            self.assertEqual(181, len(res.times('rl')))
 
     def test_data_types(self):
-        p = './tests/nc_ts/EG15_001.tpc'
-        res = TPC(p)
-        self.assertEqual(24, len(res.data_types()))
-        self.assertEqual(8, len(res.data_types('channel')))
-        self.assertEqual(5, len(res.data_types('node')))
-        self.assertEqual(16, len(res.data_types('po')))
-        self.assertEqual(3, len(res.data_types('rl')))
-        self.assertEqual(4, len(res.data_types('po/line')))
-        self.assertEqual(10, len(res.data_types('pit10')))
-        self.assertEqual(13, len(res.data_types('1d')))
+        msgs = ['TPC._load_time_series_nc(): No data found in NetCDF file for Flow Areas for domain 1D.']
+        with custom_log_handler.with_filter(msgs) as custom_logger:
+            p = './tests/nc_ts/EG15_001.tpc'
+            res = TPC(p)
+            self.assertEqual(24, len(res.data_types()))
+            self.assertEqual(8, len(res.data_types('channel')))
+            self.assertEqual(5, len(res.data_types('node')))
+            self.assertEqual(16, len(res.data_types('po')))
+            self.assertEqual(3, len(res.data_types('rl')))
+            self.assertEqual(4, len(res.data_types('po/line')))
+            self.assertEqual(10, len(res.data_types('pit10')))
+            self.assertEqual(13, len(res.data_types('1d')))
 
     def test_ids(self):
-        p = './tests/nc_ts/EG15_001.tpc'
-        res = TPC(p)
-        self.assertEqual(58, len(res.ids()))
-        self.assertEqual(30, len(res.ids('channel')))
-        self.assertEqual(34, len(res.ids('node')))
+        msgs = ['TPC._load_time_series_nc(): No data found in NetCDF file for Flow Areas for domain 1D.']
+        with custom_log_handler.with_filter(msgs) as custom_logger:
+            p = './tests/nc_ts/EG15_001.tpc'
+            res = TPC(p)
+            self.assertEqual(58, len(res.ids()))
+            self.assertEqual(30, len(res.ids('channel')))
+            self.assertEqual(34, len(res.ids('node')))
 
     def test_maximums(self):
-        p = './tests/nc_ts/EG15_001.tpc'
-        res = TPC(p)
-        df = res.maximum('pit10', 'q')
-        self.assertEqual((1, 2), df.shape)
-        df = res.maximum('pit10', ['q', 'h'])
-        self.assertEqual((1, 4), df.shape)
+        msgs = ['TPC._load_time_series_nc(): No data found in NetCDF file for Flow Areas for domain 1D.']
+        with custom_log_handler.with_filter(msgs) as custom_logger:
+            p = './tests/nc_ts/EG15_001.tpc'
+            res = TPC(p)
+            df = res.maximum('pit10', 'q')
+            self.assertEqual((1, 2), df.shape)
+            df = res.maximum('pit10', ['q', 'h'])
+            self.assertEqual((1, 4), df.shape)
 
     def test_time_series(self):
-        p = './tests/nc_ts/EG15_001.tpc'
-        res = TPC(p)
-        df = res.time_series('po_line', 'flow')
-        self.assertEqual((181, 1), df.shape)
-        df = res.time_series('po', ['q', 'h', 'vol'])
-        self.assertEqual((181, 3), df.shape)
+        msgs = ['TPC._load_time_series_nc(): No data found in NetCDF file for Flow Areas for domain 1D.']
+        with custom_log_handler.with_filter(msgs) as custom_logger:
+            p = './tests/nc_ts/EG15_001.tpc'
+            res = TPC(p)
+            df = res.time_series('po_line', 'flow')
+            self.assertEqual((181, 1), df.shape)
+            df = res.time_series('po', ['q', 'h', 'vol'])
+            self.assertEqual((181, 3), df.shape)
 
     def test_section(self):
-        p = './tests/nc_ts/EG15_001.tpc'
-        res = TPC(p)
-        df = res.section('pipe1', ['bed level', 'max water level'], 0.5)
-        self.assertEqual((10, 6), df.shape)
+        msgs = ['TPC._load_time_series_nc(): No data found in NetCDF file for Flow Areas for domain 1D.']
+        with custom_log_handler.with_filter(msgs) as custom_logger:
+            p = './tests/nc_ts/EG15_001.tpc'
+            res = TPC(p)
+            df = res.section('pipe1', ['bed level', 'max water level'], 0.5)
+            self.assertEqual((10, 6), df.shape)
 
 
 class Test_TPC_2019(TestCase):
@@ -428,9 +484,17 @@ class Test_TPC_2019(TestCase):
         self.assertEqual(1, res.rl_poly_count)
 
     def test_channel_ids(self):
-        p = './tests/2019/M03_5m_001.tpc'
-        res = TPC(p)
-        self.assertEqual(3, len(res.ids('channel')))
+        msgs = [
+            'TPC._load_time_series_nc(): No data found in NetCDF file for Flow Areas for domain 1D.',
+            'TPC._load_time_series_nc(): No data found in NetCDF file for Node Regime for domain 1D.',
+            'TPC._load_time_series_nc(): No data found in NetCDF file for Channel Regime for domain 1D.',
+            'TPC._load_time_series_nc(): No data found in NetCDF file for Channel Losses for domain 1D.',
+
+        ]
+        with custom_log_handler.with_filter(msgs) as custom_logger:
+            p = './tests/2019/M03_5m_001.tpc'
+            res = TPC(p)
+            self.assertEqual(3, len(res.ids('channel')))
 
     def test_channel_ids_2(self):
         p = './tests/2020/EG15_001.tpc'
@@ -439,22 +503,46 @@ class Test_TPC_2019(TestCase):
         self.assertEqual(18, len(ids))
 
     def test_node_ids(self):
-        p = './tests/2019/M03_5m_001.tpc'
-        res = TPC(p)
-        self.assertEqual(6, len(res.ids('node')))
+        msgs = [
+            'TPC._load_time_series_nc(): No data found in NetCDF file for Flow Areas for domain 1D.',
+            'TPC._load_time_series_nc(): No data found in NetCDF file for Node Regime for domain 1D.',
+            'TPC._load_time_series_nc(): No data found in NetCDF file for Channel Regime for domain 1D.',
+            'TPC._load_time_series_nc(): No data found in NetCDF file for Channel Losses for domain 1D.',
+
+        ]
+        with custom_log_handler.with_filter(msgs) as custom_logger:
+            p = './tests/2019/M03_5m_001.tpc'
+            res = TPC(p)
+            self.assertEqual(6, len(res.ids('node')))
 
     def test_rl_ids(self):
-        p = './tests/2019/M03_5m_001.tpc'
-        res = TPC(p)
-        self.assertEqual(3, len(res.ids('rl')))
+        msgs = [
+            'TPC._load_time_series_nc(): No data found in NetCDF file for Flow Areas for domain 1D.',
+            'TPC._load_time_series_nc(): No data found in NetCDF file for Node Regime for domain 1D.',
+            'TPC._load_time_series_nc(): No data found in NetCDF file for Channel Regime for domain 1D.',
+            'TPC._load_time_series_nc(): No data found in NetCDF file for Channel Losses for domain 1D.',
+
+        ]
+        with custom_log_handler.with_filter(msgs) as custom_logger:
+            p = './tests/2019/M03_5m_001.tpc'
+            res = TPC(p)
+            self.assertEqual(3, len(res.ids('rl')))
 
     def test_time_series(self):
-        p = './tests/2019/M03_5m_001.tpc'
-        res = TPC(p)
-        ts = res.time_series('FC01.1_R', 'flow')
-        self.assertEqual((91, 1), ts.shape)
-        ts = res.time_series('RL region 1', 'vol')
-        self.assertEqual((91, 1), ts.shape)
+        msgs = [
+            'TPC._load_time_series_nc(): No data found in NetCDF file for Flow Areas for domain 1D.',
+            'TPC._load_time_series_nc(): No data found in NetCDF file for Node Regime for domain 1D.',
+            'TPC._load_time_series_nc(): No data found in NetCDF file for Channel Regime for domain 1D.',
+            'TPC._load_time_series_nc(): No data found in NetCDF file for Channel Losses for domain 1D.',
+
+        ]
+        with custom_log_handler.with_filter(msgs) as custom_logger:
+            p = './tests/2019/M03_5m_001.tpc'
+            res = TPC(p)
+            ts = res.time_series('FC01.1_R', 'flow')
+            self.assertEqual((91, 1), ts.shape)
+            ts = res.time_series('RL region 1', 'vol')
+            self.assertEqual((91, 1), ts.shape)
 
     def test_long_plot(self):
         p = './tests/2020/EG15_001.tpc'
@@ -533,60 +621,70 @@ class Test_TPC_Frankenmodel(TestCase):
         self.assertEqual('frankenmodel', res.name)
 
     def test_times(self):
-        p = './tests/2021/frankenmodel.tpc'
-        res = TPC(p)
-        times = res.times()
-        self.assertEqual(73, len(times))
-        times = res.times('2d')
-        self.assertEqual(73, len(times))
-        times = res.times('1d')
-        self.assertEqual(0, len(times))
-        times = res.times('ADCP1')
-        self.assertEqual(73, len(times))
+        msgs = ['TPC._load_po_info(): Missing or invalid PLOT.csv. Using TPC to guess PO geometry.']
+        with custom_log_handler.with_filter(msgs) as custom_logger:
+            p = './tests/2021/frankenmodel.tpc'
+            res = TPC(p)
+            times = res.times()
+            self.assertEqual(73, len(times))
+            times = res.times('2d')
+            self.assertEqual(73, len(times))
+            times = res.times('1d')
+            self.assertEqual(0, len(times))
+            times = res.times('ADCP1')
+            self.assertEqual(73, len(times))
 
     def test_ids(self):
-        p = './tests/2021/frankenmodel.tpc'
-        res = TPC(p)
-        ids = res.ids()
-        self.assertEqual(9, len(ids))
-        ids = res.ids('2d')
-        self.assertEqual(9, len(ids))
-        ids = res.ids('h')
-        self.assertEqual(3, len(ids))
-        ids = res.ids('sal')
-        self.assertEqual(3, len(ids))
-        ids = res.ids('salt flux')
-        self.assertEqual(6, len(ids))
-        ids = res.ids('sed 1 flux')
-        self.assertEqual(6, len(ids))
+        msgs = ['TPC._load_po_info(): Missing or invalid PLOT.csv. Using TPC to guess PO geometry.']
+        with custom_log_handler.with_filter(msgs) as custom_logger:
+            p = './tests/2021/frankenmodel.tpc'
+            res = TPC(p)
+            ids = res.ids()
+            self.assertEqual(9, len(ids))
+            ids = res.ids('2d')
+            self.assertEqual(9, len(ids))
+            ids = res.ids('h')
+            self.assertEqual(3, len(ids))
+            ids = res.ids('sal')
+            self.assertEqual(3, len(ids))
+            ids = res.ids('salt flux')
+            self.assertEqual(6, len(ids))
+            ids = res.ids('sed 1 flux')
+            self.assertEqual(6, len(ids))
 
     def test_data_types(self):
-        p = './tests/2021/frankenmodel.tpc'
-        res = TPC(p)
-        dtypes = res.data_types()
-        self.assertEqual(18, len(dtypes))
-        dtypes = res.data_types('ADCP1')
-        self.assertEqual(9, len(dtypes))
-        dtypes = res.data_types('ns1')
-        self.assertEqual(9, len(dtypes))
+        msgs = ['TPC._load_po_info(): Missing or invalid PLOT.csv. Using TPC to guess PO geometry.']
+        with custom_log_handler.with_filter(msgs) as custom_logger:
+            p = './tests/2021/frankenmodel.tpc'
+            res = TPC(p)
+            dtypes = res.data_types()
+            self.assertEqual(18, len(dtypes))
+            dtypes = res.data_types('ADCP1')
+            self.assertEqual(9, len(dtypes))
+            dtypes = res.data_types('ns1')
+            self.assertEqual(9, len(dtypes))
 
     def test_maximums(self):
-        p = './tests/2021/frankenmodel.tpc'
-        res = TPC(p)
-        df = res.maximum('ADCP1', 'tracer 1 conc')
-        self.assertEqual((1, 2), df.shape)
-        df = res.maximum('ADCP1', 'tracer conc')
-        self.assertTrue(df.empty)
+        msgs = ['TPC._load_po_info(): Missing or invalid PLOT.csv. Using TPC to guess PO geometry.']
+        with custom_log_handler.with_filter(msgs) as custom_logger:
+            p = './tests/2021/frankenmodel.tpc'
+            res = TPC(p)
+            df = res.maximum('ADCP1', 'tracer 1 conc')
+            self.assertEqual((1, 2), df.shape)
+            df = res.maximum('ADCP1', 'tracer conc')
+            self.assertTrue(df.empty)
 
     def test_time_series(self):
-        p = './tests/2021/frankenmodel.tpc'
-        res = TPC(p)
-        ts = res.time_series(None, None)
-        self.assertEqual((73, 81), ts.shape)
-        ts = res.time_series('ADCP1', None)
-        self.assertEqual((73, 9), ts.shape)
-        ts = res.time_series('ns1', 'sed 1 bedload flux')
-        self.assertEqual((73, 1), ts.shape)
+        msgs = ['TPC._load_po_info(): Missing or invalid PLOT.csv. Using TPC to guess PO geometry.']
+        with custom_log_handler.with_filter(msgs) as custom_logger:
+            p = './tests/2021/frankenmodel.tpc'
+            res = TPC(p)
+            ts = res.time_series(None, None)
+            self.assertEqual((73, 81), ts.shape)
+            ts = res.time_series('ADCP1', None)
+            self.assertEqual((73, 9), ts.shape)
+            ts = res.time_series('ns1', 'sed 1 bedload flux')
+            self.assertEqual((73, 1), ts.shape)
 
 
 class Test_GPKG1D(TestCase):
@@ -946,11 +1044,14 @@ class Test_FM_TS(unittest.TestCase):
         self.assertEqual((200, 7), df.shape)
 
     def test_lp_incorrect_id(self):
-        p = './tests/fm/zzn/FMT_M01_001.zzn'
-        dat = './tests/fm/zzn/FMT_M01_001.dat'
-        res = FMTS(p, dat)
-        df = res.section(['fco1.31', 'fc01.25'], 'max stage', -1)
-        self.assertEqual((450, 5), df.shape)
+        msgs = ['FMTS.section(): Could not find a valid UID for fco1.31 - removing.']
+        with custom_log_handler.with_filter(msgs) as custom_logger:
+            p = './tests/fm/zzn/FMT_M01_001.zzn'
+            dat = './tests/fm/zzn/FMT_M01_001.dat'
+            res = FMTS(p, dat)
+            df = res.section(['fco1.31', 'fc01.25'], 'max stage', -1)
+            self.assertEqual((450, 5), df.shape)
+            self.assertEqual(1, custom_logger.msg_count)
 
 
 class Test_HydTables(unittest.TestCase):

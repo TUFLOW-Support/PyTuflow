@@ -29,6 +29,7 @@ from .TUFLOW import *
 from ._outputs import *
 from ._tmf import *
 from .util._util.tf import TuflowBinaries
+from .util._util.logging import get_logger
 
 
 name = 'PyTuflow'
