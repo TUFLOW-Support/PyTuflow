@@ -3,7 +3,7 @@ from abc import abstractmethod
 import pandas as pd
 
 from .output import Output
-from ..pytuflow_types import PathLike, TuflowPath
+from pytuflow._pytuflow_types import PathLike, TuflowPath
 
 
 class TabularOutput(Output):

@@ -9,8 +9,8 @@ import pandas as pd
 from .tabular_output import TabularOutput
 from .helpers.hyd_tables_cross_section_provider import HydTablesCrossSectionProvider
 from .helpers.hyd_tables_channel_provider import HydTablesChannelProvider
-from ..pytuflow_types import PathLike, TimeLike, FileTypeError
-from pytuflow.util.logging import get_logger
+from .._pytuflow_types import PathLike, TimeLike, FileTypeError
+from pytuflow.util._util.logging import get_logger
 
 
 logger = get_logger()

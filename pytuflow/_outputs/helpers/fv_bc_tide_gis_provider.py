@@ -1,5 +1,3 @@
-from pathlib import Path
-
 import numpy as np
 
 try:
@@ -14,9 +12,9 @@ try:
 except ImportError:
     has_gdal = False
 
-from pytuflow.pytuflow_types import PathLike, TuflowPath
-from pytuflow.util.gis import get_driver_name_from_extension
-from pytuflow.util.geom import calc_spherical_length
+from pytuflow._pytuflow_types import PathLike, TuflowPath
+from pytuflow.util._util.gis import get_driver_name_from_extension
+from pytuflow.util._util.geom import calc_spherical_length
 
 
 class FVBCTideGISProvider:

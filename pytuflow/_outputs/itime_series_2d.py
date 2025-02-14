@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 
 import pandas as pd
 
-from pytuflow.pytuflow_types import PathLike
+from pytuflow._pytuflow_types import PathLike
 
 
 class ITimeSeries2D(ABC):

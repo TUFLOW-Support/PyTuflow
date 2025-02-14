@@ -17,8 +17,8 @@ from pytuflow._outputs.helpers.nc_ts import NCTS
 from pytuflow._outputs.info import INFO
 from pytuflow._outputs.itime_series_2d import ITimeSeries2D
 from pytuflow._outputs.helpers.tpc_reader import TPCReader
-from pytuflow.pytuflow_types import PathLike, AppendDict, TimeLike
-from pytuflow.util.logging import get_logger
+from pytuflow._pytuflow_types import PathLike, AppendDict, TimeLike
+from pytuflow.util._util.logging import get_logger
 from pytuflow._outputs.helpers.nc_dataset_wrapper import DatasetWrapper
 
 

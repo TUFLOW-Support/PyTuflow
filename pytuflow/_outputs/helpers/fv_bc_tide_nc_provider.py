@@ -10,8 +10,8 @@ try:
 except ImportError:
     has_netcdf4 = False
 
-from pytuflow.pytuflow_types import TimeLike
-from pytuflow.util.logging import get_logger
+from pytuflow._pytuflow_types import TimeLike
+from pytuflow.util._util.logging import get_logger
 
 
 class FVBCTideNCProvider:

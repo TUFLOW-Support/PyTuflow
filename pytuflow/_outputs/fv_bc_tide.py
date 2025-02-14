@@ -12,11 +12,11 @@ except ImportError:
     has_netcdf4 = False
 
 from .time_series import TimeSeries
-from ..pytuflow_types import PathLike, FileTypeError, TuflowPath, TimeLike
+from pytuflow._pytuflow_types import PathLike, FileTypeError, TuflowPath, TimeLike
 from .helpers.fv_bc_tide_provider import FVBCTideProvider
-from pytuflow.util.gis import has_gdal
+from pytuflow.util._util.gis import has_gdal
 from pytuflow._tmf.tmf.tuflow_model_files.dataclasses.append_dict import AppendDict
-from pytuflow.util.logging import get_logger
+from pytuflow.util._util.logging import get_logger
 
 
 logger = get_logger()

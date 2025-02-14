@@ -2,7 +2,7 @@ import os
 import unittest
 from unittest import TestCase
 
-from pytuflow.pytuflow_types import FileTypeError
+from pytuflow._pytuflow_types import FileTypeError
 from pytuflow._outputs.bc_tables_check import BCTablesCheck
 from pytuflow._fm import GXY
 from pytuflow._outputs.hyd_tables_check import HydTablesCheck

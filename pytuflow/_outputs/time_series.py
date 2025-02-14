@@ -6,8 +6,8 @@ import numpy as np
 import pandas as pd
 
 from .tabular_output import TabularOutput
-from ..pytuflow_types import TimeLike
-from ..util.misc_tools import flatten
+from pytuflow._pytuflow_types import TimeLike
+from pytuflow.util._util.misc_tools import flatten
 
 
 class TimeSeries(TabularOutput):

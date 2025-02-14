@@ -9,7 +9,7 @@ import pandas as pd
 from pytuflow._outputs.gpkg_base import GPKGBase
 from pytuflow._outputs.helpers import TPCReader
 from pytuflow._outputs.info import INFO
-from pytuflow.pytuflow_types import PathLike, TimeLike, TuflowPath
+from pytuflow._pytuflow_types import PathLike, TimeLike, TuflowPath
 
 if TYPE_CHECKING:
     from sqlite3 import Cursor

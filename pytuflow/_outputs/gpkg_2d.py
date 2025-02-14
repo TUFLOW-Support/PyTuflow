@@ -10,7 +10,7 @@ from packaging.version import Version
 from pytuflow._outputs.gpkg_base import GPKGBase
 from pytuflow._outputs.time_series import TimeSeries
 from pytuflow._outputs.itime_series_2d import ITimeSeries2D
-from pytuflow.pytuflow_types import PathLike, AppendDict, FileTypeError, TimeLike, TuflowPath
+from pytuflow._pytuflow_types import PathLike, AppendDict, FileTypeError, TimeLike, TuflowPath
 
 if typing.TYPE_CHECKING:
     from sqlite3 import Cursor

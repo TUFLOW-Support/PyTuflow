@@ -2,10 +2,10 @@ from pathlib import Path
 
 import numpy as np
 
-from pytuflow.pytuflow_types import PathLike, TimeLike
+from pytuflow._pytuflow_types import PathLike, TimeLike
 from .fv_bc_tide_gis_provider import FVBCTideGISProvider
 from .fv_bc_tide_nc_provider import FVBCTideNCProvider
-from pytuflow.util.gis import has_gdal
+from pytuflow.util._util.gis import has_gdal
 
 try:
     import shapely

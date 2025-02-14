@@ -7,7 +7,7 @@ import pandas as pd
 from packaging.version import Version
 
 from .gpkg_2d import GPKG2D
-from pytuflow.pytuflow_types import PathLike, AppendDict, TimeLike
+from pytuflow._pytuflow_types import PathLike, AppendDict, TimeLike
 
 if typing.TYPE_CHECKING:
     from sqlite3 import Cursor

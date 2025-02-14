@@ -8,7 +8,7 @@ import pandas as pd
 
 from .time_series import TimeSeries
 from .helpers.bc_check_provider import BCCheckProvider
-from ..pytuflow_types import PathLike, TimeLike, FileTypeError
+from pytuflow._pytuflow_types import PathLike, TimeLike, FileTypeError
 
 
 class BCTablesCheck(TimeSeries):
