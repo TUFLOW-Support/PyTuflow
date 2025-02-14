@@ -7,8 +7,9 @@ import pandas as pd
 from .tabular_output import TabularOutput
 from pytuflow._tmf import TuflowCrossSection
 from pytuflow.util._util.gis import GISAttributes
-from pytuflow._pytuflow_types import PathLike, FileTypeError, TimeLike, TuflowPath
+from pytuflow._pytuflow_types import PathLike, TimeLike, TuflowPath
 from pytuflow.util._util.logging import get_logger
+from pytuflow.results import ResultTypeError
 
 
 logger = get_logger()
@@ -31,18 +32,14 @@ class CrossSections(TabularOutput):
 
     Raises
     ------
-    FileNotFoundError
-        Raised if the check file does not exist.
-    FileTypeError
-        Raises :class:`pytuflow.pytuflow_types.FileTypeError` if the file does not look like a valid check file.
-    EOFError
-        Raised if the check file is empty or incomplete.
+    ResultTypeError
+        Raises :class:`pytuflow.results.ResultTypeError` if the file does not look like a ``CrossSection`` file.
 
     Examples
     --------
     Load a cross-section layer:
 
-    >>> from pytuflow.outputs import CrossSections
+    >>> from pytuflow import CrossSections
     >>> xs = CrossSections('path/to/1d_xs.shp')
     """
 
@@ -64,7 +61,7 @@ class CrossSections(TabularOutput):
             raise FileNotFoundError(f'File does not exist: {fpath}')
 
         if not self._looks_like_this(self.fpath):
-            raise FileTypeError(f'File does not look like a {self.__class__.__name__} file: {fpath}')
+            raise ResultTypeError(f'File does not look like a {self.__class__.__name__} file: {fpath}')
 
         if self._looks_empty(self.fpath):
             raise EOFError(f'File is empty or incomplete: {fpath}')

@@ -50,18 +50,14 @@ class TPC(INFO, ITimeSeries2D):
 
     Raises
     ------
-    FileNotFoundError
-        Raised if the .tpc file does not exist.
-    FileTypeError
-        Raises :class:`pytuflow.pytuflow_types.FileTypeError` if the file does not look like a .tpc file.
-    EOFError
-        Raised if the .tpc file is empty or incomplete.
+    ResultTypeError
+        Raises :class:`pytuflow.results.ResultTypeError` if the file does not look like a ``TPC`` file.
 
     Examples
     --------
     Loading a .tpc file:
 
-    >>> from pytuflow.outputs import TPC
+    >>> from pytuflow import TPC
     >>> res = TPC('path/to/file.tpc')
 
     Querying all the available :code:`2d_po` data types:

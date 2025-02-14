@@ -27,7 +27,7 @@ sys.path.append((Path(__file__).resolve().parents[1]).as_posix())
 sys.path.append((Path(__file__).resolve().parent / '_ext').as_posix())
 
 project = 'pytuflow'
-copyright = '2024, Ellis Symons'
+copyright = '2025, BMT'
 author = 'Ellis Symons'
 
 # -- General configuration ---------------------------------------------------
@@ -54,7 +54,8 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
 html_theme = 'sphinx_book_theme'
-html_static_path = ['_static']
+html_favicon = 'assets/favicon/TUFLOW.ico'
+# html_static_path = ['_static']
 
 
 class CustomPythonDomain(PythonDomain):

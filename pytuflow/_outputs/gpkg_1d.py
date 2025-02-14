@@ -37,19 +37,14 @@ class GPKG1D(INFO, GPKGBase):
 
     Raises
     ------
-    FileNotFoundError
-        Raised if the .info file does not exist.
-    FileTypeError
-        Raises :class:`pytuflow.pytuflow_types.FileTypeError` if the file does not look like a time
-        series .gpkg file.
-    EOFError
-        Raised if the .info file is empty or incomplete.
+    ResultTypeError
+        Raises :class:`pytuflow.results.ResultTypeError` if the file does not look like a ``GPKG1D`` file.
 
     Examples
     --------
     Load a :code:`_swmm_ts.gpkg` file:
 
-    >>> from pytuflow.outputs import GPKG1D
+    >>> from pytuflow import GPKG1D
     >>> res = GPKG1D('path/to/output_swmm_ts.gpkg')
 
     Querying all the available data types:

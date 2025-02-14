@@ -28,7 +28,8 @@ else:  # add pytuflow handlers to the tmf and fm2estry loggers if they aren't th
 from .TUFLOW import *
 from ._outputs import *
 from ._tmf import *
+from .util._util.tf import TuflowBinaries
 
 
 name = 'PyTuflow'
-__version__ = '0.0.123'
+__version__ = '0.0.124'

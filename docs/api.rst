@@ -76,3 +76,25 @@ This page gives an overview of the public modules, classes, and functions within
    HydTablesCheck
    BCTablesCheck
    CrossSections
+
+.. rubric:: Utilities
+
+.. autosummary::
+   :toctree: ./api
+   :nosignatures:
+
+   util.register_tuflow_binary
+   util.register_tuflow_binary_folder
+   util.tuflow_binaries
+
+.. rubric:: Everything Else
+
+.. autosummary::
+   :toctree: ./api
+   :nosignatures:
+   :template: custom-class-template.rst
+
+   TuflowBinaries
+   results.ResultTypeError
+
+

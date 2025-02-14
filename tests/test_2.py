@@ -2,7 +2,7 @@ import os
 import unittest
 from unittest import TestCase
 
-from pytuflow._pytuflow_types import FileTypeError
+from pytuflow.results import ResultTypeError
 from pytuflow._outputs.bc_tables_check import BCTablesCheck
 from pytuflow._fm import GXY
 from pytuflow._outputs.hyd_tables_check import HydTablesCheck
@@ -975,7 +975,7 @@ class Test_HydTables(unittest.TestCase):
         try:
             res = HydTablesCheck(p)
             raise AssertionError('Should have raised an exception')
-        except FileTypeError:
+        except ResultTypeError:
             pass
 
     def test_empty_hyd_tables(self):
@@ -1132,7 +1132,7 @@ class Test_BC_Tables(unittest.TestCase):
         try:
             res = BCTablesCheck(p)
             raise AssertionError('Should have raised an exception')
-        except FileTypeError:
+        except ResultTypeError:
             pass
 
     def test_emtpy_bc_tables(self):

@@ -7,12 +7,13 @@ import pandas as pd
 
 from pytuflow._outputs.helpers import TPCReader
 from pytuflow._outputs.info import INFO
-from pytuflow._pytuflow_types import PathLike, FileTypeError, TimeLike, ResultError
+from pytuflow._pytuflow_types import PathLike, TimeLike
 from pytuflow._outputs.helpers.fm_res_driver import FM_ResultDriver
 from pytuflow._outputs.helpers.lp_1d_fm import LP1D_FM
 from pytuflow._fm import GXY
 from pytuflow._fm import DAT
 from pytuflow.util._util.logging import get_logger
+from pytuflow.results import ResultTypeError
 
 
 logger = get_logger()
@@ -44,22 +45,17 @@ class FMTS(INFO):
 
     Raises
     ------
-    FileNotFoundError
-        Raises if the result file(s) does not exist.
-    FileTypeError
-        Raises :class:`pytuflow.pytuflow_types.FileTypeError` if the file(s) does not look like a FM time series result.
-    EOFError
-        Raises if the result file(s) is empty or incomplete.
-    ResultError
-        Raises :class:`pytuflow.pytuflow_types.ResultError` if the result file(s) do not contain the expected
-        data e.g. if multiple files are provided, but they belong to different models or different events.
+    ResultTypeError
+        Raises :class:`pytuflow.results.ResultTypeError` if the file does not look like a time series ``FMTS`` file, or
+        if the result file(s) do not contain the expected data e.g. if multiple files are provided, but they belong
+        to different models or different events.
 
     Examples
     --------
     Load results without any reference to the DAT or GXY files - this will not support section plotting and won't
     contain spatial information:
 
-    >>> from pytuflow.outputs import FMTS
+    >>> from pytuflow import FMTS
     >>> res = FMTS('path/to/result.zzn')
 
     Load results with a DAT file so that connectivity information is available for section plotting:
@@ -147,7 +143,7 @@ class FMTS(INFO):
             if not f.exists():
                 raise FileNotFoundError(f'File not found: {f}')
             if not self._looks_like_this(f):
-                raise FileTypeError(f'File does not look like a Flood Modeller time series result: {f}')
+                raise ResultTypeError(f'File does not look like a Flood Modeller time series result: {f}')
             if self._looks_empty(f):
                 raise EOFError(f'File is empty or incomplete: {f}')
 
@@ -454,7 +450,7 @@ class FMTS(INFO):
 
         Raises
         ------
-        ValueError
+        ResultTypeError
             Raised if no valid :code:`locations` are provided or if :code:`data_types` is not :code:`None`
             but the provided :code:`data_types` are all invalid. A value error is also raised if more than one location
             is provided and the locations are not connected.
@@ -492,7 +488,7 @@ class FMTS(INFO):
         7          0     ds4  ds4.2   301.6  33.189  35.6358    35.9533
         """
         if not self._support_section_plotting:
-            raise ResultError('A DAT or GXY file is required for section plotting')
+            raise ResultTypeError('A DAT or GXY file is required for section plotting')
 
         self._load()
 
@@ -609,19 +605,19 @@ class FMTS(INFO):
         for fpath in self._fpaths:
             driver = FM_ResultDriver(fpath)
             if driver.driver_name == 'zzn' and len(self._fpaths) > 1:
-                raise ResultError('Cannot load multiple results and one of them is a ZZN file')
+                raise ResultTypeError('Cannot load multiple results and one of them is a ZZN file')
 
             if ids is None:
                 ids = driver.ids
             else:
                 if ids != driver.ids:
-                    raise ResultError('Result IDs do not match')
+                    raise ResultTypeError('Result IDs do not match')
 
             if res_types is None:
                 res_types = driver.result_types
             else:
                 if np.intersect1d(res_types, driver.result_types).size:
-                    raise ResultError('Duplicate result types found in the result files')
+                    raise ResultTypeError('Duplicate result types found in the result files')
 
             self._storage.append(driver)
 

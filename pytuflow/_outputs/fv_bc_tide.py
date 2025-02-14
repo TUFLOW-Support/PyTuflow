@@ -12,11 +12,12 @@ except ImportError:
     has_netcdf4 = False
 
 from .time_series import TimeSeries
-from pytuflow._pytuflow_types import PathLike, FileTypeError, TuflowPath, TimeLike
+from pytuflow._pytuflow_types import PathLike, TuflowPath, TimeLike
 from .helpers.fv_bc_tide_provider import FVBCTideProvider
 from pytuflow.util._util.gis import has_gdal
 from pytuflow._tmf.tmf.tuflow_model_files.dataclasses.append_dict import AppendDict
 from pytuflow.util._util.logging import get_logger
+from pytuflow.results import ResultTypeError
 
 
 logger = get_logger()
@@ -44,19 +45,15 @@ class FVBCTide(TimeSeries):
 
     Raises
     ------
-    FileNotFoundError
-        Raised if the input files do not exist.
-    FileTypeError
-        Raises :class:`pytuflow.pytuflow_types.FileTypeError` if the file does not look like a time series .info file.
-    EOFError
-        Raised if either of the input files are empty or incomplete.
+    ResultTypeError
+        Raises :class:`pytuflow.results.ResultTypeError` if the file does not look like a ``FVBCTide`` file.
 
     Examples
     --------
     Load TUFLOW FV tide boundary data - this requires the NetCDF data that contains the tabular data and the GIS file
     that contains the spatial location.
 
-    >>> from pytuflow.outputs import FVBCTide
+    >>> from pytuflow import FVBCTide
     >>> bndry = FVBCTide('path/to/fv_bc_tide.nc', 'path/to/fv_bc_tide.shp')
 
     Plot a time-series of water level from a location along the boundary:
@@ -124,7 +121,7 @@ class FVBCTide(TimeSeries):
 
         # call before tpc_reader is initialised to give a clear error message if it isn't actually a .info time series file
         if not self._looks_like_this(self.nc_fpath):
-            raise FileTypeError(f'File does not look like a time series {self.__class__.__name__} file: {nc_fpath}')
+            raise ResultTypeError(f'File does not look like a time series {self.__class__.__name__} file: {nc_fpath}')
 
         try:
             with self.node_string_gis_fpath.open_gis('r') as f:

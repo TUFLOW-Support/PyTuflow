@@ -33,18 +33,13 @@ class GPKGRL(GPKG2D):
 
     Raises
     ------
-    FileNotFoundError
-        Raised if the .gpkg file does not exist.
-    FileTypeError
-        Raises :class:`pytuflow.pytuflow_types.FileTypeError` if the file does not look like a 1D time
-        series .gpkg file.
-    EOFError
-        Raised if the .gpkg file is empty or incomplete.
+    ResultTypeError
+        Raises :class:`pytuflow.results.ResultTypeError` if the file does not look like a ``GPKGRL`` file.
 
     Examples
     --------
-    >>> from pytuflow.outputs.gpkg_rl import GPKGRL
-    >>> res = GPKGRL('path/to/file_RL.gpkg')
+    >>> from pytuflow import GPKGRL
+    >>> res = GPKGRL('path/to/GPKG_RL.gpkg')
 
     Querying all the available data types:
 

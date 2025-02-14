@@ -10,7 +10,8 @@ from packaging.version import Version
 from pytuflow._outputs.gpkg_base import GPKGBase
 from pytuflow._outputs.time_series import TimeSeries
 from pytuflow._outputs.itime_series_2d import ITimeSeries2D
-from pytuflow._pytuflow_types import PathLike, AppendDict, FileTypeError, TimeLike, TuflowPath
+from pytuflow._pytuflow_types import PathLike, AppendDict, TimeLike, TuflowPath
+from pytuflow.results import ResultTypeError
 
 if typing.TYPE_CHECKING:
     from sqlite3 import Cursor
@@ -36,17 +37,12 @@ class GPKG2D(TimeSeries, ITimeSeries2D, GPKGBase):
 
     Raises
     ------
-    FileNotFoundError
-        Raised if the .info file does not exist.
-    FileTypeError
-        Raises :class:`pytuflow.pytuflow_types.FileTypeError` if the file does not look like a time
-        series .gpkg file.
-    EOFError
-        Raised if the .info file is empty or incomplete.
+    ResultTypeError
+        Raises :class:`pytuflow.results.ResultTypeError` if the file does not look like a ``GPKG2D`` file.
 
     Examples
     --------
-    >>> from pytuflow.outputs.gpkg_2d import GPKG2D
+    >>> from pytuflow import GPKG2D
     >>> res = GPKG2D('path/to/file_2D.gpkg')
 
     Querying all the available data types:
@@ -101,7 +97,7 @@ class GPKG2D(TimeSeries, ITimeSeries2D, GPKGBase):
 
         # call before tpc_reader is initialised to give a clear error message if it isn't actually a .info time series file
         if not self._looks_like_this(self.fpath):
-            raise FileTypeError(f'File does not look like a time series {self.__class__.__name__} file: {fpath}')
+            raise ResultTypeError(f'File does not look like a time series {self.__class__.__name__} file: {fpath}')
 
         # call after tpc_reader has been initialised so that we know the file can be loaded by the reader
         if self._looks_empty(fpath):

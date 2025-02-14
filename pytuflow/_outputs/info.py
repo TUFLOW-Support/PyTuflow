@@ -9,8 +9,9 @@ import pandas as pd
 from pytuflow._outputs.helpers.tpc_reader import TPCReader
 from pytuflow._outputs.itime_series_1d import ITimeSeries1D
 from pytuflow._outputs.time_series import TimeSeries
-from pytuflow._pytuflow_types import PathLike, TimeLike, AppendDict, FileTypeError
+from pytuflow._pytuflow_types import PathLike, TimeLike, AppendDict
 from pytuflow.util._util.logging import get_logger
+from pytuflow.results import ResultTypeError
 
 logger = get_logger()
 
@@ -33,18 +34,14 @@ class INFO(TimeSeries, ITimeSeries1D):
 
     Raises
     ------
-    FileNotFoundError
-        Raised if the .info file does not exist.
-    FileTypeError
-        Raises :class:`pytuflow.pytuflow_types.FileTypeError` if the file does not look like a time series .info file.
-    EOFError
-        Raised if the .info file is empty or incomplete.
+    ResultTypeError
+        Raises :class:`pytuflow.results.ResultTypeError` if the file does not look like a time series ``INFO`` file.
 
     Examples
     --------
     Load a :code:`.info` file:
 
-    >>> from pytuflow.outputs import INFO
+    >>> from pytuflow import INFO
     >>> res = INFO('path/to/file.info')
 
     Querying all the available data types:
@@ -89,7 +86,7 @@ class INFO(TimeSeries, ITimeSeries1D):
 
         # call before tpc_reader is initialised to give a clear error message if it isn't actually a .info time series file
         if not self._looks_like_this(self.fpath):
-            raise FileTypeError(f'File does not look like a time series {self.__class__.__name__} file: {fpath}')
+            raise ResultTypeError(f'File does not look like a time series {self.__class__.__name__} file: {fpath}')
 
         # call after tpc_reader has been initialised so that we know the file can be loaded by the reader
         if self._looks_empty(fpath):

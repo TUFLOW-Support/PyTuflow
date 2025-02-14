@@ -9,8 +9,9 @@ import pandas as pd
 from .tabular_output import TabularOutput
 from .helpers.hyd_tables_cross_section_provider import HydTablesCrossSectionProvider
 from .helpers.hyd_tables_channel_provider import HydTablesChannelProvider
-from .._pytuflow_types import PathLike, TimeLike, FileTypeError
+from .._pytuflow_types import PathLike, TimeLike
 from pytuflow.util._util.logging import get_logger
+from pytuflow.results import ResultTypeError
 
 
 logger = get_logger()
@@ -27,18 +28,14 @@ class HydTablesCheck(TabularOutput):
 
     Raises
     ------
-    FileNotFoundError
-        Raised if the check file does not exist.
-    FileTypeError
-        Raises :class:`pytuflow.pytuflow_types.FileTypeError` if the file does not look like a valid check file.
-    EOFError
-        Raised if the check file is empty or incomplete.
+    ResultTypeError
+        Raises :class:`pytuflow.results.ResultTypeError` if the file does not look like a ``HydTablesCheck`` file.
 
     Examples
     --------
     Load a 1D hydraulic tables check file:
 
-    >>> from pytuflow.outputs import HydTablesCheck
+    >>> from pytuflow import HydTablesCheck
     >>> hyd_tables = HydTablesCheck('path/to/1d_ta_tables_check.csv')
     """
 
@@ -66,7 +63,7 @@ class HydTablesCheck(TabularOutput):
             raise FileNotFoundError(f'File does not exist: {fpath}')
 
         if not self._looks_like_this(self.fpath):
-            raise FileTypeError(f'File does not look like a {self.__class__.__name__} file: {fpath}')
+            raise ResultTypeError(f'File does not look like a {self.__class__.__name__} file: {fpath}')
 
         if self._looks_empty(self.fpath):
             raise EOFError(f'File is empty or incomplete: {fpath}')
