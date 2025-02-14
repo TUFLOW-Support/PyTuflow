@@ -32,4 +32,4 @@ from .util._util.tf import TuflowBinaries
 
 
 name = 'PyTuflow'
-__version__ = '0.0.124'
+__version__ = '0.0.125'
