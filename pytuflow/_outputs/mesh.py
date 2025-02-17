@@ -118,44 +118,44 @@ class Mesh(MapOutput):
         Get the water level time-series data for a given point defined as ``(x, y)``:
 
         >>> xmdf.time_series((293250, 6178030), 'water level')
-                time  pnt1/water level
-        0   0.000000               NaN
-        1   0.083333               NaN
-        2   0.166667               NaN
-        3   0.250000               NaN
-        4   0.333333               NaN
-        5   0.416667               NaN
-        6   0.500000               NaN
-        7   0.583333               NaN
-        8   0.666667         41.561204
-        9   0.750000         41.838923
-        ...    ...                 ...
-        32  2.666667         41.278006
-        33  2.750000         41.239387
-        34  2.833334         41.201996
-        35  2.916667         41.166462
-        36  3.000000         41.128152
+            time  pnt1/water level
+        0.000000               NaN
+        0.083333               NaN
+        0.166667               NaN
+        0.250000               NaN
+        0.333333               NaN
+        0.416667               NaN
+        0.500000               NaN
+        0.583333               NaN
+        0.666667         41.561204
+        0.750000         41.838923
+        ...                    ...
+        2.666667         41.278006
+        2.750000         41.239387
+        2.833334         41.201996
+        2.916667         41.166462
+        3.000000         41.128152
 
         Get velocity time-series of the points with a shapefile:
 
         >>> xmdf.time_series('path/to/shapefile.shp', 'vel')
-                time  pnt1/velocity
-        0   0.000000            NaN
-        1   0.083333            NaN
-        2   0.166667            NaN
-        3   0.250000            NaN
-        4   0.333333            NaN
-        5   0.416667            NaN
-        6   0.500000            NaN
-        7   0.583333            NaN
-        8   0.666667       0.975577
-        9   0.750000       0.914921
-        ...    ...              ...
-        32  2.666667       0.320217
-        33  2.750000       0.270925
-        34  2.833334       0.233793
-        35  2.916667       0.206761
-        36  3.000000       0.183721
+            time  pnt1/velocity
+        0.000000            NaN
+        0.083333            NaN
+        0.166667            NaN
+        0.250000            NaN
+        0.333333            NaN
+        0.416667            NaN
+        0.500000            NaN
+        0.583333            NaN
+        0.666667       0.975577
+        0.750000       0.914921
+        ...                 ...
+        2.666667       0.320217
+        2.750000       0.270925
+        2.833334       0.233793
+        2.916667       0.206761
+        3.000000       0.183721
         """
         df = pd.DataFrame()
         pnts = self._translate_point_location(locations)
@@ -163,7 +163,14 @@ class Mesh(MapOutput):
         for name, pnt in pnts.items():
             for dtype in data_types:
                 df1 = self._driver.time_series(name, pnt, dtype)
-                df = pd.concat([df, df1]) if not df.empty else df1
+                if df1.empty:
+                    continue
+                if not df.empty:
+                    if np.isclose(df.index, df1.index, atol=0.0001, rtol=0).all():
+                        df1.index = df.index
+                    else:
+                        raise ValueError('Time series index does not match between datasets.')
+                df = pd.concat([df, df1], axis=1) if not df.empty else df1
         return df
 
     def section(self, locations: LineStringLocation, data_types: Union[str, list[str]],

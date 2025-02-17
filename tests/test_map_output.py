@@ -64,14 +64,14 @@ class TestXMDF(unittest.TestCase):
         with pyqgis():
             res = XMDF(xmdf)
             df = res.time_series((1, 1), 'water level')
-            self.assertEqual((7, 2), df.shape)
+            self.assertEqual((7, 1), df.shape)
 
     def test_time_series_2(self):
         xmdf = './tests/xmdf/run.xmdf'
         with pyqgis():
             res = XMDF(xmdf)
             df = res.time_series({'test name': 'POINT (1.5 3.2)'}, 'water level')
-            self.assertEqual((7, 2), df.shape)
+            self.assertEqual((7, 1), df.shape)
 
     def test_time_series_3(self):
         xmdf = './tests/xmdf/run.xmdf'
@@ -79,4 +79,4 @@ class TestXMDF(unittest.TestCase):
         with pyqgis():
             res = XMDF(xmdf)
             df = res.time_series(shp, 'vel')
-            self.assertEqual((7, 2), df.shape)
+            self.assertEqual((7, 1), df.shape)

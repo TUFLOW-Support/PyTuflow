@@ -95,4 +95,9 @@ class QgisMeshDriver(MeshDriver):
             if not np.isnan(value):
                 valid = True
 
-        return pd.DataFrame(data, columns=['time', f'{name}/{stnd_name}']) if valid else pd.DataFrame()
+        if not valid:
+            return pd.DataFrame()
+
+        df = pd.DataFrame(data, columns=['time', f'{name}/{stnd_name}'])
+        df.set_index('time', inplace=True)
+        return df
