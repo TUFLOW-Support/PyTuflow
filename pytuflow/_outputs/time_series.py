@@ -71,45 +71,6 @@ class TimeSeries(TabularOutput):
         # docstring inherited
         return pd.DataFrame(columns=['id', 'data_type', 'geometry', 'start', 'end', 'dt', 'domain'])
 
-    def times(self, filter_by: str = None, fmt: str = 'relative') -> list[TimeLike]:
-        """Returns all the available times for the given context.
-
-       The context is an optional input that can be used to filter the return further. E.g. this can be used to
-       get the times only for a given 1D channel.
-
-       Parameters
-       ----------
-       filter_by : str, optional
-           The context to filter the times by.
-       fmt : str, optional
-           The format for the times. Options are 'relative' or 'absolute'.
-
-       Returns
-       -------
-       list[TimeLike]
-           The available times in the requested format.
-       """
-        def generate_times(row):
-            a = np.arange(row['start'], row['end'], row['dt'] / 3600.)
-            if not np.isclose(a[-1], row['end'], rtol=0., atol=0.001):
-                a = np.append(a, np.reshape(row['end'], (1,)), axis=0)
-            return a[a <= row['end']]
-
-        # generate a DataFrame with all a combination of result types that meet the context
-        ctx = self._filter(filter_by)
-        if ctx.empty:
-            return []
-
-        # generate a lit of times based on the unique start, end and dt values
-        time_prop = ctx[['start', 'end', 'dt']].drop_duplicates()
-        time_prop['times'] = time_prop.apply(generate_times, axis=1)
-        combined_times = pd.Series([time for times_list in time_prop['times'] for time in times_list])
-        unique_sorted_times = pd.Series(combined_times.unique()).sort_values().reset_index(drop=True)
-
-        if fmt == 'absolute':
-            return [self.reference_time + timedelta(hours=x) for x in unique_sorted_times.tolist()]
-        return unique_sorted_times.tolist()
-
     def data_types(self, filter_by: str = None) -> list[str]:
         """Returns all the available data types (result types) for the given context.
 

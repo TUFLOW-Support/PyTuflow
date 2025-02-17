@@ -66,6 +66,7 @@ This page gives an overview of the public modules, classes, and functions within
    :nosignatures:
    :template: custom-class-template.rst
 
+   XMDF
    TPC
    INFO
    GPKG1D

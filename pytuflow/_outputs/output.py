@@ -1,7 +1,7 @@
 import json
 import re
 from abc import ABC, abstractmethod
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from typing import Union
 
@@ -73,28 +73,52 @@ class Output(ABC):
         """
         pass
 
-    @abstractmethod
     def times(self, filter_by: str = None, fmt: str = 'relative') -> list[TimeLike]:
-        """Returns all the available times for the output.
+        """Returns all the available times for the given context.
 
-        The ``filter_by`` argument is an optional input that can be used to filter the return further.
-        E.g. this can be used to get the times only for a given 1D channel.
+       The context is an optional input that can be used to filter the return further. E.g. this can be used to
+       get the times only for a given 1D channel.
 
-        Parameters
-        ----------
-        filter_by : str, optional
-            The context to filter the times by.
-        fmt : str, optional
-            The format for the times. Options are 'relative' or 'absolute'.
+       Parameters
+       ----------
+       filter_by : str, optional
+           The context to filter the times by.
+       fmt : str, optional
+           The format for the times. Options are 'relative' or 'absolute'.
 
-        Returns
-        -------
-        list[TimeLike]
-            The available times in the requested format.
-        """
-        pass
+       Returns
+       -------
+       list[TimeLike]
+           The available times in the requested format.
+       """
+        def generate_times(row):
+            if isinstance(row['dt'], list):
+                return np.array(row['dt'])
+            else:
+                if np.isclose(row['start'], row['end'], rtol=0., atol=0.001).all():
+                    return np.array([])
+                a = np.arange(row['start'], row['end'], row['dt'] / 3600.)
+                if not np.isclose(a[-1], row['end'], rtol=0., atol=0.001):
+                    a = np.append(a, np.reshape(row['end'], (1,)), axis=0)
+                return a[a <= row['end']]
 
-    @abstractmethod
+        # generate a DataFrame with all a combination of result types that meet the context
+        ctx = self._filter(filter_by)
+        if ctx.empty:
+            return []
+        if not np.intersect1d(['start', 'end', 'dt'], ctx.columns).all():
+            return []
+
+        # generate a lit of times based on the unique start, end and dt values
+        time_prop = ctx[['start', 'end', 'dt']].drop_duplicates()
+        time_prop['times'] = time_prop.apply(generate_times, axis=1)
+        combined_times = pd.Series([time for times_list in time_prop['times'] for time in times_list])
+        unique_sorted_times = pd.Series(combined_times.unique()).sort_values().reset_index(drop=True)
+
+        if fmt == 'absolute':
+            return [self.reference_time + timedelta(hours=x) for x in unique_sorted_times.tolist()]
+        return unique_sorted_times.tolist()
+
     def data_types(self, filter_by: str = None) -> list[str]:
         """Returns all the available data types (result types) for the output given the context.
 
@@ -111,7 +135,11 @@ class Output(ABC):
         list[str]
             The available data types.
         """
-        pass
+        ctx = self._filter(filter_by)
+        if ctx.empty:
+            return []
+
+        return ctx['data_type'].unique().tolist()
 
     @abstractmethod
     def time_series(self, locations: PlotExtractionLocation, data_types: Union[str, list[str]],
@@ -121,7 +149,7 @@ class Output(ABC):
 
         Parameters
         ----------
-        locations : :doc:`PlotExtractionLocation <pytuflow.pytuflow_types.PlotExtractionLocation>`
+        locations : PlotExtractionLocation
             The location to extract the time series data for.
         data_types : str | list[str]
             The data type to extract the time series data for.
@@ -142,7 +170,7 @@ class Output(ABC):
 
         Parameters
         ----------
-        locations : :doc:`PlotExtractionLocation <pytuflow.pytuflow_types.PlotExtractionLocation>`
+        locations : PlotExtractionLocation
             The location to extract the section data for.
         data_types : str | list[str]
             The data type to extract the section data for.
@@ -163,7 +191,7 @@ class Output(ABC):
 
         Parameters
         ----------
-        locations : :doc:`PlotExtractionLocation <pytuflow.pytuflow_types.PlotExtractionLocation>`
+        locations : PlotExtractionLocation
             The location to extract the curtain data for.
         data_types : str | list[str]
             The data type to extract the curtain data for.
@@ -184,7 +212,7 @@ class Output(ABC):
 
         Parameters
         ----------
-        locations : :doc:`PlotExtractionLocation <pytuflow.pytuflow_types.PlotExtractionLocation>`
+        locations : PlotExtractionLocation
             The location to extract the profile data for.
         data_types : str | list[str]
             The data type to extract the profile data for.
@@ -195,6 +223,57 @@ class Output(ABC):
         -------
         pd.DataFrame
             The profile data.
+        """
+        pass
+
+    @abstractmethod
+    def _filter(self, filter_by: str):
+        """Returns a DataFrame with the output combinations for the given filter string.
+
+        Parameters
+        ----------
+        filter_by : str
+            The context to extract the combinations for.
+
+        Returns
+        -------
+        pd.DataFrame
+            The context combinations.
+
+        Examples
+        --------
+        Extracting the available :code:`channel` output combinations. The returned DataFrame contains a row for each
+        :code:`id` / :code:`data_type` combination that is available for :code:`channel` types.
+
+        >>> res._filter('channel')
+                   id data_type geometry  start  end    dt domain
+        55        ds1      flow     line    0.0  3.0  60.0     1d
+        56        ds2      flow     line    0.0  3.0  60.0     1d
+        57        ds3      flow     line    0.0  3.0  60.0     1d
+        58        ds4      flow     line    0.0  3.0  60.0     1d
+        59        ds5      flow     line    0.0  3.0  60.0     1d
+        ..        ...       ...      ...    ...  ...   ...    ...
+        158   FC02.04  velocity     line    0.0  3.0  60.0     1d
+        159   FC02.05  velocity     line    0.0  3.0  60.0     1d
+        160   FC02.06  velocity     line    0.0  3.0  60.0     1d
+        161  FC04.1_C  velocity     line    0.0  3.0  60.0     1d
+        162  FC_weir1  velocity     line    0.0  3.0  60.0     1d
+
+        Similarly, extracting combinations for :code:`flow`:
+
+        >>> res._filter('flow')
+                           id data_type geometry  start  end    dt domain
+        55        ds1      flow     line    0.0  3.0  60.0     1d
+        56        ds2      flow     line    0.0  3.0  60.0     1d
+        57        ds3      flow     line    0.0  3.0  60.0     1d
+        58        ds4      flow     line    0.0  3.0  60.0     1d
+        59        ds5      flow     line    0.0  3.0  60.0     1d
+        ..        ...       ...      ...    ...  ...   ...    ...
+        104   FC02.04      flow     line    0.0  3.0  60.0     1d
+        105   FC02.05      flow     line    0.0  3.0  60.0     1d
+        106   FC02.06      flow     line    0.0  3.0  60.0     1d
+        107  FC04.1_C      flow     line    0.0  3.0  60.0     1d
+        108  FC_weir1      flow     line    0.0  3.0  60.0     1d
         """
         pass
 

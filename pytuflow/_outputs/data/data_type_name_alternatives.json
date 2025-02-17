@@ -4,7 +4,7 @@
   "data_types": {
     "water level": ["h", "wl", "water(?:\\s|_|-)?levels?", "stage", "levels?"],
     "energy": ["e", "energy", "energy(?:\\s|_|-)?levels?"],
-    "velocity": ["v", "velocity", "velocities"],
+    "velocity": ["v", "velocity", "velocities", "vel"],
     "flow": ["q", "flows?", "discharges?", "total(?:\\s|_|-)?flow"],
     "total inflow": ["total(?:\\s|_|-)?inflows?"],
     "lateral inflow": ["lat(?:eral)?(?:\\s|_|-)?inflows?"],
