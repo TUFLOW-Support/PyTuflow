@@ -60,7 +60,7 @@ class XMDF(Mesh):
     2.916667         41.166462
     3.000000         41.128152
 
-    Get velocity time-series of the points with a shapefile:
+    Get velocity time-series using all the points within a shapefile:
 
     >>> xmdf.time_series('path/to/shapefile.shp', 'vel')
         time  pnt1/velocity
@@ -83,14 +83,14 @@ class XMDF(Mesh):
     """
 
     def __init__(self, fpath: PathLike, twodm: PathLike = None):
-        self.twodm = Path(twodm) if twodm else self.find_2dm(fpath)
+        self.twodm = Path(twodm) if twodm else self._find_2dm(fpath)
         super().__init__(self.twodm)
         self.fpath = Path(fpath)
         self._driver = QgisXmdfMeshDriver(self.twodm, self.fpath)
         self._load()
 
     @staticmethod
-    def find_2dm(xmdf: PathLike) -> Path:
+    def _find_2dm(xmdf: PathLike) -> Path:
         p = Path(xmdf).with_suffix('.2dm')
         if not p.exists():
             raise FileNotFoundError(f'2dm file does not exist: {p}')

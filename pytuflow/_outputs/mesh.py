@@ -14,6 +14,7 @@ logger = get_logger()
 
 
 class Mesh(MapOutput):
+    """Abstract base class for Mesh outputs."""
 
     def __init__(self, fpath: PathLike):
         super().__init__(fpath)
@@ -136,7 +137,7 @@ class Mesh(MapOutput):
         2.916667         41.166462
         3.000000         41.128152
 
-        Get velocity time-series of the points with a shapefile:
+        Get velocity time-series using all the points within a shapefile:
 
         >>> xmdf.time_series('path/to/shapefile.shp', 'vel')
             time  pnt1/velocity
