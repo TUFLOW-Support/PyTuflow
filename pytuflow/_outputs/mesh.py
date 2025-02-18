@@ -1,3 +1,4 @@
+import re
 from pathlib import Path
 from typing import Union
 
@@ -8,6 +9,7 @@ from .helpers.mesh_driver_qgis import QgisMeshDriver
 from .map_output import MapOutput, PointLocation, LineStringLocation
 from .._pytuflow_types import PathLike, TimeLike
 from ..util._util.logging import get_logger
+from .output import Output
 
 
 logger = get_logger()
@@ -30,6 +32,25 @@ class Mesh(MapOutput):
     @staticmethod
     def _looks_empty(driver: QgisMeshDriver) -> bool:
         return False
+
+    @staticmethod
+    def _get_standard_data_type_name(name: str) -> str:
+        """Override base method to consider explicit calls to max, min, and time of max datasets."""
+        name1 = name.split('/')[0]
+        stnd_name = Output._get_standard_data_type_name(name1)
+        if not re.findall(r'(max|peak|min)', name, re.IGNORECASE):
+            return stnd_name
+
+        if re.findall(r'(tmax|time[\s_-]+of[\s_-](?:peak|max))', name, re.IGNORECASE):
+            return 'tmax ' + stnd_name
+
+        if re.findall(r'(max|peak)', name, re.IGNORECASE):
+            return 'max ' + stnd_name
+
+        if re.findall(r'(tmin|time[\s_-]+of[\s_-]+min)', name, re.IGNORECASE):
+            return 'tmin ' + stnd_name
+
+        return 'min ' + stnd_name
 
     def times(self, filter_by: str = None, fmt: str = 'relative') -> list[TimeLike]:
         """Returns a list of times for the given filter.
@@ -94,13 +115,16 @@ class Mesh(MapOutput):
                     time_fmt: str = 'relative') -> pd.DataFrame:
         """Extracts time series data for the given locations and data types.
 
-        The location can be a single point in the form of a tuple ``(x, y)`` or in the Well Known Text (WKT) format.
-        It can also be a list of point or a dictionary of points where the key will be used in the column name
+        The ``locations`` can be a single point in the form of a tuple ``(x, y)`` or in the Well Known Text (WKT)
+        format. It can also be a list of point or a dictionary of points where the key will be used in the column name
         in the resulting DataFrame.
 
         The location can also be a GIS point file e.g. Shapefile or GPKG. GPKG's should follow the TUFLOW
         convention if specifying the layer name within the database ``database.gpkg >> layer``. If the GIS layer
-        has a field called ``name`` then this will be used as the column name in the resulting DataFrame.
+        has a field called ``name`` or ``label`` then this will be used as the column name in the resulting DataFrame.
+
+        The returned DataFrame will use a single time index and the column names will be in the form of:
+        ``label/data_type`` e.g. ``pnt1/water level``.
 
         Parameters
         ----------
@@ -160,7 +184,7 @@ class Mesh(MapOutput):
         """
         df = pd.DataFrame()
         pnts = self._translate_point_location(locations)
-        data_types = self._figure_out_data_types(data_types)
+        data_types = self._figure_out_data_types(data_types, 'temporal')
         for name, pnt in pnts.items():
             for dtype in data_types:
                 df1 = self._driver.time_series(name, pnt, dtype)
@@ -176,7 +200,95 @@ class Mesh(MapOutput):
 
     def section(self, locations: LineStringLocation, data_types: Union[str, list[str]],
                 time: TimeLike) -> pd.DataFrame:
-        pass
+        """Extracts section data for the given locations and data types.
+
+        The ``locations`` can be a list of ``x, y`` tuple points, or a Well Known Text (WKT) line string. It can also
+        be a dictionary of key, line-string pairs where the key is the name that will be used in the column name in
+        the resulting DataFrame.
+
+        It can also be a single GIS file path e.g. Shapefile or GPKG. GPKG's should follow the TUFLOW convention
+        if specifying the layer name within the database ``database.gpkg >> layer``. If the GIS layer has a field
+        called ``name`` or ``label`` then this will be used as the column name in the resulting DataFrame.
+
+        The resulting DataFrame will use multi-index columns since the data is not guaranteed to have the same
+        index. The level 1 index will be the label, and the level 2 index will be the data type. The offset will
+        always be the first column within the level 2 index.
+
+        Parameters
+        ----------
+        locations : list[Point] | str | PathLike
+            The location to extract the section data for.
+        data_types : str | list[str]
+            The data types to extract the section data for.
+        time : TimeLike
+            The time to extract the section data for.
+
+        Returns
+        -------
+        pd.DataFrame
+            The section data.
+
+        Examples
+        --------
+        Get the water level section data for a given line string defined as a list of points:
+
+        >>> xmdf.section([(293250, 6178030), (293500, 6178030)], 'water level', 1.5)
+                 line1
+                offset water level
+        0     0.000000   42.724101
+        1     1.706732   42.723076
+        2     4.624017   42.722228
+        3     7.191697   42.722665
+        4    11.116369   42.723587
+        5    16.251266   42.723855
+        6    21.386370   42.723230
+        7    25.869978   42.722765
+        8    28.437221   42.722449
+        9    31.656245   42.721945
+        10   36.791135   42.721079
+
+        Get the bed level and max water level data using a shapefile to define the locations (both datasets are
+        static and therefore the time argument won't have any effect):
+
+        >>> xmdf.section('path/to/shapefile.shp', ['bed level', 'max h'], -1)
+               Line_1                                 Line_2
+               offset  bed level max water level      offset  bed level max water level
+        0    0.000000  43.646312             NaN    0.000000  43.112894             NaN
+        1    0.145704  43.645835             NaN    2.213407  43.088104             NaN
+        2    2.801012  43.647998             NaN    6.926959  43.035811             NaN
+        3    7.819650  43.643313             NaN   11.926842  42.987500             NaN
+        4   12.838279  43.634620             NaN   16.926803  42.950000             NaN
+        5   17.856980  43.626645             NaN   21.926729  42.916000             NaN
+        6   22.875678  43.615949             NaN   26.926655  42.888000             NaN
+        7   25.941652  43.611225             NaN   31.926952  42.865499             NaN
+        8   28.451249  43.603039             NaN   36.926835  42.846001             NaN
+        9   32.913571  43.591435             NaN   41.926869  42.829500             NaN
+        10  37.932185  43.578406             NaN   46.926830  42.812500             NaN
+        11  42.950809  43.569102             NaN   51.926756  42.795000       42.443355
+        12  47.969530  43.577088             NaN   56.926682  42.777190       42.443967
+        13  52.988495  43.666201             NaN   61.926643  42.760000       42.444545
+        14  58.007149  43.773129             NaN   66.926940  42.744000       42.445528
+        15  63.026036  43.897195             NaN   71.926823  42.730500       42.447615
+        16  68.044737  43.612406             NaN   76.926857  42.719000       42.449872
+        17  73.063420  42.849014       42.834780   81.926818  42.708500       42.452022
+        """
+        df = pd.DataFrame()
+        lines = self._translate_line_string_location(locations)
+        data_types = self._figure_out_data_types(data_types, None)
+        for name, line in lines.items():
+            df1 = pd.DataFrame()
+            for dtype in data_types:
+                df2 = self._driver.section(line, dtype, time, None)
+                if df2.empty:
+                    continue
+                df1 = pd.concat([df1, df2], axis=1) if not df1.empty else df2
+            if df1.empty:
+                continue
+            df1.reset_index(inplace=True, drop=False)
+            df1.columns = pd.MultiIndex.from_tuples([(name, x) for x in df1.columns])
+            df = pd.concat([df, df1], axis=1) if not df.empty else df1
+
+        return df
 
     def curtain(self, locations: LineStringLocation, data_types: Union[str, list[str]],
                 time: TimeLike) -> pd.DataFrame:
@@ -267,13 +379,16 @@ class Mesh(MapOutput):
 
         self._info = pd.DataFrame(d)
 
-    def _figure_out_data_types(self, data_types: Union[str, list[str]]) -> list[str]:
+    def _figure_out_data_types(self, data_types: Union[str, list[str]], filter_by: str | None) -> list[str]:
         if not data_types:
             raise ValueError('No data types provided.')
 
         data_types = [data_types] if not isinstance(data_types, list) else data_types
 
-        valid_dtypes = self.data_types('temporal')
+        valid_dtypes = self.data_types(filter_by)
+        if filter_by != 'temporal':
+            valid_dtypes.extend(['max ' + x for x in self.data_types('max')])
+            valid_dtypes.extend(['min ' + x for x in self.data_types('min')])
         dtypes1 = []
         for dtype in data_types:
             stnd = self._get_standard_data_type_name(dtype)

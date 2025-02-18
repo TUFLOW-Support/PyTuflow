@@ -80,3 +80,67 @@ class TestXMDF(unittest.TestCase):
             res = XMDF(xmdf)
             df = res.time_series(shp, 'vel')
             self.assertEqual((7, 1), df.shape)
+
+    def test_time_series_4(self):
+        xmdf = './tests/xmdf/run.xmdf'
+        shp = './tests/xmdf/time_series_multi_point.shp'
+        with pyqgis():
+            res = XMDF(xmdf)
+            df = res.time_series(shp, 'vel')
+            self.assertEqual((7, 2), df.shape)
+
+    def test_section(self):
+        xmdf = './tests/xmdf/run.xmdf'
+        shp = './tests/xmdf/section_line.shp'
+        with pyqgis():
+            res = XMDF(xmdf)
+            df = res.section(shp, 'h', 0)
+            self.assertEqual((9, 2), df.shape)
+
+    def test_section_2(self):
+        xmdf = './tests/xmdf/run.xmdf'
+        with pyqgis():
+            res = XMDF(xmdf)
+            line = 'LINESTRING (0.697468354430381 0.633670886075949,3.27063291139241 3.34506329113924)'
+            df = res.section(line, 'h', 0)
+            self.assertEqual((9, 2), df.shape)
+
+    def test_section_3(self):
+        xmdf = './tests/xmdf/run.xmdf'
+        shp = './tests/xmdf/section_multi_line.shp'
+        with pyqgis():
+            res = XMDF(xmdf)
+            df = res.section(shp, 'h', 0)
+            self.assertEqual((9, 4), df.shape)
+
+    def test_section_4(self):
+        xmdf = './tests/xmdf/run.xmdf'
+        shp = './tests/xmdf/section_line.shp'
+        with pyqgis():
+            res = XMDF(xmdf)
+            df = res.section(shp, ['h', 'v'], 0)
+            self.assertEqual((9, 3), df.shape)
+
+    def test_section_5(self):
+        xmdf = './tests/xmdf/run.xmdf'
+        shp = './tests/xmdf/section_multi_line.shp'
+        with pyqgis():
+            res = XMDF(xmdf)
+            df = res.section(shp, ['h', 'v'], 0)
+            self.assertEqual((9, 6), df.shape)
+
+    def test_section_6(self):
+        xmdf = './tests/xmdf/run.xmdf'
+        shp = './tests/xmdf/section_line.shp'
+        with pyqgis():
+            res = XMDF(xmdf)
+            df = res.section(shp, ['bed level', 'h'], 0)
+            self.assertEqual((9, 3), df.shape)
+
+    def test_section_7(self):
+        xmdf = './tests/xmdf/run.xmdf'
+        with pyqgis():
+            res = XMDF(xmdf)
+            line = [(0.5, 0.5), (1.5, 1.5)]
+            df = res.section(line, 'max h', 0)
+            self.assertEqual((7, 2), df.shape)

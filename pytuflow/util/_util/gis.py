@@ -32,6 +32,8 @@ OrderedDict([('Name', 'RL_03')])
 OrderedDict([('Name', 'RL_04')])
 OrderedDict([('Name', 'RL_05')])
 """
+from contextlib import contextmanager
+
 from pytuflow._pytuflow_types import PathLike, TuflowPath
 from pytuflow._tmf.tmf.convert_tuflow_model_gis_format.conv_tf_gis_format.helpers.gis import GPKG, ogr_basic_geom_type
 from pytuflow._tmf.tmf.tuflow_model_files.db.drivers.gis_attr_driver import GISAttributes
@@ -49,7 +51,8 @@ except ImportError:
     has_gdal = False
 
 
-def point_gis_file_to_dict(fpath: PathLike):
+@contextmanager
+def open_gis(fpath):
     if not has_gdal:
         raise ImportError('GDAL python libraries are not installed or cannot be imported.')
 
@@ -70,30 +73,68 @@ def point_gis_file_to_dict(fpath: PathLike):
         if not lyr:
             raise RuntimeError(f'Failed to open layer {p.lyrname}')
 
-        if ogr_basic_geom_type(lyr.GetGeomType()) != ogr.wkbPoint:
-            raise ValueError(f'Layer {p.lyrname} is not a point layer.')
+        yield lyr
+    finally:
+        ds, lyr = None, None  # closes the file
 
-        d = {}
-        i = 0
+
+def point_gis_file_to_dict(fpath: PathLike):
+    d = {}
+    i = 0
+    with open_gis(fpath) as lyr:
+        if ogr_basic_geom_type(lyr.GetGeomType()) != ogr.wkbPoint:
+            raise ValueError(f'Layer {lyr.GetName()} is not a point layer.')
         for feature in lyr:
             geom = feature.GetGeometryRef()
             fi = feature.GetFieldIndex('Name')
             if fi == -1:
                 fi = feature.GetFieldIndex('name')
+            if fi == -1:
+                fi = feature.GetFieldIndex('Label')
+            if fi == -1:
+                fi = feature.GetFieldIndex('label')
             name = feature[fi] if fi != -1 else f'pnt{i+1}'
             i += 1
-            pnts = geom.GetPoints()
-            if len(pnts) == 1:
-                d[name] = pnts[0]
-            else:
-                for j, p in enumerate(pnts):
+            try:
+                d[name] = geom.GetPoints()[0]
+            except RuntimeError:
+                for j, p in enumerate(geom):
                     if fi == -1:
-                        name = f'{name}_{j+1}'
+                        key = f'pnt{i+1}'
                         i += 1
                     else:
-                        name = f'{name}_{j+1}'
-                    d[name] = p
-    finally:
-        dataset, layer = None, None
+                        key = f'{name}_{j+1}'
+                    d[key] = p.GetPoints()[0]
+
+    return d
+
+
+def line_gis_file_to_dict(fpath: PathLike):
+    d = {}
+    i = 0
+    with open_gis(fpath) as lyr:
+        if ogr_basic_geom_type(lyr.GetGeomType()) != ogr.wkbLineString:
+            raise ValueError(f'Layer {lyr.GetName()} is not a line-string layer.')
+        for feature in lyr:
+            geom = feature.GetGeometryRef()
+            fi = feature.GetFieldIndex('Name')
+            if fi == -1:
+                fi = feature.GetFieldIndex('name')
+            if fi == -1:
+                fi = feature.GetFieldIndex('Label')
+            if fi == -1:
+                fi = feature.GetFieldIndex('label')
+            name = feature[fi] if fi != -1 else f'line{i + 1}'
+            i += 1
+            try:
+                d[name] = geom.GetPoints()
+            except RuntimeError:  # multi-line
+                for j, line in enumerate(geom):
+                    if fi == -1:
+                        key = f'line{i+1}'
+                        i += 1
+                    else:
+                        key = f'{name}_{j+1}'
+                    d[key] = line.GetPoints()
 
     return d
