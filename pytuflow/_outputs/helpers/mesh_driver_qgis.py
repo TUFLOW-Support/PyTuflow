@@ -175,6 +175,38 @@ class QgisMeshDriver(MeshDriver):
 
         return data
 
+    def profile(self, point: Point, data_type: str, time: TimeLike, interpolation: str) -> pd.DataFrame:
+        self.init_spatial_index()
+
+        # get dataset index based on the time
+        igrp = self.group_index_from_name(data_type)
+        if isinstance(time, datetime):
+            reltime = (time - self.reference_time).total_seconds()
+        else:
+            reltime = time * 3600  # convert to seconds
+        time_interval = QgsInterval(reltime)
+        index = self.lyr.datasetIndexAtRelativeTime(time_interval, igrp)
+
+        res = ScalarMeshResult(self.lyr, self.qgsmesh, self.dp, self.si, QgsPointXY(*point))
+        if res in self._point_results:
+            res = self._point_results[self._point_results.index(res)]
+        else:
+            self._point_results.append(res)
+
+        data_ = []
+        valid = False
+        for z, value in res.vertical_values(index, interpolation):
+            data_.append((value, z))
+            if not np.isnan(value):
+                valid = True
+
+        df = pd.DataFrame()
+        if valid:
+            df = pd.DataFrame(data_, columns=[data_type, 'elevation'])
+            df.set_index('elevation', inplace=True)
+
+        return df
+
 
 class MeshLine:
     """Class to represent extracting mesh results along a line-string. This class is used to perform

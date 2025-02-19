@@ -113,7 +113,7 @@ class Mesh(MapOutput):
 
     def time_series(self, locations: PointLocation, data_types: Union[str, list[str]],
                     time_fmt: str = 'relative') -> pd.DataFrame:
-        """Extracts time series data for the given locations and data types.
+        """Extracts time-series data for the given locations and data types.
 
         The ``locations`` can be a single point in the form of a tuple ``(x, y)`` or in the Well Known Text (WKT)
         format. It can also be a list of point or a dictionary of points where the key will be used in the column name
@@ -362,8 +362,59 @@ class Mesh(MapOutput):
         return df
 
     def profile(self, locations: PointLocation, data_types: Union[str, list[str]],
-                time: TimeLike) -> pd.DataFrame:
-        pass
+                time: TimeLike, interpolation: str = 'stepped') -> pd.DataFrame:
+        """Extracts vertical profile data for the given locations and data types.
+
+        The ``locations`` can be a single point in the form of a tuple ``(x, y)`` or in the Well Known Text (WKT)
+        format. It can also be a list of point or a dictionary of points where the key will be used in the column name
+        in the resulting DataFrame.
+
+        The location can also be a GIS point file e.g. Shapefile or GPKG. GPKG's should follow the TUFLOW
+        convention if specifying the layer name within the database ``database.gpkg >> layer``. If the GIS layer
+        has a field called ``name`` or ``label`` then this will be used as the column name in the resulting DataFrame.
+
+        The returned DataFrame will use multi-index columns as the data is not guaranteed to have the same index.
+        The level 1 index will be the label, and the level 2 index will be the data type. The elevation will always
+        be the first column within the level 2 index.
+
+        Parameters
+        ----------
+        locations : Point | list[Point] | dict[str, Point] | PathLike
+            The location to extract the time series data for.
+        data_types : str | list[str]
+            The data types to extract the time series data for.
+        time : TimeLike
+            The time to extract the time series data for.
+        interpolation : str, optional
+            The interpolation method to use. Options are 'stepped' or 'linear'. Linear interpolation
+            should not be used for 2D results.
+
+        Returns
+        -------
+        pd.DataFrame
+            The time series data.
+
+        Examples
+        --------
+        Get The profile for a given point defined in a shapefile.
+        """
+        df = pd.DataFrame()
+        pnts = self._translate_point_location(locations)
+        data_types = self._figure_out_data_types(data_types, None)
+        for name, pnt in pnts.items():
+            df1 = pd.DataFrame()
+            for dtype in data_types:
+                df2 = self._driver.profile(pnt, dtype, time, interpolation)
+                if df2.empty:
+                    continue
+                df1 = pd.concat([df1, df2], axis=1) if not df1.empty else df2
+            if df1.empty:
+                continue
+            df1.reset_index(inplace=True, drop=False)
+            df1.columns = pd.MultiIndex.from_tuples([(name, x) for x in df1.columns])
+            df = pd.concat([df, df1], axis=1) if not df.empty else df1
+
+        return df
 
     def _filter(self, filter_by: str):
         filter_by = [x.strip().lower() for x in filter_by.split('/')] if filter_by else []

@@ -192,3 +192,11 @@ class TestXMDF(unittest.TestCase):
             res = XMDF(xmdf)
             df = res.curtain(shp, 'vel', 0)
             self.assertEqual((16, 3), df.shape)
+
+    def test_profile(self):
+        xmdf = './tests/xmdf/run.xmdf'
+        shp = './tests/xmdf/time_series_point.shp'
+        with pyqgis():
+            res = XMDF(xmdf)
+            df = res.profile(shp, 'vel', 0)
+            self.assertEqual((2, 2), df.shape)
