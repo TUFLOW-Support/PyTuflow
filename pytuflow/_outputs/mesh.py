@@ -206,9 +206,9 @@ class Mesh(MapOutput):
         be a dictionary of key, line-string pairs where the key is the name that will be used in the column name in
         the resulting DataFrame.
 
-        It can also be a single GIS file path e.g. Shapefile or GPKG. GPKG's should follow the TUFLOW convention
-        if specifying the layer name within the database ``database.gpkg >> layer``. If the GIS layer has a field
-        called ``name`` or ``label`` then this will be used as the column name in the resulting DataFrame.
+        The ``locations`` argument can also be a single GIS file path e.g. Shapefile or GPKG. GPKG's should follow the
+        TUFLOW convention if specifying the layer name within the database ``database.gpkg >> layer``. If the GIS layer
+        has a field called ``name`` or ``label`` then this will be used as the column name in the resulting DataFrame.
 
         The resulting DataFrame will use multi-index columns since the data is not guaranteed to have the same
         index. The level 1 index will be the label, and the level 2 index will be the data type. The offset will
@@ -292,7 +292,74 @@ class Mesh(MapOutput):
 
     def curtain(self, locations: LineStringLocation, data_types: Union[str, list[str]],
                 time: TimeLike) -> pd.DataFrame:
-        pass
+        """Extracts curtain data for the given locations and data types.
+
+        The ``locations`` can be a list of ``x, y`` tuple points, or a Well Known Text (WKT) line string. It can also
+        be a dictionary of key, line-string pairs where the key is the name that will be used in the column name in
+        the resulting DataFrame.
+
+        The ``locations`` argument can also be a single GIS file path e.g. Shapefile or GPKG. GPKG's should follow the
+        TUFLOW convention if specifying the layer name within the database ``database.gpkg >> layer``. If the GIS layer
+        has a field called ``name`` or ``label`` then this will be used as the column name in the resulting DataFrame.
+
+        The resulting DataFrame will be made up of 3 columns- ``X, Y, value`` data. The ``X, Y`` values represent
+        cells in the vertical plane, and should be treated as groups of 4 which denote the corners of a cell. The
+        ``value`` represents the data value at that cell, which will be returned as a single number for scalar
+        results and a tuple for vector results.
+
+        The resulting DataFrame will use multi-index columns since the data is not guaranteed to have the same
+        index. The level 1 index will be the label, and the level 2 index will be the data type. The ``X,Y`` offsets
+        will always be the first two columns within the level 2 index.
+
+        Parameters
+        ----------
+        locations : list[Point] | str | PathLike
+            The location to extract the section data for.
+        data_types : str | list[str]
+            The data types to extract the section data for.
+        time : TimeLike
+            The time to extract the section data for.
+
+        Returns
+        -------
+        pd.DataFrame
+            The section data.
+
+        Examples
+        --------
+        Get the velocity (scalar) curtain data for a given line string defined as in a shapefile:
+
+        >>> mesh.curtain('path/to/shapefile.shp', 'velocity', 1.5)
+                 Line_1
+                      x          y  velocity
+        0     53.431056  42.898541  0.009024
+        1     57.991636  42.898541  0.009024
+        2     57.991636  42.939461  0.009024
+        3     53.431056  42.939461  0.009024
+        4     57.991636  42.884058  0.010111
+        ..          ...        ...       ...
+        199  257.097906  42.754025  0.049965
+        200  258.743717  42.759825  0.028459
+        201  263.876694  42.759825  0.028459
+        202  263.876694  42.875885  0.028459
+        203  258.743717  42.875885  0.028459
+        """
+        df = pd.DataFrame()
+        lines = self._translate_line_string_location(locations)
+        data_types = self._figure_out_data_types(data_types, None)
+        for name, line in lines.items():
+            df1 = pd.DataFrame()
+            for dtype in data_types:
+                df2 = self._driver.curtain(line, dtype, time)
+                if df2.empty:
+                    continue
+                df1 = pd.concat([df1, df2[dtype]], axis=1) if not df1.empty else df2
+            if df1.empty:
+                continue
+            df1.columns = pd.MultiIndex.from_tuples([(name, x) for x in df1.columns])
+            df = pd.concat([df, df1], axis=1) if not df.empty else df1
+
+        return df
 
     def profile(self, locations: PointLocation, data_types: Union[str, list[str]],
                 time: TimeLike) -> pd.DataFrame:

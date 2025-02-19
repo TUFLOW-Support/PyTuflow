@@ -173,6 +173,8 @@ class MeshResult:
         except AssertionError:
             return np.nan
 
+        is_vector = self.dp.datasetGroupMetadata(dataset_group_index).isVector()
+
         # calculate value
         return self._value_from_weightings(data_blocks, self.weightings)
 
@@ -203,7 +205,8 @@ class MeshResult:
         raise NotImplementedError
 
     def _2d_elevations(self, dataset_index: 'QgsMeshDatasetIndex') -> Generator[float, None, None]:
-        raise NotImplementedError
+        yield self.result_from_name(dataset_index, ['water level', 'water surface elevation'])
+        yield self.bed_elevation()
 
     def _get_face(self, point: 'QgsPointXY') -> int:
         """
@@ -243,6 +246,8 @@ class MeshResult:
         return self._bed_elevation
 
     def result_from_name(self, dataset_index: 'QgsMeshDatasetIndex', name: list[str]) -> float:
+        from .vector_mesh_result import VectorMeshResult
+        from .scalar_mesh_result import ScalarMeshResult
         # find water level group
         igrp = None
         for i in range(self.dp.datasetGroupCount()):
@@ -253,6 +258,12 @@ class MeshResult:
             return np.nan
 
         index = QgsMeshDatasetIndex(igrp, dataset_index.dataset())
+        if isinstance(self, VectorMeshResult) and not self.dp.datasetGroupMetadata(igrp).isVector():
+            mesh_result = ScalarMeshResult(self.lyr, self.mesh, self.dp, self.si, self.point)
+            return mesh_result.value(index, None)
+        elif isinstance(self, ScalarMeshResult) and self.dp.datasetGroupMetadata(igrp).isVector():
+            mesh_result = VectorMeshResult(self.lyr, self.mesh, self.dp, self.si, self.point)
+            return mesh_result.value(index, None)
         return self.value(index, None)
 
     def value(self,

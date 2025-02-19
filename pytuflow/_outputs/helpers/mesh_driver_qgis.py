@@ -12,10 +12,15 @@ try:
     from qgis.core import (QgsMeshDatasetIndex, QgsMesh, QgsMeshSpatialIndex, QgsPointXY, QgsInterval,
                            QgsGeometry, QgsLineString)
     from .scalar_mesh_result import ScalarMeshResult
-    from .mesh_geom import mesh_intersects
+    from .vector_mesh_result import VectorMeshResult
+    from .mesh_result import MeshResult
+    from .mesh_geom import mesh_intersects, IntersectResult
+
     has_qgis = True
 except ImportError:
     has_qgis = False
+    MeshResult = 'MeshResult'
+    IntersectResult = 'IntersectResult'
 
 Point = tuple[float, float]
 
@@ -116,42 +121,13 @@ class QgisMeshDriver(MeshDriver):
 
     def section(self, linestring: list[Point], data_type: str, time: TimeLike,
                 averaging_method: str | None = None) -> pd.DataFrame:
-        self.init_spatial_index()
-        igrp = self.group_index_from_name(data_type)
-
-        # get dataset index based on the time
-        if isinstance(time, datetime):
-            reltime = (time - self.reference_time).total_seconds()
-        else:
-            reltime = time * 3600  # convert to seconds
-        time_interval = QgsInterval(reltime)
-        index = self.lyr.datasetIndexAtRelativeTime(time_interval, igrp)
-        linestring = QgsLineString([QgsPointXY(*pnt) for pnt in linestring])
-
-        # get mesh intersections
-        if linestring in self._linestrings:
-            intersects = self._line_results[self._linestrings.index(linestring)]
-        else:
-            intersects = mesh_intersects(self.qgsmesh, self.si, linestring)
-            self._linestrings.append(linestring)
-            self._line_results.append(intersects)
-
-        # loop through points and extract results
+        mesh_line = MeshLine(self, linestring, data_type, time)
+        # loop along line and get data
         data_ = []
         valid = False
-        active = False
-        start_end_locs = []
-        start_loc, end_loc = None, None
-        for location in intersects.iter(self.dp.datasetGroupMetadata(igrp)):
-            # mesh result class
-            mesh_result = ScalarMeshResult(self.lyr, self.qgsmesh, self.dp, self.si, location.point)
-            if mesh_result in self._point_results:
-                mesh_result = self._point_results[self._point_results.index(mesh_result)]
-            else:
-                self._point_results.append(mesh_result)
-
+        for location, mesh_result in mesh_line.results_along_line():
             # get value from mesh
-            value = mesh_result.value(index, averaging_method)
+            value = mesh_result.value(mesh_line.index, averaging_method)
             data_.append((location.dist1, value))
             if location.type == 'face':
                 data_.append((location.dist2, value))
@@ -160,20 +136,6 @@ class QgisMeshDriver(MeshDriver):
             if not np.isnan(value):
                 valid = True
 
-            # check if mesh is active so start / end locations can be determined
-            if mesh_result.active and not active:
-                active = True
-                start_loc = location.start_side
-            elif not mesh_result.active and active:
-                active = False
-                end_loc = location.start_side
-                start_end_locs.append((start_loc, end_loc))
-
-        # check if mesh is active at the end of the line (close it off if it is still active)
-        if active:  # location should be assigned if active is True
-            end_loc = location.end_side
-            start_end_locs.append((start_loc, end_loc))
-
         if valid:
             df = pd.DataFrame(np.array(data_), columns=['offset', data_type])
             df.set_index('offset', inplace=True)
@@ -181,3 +143,86 @@ class QgisMeshDriver(MeshDriver):
             df = pd.DataFrame()
 
         return df
+
+    def curtain(self, linestring: list[Point], data_type: str, time: TimeLike) -> pd.DataFrame:
+        mesh_line = MeshLine(self, linestring, data_type, time)
+        # loop through points and extract results
+        data_ = []
+        valid = False
+        for i, (location, mesh_result) in enumerate(mesh_line.results_along_line()):
+            if i == 0 or i == len(mesh_line.intersects.intersects):  # ignore first and last points
+                continue
+            order_switch = False
+            for z, value in mesh_result.vertical_values(mesh_line.index, 'stepped'):
+                if order_switch:
+                    data_.append((location.end_side, z, value))
+                    data_.append((location.start_side, z, value))
+                else:
+                    data_.append((location.start_side, z, value))
+                    data_.append((location.end_side, z, value))
+
+                order_switch = not order_switch
+
+                # check if the returned data will have something valid in it
+                if isinstance(value, tuple):
+                    value = value[0]
+                if not np.isnan(value):
+                    valid = True
+
+        data = pd.DataFrame()
+        if valid:
+            data = pd.DataFrame(data_, columns=['x', 'y', data_type])
+
+        return data
+
+
+class MeshLine:
+    """Class to represent extracting mesh results along a line-string. This class is used to perform
+    common tasks for extracting mesh results along a line-string, such as finding the intersections and initialising
+    the mesh result class.
+    """
+
+    def __init__(self, driver: QgisMeshDriver, linestring: list[Point], data_type: str, time: TimeLike):
+        self.driver = driver  # parent class
+        self.linestring = QgsLineString([QgsPointXY(*pnt) for pnt in linestring])
+        self.data_type = data_type
+        self.time = time
+
+        self.driver.init_spatial_index()
+        self.lyr = self.driver.lyr
+        self.dp = self.driver.dp
+        self.si = self.driver.si
+        self.qgsmesh = self.driver.qgsmesh
+        self.igrp = self.driver.group_index_from_name(data_type)
+
+        # get dataset index based on the time
+        if isinstance(time, datetime):
+            reltime = (time - self.driver.reference_time).total_seconds()
+        else:
+            reltime = time * 3600  # convert to seconds
+        time_interval = QgsInterval(reltime)
+        self.index = self.lyr.datasetIndexAtRelativeTime(time_interval, self.igrp)
+        linestring = QgsLineString([QgsPointXY(*pnt) for pnt in linestring])
+
+        # get mesh intersections
+        if linestring in self.driver._linestrings:
+            self.intersects = self.driver._line_results[self.driver._linestrings.index(linestring)]
+        else:
+            self.intersects = mesh_intersects(self.qgsmesh, self.si, linestring)
+            self.driver._linestrings.append(linestring)
+            self.driver._line_results.append(self.intersects)
+
+    def results_along_line(self) -> Generator[tuple[IntersectResult, MeshResult], None, None]:
+        """Generator to yield the locations along the line-string."""
+        grp = self.lyr.datasetGroupMetadata(self.index)
+        for location in self.intersects.iter(self.dp.datasetGroupMetadata(self.igrp)):
+            # mesh result class
+            if grp.isVector():
+                mesh_result = VectorMeshResult(self.lyr, self.qgsmesh, self.dp, self.si, location.point)
+            else:
+                mesh_result = ScalarMeshResult(self.lyr, self.qgsmesh, self.dp, self.si, location.point)
+            if mesh_result in self.driver._point_results:
+                mesh_result = self.driver._point_results[self.driver._point_results.index(mesh_result)]
+            else:
+                self.driver._point_results.append(mesh_result)
+            yield location, mesh_result

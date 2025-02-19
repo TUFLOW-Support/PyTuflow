@@ -144,3 +144,51 @@ class TestXMDF(unittest.TestCase):
             line = [(0.5, 0.5), (1.5, 1.5)]
             df = res.section(line, 'max h', 0)
             self.assertEqual((7, 2), df.shape)
+
+    def test_section_long(self):
+        xmdf = './tests/xmdf/run.xmdf'
+        shp = './tests/xmdf/section_line_long.shp'
+        with pyqgis():
+            res = XMDF(xmdf)
+            df = res.section(shp, 'max h', 0)
+            self.assertEqual((8, 2), df.shape)
+
+    def test_curtain(self):
+        xmdf = './tests/xmdf/run.xmdf'
+        shp = './tests/xmdf/section_line.shp'
+        with pyqgis():
+            res = XMDF(xmdf)
+            df = res.curtain(shp, 'vel', 0)
+            self.assertEqual((28, 3), df.shape)
+
+    def test_curtain_2(self):
+        xmdf = './tests/xmdf/run.xmdf'
+        shp = './tests/xmdf/section_multi_line.shp'
+        with pyqgis():
+            res = XMDF(xmdf)
+            df = res.curtain(shp, 'vel', 0)
+            self.assertEqual((28, 6), df.shape)
+
+    def test_curtain_3(self):
+        xmdf = './tests/xmdf/run.xmdf'
+        shp = './tests/xmdf/section_line.shp'
+        with pyqgis():
+            res = XMDF(xmdf)
+            df = res.curtain(shp, ['vel', 'depth'], 0)
+            self.assertEqual((28, 4), df.shape)
+
+    def test_curtain_vector(self):
+        xmdf = './tests/xmdf/run.xmdf'
+        shp = './tests/xmdf/section_line.shp'
+        with pyqgis():
+            res = XMDF(xmdf)
+            df = res.curtain(shp, 'vector velocity', 0)
+            self.assertEqual((28, 3), df.shape)
+
+    def test_curtain_long(self):
+        xmdf = './tests/xmdf/run.xmdf'
+        shp = './tests/xmdf/section_line_long.shp'
+        with pyqgis():
+            res = XMDF(xmdf)
+            df = res.curtain(shp, 'vel', 0)
+            self.assertEqual((16, 3), df.shape)

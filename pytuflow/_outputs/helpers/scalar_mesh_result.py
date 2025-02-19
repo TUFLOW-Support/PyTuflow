@@ -47,6 +47,6 @@ class ScalarMeshResult(MeshResult):
         for x, y in zip(x_, y_):
             yield y, x
 
-    def _2d_elevations(self, dataset_index: 'QgsMeshDatasetIndex') -> Generator[float, None, None]:
-        yield self.result_from_name(dataset_index, ['water level', 'water surface elevation'])
-        yield self.bed_elevation()
+    # def _2d_elevations(self, dataset_index: 'QgsMeshDatasetIndex') -> Generator[float, None, None]:
+    #     yield self.result_from_name(dataset_index, ['water level', 'water surface elevation'])
+    #     yield self.bed_elevation()
