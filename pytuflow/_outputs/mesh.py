@@ -112,7 +112,7 @@ class Mesh(MapOutput):
         return super().data_types(filter_by)
 
     def time_series(self, locations: PointLocation, data_types: Union[str, list[str]],
-                    time_fmt: str = 'relative') -> pd.DataFrame:
+                    time_fmt: str = 'relative', averaging_method: str = None) -> pd.DataFrame:
         """Extracts time-series data for the given locations and data types.
 
         The ``locations`` can be a single point in the form of a tuple ``(x, y)`` or in the Well Known Text (WKT)
@@ -132,6 +132,37 @@ class Mesh(MapOutput):
             The location to extract the time series data for.
         data_types : str | list[str]
             The data types to extract the time series data for.
+        time_fmt : str, optional
+            The format for the time values. Options are 'relative' or 'absolute'.
+        averaging_method : str, optional
+            The depth-averaging method to use. Only applicable for 3D results. If None is provided for a 3D result,
+            the current rendering method will be used.
+
+            The averaging methods are:
+
+            * ``singlelevel``
+            * ``multilevel``
+            * ``depth``
+            * ``height``
+            * ``elevation``
+            * ``sigma``
+
+            The averaging method parameters can be adjusted by building them into the method string in a URI style
+            format. The format is as follows:
+
+            ``<method>?dir=<dir>&<value1>&<value2>``
+
+            Where
+
+            * ``<method>`` is the averaging method name
+            * ``<dir>`` is the direction, ``top`` or ``bottom`` (i.e. from top or from bottom) - only used by certain
+              averaging methods
+            * ``<value1>``, ``<value2>``... are the values to be used in the averaging method (the number required to be
+              passed depends on the averaging method)
+
+            e.g. ``'singlelevel?dir=top&1'`` uses the single level averaging method and takes the first vertical layer
+            from the top. Or ``'sigma&0.1&0.9'`` uses the sigma averaging method and averages values located between
+            the 10th and 90th water column depth.
 
         Returns
         -------
@@ -187,7 +218,7 @@ class Mesh(MapOutput):
         data_types = self._figure_out_data_types(data_types, 'temporal')
         for name, pnt in pnts.items():
             for dtype in data_types:
-                df1 = self._driver.time_series(name, pnt, dtype)
+                df1 = self._driver.time_series(name, pnt, dtype, averaging_method)
                 if df1.empty:
                     continue
                 if not df.empty:
@@ -199,7 +230,7 @@ class Mesh(MapOutput):
         return df
 
     def section(self, locations: LineStringLocation, data_types: Union[str, list[str]],
-                time: TimeLike) -> pd.DataFrame:
+                time: TimeLike, averaging_method: str = None) -> pd.DataFrame:
         """Extracts section data for the given locations and data types.
 
         The ``locations`` can be a list of ``x, y`` tuple points, or a Well Known Text (WKT) line string. It can also
@@ -222,6 +253,35 @@ class Mesh(MapOutput):
             The data types to extract the section data for.
         time : TimeLike
             The time to extract the section data for.
+        averaging_method : str, optional
+            The depth-averaging method to use. Only applicable for 3D results. If None is provided for a 3D result,
+            the current rendering method will be used.
+
+            The averaging methods are:
+
+            * ``singlelevel``
+            * ``multilevel``
+            * ``depth``
+            * ``height``
+            * ``elevation``
+            * ``sigma``
+
+            The averaging method parameters can be adjusted by building them into the method string in a URI style
+            format. The format is as follows:
+
+            ``<method>?dir=<dir>&<value1>&<value2>``
+
+            Where
+
+            * ``<method>`` is the averaging method name
+            * ``<dir>`` is the direction, `top` or ``bottom`` (i.e. from top or from bottom) - only used by certain
+              averaging methods
+            * ``<value1>``, ``<value2>``... are the values to be used in the averaging method (the number required to be
+              passed depends on the averaging method)
+
+            e.g. ``'singlelevel?dir=top&1'`` uses the single level averaging method and takes the first vertical layer
+            from the top. Or ``'sigma&0.1&0.9'`` uses the sigma averaging method and averages values located between
+            the 10th and 90th water column depth.
 
         Returns
         -------
@@ -278,7 +338,7 @@ class Mesh(MapOutput):
         for name, line in lines.items():
             df1 = pd.DataFrame()
             for dtype in data_types:
-                df2 = self._driver.section(line, dtype, time, None)
+                df2 = self._driver.section(line, dtype, time, averaging_method)
                 if df2.empty:
                     continue
                 df1 = pd.concat([df1, df2], axis=1) if not df1.empty else df2

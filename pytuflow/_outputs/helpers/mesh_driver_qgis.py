@@ -10,7 +10,7 @@ from ..._pytuflow_types import TimeLike
 
 try:
     from qgis.core import (QgsMeshDatasetIndex, QgsMesh, QgsMeshSpatialIndex, QgsPointXY, QgsInterval,
-                           QgsGeometry, QgsLineString)
+                           QgsGeometry, QgsLineString, QgsApplication, QgsMeshLayer)
     from .scalar_mesh_result import ScalarMeshResult
     from .vector_mesh_result import VectorMeshResult
     from .mesh_result import MeshResult
@@ -21,6 +21,7 @@ except ImportError:
     has_qgis = False
     MeshResult = 'MeshResult'
     IntersectResult = 'IntersectResult'
+
 
 Point = tuple[float, float]
 
@@ -38,6 +39,9 @@ class QgisMeshDriver(MeshDriver):
         self._linestrings = []
         self._line_results = []
 
+    def __repr__(self):
+        return f'<{self.__class__.__name__} {self.mesh.stem}>'
+
     def data_groups(self) -> Generator[DatasetGroup, None, None]:
         if not self.lyr:
             raise RuntimeError('Layer not loaded.')
@@ -49,6 +53,18 @@ class QgisMeshDriver(MeshDriver):
             type_ = 'vector' if grp.isVector() else 'scalar'
             times = [self.lyr.datasetMetadata(QgsMeshDatasetIndex(ind.group(), i)).time() for i in range(self.lyr.datasetCount(ind))]
             yield DatasetGroup(name, type_, times)
+
+    def init_mesh_layer(self, name: str):
+        if not has_qgis:
+            raise ImportError('QGIS python libraries are not installed or cannot be imported.')
+        if not QgsApplication.instance():
+            raise RuntimeError('QGIS application instance not found.')
+
+        self.lyr = QgsMeshLayer(str(self.mesh), name, 'mdal')
+        if not self.lyr.isValid():
+            raise RuntimeError(f'Failed to load mesh layer {self.mesh}')
+
+        self.dp = self.lyr.dataProvider()
 
     def load(self):
         if not has_qgis:
@@ -121,7 +137,7 @@ class QgisMeshDriver(MeshDriver):
 
     def section(self, linestring: list[Point], data_type: str, time: TimeLike,
                 averaging_method: str | None = None) -> pd.DataFrame:
-        mesh_line = MeshLine(self, linestring, data_type, time)
+        mesh_line = MeshLine(self, linestring, data_type, time, return_magnitude=True)
         # loop along line and get data
         data_ = []
         valid = False
@@ -150,7 +166,7 @@ class QgisMeshDriver(MeshDriver):
         data_ = []
         valid = False
         for i, (location, mesh_result) in enumerate(mesh_line.results_along_line()):
-            if i == 0 or i == len(mesh_line.intersects.intersects):  # ignore first and last points
+            if location.type == 'vertex' and (i == 0 or i == len(mesh_line.intersects.intersects)):  # ignore first and last points
                 continue
             order_switch = False
             for z, value in mesh_result.vertical_values(mesh_line.index, 'stepped'):
@@ -214,11 +230,13 @@ class MeshLine:
     the mesh result class.
     """
 
-    def __init__(self, driver: QgisMeshDriver, linestring: list[Point], data_type: str, time: TimeLike):
+    def __init__(self, driver: QgisMeshDriver, linestring: list[Point], data_type: str, time: TimeLike,
+                 return_magnitude: bool = False):
         self.driver = driver  # parent class
         self.linestring = QgsLineString([QgsPointXY(*pnt) for pnt in linestring])
         self.data_type = data_type
         self.time = time
+        self.return_magnitude = return_magnitude
 
         self.driver.init_spatial_index()
         self.lyr = self.driver.lyr
@@ -249,7 +267,7 @@ class MeshLine:
         grp = self.lyr.datasetGroupMetadata(self.index)
         for location in self.intersects.iter(self.dp.datasetGroupMetadata(self.igrp)):
             # mesh result class
-            if grp.isVector():
+            if grp.isVector() and not self.return_magnitude:
                 mesh_result = VectorMeshResult(self.lyr, self.qgsmesh, self.dp, self.si, location.point)
             else:
                 mesh_result = ScalarMeshResult(self.lyr, self.qgsmesh, self.dp, self.si, location.point)

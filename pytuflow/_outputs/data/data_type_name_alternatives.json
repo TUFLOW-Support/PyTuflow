@@ -2,7 +2,7 @@
   "name": "Data type name alternatives",
   "description": "List of alternate data type names that are accepted in place of the exact data type name. Uses regex.",
   "data_types": {
-    "water level": ["h", "wl", "water(?:\\s|_|-)?levels?", "stage", "levels?"],
+    "water level": ["h", "wl", "water(?:\\s|_|-)?levels?", "stage", "levels?", "water(?:\\s|_|-)?surf(?:ace)?(?:\\s|_|-)?elev(?:ations?)?"],
     "energy": ["e", "energy", "energy(?:\\s|_|-)?levels?"],
     "velocity": ["v", "velocity", "velocities", "vel"],
     "flow": ["q", "flows?", "discharges?", "total(?:\\s|_|-)?flow"],

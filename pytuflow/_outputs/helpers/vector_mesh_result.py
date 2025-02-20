@@ -46,13 +46,17 @@ class VectorMeshResult(MeshResult):
     ) -> Generator[tuple[float, tuple[float, float]], None, None]:
         """Yields vertical level and vector (x, y) values from a 3d mesh dataset."""
         vertical_levels = dataset_3d.verticalLevels()
-        z_values = [(vertical_levels[i] + x) / 2. for i, x in enumerate(dataset_3d.verticalLevels()[1:])]
         values = dataset_3d.values()
-        if (len(vertical_levels) - 1) * 2 != len(values):  # not vector
-            return
-        values = [(values[i], values[i + 1]) for i in range(0, len(values), 2)]
-        for z, value in zip(z_values, values):
-            yield z, value
+        if (len(vertical_levels) - 1) * 2 == len(values):  # vector
+            values = [(values[i], values[i + 1]) for i in range(0, len(values), 2)]
+        if interpolation == 'stepped':
+            x_ = sum([[x, x] for x in values], [])
+            y_ = sum([[y, y] for y in vertical_levels], [])[1:-1]
+        elif interpolation == 'linear':
+            x_ = values
+            y_ = [(vertical_levels[i] + x) / 2. for i, x in enumerate(vertical_levels[1:])]
+        for x, y in zip(x_, y_):
+            yield y, x
 
     # def _2d_elevations(self, dataset_index: 'QgsMeshDatasetIndex') -> Generator[float, None, None]:
     #     wl = self.result_from_name(dataset_index, ['water level', 'water surface elevation'])

@@ -3,7 +3,7 @@ from contextlib import contextmanager
 
 from qgis.core import QgsApplication
 
-from pytuflow import XMDF
+from pytuflow import XMDF, NCMesh
 
 
 @contextmanager
@@ -200,3 +200,78 @@ class TestXMDF(unittest.TestCase):
             res = XMDF(xmdf)
             df = res.profile(shp, 'vel', 0)
             self.assertEqual((2, 2), df.shape)
+
+
+class TestNCMesh(unittest.TestCase):
+
+    def test_load(self):
+        nc = './tests/nc_mesh/fv_res.nc'
+        with pyqgis():
+            res = NCMesh(nc)
+            self.assertEqual('fv_res', res.name)
+
+    def test_times(self):
+        nc = './tests/nc_mesh/fv_res.nc'
+        with pyqgis():
+            res = NCMesh(nc)
+            times = res.times()
+            self.assertEqual(7, len(times))
+
+    def test_data_types(self):
+        nc = './tests/nc_mesh/fv_res.nc'
+        with pyqgis():
+            res = NCMesh(nc)
+            dtypes = res.data_types()
+            self.assertEqual(3, len(dtypes))
+
+    def test_data_types_filter(self):
+        nc = './tests/nc_mesh/fv_res.nc'
+        with pyqgis():
+            res = NCMesh(nc)
+            dtypes = res.data_types('static')
+            self.assertEqual(1, len(dtypes))
+
+    def test_time_series(self):
+        nc = './tests/nc_mesh/fv_res.nc'
+        with pyqgis():
+            res = NCMesh(nc)
+            df = res.time_series((1.5, 4.5), 'water level')
+            self.assertEqual((7, 1), df.shape)
+
+    def test_time_series_averaging(self):
+        nc = './tests/nc_mesh/fv_res.nc'
+        with pyqgis():
+            res = NCMesh(nc)
+            df = res.time_series((1.5, 4.5), 'vel', averaging_method='singlelevel?top&1')
+            self.assertEqual((7, 1), df.shape)
+
+    def test_section(self):
+        nc = './tests/nc_mesh/fv_res.nc'
+        with pyqgis():
+            res = NCMesh(nc)
+            line = [(1.4, 4.5), (3.6, 4.2)]
+            df = res.section(line, 'h', 0)
+            self.assertEqual((6, 2), df.shape)
+
+    def test_section_averaging(self):
+        nc = './tests/nc_mesh/fv_res.nc'
+        with pyqgis():
+            res = NCMesh(nc)
+            line = [(1.4, 4.5), (3.6, 4.2)]
+            df = res.section(line, 'v', 0, averaging_method='sigma&0.1&0.9')
+            self.assertEqual((6, 2), df.shape)
+
+    def test_curtain(self):
+        nc = './tests/nc_mesh/fv_res.nc'
+        with pyqgis():
+            res = NCMesh(nc)
+            line = [(1.4, 4.5), (3.6, 4.2)]
+            df = res.curtain(line, 'v', 0)
+            self.assertEqual((24, 3), df.shape)
+
+    def test_profile(self):
+        nc = './tests/nc_mesh/fv_res.nc'
+        with pyqgis():
+            res = NCMesh(nc)
+            df = res.profile((1.5, 4.5), 'v', 0)
+            self.assertEqual((4, 2), df.shape)

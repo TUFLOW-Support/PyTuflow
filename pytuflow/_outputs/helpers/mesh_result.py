@@ -8,10 +8,10 @@ from qgis.core import (QgsGeometry, QgsMeshDatasetGroupMetadata, QgsMesh3dAverag
                        QgsMeshSpatialIndex)
 
 from .mesh_geom import vertex_indices_to_polygon, calculate_barycentric_weightings, closest_face_indexes
+from .averaging_method import AveragingMethod
 
 if TYPE_CHECKING:
     from qgis.core import (QgsPointXY, QgsMesh, QgsMeshDataProvider, QgsMeshSpatialIndex)
-    from ....widgets.action import AveragingMethod
 
 
 class MeshResult:
@@ -51,15 +51,12 @@ class MeshResult:
             return self.lyr == other.lyr and self.point is not None and self.point == other.point
         return False
 
-    def _key(self, dataset_index: 'QgsMeshDatasetIndex', averaging_method: 'AveragingMethod') -> tuple[Any, ...]:
+    def _key(self, dataset_index: 'QgsMeshDatasetIndex', averaging_method: QgsMesh3dAveragingMethod) -> tuple[Any, ...]:
         """Returns a key for the results dictionary."""
         if self.dp.datasetGroupMetadata(dataset_index.group()).dataType() == QgsMeshDatasetGroupMetadata.DataOnVertices:
             return dataset_index.group(), dataset_index.dataset()
 
-        if averaging_method is None:
-            method = self.lyr.rendererSettings().averagingMethod()
-        else:
-            method = averaging_method.to_qgis()
+        method = averaging_method
 
         if isinstance(method, QgsMeshMultiLevelsAveragingMethod):
             string = f'multilvl_{method.startVerticalLevel()}_{method.endVerticalLevel()}_{method.countedFromTop()}'
@@ -189,10 +186,13 @@ class MeshResult:
         if not self.lyr.isFaceActive(dataset_index, face_index):
             return np.nan
 
-        dataset_3d = self.dp.dataset3dValues(dataset_index, face_index, 1)
-        if dataset_3d.isValid():  # 3d result
-            value = averaging_method.calculate(dataset_3d)
-        else:  # 2d result
+        value = None
+        if self.lyr.datasetGroupMetadata(dataset_index).maximumVerticalLevelsCount():
+            dataset_3d = self.dp.dataset3dValues(dataset_index, face_index, 1)
+            if dataset_3d.isValid():  # 3d result
+                value = averaging_method.calculate(dataset_3d)
+
+        if value is None:
             value = self.dp.datasetValue(dataset_index, face_index)
 
         return self._value_from_face_block(value)
@@ -268,9 +268,15 @@ class MeshResult:
 
     def value(self,
               dataset_index: 'QgsMeshDatasetIndex',
-              averaging_method: 'AveragingMethod') -> float:
+              averaging_method: str) -> float:
         """Returns the scalar value at a point for a given QgsMeshDatasetIndex (result group and timestep)."""
-        key = self._key(dataset_index, averaging_method)
+        avg_method = AveragingMethod(averaging_method)
+        if avg_method.valid:
+            avg_method = avg_method.to_qgis()
+        else:
+            avg_method = self.lyr.rendererSettings().averagingMethod()
+
+        key = self._key(dataset_index, avg_method)
         if key in self._results:
             return self._results[key]
 
@@ -289,10 +295,6 @@ class MeshResult:
         # if value is on faces, use face value without interpolation - use averaging method if 3d
         if self.dp.datasetGroupMetadata(dataset_index.group()).dataType() in \
                 [QgsMeshDatasetGroupMetadata.DataOnFaces, QgsMeshDatasetGroupMetadata.DataOnVolumes]:
-            if averaging_method is None:
-                avg_method = self.lyr.rendererSettings().averagingMethod()
-            else:
-                avg_method = averaging_method.to_qgis()
             value = self._value_from_mesh_face(dataset_index, self.face, avg_method)
 
         self._results[key] = value

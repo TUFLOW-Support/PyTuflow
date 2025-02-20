@@ -20,16 +20,7 @@ class QgisXmdfMeshDriver(QgisMeshDriver):
         return f'<{self.__class__.__name__} {self.xmdf.stem}>'
 
     def load(self):
-        if not has_qgis:
-            raise ImportError('QGIS python libraries are not installed or cannot be imported.')
-        if not QgsApplication.instance():
-            raise RuntimeError('QGIS application instance not found.')
-
-        self.lyr = QgsMeshLayer(str(self.mesh), self.xmdf.stem, 'mdal')
-        if not self.lyr.isValid():
-            raise RuntimeError(f'Failed to load mesh layer {self.mesh}')
-
-        self.dp = self.lyr.dataProvider()
+        self.init_mesh_layer(self.xmdf.stem)
         success = self.dp.addDataset(str(self.xmdf))
         if not success:
             raise RuntimeError(f'Failed to load xmdf results onto 2dm: {self.xmdf}')
