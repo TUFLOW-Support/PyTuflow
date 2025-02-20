@@ -26,7 +26,7 @@ class Mesh(MapOutput):
         self._info = pd.DataFrame()
 
     @staticmethod
-    def _looks_like_this(driver: QgisMeshDriver) -> bool:
+    def _looks_like_this(fpath: Path) -> bool:
         return True
 
     @staticmethod

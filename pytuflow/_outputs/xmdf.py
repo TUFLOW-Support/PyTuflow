@@ -1,8 +1,10 @@
 from pathlib import Path
 
 from .helpers.mesh_driver_qgis_xmdf import QgisXmdfMeshDriver
+from .helpers.super_file import SuperFile
 from .mesh import Mesh
 from .._pytuflow_types import PathLike
+from ..results import ResultTypeError
 
 
 class XMDF(Mesh):
@@ -14,10 +16,10 @@ class XMDF(Mesh):
     Parameters
     ----------
     fpath : PathLike
-        Path to the XMDF file.
+        Path to the XMDF file, or XMDF SUP file.
     twodm : PathLike, optional
         Path to the 2dm file. If not provided, the class will attempt to find the 2dm file with the same name as the
-        XMDF file.
+        XMDF file. If an XMDF SUP file is provided in the first argument, the 2dm argument is not used.
 
     Examples
     --------
@@ -107,7 +109,20 @@ class XMDF(Mesh):
     """
 
     def __init__(self, fpath: PathLike, twodm: PathLike = None):
-        self.twodm = Path(twodm) if twodm else self._find_2dm(fpath)
+        if Path(fpath).suffix.lower() == '.sup':
+            sup = SuperFile(fpath)
+            fpath = Path(fpath).parent / sup['DATA']
+            self.twodm = Path(fpath).parent / Path(sup['MESH2D'])
+        else:
+            self.twodm = Path(twodm) if twodm else self._find_2dm(fpath)
+
+        if not Path(fpath).exists():
+            raise FileNotFoundError(f'XMDF file does not exist: {fpath}')
+        if not self.twodm.exists():
+            raise FileNotFoundError(f'2dm file does not exist: {self.twodm}')
+        if not self._looks_like_this(Path(fpath)):
+            raise ResultTypeError(f'File does not look like an XMDF file: {fpath}')
+
         super().__init__(self.twodm)
         self.fpath = Path(fpath)
         self._driver = QgisXmdfMeshDriver(self.twodm, self.fpath)
@@ -119,3 +134,7 @@ class XMDF(Mesh):
         if not p.exists():
             raise FileNotFoundError(f'2dm file does not exist: {p}')
         return p
+
+    @staticmethod
+    def _looks_like_this(fpath: Path) -> bool:
+        return fpath.suffix.lower() == '.xmdf'
