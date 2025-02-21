@@ -92,7 +92,7 @@ class Output(ABC):
            The available times in the requested format.
        """
         def generate_times(row):
-            if isinstance(row['dt'], list):
+            if isinstance(row['dt'], tuple):
                 return np.array(row['dt'])
             else:
                 if np.isclose(row['start'], row['end'], rtol=0., atol=0.001).all():

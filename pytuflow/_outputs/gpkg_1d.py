@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 
 from pytuflow._outputs.gpkg_base import GPKGBase
-from pytuflow._outputs.helpers import TPCReader
+from pytuflow._outputs.helpers.tpc_reader import TPCReader
 from pytuflow._outputs.info import INFO
 from pytuflow._pytuflow_types import PathLike, TimeLike, TuflowPath
 

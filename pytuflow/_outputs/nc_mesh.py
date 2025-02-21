@@ -1,4 +1,5 @@
 from .helpers.mesh_driver_qgis_nc import QgisNcMeshDriver
+from .helpers.mesh_driver_nc_nc import NCMeshDriverNC
 from .mesh import Mesh
 from .._pytuflow_types import PathLike
 
@@ -6,8 +7,11 @@ from .._pytuflow_types import PathLike
 class NCMesh(Mesh):
     """Class for handling TUFLOW FV style output files.
 
-    Currently, the class uses QGIS drivers for loading the mesh and XMDF files, it is therefore a requirement to
-    be working in a QGIS environment and have QGIS initialised before using this class.
+    The ``NCMesh`` class will only load header information from the NetCDF file on initialisation, this makes the class
+    cheap to initialise. The class can be initialised and the methods :meth:`times` and
+    :meth:`data_types` can be used without requiring QGIS libraries. However, extracting spatial data requires
+    QGIS libraries to be available and QGIS to be initialised. The class will automatically load the full mesh
+    the first time a spatial method is called which can cause the first time a spatial method is called to be slow.
 
     Parameters
     ----------
@@ -117,4 +121,5 @@ class NCMesh(Mesh):
     def __init__(self, fpath: PathLike):
         super().__init__(fpath)
         self._driver = QgisNcMeshDriver(self.fpath)
-        self._load()
+        self._soft_load_driver = NCMeshDriverNC(self.fpath)
+        self._initial_load()

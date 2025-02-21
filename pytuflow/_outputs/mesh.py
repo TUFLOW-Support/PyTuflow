@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 
 from .helpers.mesh_driver_qgis import QgisMeshDriver
+from .helpers.mesh_driver_nc import NCMeshDriver
 from .map_output import MapOutput, PointLocation, LineStringLocation
 from .._pytuflow_types import PathLike, TimeLike
 from ..util._util.logging import get_logger
@@ -23,7 +24,9 @@ class Mesh(MapOutput):
 
         self.fpath = Path(fpath)
         self._driver = QgisMeshDriver(self.fpath)
+        self._soft_load_driver = NCMeshDriver(self.fpath)  # QGIS driver cannot soft load (i.e. without loading 2dm)
         self._info = pd.DataFrame()
+        self._loaded = False
 
     @staticmethod
     def _looks_like_this(fpath: Path) -> bool:
@@ -213,6 +216,7 @@ class Mesh(MapOutput):
         2.916667       0.206761
         3.000000       0.183721
         """
+        self._load()
         df = pd.DataFrame()
         pnts = self._translate_point_location(locations)
         data_types = self._figure_out_data_types(data_types, 'temporal')
@@ -332,6 +336,7 @@ class Mesh(MapOutput):
         16  68.044737  43.612406             NaN   76.926857  42.719000       42.449872
         17  73.063420  42.849014       42.834780   81.926818  42.708500       42.452022
         """
+        self._load()
         df = pd.DataFrame()
         lines = self._translate_line_string_location(locations)
         data_types = self._figure_out_data_types(data_types, None)
@@ -404,6 +409,7 @@ class Mesh(MapOutput):
         202  263.876694  42.875885  0.028459
         203  258.743717  42.875885  0.028459
         """
+        self._load()
         df = pd.DataFrame()
         lines = self._translate_line_string_location(locations)
         data_types = self._figure_out_data_types(data_types, None)
@@ -458,6 +464,7 @@ class Mesh(MapOutput):
         --------
         Get The profile for a given point defined in a shapefile.
         """
+        self._load()
         df = pd.DataFrame()
         pnts = self._translate_point_location(locations)
         data_types = self._figure_out_data_types(data_types, None)
@@ -532,12 +539,19 @@ class Mesh(MapOutput):
 
         return df
 
-    def _load(self):
+    def _initial_load(self):
+        # attempt doing a "soft" load initially, loading the whole 2dm is expensive and not relevant to info in
+        # the xmdf until we need to extract spatial data - requires netCDF4 library
         self.name = self.fpath.stem
-        self.reference_time = self._driver.reference_time
-        self._driver.load()
+        if self._soft_load_driver.valid:
+            driver = self._soft_load_driver
+        else:
+            self._driver.load()
+            self._loaded = True
+            driver = self._driver
+        self.reference_time = driver.reference_time
         d = {'data_type': [], 'type': [], 'is_max': [], 'is_min': [], 'static': [], 'start': [], 'end': [], 'dt': []}
-        for dtype in self._driver.data_groups():
+        for dtype in driver.data_groups():
             d['type'].append(dtype.type)
             d['is_min'].append('/minimums' in dtype.name.lower())
             d['is_max'].append('/maximums' in dtype.name.lower())
@@ -549,13 +563,19 @@ class Mesh(MapOutput):
             dt = 0.
             if not static:
                 dif = np.diff(dtype.times)
-                if np.isclose(dif, dif[0], atol=0.001, rtol=0).all():
+                if np.isclose(dif[:-1], dif[0], atol=0.001, rtol=0).all():
                     dt = float(np.round(dif[0] * 3600., decimals=2))
                 else:
-                    dt = dtype.times
+                    dt = tuple(dtype.times)
             d['dt'].append(dt)
 
         self._info = pd.DataFrame(d)
+
+    def _load(self):
+        if self._loaded:
+            return
+        self._driver.load()
+        self._loaded = True
 
     def _figure_out_data_types(self, data_types: Union[str, list[str]], filter_by: str | None) -> list[str]:
         if not data_types:

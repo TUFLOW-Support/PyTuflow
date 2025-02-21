@@ -1,6 +1,18 @@
 from pathlib import Path
+from typing import Generator
 
 import numpy as np
+
+
+class DatasetGroup:
+
+    def __init__(self, name: str, type_: str, times: list[float]):
+        self.name = name
+        self.type = type_
+        self.times = np.array(times)
+
+    def __repr__(self):
+        return f'<{self.__class__.__name__} {self.name} ({self.type})>'
 
 
 class MeshDriver:
@@ -14,13 +26,5 @@ class MeshDriver:
     def __str__(self):
         return self.__repr__()
 
-
-class DatasetGroup:
-
-    def __init__(self, name: str, type_: str, times: list[float]):
-        self.name = name
-        self.type = type_
-        self.times = np.array(times)
-
-    def __repr__(self):
-        return f'<{self.__class__.__name__} {self.name} ({self.type})>'
+    def data_groups(self) -> Generator[DatasetGroup, None, None]:
+        raise NotImplementedError
