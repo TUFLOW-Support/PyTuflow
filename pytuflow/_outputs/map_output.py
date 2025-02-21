@@ -1,6 +1,9 @@
 import re
 from collections.abc import Iterable
 
+import numpy as np
+import pandas as pd
+
 from .output import Output
 from .._pytuflow_types import PathLike
 from ..util._util.gis import point_gis_file_to_dict, line_gis_file_to_dict
@@ -16,6 +19,62 @@ LineStringLocation = LineStrings | PathLike
 
 
 class MapOutput(Output):
+
+    def _filter(self, filter_by: str) -> pd.DataFrame:
+        filter_by = [x.strip().lower() for x in filter_by.split('/')] if filter_by else []
+
+        # type - Scalar / Vector
+        df = self._info.copy()
+        ctx = []
+        if 'scalar' in filter_by:
+            ctx.append('scalar')
+            while 'scalar' in filter_by:
+                filter_by.remove('scalar')
+        if 'vector' in filter_by:
+            ctx.append('vector')
+            while 'vector' in filter_by:
+                filter_by.remove('vector')
+        if ctx:
+            df = self._info[self._info['type'].isin(ctx)] if ctx else pd.DataFrame()
+
+        # max/mins
+        ctx = []
+        df2 = pd.DataFrame()
+        if np.intersect1d(filter_by, ['max', 'maximum']).size:
+            ctx.append('max')
+            df2 = df[df['is_max']]
+            filter_by = [x for x in filter_by if x not in ['max', 'maximum']]
+        if np.intersect1d(filter_by, ['min', 'minimum']).size:
+            ctx.append('min')
+            df_ = df[df['is_min']]
+            df2 = pd.concat([df2, df_]) if not df2.empty else df_
+            filter_by = [x for x in filter_by if x not in ['min', 'minimum']]
+        if ctx:
+            df = df2
+
+        # static/temporal
+        ctx = []
+        df3 = pd.DataFrame()
+        if 'static' in filter_by:
+            ctx.append('static')
+            df3 = df[df['static']]
+            while 'static' in filter_by:
+                filter_by.remove('static')
+        if 'temporal' in filter_by:
+            ctx.append('temporal')
+            df_ = df[~df['static']]
+            df3 = pd.concat([df3, df_]) if not df3.empty else df_
+            while 'temporal' in filter_by:
+                filter_by.remove('temporal')
+        if ctx:
+            df = df3
+
+        # data type
+        if filter_by:
+            ctx = [self._get_standard_data_type_name(x) for x in filter_by]
+            df = df[df['data_type'].isin(ctx)] if ctx else pd.DataFrame()
+
+        return df
 
     def _translate_point_location(self, locations: PointLocation) -> dict[str, Point]:
         """Translate, as in to understand, not a spatial translation."""

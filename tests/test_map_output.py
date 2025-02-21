@@ -3,7 +3,7 @@ from contextlib import contextmanager
 
 from qgis.core import QgsApplication
 
-from pytuflow import XMDF, NCMesh
+from pytuflow import XMDF, NCMesh, CATCHJson
 
 
 @contextmanager
@@ -46,7 +46,7 @@ class TestXMDF(unittest.TestCase):
         with pyqgis():
             res = XMDF(xmdf)
             dtypes = res.data_types()
-            self.assertEqual(6, len(dtypes))
+            self.assertEqual(10, len(dtypes))
 
     def test_data_types_filter(self):
         xmdf = './tests/xmdf/run.xmdf'
@@ -57,7 +57,7 @@ class TestXMDF(unittest.TestCase):
             dtypes = res.data_types('temporal')
             self.assertEqual(4, len(dtypes))
             dtypes = res.data_types('vector')
-            self.assertEqual(1, len(dtypes))
+            self.assertEqual(2, len(dtypes))
 
     def test_time_series(self):
         xmdf = './tests/xmdf/run.xmdf'
@@ -275,3 +275,11 @@ class TestNCMesh(unittest.TestCase):
             res = NCMesh(nc)
             df = res.profile((1.5, 4.5), 'v', 0)
             self.assertEqual((4, 2), df.shape)
+
+
+class TestCATCHJson(unittest.TestCase):
+
+    def test_load(self):
+        p = './tests/catch_json/res.tuflow.json'
+        res = CATCHJson(p)
+        self.assertEqual('res', res.name)

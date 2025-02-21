@@ -40,6 +40,7 @@ class Mesh(MapOutput):
     def _get_standard_data_type_name(name: str) -> str:
         """Override base method to consider explicit calls to max, min, and time of max datasets."""
         name1 = name.split('/')[0]
+        name1 = re.sub(r'\sMaximums$', '', name1)
         stnd_name = Output._get_standard_data_type_name(name1)
         if not re.findall(r'(max|peak|min)', name, re.IGNORECASE):
             return stnd_name
@@ -483,62 +484,6 @@ class Mesh(MapOutput):
 
         return df
 
-    def _filter(self, filter_by: str):
-        filter_by = [x.strip().lower() for x in filter_by.split('/')] if filter_by else []
-
-        # type - Scalar / Vector
-        df = self._info.copy()
-        ctx = []
-        if 'scalar' in filter_by:
-            ctx.append('scalar')
-            while 'scalar' in filter_by:
-                filter_by.remove('scalar')
-        if 'vector' in filter_by:
-            ctx.append('vector')
-            while 'vector' in filter_by:
-                filter_by.remove('vector')
-        if ctx:
-            df = self._info[self._info['type'].isin(ctx)] if ctx else pd.DataFrame()
-
-        # max/mins
-        ctx = []
-        df2 = pd.DataFrame()
-        if np.intersect1d(filter_by, ['max', 'maximum']).size:
-            ctx.append('max')
-            df2 = df[df['is_max']]
-            filter_by = [x for x in filter_by if x not in ['max', 'maximum']]
-        if np.intersect1d(filter_by, ['min', 'minimum']).size:
-            ctx.append('min')
-            df_ = df[df['is_min']]
-            df2 = pd.concat([df2, df_]) if not df2.empty else df_
-            filter_by = [x for x in filter_by if x not in ['min', 'minimum']]
-        if ctx:
-            df = df2
-
-        # static/temporal
-        ctx = []
-        df3 = pd.DataFrame()
-        if 'static' in filter_by:
-            ctx.append('static')
-            df3 = df[df['static']]
-            while 'static' in filter_by:
-                filter_by.remove('static')
-        if 'temporal' in filter_by:
-            ctx.append('temporal')
-            df_ = df[~df['static']]
-            df3 = pd.concat([df3, df_]) if not df3.empty else df_
-            while 'temporal' in filter_by:
-                filter_by.remove('temporal')
-        if ctx:
-            df = df3
-
-        # data type
-        if filter_by:
-            ctx = [self._get_standard_data_type_name(x) for x in filter_by]
-            df = df[df['data_type'].isin(ctx)] if ctx else pd.DataFrame()
-
-        return df
-
     def _initial_load(self):
         # attempt doing a "soft" load initially, loading the whole 2dm is expensive and not relevant to info in
         # the xmdf until we need to extract spatial data - requires netCDF4 library
@@ -555,9 +500,9 @@ class Mesh(MapOutput):
             d['type'].append(dtype.type)
             d['is_min'].append('/minimums' in dtype.name.lower())
             d['is_max'].append('/maximums' in dtype.name.lower())
-            d['data_type'].append(self._get_standard_data_type_name(dtype.name.split('/')[0]))
-            d['start'].append(dtype.times[0])
-            d['end'].append(dtype.times[-1])
+            d['data_type'].append(self._get_standard_data_type_name(dtype.name))
+            d['start'].append(np.round(dtype.times[0], decimals=6))
+            d['end'].append(np.round(dtype.times[-1], decimals=6))
             static = len(dtype.times) == 1
             d['static'].append(static)
             dt = 0.
