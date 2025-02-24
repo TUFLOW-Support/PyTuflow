@@ -521,24 +521,3 @@ class Mesh(MapOutput):
             return
         self._driver.load()
         self._loaded = True
-
-    def _figure_out_data_types(self, data_types: Union[str, list[str]], filter_by: str | None) -> list[str]:
-        if not data_types:
-            raise ValueError('No data types provided.')
-
-        data_types = [data_types] if not isinstance(data_types, list) else data_types
-
-        valid_dtypes = self.data_types(filter_by)
-        if filter_by != 'temporal':
-            valid_dtypes.extend(['max ' + x for x in self.data_types('max')])
-            valid_dtypes.extend(['min ' + x for x in self.data_types('min')])
-        dtypes1 = []
-        for dtype in data_types:
-            stnd = self._get_standard_data_type_name(dtype)
-            if stnd not in valid_dtypes:
-                logger.warning(f'Invalid data type: {dtype}. Skipping.')
-                continue
-            dtypes1.append(stnd)
-
-        return dtypes1
-

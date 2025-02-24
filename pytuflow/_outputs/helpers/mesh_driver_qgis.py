@@ -35,6 +35,7 @@ class QgisMeshDriver(MeshDriver):
         self.si = None
         self.qgsmesh = None
         self.reference_time = datetime(1990, 1, 1)
+        self.start_end_locs = []
         self._point_results = []
         self._linestrings = []
         self._line_results = []
@@ -137,7 +138,16 @@ class QgisMeshDriver(MeshDriver):
 
     def section(self, linestring: list[Point], data_type: str, time: TimeLike,
                 averaging_method: str | None = None) -> pd.DataFrame:
+        df = pd.DataFrame()
+
         mesh_line = MeshLine(self, linestring, data_type, time, return_magnitude=True)
+
+        # initialise start/end locations - for TUFLOW CATCH where results need to be stamped onto each other
+        self.start_end_locs.clear()
+        active = False
+        start_loc, end_loc = None, None
+        location = None
+
         # loop along line and get data
         data_ = []
         valid = False
@@ -152,16 +162,36 @@ class QgisMeshDriver(MeshDriver):
             if not np.isnan(value):
                 valid = True
 
+            # check if mesh is active so start / end locations can be recorded
+            if mesh_result.active and not active:
+                active = True
+                start_loc = location.start_side
+            elif not mesh_result.active and active:
+                active = False
+                end_loc = location.start_side
+                self.start_end_locs.append((start_loc, end_loc))
+
+        # check if mesh is active at the end of the line (close it off if it is still active)
+        if active and location:  # location should be assigned if active is True
+            end_loc = location.end_side
+            self.start_end_locs.append((start_loc, end_loc))
+
         if valid:
             df = pd.DataFrame(np.array(data_), columns=['offset', data_type])
             df.set_index('offset', inplace=True)
-        else:
-            df = pd.DataFrame()
 
         return df
 
     def curtain(self, linestring: list[Point], data_type: str, time: TimeLike) -> pd.DataFrame:
+        df = pd.DataFrame()
         mesh_line = MeshLine(self, linestring, data_type, time)
+
+        # initialise start/end locations - for TUFLOW CATCH where results need to be stamped onto each other
+        self.start_end_locs.clear()
+        active = False
+        start_loc, end_loc = None, None
+        location = None
+
         # loop through points and extract results
         data_ = []
         valid = False
@@ -185,11 +215,24 @@ class QgisMeshDriver(MeshDriver):
                 if not np.isnan(value):
                     valid = True
 
-        data = pd.DataFrame()
-        if valid:
-            data = pd.DataFrame(data_, columns=['x', 'y', data_type])
+            # check if mesh is active so start / end locations can be recorded
+            if mesh_result.active and not active:
+                active = True
+                start_loc = location.start_side
+            elif not mesh_result.active and active:
+                active = False
+                end_loc = location.start_side
+                self.start_end_locs.append((start_loc, end_loc))
 
-        return data
+        # check if mesh is active at the end of the line (close it off if it is still active)
+        if active and location:  # location should be assigned if active is True
+            end_loc = location.end_side
+            self.start_end_locs.append((start_loc, end_loc))
+
+        if valid:
+            df = pd.DataFrame(data_, columns=['x', 'y', data_type])
+
+        return df
 
     def profile(self, point: Point, data_type: str, time: TimeLike, interpolation: str) -> pd.DataFrame:
         self.init_spatial_index()

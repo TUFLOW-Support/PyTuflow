@@ -283,3 +283,63 @@ class TestCATCHJson(unittest.TestCase):
         p = './tests/catch_json/res.tuflow.json'
         res = CATCHJson(p)
         self.assertEqual('res', res.name)
+
+    def test_times(self):
+        p = './tests/catch_json/res.tuflow.json'
+        res = CATCHJson(p)
+        times = res.times()
+        self.assertEqual(7, len(times))
+
+    def test_data_types(self):
+        p = './tests/catch_json/res.tuflow.json'
+        res = CATCHJson(p)
+        dtypes = res.data_types()
+        self.assertEqual(10, len(dtypes))
+
+    def test_section(self):
+        p = './tests/catch_json/res.tuflow.json'
+        line = './tests/catch_json/section_line.shp'
+        with pyqgis():
+            res = CATCHJson(p)
+            df = res.section(line, 'water level', 0.)
+            self.assertEqual((9, 2), df.shape)
+
+    def test_section_2(self):
+        p = './tests/catch_json/res.tuflow.json'
+        line = './tests/catch_json/section_line.shp'
+        with pyqgis():
+            res = CATCHJson(p)
+            df = res.section(line, ['water level', 'velocity'], 0.)
+            self.assertEqual((9, 3), df.shape)
+
+    def test_section_3(self):
+        p = './tests/catch_json/res.tuflow.json'
+        line = './tests/catch_json/section_line_2.shp'
+        with pyqgis():
+            res = CATCHJson(p)
+            df = res.section(line, ['water level'], 0.)
+            self.assertEqual((9, 4), df.shape)
+
+    def test_curtain(self):
+        p = './tests/catch_json/res.tuflow.json'
+        line = './tests/catch_json/section_line.shp'
+        with pyqgis():
+            res = CATCHJson(p)
+            df = res.curtain(line, 'velocity', 0.)
+            self.assertEqual((24, 3), df.shape)
+
+    def test_curtain_2(self):
+        p = './tests/catch_json/res.tuflow.json'
+        line = './tests/catch_json/section_line_hook.shp'
+        with pyqgis():
+            res = CATCHJson(p)
+            df = res.curtain(line, 'velocity', 0.)
+            self.assertEqual((40, 3), df.shape)
+
+    def test_curtain_3(self):
+        p = './tests/catch_json/res.tuflow.json'
+        line = './tests/catch_json/section_line_hook_reversed.shp'
+        with pyqgis():
+            res = CATCHJson(p)
+            df = res.curtain(line, 'velocity', 0.)
+            self.assertEqual((32, 3), df.shape)

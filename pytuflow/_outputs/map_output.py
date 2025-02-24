@@ -1,5 +1,6 @@
 import re
 from collections.abc import Iterable
+from typing import Union
 
 import numpy as np
 import pandas as pd
@@ -7,6 +8,10 @@ import pandas as pd
 from .output import Output
 from .._pytuflow_types import PathLike
 from ..util._util.gis import point_gis_file_to_dict, line_gis_file_to_dict
+from ..util._util.logging import get_logger
+
+
+logger = get_logger()
 
 Point = tuple[float, float] | str
 LineString = list[Point] | tuple[Point]
@@ -75,6 +80,26 @@ class MapOutput(Output):
             df = df[df['data_type'].isin(ctx)] if ctx else pd.DataFrame()
 
         return df
+
+    def _figure_out_data_types(self, data_types: Union[str, list[str]], filter_by: str | None) -> list[str]:
+        if not data_types:
+            raise ValueError('No data types provided.')
+
+        data_types = [data_types] if not isinstance(data_types, list) else data_types
+
+        valid_dtypes = self.data_types(filter_by)
+        if filter_by != 'temporal':
+            valid_dtypes.extend(['max ' + x for x in self.data_types('max')])
+            valid_dtypes.extend(['min ' + x for x in self.data_types('min')])
+        dtypes1 = []
+        for dtype in data_types:
+            stnd = self._get_standard_data_type_name(dtype)
+            if stnd not in valid_dtypes:
+                logger.warning(f'Invalid data type: {dtype}. Skipping.')
+                continue
+            dtypes1.append(stnd)
+
+        return dtypes1
 
     def _translate_point_location(self, locations: PointLocation) -> dict[str, Point]:
         """Translate, as in to understand, not a spatial translation."""
