@@ -343,3 +343,19 @@ class TestCATCHJson(unittest.TestCase):
             res = CATCHJson(p)
             df = res.curtain(line, 'velocity', 0.)
             self.assertEqual((32, 3), df.shape)
+
+    def test_curtain_4(self):
+        p = './tests/catch_json/res_shifted.tuflow.json'
+        line = './tests/xmdf/section_line_long.shp'
+        with pyqgis():
+            res = CATCHJson(p)
+            df = res.curtain(line, 'velocity', 0.)
+            self.assertEqual((24, 3), df.shape)
+
+    def test_curtain_5(self):
+        p = './tests/catch_json/res_shifted.tuflow.json'
+        line = './tests/catch_json/section_line_ugly.shp'
+        with pyqgis():
+            res = CATCHJson(p)
+            df = res.curtain(line, 'velocity', 0.)
+            self.assertEqual((64, 3), df.shape)

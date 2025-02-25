@@ -42,6 +42,8 @@ class CATCHJson(MapOutput):
                     time_fmt: str = 'relative', averaging_method: str = None) -> pd.DataFrame:
         df = pd.DataFrame()
         for provider in self._providers.values():
+            if provider == self._idx_provider:
+                continue
             df = provider.time_series(locations, data_types, time_fmt, averaging_method)
             if not df.empty:
                 break
@@ -58,6 +60,8 @@ class CATCHJson(MapOutput):
             dfs = []
             df1 = pd.DataFrame()
             for provider in self._providers.values():
+                if provider == self._idx_provider:
+                    continue
                 df2 = provider.section(loc, data_types, time, averaging_method)
                 if not df2.empty:
                     dfs.append((df2, provider._driver.start_end_locs.copy()))
@@ -85,6 +89,8 @@ class CATCHJson(MapOutput):
             dfs = []
             df1 = pd.DataFrame()
             for provider in self._providers.values():
+                if provider == self._idx_provider:
+                    continue
                 df2 = provider.curtain(loc, data_types, time)
                 if not df2.empty:
                     dfs.append((df2, provider._driver.start_end_locs.copy()))
@@ -96,7 +102,7 @@ class CATCHJson(MapOutput):
                             df1 = df2
                             break
                         else:
-                            df1 = self._stamp(df1, df2, start_loc, end_loc)
+                            df1 = self._stamp_curtain_data(df1, df2, start_loc, end_loc)
 
             df = pd.concat([df, df1], axis=1) if not df.empty else df1
 
@@ -144,7 +150,7 @@ class CATCHJson(MapOutput):
 
         self._info = self._info.drop_duplicates()
 
-    def _stamp(self, df1: pd.DataFrame, df2: pd.DataFrame, start_loc: float, end_loc: float):
+    def _stamp_curtain_data(self, df1: pd.DataFrame, df2: pd.DataFrame, start_loc: float, end_loc: float):
         mask = df1.iloc[:,0] <= start_loc
         inds = np.where(~mask)
         mask2 = (df2.iloc[:,0] >= start_loc) & (df2.iloc[:,0] <= end_loc)
@@ -160,10 +166,12 @@ class CATCHJson(MapOutput):
             i = inds[0][0]
             val = df1.iloc[i-2,0] if i > 1 else df1.iloc[0,0]
             if not np.isclose(val, start_loc):
-                a = [[start_loc] + df1.iloc[i, 1:].tolist(),
-                     [start_loc] + df1.iloc[i+1, 1:].tolist(),
-                     df1.iloc[i+2,:].tolist()]
-                df = pd.concat([df, pd.DataFrame(a)], axis=0, ignore_index=True)
+                a = np.array([[start_loc] + df1.iloc[i, 1:].tolist(),
+                             [start_loc] + df1.iloc[i+1, 1:].tolist(),
+                             df1.iloc[i+2,:].tolist()])
+                df = pd.concat([df, pd.DataFrame(a, columns=df.columns)], axis=0, ignore_index=True)
+            elif np.isclose(df.iloc[0,0], start_loc):
+                df = pd.DataFrame()
 
         df = pd.concat([df, df2_], axis=0, ignore_index=True) if not df.empty else df2_
 
@@ -175,14 +183,15 @@ class CATCHJson(MapOutput):
         i = inds[0][0]
         val = df1.iloc[i,0]
         if not np.isclose(val, end_loc):
-            a = [[end_loc] + df1.iloc[i, 2:].tolist(),
-                 df1.iloc[i+1,:].tolist(),
-                 df1.iloc[i+2:].tolist(),
-                 [end_loc] + df1.iloc[i+3, 2:].tolist()]
-            i += 4
-            df = pd.concat([df, pd.DataFrame(a)], axis=0, ignore_index=True)
+            a = np.array([[end_loc] + df1.iloc[i-1, 1:].tolist(),
+                         df1.iloc[i,:].tolist(),
+                         df1.iloc[i+1,:].tolist(),
+                         [end_loc] + df1.iloc[i+2, 1:].tolist()])
+            i += 3
+            df = pd.concat([df, pd.DataFrame(a, columns=df.columns)], axis=0, ignore_index=True)
 
-        df = pd.concat([df, df1.iloc[i:,:]], axis=0, ignore_index=True)
+        if not np.isclose(df1.iloc[-2,0], end_loc):
+            df = pd.concat([df, df1.iloc[i:,:]], axis=0, ignore_index=True)
 
         return df
 
