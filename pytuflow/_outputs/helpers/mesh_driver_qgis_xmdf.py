@@ -26,3 +26,9 @@ class QgisXmdfMeshDriver(QgisMeshDriver):
             raise RuntimeError(f'Failed to load xmdf results onto 2dm: {self.xmdf}')
 
         super().load()
+
+    def group_index_from_name(self, data_type: str, **kwargs) -> int:
+        vel_to_vec_vel = kwargs.get('vel_to_vec_vel', False)
+        if vel_to_vec_vel and data_type == 'velocity':
+            data_type = 'vector velocity'
+        return super().group_index_from_name(data_type)

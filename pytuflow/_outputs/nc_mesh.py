@@ -54,7 +54,7 @@ class NCMesh(Mesh):
     2.916667         41.166462
     3.000000         41.128152
 
-    Get the depth-averaged velocity time-series:
+    Get the depth-averaged velocity time-series using the Sigma method:
 
     >>> nc.time_series('path/to/shapefile.shp', 'velocity', averaging_method='sigma&0.1&0.9')
     time      pnt1/velocity

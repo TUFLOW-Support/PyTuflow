@@ -371,7 +371,7 @@ class Mesh(MapOutput):
         The resulting DataFrame will be made up of 3 columns- ``X, Y, value`` data. The ``X, Y`` values represent
         cells in the vertical plane, and should be treated as groups of 4 which denote the corners of a cell. The
         ``value`` represents the data value at that cell, which will be returned as a single number for scalar
-        results and a tuple for vector results.
+        results and a tuple for vector results. Note, velocity will always be returned as vector (tuple) result.
 
         The resulting DataFrame will use multi-index columns since the data is not guaranteed to have the same
         index. The level 1 index will be the label, and the level 2 index will be the data type. The ``X,Y`` offsets
@@ -463,7 +463,15 @@ class Mesh(MapOutput):
 
         Examples
         --------
-        Get The profile for a given point defined in a shapefile.
+        Get The profile for a given point defined in a shapefile:
+
+        >>> mesh.profile('path/to/shapefile.shp', 'velocity', 1.5)
+                       pnt1
+          elevation  velocity
+        0       0.0  0.282843
+        1       0.5  0.282843
+        2       0.5  0.424264
+        3       1.0  0.424264
         """
         self._load()
         df = pd.DataFrame()

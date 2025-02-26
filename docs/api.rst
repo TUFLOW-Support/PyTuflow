@@ -67,8 +67,9 @@ This page gives an overview of the public modules, classes, and functions within
    :template: custom-class-template.rst
 
    XMDF
-   NCMesh
    TPC
+   NCMesh
+   CATCHJson
    INFO
    GPKG1D
    GPKG2D

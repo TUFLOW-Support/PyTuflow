@@ -313,12 +313,60 @@ class TestCATCHJson(unittest.TestCase):
             self.assertEqual((9, 3), df.shape)
 
     def test_section_3(self):
-        p = './tests/catch_json/res.tuflow.json'
-        line = './tests/catch_json/section_line_2.shp'
+        p = './tests/catch_json/res_reversed.tuflow.json'
+        line = './tests/catch_json/section_line.shp'
         with pyqgis():
             res = CATCHJson(p)
             df = res.section(line, ['water level'], 0.)
-            self.assertEqual((9, 4), df.shape)
+            self.assertEqual((9, 2), df.shape)
+
+    def test_section_4(self):
+        p = './tests/catch_json/res.tuflow.json'
+        line = './tests/catch_json/section_line_reversed.shp'
+        with pyqgis():
+            res = CATCHJson(p)
+            df = res.section(line, ['water level'], 0.)
+            self.assertEqual((9, 2), df.shape)
+
+    def test_section_5(self):
+        p = './tests/catch_json/res_reversed.tuflow.json'
+        line = './tests/catch_json/section_line_reversed.shp'
+        with pyqgis():
+            res = CATCHJson(p)
+            df = res.section(line, ['water level'], 0.)
+            self.assertEqual((9, 2), df.shape)
+
+    def test_section_6(self):
+        p = './tests/catch_json/res.tuflow.json'
+        line = './tests/catch_json/section_line_hook.shp'
+        with pyqgis():
+            res = CATCHJson(p)
+            df = res.section(line, ['water level'], 0.)
+            self.assertEqual((12, 2), df.shape)
+
+    def test_section_7(self):
+        p = './tests/catch_json/res.tuflow.json'
+        line = './tests/catch_json/section_line_hook_reversed.shp'
+        with pyqgis():
+            res = CATCHJson(p)
+            df = res.section(line, ['water level'], 0.)
+            self.assertEqual((8, 2), df.shape)
+
+    def test_section_8(self):
+        p = './tests/catch_json/res_shifted.tuflow.json'
+        line = './tests/xmdf/section_line_long.shp'
+        with pyqgis():
+            res = CATCHJson(p)
+            df = res.section(line, ['water level'], 0.)
+            self.assertEqual((9, 2), df.shape)
+
+    def test_section_9(self):
+        p = './tests/catch_json/res_shifted.tuflow.json'
+        line = './tests/catch_json/section_line_ugly.shp'
+        with pyqgis():
+            res = CATCHJson(p)
+            df = res.section(line, ['water level'], 0.)
+            self.assertEqual((16, 2), df.shape)
 
     def test_curtain(self):
         p = './tests/catch_json/res.tuflow.json'
@@ -359,3 +407,19 @@ class TestCATCHJson(unittest.TestCase):
             res = CATCHJson(p)
             df = res.curtain(line, 'velocity', 0.)
             self.assertEqual((64, 3), df.shape)
+
+    def test_profile(self):
+        p = './tests/catch_json/res.tuflow.json'
+        point = (1.5, 4.5)
+        with pyqgis():
+            res = CATCHJson(p)
+            df = res.profile(point, 'v', 0)
+            self.assertEqual((4, 2), df.shape)
+
+    def test_profile_2(self):
+        p = './tests/catch_json/res.tuflow.json'
+        shp = './tests/xmdf/time_series_point.shp'
+        with pyqgis():
+            res = CATCHJson(p)
+            df = res.profile(shp, 'v', 0)
+            self.assertEqual((2, 2), df.shape)

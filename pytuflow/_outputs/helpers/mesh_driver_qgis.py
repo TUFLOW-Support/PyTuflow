@@ -90,7 +90,7 @@ class QgisMeshDriver(MeshDriver):
         self.dp.populateMesh(self.qgsmesh)
         self.si = QgsMeshSpatialIndex(self.qgsmesh)
 
-    def group_index_from_name(self, data_type: str) -> int:
+    def group_index_from_name(self, data_type: str, **kwargs) -> int:
         from ..mesh import Mesh  # import here to avoid circular import
         igrp = -1
         for i in range(self.lyr.datasetGroupCount()):
@@ -184,7 +184,7 @@ class QgisMeshDriver(MeshDriver):
 
     def curtain(self, linestring: list[Point], data_type: str, time: TimeLike) -> pd.DataFrame:
         df = pd.DataFrame()
-        mesh_line = MeshLine(self, linestring, data_type, time)
+        mesh_line = MeshLine(self, linestring, data_type, time, vel_to_vec_vel=True)
 
         # initialise start/end locations - for TUFLOW CATCH where results need to be stamped onto each other
         self.start_end_locs.clear()
@@ -274,7 +274,7 @@ class MeshLine:
     """
 
     def __init__(self, driver: QgisMeshDriver, linestring: list[Point], data_type: str, time: TimeLike,
-                 return_magnitude: bool = False):
+                 return_magnitude: bool = False, **kwargs):
         self.driver = driver  # parent class
         self.linestring = QgsLineString([QgsPointXY(*pnt) for pnt in linestring])
         self.data_type = data_type
@@ -286,7 +286,7 @@ class MeshLine:
         self.dp = self.driver.dp
         self.si = self.driver.si
         self.qgsmesh = self.driver.qgsmesh
-        self.igrp = self.driver.group_index_from_name(data_type)
+        self.igrp = self.driver.group_index_from_name(data_type, **kwargs)
 
         # get dataset index based on the time
         if isinstance(time, datetime):
