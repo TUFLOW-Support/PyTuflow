@@ -280,6 +280,14 @@ class TestNCMesh(unittest.TestCase):
 
 class TestCATCHJson(unittest.TestCase):
 
+    # def test_load_tmp(self):
+    #     dtime = datetime(2021, 1, 1, 1)
+    #     p = r"C:\TUFLOW\working\catch_units\model\TUFLOWCatch\results\Demonstration_005.tuflow.json"
+    #     with pyqgis():
+    #         res = CATCHJson(p)
+    #         df = res.section(r"C:\Users\ellis.symons\Downloads\demonstation_line.shp", 'h', dtime)
+    #         print()
+
     def test_load(self):
         p = './tests/catch_json/res.tuflow.json'
         res = CATCHJson(p)
