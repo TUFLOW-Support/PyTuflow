@@ -4,7 +4,7 @@ from datetime import datetime
 
 from qgis.core import QgsApplication
 
-from pytuflow import XMDF, NCMesh, CATCHJson
+from pytuflow import XMDF, NCMesh, CATCHJson, DAT
 
 
 @contextmanager
@@ -448,3 +448,33 @@ class TestCATCHJson(unittest.TestCase):
             res = CATCHJson(p)
             df = res.profile(shp, 'v', 0)
             self.assertEqual((2, 2), df.shape)
+
+class TestDAT(unittest.TestCase):
+
+    def test_load(self):
+        p = './tests/dat/small_model_001.ALL.sup'
+        with pyqgis():
+            res = DAT(p)
+            self.assertEqual('small_model_001', res.name)
+
+    def test_load_2(self):
+        p = ['./tests/dat/small_model_001_d.dat', './tests/dat/small_model_001_V.dat',
+             './tests/dat/small_model_001_h.dat', './tests/dat/small_model_001_q.dat',
+             './tests/dat/small_model_001_Times.dat']
+        with pyqgis():
+            res = DAT(p)
+            self.assertEqual('small_model_001', res.name)
+
+    def test_times(self):
+        p = './tests/dat/small_model_001.ALL.sup'
+        with pyqgis():
+            res = DAT(p)
+            times = res.times()
+            self.assertEqual(13, len(times))
+
+    def test_data_types(self):
+        p = './tests/dat/small_model_001.ALL.sup'
+        with pyqgis():
+            res = DAT(p)
+            dtypes = res.data_types()
+            self.assertEqual(8, len(dtypes))

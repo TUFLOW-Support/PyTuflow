@@ -40,8 +40,8 @@ class Mesh(MapOutput):
     @staticmethod
     def _get_standard_data_type_name(name: str) -> str:
         """Override base method to consider explicit calls to max, min, and time of max datasets."""
-        name1 = name.split('/')[0]
-        name1 = re.sub(r'\sMaximums$', '', name1)
+        name1 = name.split('/')[0].strip()
+        name1 = re.sub(r'\sMaximums$', '', name1, flags=re.IGNORECASE)
         stnd_name = Output._get_standard_data_type_name(name1)
         if not re.findall(r'(max|peak|min)', name, re.IGNORECASE):
             return stnd_name

@@ -13,10 +13,11 @@ class SuperFile:
 
     def __getitem__(self, item):
         self.load_data()
-        return self._data.loc[item].value
+        val = self._data.loc[self._data['key'] == item].value.tolist()
+        return val[0] if len(val) == 1 else val
 
     def load_data(self):
         if self._data is not None:
             return
-        self._data = pd.read_csv(self.fpath, sep=' ', names=['key', 'value'], index_col='key',
+        self._data = pd.read_csv(self.fpath, sep=' ', names=['key', 'value'],
                                  converters={'value': lambda x: x.strip(' "')})
