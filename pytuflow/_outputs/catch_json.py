@@ -597,6 +597,8 @@ class CATCHJson(MapOutput):
             provider = CATCHProvider.from_catch_json_output(self._fpath.parent, output)
             if res_name == index_result_name:
                 self._idx_provider = provider
+            if provider.reference_time is not None:
+                provider.time_offset = (provider.reference_time - self.reference_time).total_seconds()
             self._providers[res_name] = provider
 
         self._load_info()
@@ -606,9 +608,7 @@ class CATCHJson(MapOutput):
         for provider in self._providers.values():
             if provider == self._idx_provider:
                 continue
-            if provider.reference_time != self.reference_time:
-                provider.offset_time = (provider.reference_time - self.reference_time).total_seconds()
-            df = provider.info_with_correct_times()
+            df = provider.info_with_corrected_times()
             self._info = pd.concat([self._info, df], axis=0) if not self._info.empty else df
 
         self._info = self._info.drop_duplicates()

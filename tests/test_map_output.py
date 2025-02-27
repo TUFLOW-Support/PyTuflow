@@ -296,6 +296,22 @@ class TestCATCHJson(unittest.TestCase):
         dtypes = res.data_types()
         self.assertEqual(10, len(dtypes))
 
+    def test_time_series(self):
+        p = './tests/catch_json/res.tuflow.json'
+        point = (1.5, 4.5)
+        with pyqgis():
+            res = CATCHJson(p)
+            df = res.time_series(point, 'water level')
+            self.assertEqual((7, 1), df.shape)
+
+    def test_time_series_2(self):
+        p = './tests/catch_json/res.tuflow.json'
+        point = (1.5, 4.5)
+        with pyqgis():
+            res = CATCHJson(p)
+            df = res.time_series(point, 'water level', time_fmt='absolute')
+            self.assertEqual((7, 1), df.shape)
+
     def test_section(self):
         p = './tests/catch_json/res.tuflow.json'
         line = './tests/catch_json/section_line.shp'

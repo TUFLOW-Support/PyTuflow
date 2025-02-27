@@ -34,7 +34,7 @@ class QgisMeshDriver(MeshDriver):
         self.dp = None
         self.si = None
         self.qgsmesh = None
-        self.reference_time = datetime(1990, 1, 1)
+        self.reference_time = None
         self.start_end_locs = []
         self._point_results = []
         self._linestrings = []

@@ -1,4 +1,5 @@
 import re
+from datetime import timedelta
 from pathlib import Path
 from typing import Union
 
@@ -232,6 +233,10 @@ class Mesh(MapOutput):
                     else:
                         raise ValueError('Time series index does not match between datasets.')
                 df = pd.concat([df, df1], axis=1) if not df.empty else df1
+
+        if time_fmt == 'absolute':
+            df.index = self.reference_time + pd.to_timedelta(df.index, unit='h')
+
         return df
 
     def section(self, locations: LineStringLocation, data_types: Union[str, list[str]],
