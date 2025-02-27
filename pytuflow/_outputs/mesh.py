@@ -507,7 +507,8 @@ class Mesh(MapOutput):
             self._driver.load()
             self._loaded = True
             driver = self._driver
-        self.reference_time = driver.reference_time
+        if driver.has_inherent_reference_time:
+            self.reference_time = driver.reference_time
         d = {'data_type': [], 'type': [], 'is_max': [], 'is_min': [], 'static': [], 'start': [], 'end': [], 'dt': []}
         for dtype in driver.data_groups():
             d['type'].append(dtype.type)

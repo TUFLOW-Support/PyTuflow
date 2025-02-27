@@ -15,6 +15,36 @@ class CATCHProvider:
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.time_offset = 0  # seconds
+        self._reference_time = None
+
+    @property
+    def reference_time(self) -> datetime:
+        if self._soft_load_driver.valid:
+            driver = self._soft_load_driver
+        else:
+            self._driver.load()
+            self._loaded = True
+            driver = self._driver
+        return driver.reference_time
+
+    @reference_time.setter
+    def reference_time(self, ref_time: datetime):
+        if hasattr(self, '_soft_load_driver') and self._soft_load_driver.valid:
+            self._soft_load_driver.reference_time = ref_time
+        if hasattr(self, '_loaded') and self._loaded:
+            self._driver.reference_time = ref_time
+        if hasattr(self, '_loaded') and hasattr(self, '_soft_load_driver'):
+            self._reference_time = ref_time
+
+    @property
+    def has_inherent_reference_time(self) -> bool:
+        if self._soft_load_driver.valid:
+            driver = self._soft_load_driver
+        else:
+            self._driver.load()
+            self._loaded = True
+            driver = self._driver
+        return driver.has_inherent_reference_time
 
     @staticmethod
     def from_catch_json_output(parent_dir: Path, data: dict) -> 'CATCHProvider':
@@ -64,6 +94,11 @@ class CATCHProvider:
         if isinstance(time, (float, int)) and self.time_offset:
             time -= self.time_offset / 3600.
         return super().profile(locations, data_types, time, interpolation)
+
+    def _load(self):
+        super()._load()
+        if self._reference_time:
+            self._driver.reference_time = self._reference_time
 
 
 class CATCHProviderXMDF(CATCHProvider, XMDF):

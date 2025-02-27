@@ -15,7 +15,7 @@ class NCMeshDriverNC(NCMeshDriver):
         self.valid = has_nc
         if self.valid:
             with Dataset(self.mesh) as nc:
-                _, self.units, self.reference_time = self.parse_reference_time(nc['ResTime'].units)
+                self.has_inherent_reference_time, self.units, self.reference_time = self.parse_reference_time(nc['ResTime'].units)
 
     def data_groups(self) -> Generator[DatasetGroup, None, None]:
         if not has_nc:

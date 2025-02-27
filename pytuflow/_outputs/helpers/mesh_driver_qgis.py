@@ -34,7 +34,7 @@ class QgisMeshDriver(MeshDriver):
         self.dp = None
         self.si = None
         self.qgsmesh = None
-        self.reference_time = None
+        self.reference_time = datetime(1990, 1, 1)
         self.start_end_locs = []
         self._point_results = []
         self._linestrings = []
@@ -77,6 +77,7 @@ class QgisMeshDriver(MeshDriver):
             if grp.isTemporal():
                 if grp.referenceTime().isValid():
                     self.reference_time = grp.referenceTime().toPyDateTime()
+                    self.has_inherent_reference_time = True
                     break
 
     def init_spatial_index(self):

@@ -597,8 +597,10 @@ class CATCHJson(MapOutput):
             provider = CATCHProvider.from_catch_json_output(self._fpath.parent, output)
             if res_name == index_result_name:
                 self._idx_provider = provider
-            if provider.reference_time is not None:
+            if provider.has_inherent_reference_time:
                 provider.time_offset = (provider.reference_time - self.reference_time).total_seconds()
+            else:
+                provider.reference_time = self.reference_time
             self._providers[res_name] = provider
 
         self._load_info()

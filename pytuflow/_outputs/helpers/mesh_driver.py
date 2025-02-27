@@ -20,6 +20,7 @@ class MeshDriver:
     def __init__(self, mesh: Path):
         self.mesh = mesh
         self.reference_time = None
+        self.has_inherent_reference_time = False
 
     def __repr__(self):
         return f'<{self.__class__.__name__} {self.mesh.stem}>'
