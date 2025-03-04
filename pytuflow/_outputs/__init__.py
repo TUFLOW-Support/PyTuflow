@@ -13,3 +13,4 @@ from .xmdf import XMDF
 from .nc_mesh import NCMesh
 from .catch_json import CATCHJson
 from .dat import DAT
+from .nc_grid import NCGrid

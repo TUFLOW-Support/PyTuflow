@@ -25,6 +25,31 @@ LineStringLocation = LineStrings | PathLike
 
 class MapOutput(Output):
 
+    @staticmethod
+    def _get_standard_data_type_name(name: str) -> str:
+        """Override base method to consider explicit calls to max, min, and time of max datasets."""
+        name1 = name.split('/')[0].strip()
+        name1 = re.sub(r'\sMaximums$', '', name1, flags=re.IGNORECASE)
+        name1 = re.sub(r'^hazard_', '', name1, flags=re.IGNORECASE)
+        stnd_name = Output._get_standard_data_type_name(name1)
+        if not re.findall(r'(max|peak|min)', name, re.IGNORECASE):
+            return stnd_name
+
+        if re.findall(r'(tmax|time[\s_-]+of[\s_-](?:peak|max))', name, re.IGNORECASE):
+            return 'tmax ' + stnd_name
+
+        if re.findall(r'(max|peak)', name, re.IGNORECASE):
+            if stnd_name.startswith('maximum_'):
+                stnd_name = stnd_name[8:]
+            return 'max ' + stnd_name
+
+        if re.findall(r'(tmin|time[\s_-]+of[\s_-]+min)', name, re.IGNORECASE):
+            if stnd_name.startswith('minimum_'):
+                stnd_name = stnd_name[8:]
+            return 'tmin ' + stnd_name
+
+        return 'min ' + stnd_name
+
     def _filter(self, filter_by: str) -> pd.DataFrame:
         filter_by = [x.strip().lower() for x in filter_by.split('/')] if filter_by else []
 

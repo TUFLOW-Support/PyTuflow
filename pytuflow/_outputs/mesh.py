@@ -37,26 +37,6 @@ class Mesh(MapOutput):
     def _looks_empty(driver: QgisMeshDriver) -> bool:
         return False
 
-    @staticmethod
-    def _get_standard_data_type_name(name: str) -> str:
-        """Override base method to consider explicit calls to max, min, and time of max datasets."""
-        name1 = name.split('/')[0].strip()
-        name1 = re.sub(r'\sMaximums$', '', name1, flags=re.IGNORECASE)
-        stnd_name = Output._get_standard_data_type_name(name1)
-        if not re.findall(r'(max|peak|min)', name, re.IGNORECASE):
-            return stnd_name
-
-        if re.findall(r'(tmax|time[\s_-]+of[\s_-](?:peak|max))', name, re.IGNORECASE):
-            return 'tmax ' + stnd_name
-
-        if re.findall(r'(max|peak)', name, re.IGNORECASE):
-            return 'max ' + stnd_name
-
-        if re.findall(r'(tmin|time[\s_-]+of[\s_-]+min)', name, re.IGNORECASE):
-            return 'tmin ' + stnd_name
-
-        return 'min ' + stnd_name
-
     def times(self, filter_by: str = None, fmt: str = 'relative') -> list[TimeLike]:
         """Returns a list of times for the given filter.
 
@@ -121,12 +101,13 @@ class Mesh(MapOutput):
         """Extracts time-series data for the given locations and data types.
 
         The ``locations`` can be a single point in the form of a tuple ``(x, y)`` or in the Well Known Text (WKT)
-        format. It can also be a list of point or a dictionary of points where the key will be used in the column name
+        format. It can also be a list of points, or a dictionary of points where the key will be used in the column name
         in the resulting DataFrame.
 
-        The location can also be a GIS point file e.g. Shapefile or GPKG. GPKG's should follow the TUFLOW
-        convention if specifying the layer name within the database ``database.gpkg >> layer``. If the GIS layer
-        has a field called ``name`` or ``label`` then this will be used as the column name in the resulting DataFrame.
+        The ``locations`` argument can also be a single GIS file path e.g. Shapefile or GPKG (but any format supported
+        by GDAL is also supported). GPKG's should follow the TUFLOW convention if specifying the layer name within
+        the database ``database.gpkg >> layer``. If the GIS layer has a field called ``name``, ``label``, or ``ID``
+        then this will be used as the column name in the resulting DataFrame.
 
         The returned DataFrame will use a single time index and the column names will be in the form of:
         ``label/data_type`` e.g. ``pnt1/water level``.
@@ -247,9 +228,10 @@ class Mesh(MapOutput):
         be a dictionary of key, line-string pairs where the key is the name that will be used in the column name in
         the resulting DataFrame.
 
-        The ``locations`` argument can also be a single GIS file path e.g. Shapefile or GPKG. GPKG's should follow the
-        TUFLOW convention if specifying the layer name within the database ``database.gpkg >> layer``. If the GIS layer
-        has a field called ``name`` or ``label`` then this will be used as the column name in the resulting DataFrame.
+        The ``locations`` argument can also be a single GIS file path e.g. Shapefile or GPKG (but any format supported
+        by GDAL is also supported). GPKG's should follow the TUFLOW convention if specifying the layer name within
+        the database ``database.gpkg >> layer``. If the GIS layer has a field called ``name``, ``label``, or ``ID``
+        then this will be used as the column name in the resulting DataFrame.
 
         The resulting DataFrame will use multi-index columns since the data is not guaranteed to have the same
         index. The level 1 index will be the label, and the level 2 index will be the data type. The offset will
@@ -369,9 +351,10 @@ class Mesh(MapOutput):
         be a dictionary of key, line-string pairs where the key is the name that will be used in the column name in
         the resulting DataFrame.
 
-        The ``locations`` argument can also be a single GIS file path e.g. Shapefile or GPKG. GPKG's should follow the
-        TUFLOW convention if specifying the layer name within the database ``database.gpkg >> layer``. If the GIS layer
-        has a field called ``name`` or ``label`` then this will be used as the column name in the resulting DataFrame.
+        The ``locations`` argument can also be a single GIS file path e.g. Shapefile or GPKG (but any format supported
+        by GDAL is also supported). GPKG's should follow the TUFLOW convention if specifying the layer name within
+        the database ``database.gpkg >> layer``. If the GIS layer has a field called ``name``, ``label``, or ``ID``
+        then this will be used as the column name in the resulting DataFrame.
 
         The resulting DataFrame will be made up of 3 columns- ``X, Y, value`` data. The ``X, Y`` values represent
         cells in the vertical plane, and should be treated as groups of 4 which denote the corners of a cell. The
@@ -438,12 +421,13 @@ class Mesh(MapOutput):
         """Extracts vertical profile data for the given locations and data types.
 
         The ``locations`` can be a single point in the form of a tuple ``(x, y)`` or in the Well Known Text (WKT)
-        format. It can also be a list of point or a dictionary of points where the key will be used in the column name
+        format. It can also be a list of points, or a dictionary of points where the key will be used in the column name
         in the resulting DataFrame.
 
-        The location can also be a GIS point file e.g. Shapefile or GPKG. GPKG's should follow the TUFLOW
-        convention if specifying the layer name within the database ``database.gpkg >> layer``. If the GIS layer
-        has a field called ``name`` or ``label`` then this will be used as the column name in the resulting DataFrame.
+        The ``locations`` argument can also be a single GIS file path e.g. Shapefile or GPKG (but any format supported
+        by GDAL is also supported). GPKG's should follow the TUFLOW convention if specifying the layer name within
+        the database ``database.gpkg >> layer``. If the GIS layer has a field called ``name``, ``label``, or ``ID``
+        then this will be used as the column name in the resulting DataFrame.
 
         The returned DataFrame will use multi-index columns as the data is not guaranteed to have the same index.
         The level 1 index will be the label, and the level 2 index will be the data type. The elevation will always
@@ -521,9 +505,9 @@ class Mesh(MapOutput):
             d['static'].append(static)
             dt = 0.
             if not static:
-                dif = np.diff(dtype.times)
-                if np.isclose(dif[:-1], dif[0], atol=0.001, rtol=0).all():
-                    dt = float(np.round(dif[0] * 3600., decimals=2))
+                dif = np.diff(dtype.times) * 3600.
+                if np.isclose(dif[:-1], dif[0], atol=0.01, rtol=0).all():
+                    dt = float(np.round(dif[0], decimals=2))
                 else:
                     dt = tuple(dtype.times)
             d['dt'].append(dt)

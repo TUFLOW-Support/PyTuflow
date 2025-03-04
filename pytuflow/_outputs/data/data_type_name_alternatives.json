@@ -6,6 +6,7 @@
     "energy": ["e", "energy", "energy(?:\\s|_|-)?levels?"],
     "velocity": ["v", "velocity", "velocities", "vel"],
     "flow": ["q", "flows?", "discharges?", "total(?:\\s|_|-)?flow"],
+    "unit flow": ["unit(?:\\s|_|-)?flows?", "unit(?:\\s|_|-)?discharges?"],
     "total inflow": ["total(?:\\s|_|-)?inflows?"],
     "lateral inflow": ["lat(?:eral)?(?:\\s|_|-)?inflows?"],
     "net lateral inflow": ["net(?:\\s|_|-)?lat(?:eral)?(?:\\s|_|-)?inflows?"],

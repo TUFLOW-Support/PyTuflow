@@ -593,7 +593,7 @@ class CATCHJson(MapOutput):
                                                         '%Y-%m-%d %H:%M:%S')
         self.units = self._data.get('units', 'metric')
         self._outputs = self._data.get('output data', {})
-        self._result_types = [Mesh._get_standard_data_type_name(x) for x in self._data.get('result types')]
+        self._result_types = [self._get_standard_data_type_name(x) for x in self._data.get('result types')]
 
         index_result_name = self._data.get('index')
         for res_name in self._data.get('outputs', []):

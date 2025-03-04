@@ -92,12 +92,12 @@ class QgisMeshDriver(MeshDriver):
         self.si = QgsMeshSpatialIndex(self.qgsmesh)
 
     def group_index_from_name(self, data_type: str, **kwargs) -> int:
-        from ..mesh import Mesh  # import here to avoid circular import
+        from ..map_output import MapOutput  # import here to avoid circular import
         igrp = -1
         for i in range(self.lyr.datasetGroupCount()):
             ind = QgsMeshDatasetIndex(i, 0)
             ds_name = self.lyr.datasetGroupMetadata(ind).name()
-            stnd_name = Mesh._get_standard_data_type_name(ds_name)
+            stnd_name = MapOutput._get_standard_data_type_name(ds_name)
             if stnd_name == data_type:
                 igrp = i
                 break
@@ -108,10 +108,10 @@ class QgisMeshDriver(MeshDriver):
         return igrp
 
     def time_series(self, name: str, point: Point, data_type: str, averaging_method: str | None = None) -> pd.DataFrame:
-        from ..mesh import Mesh  # import here to avoid circular import
+        from ..map_output import MapOutput  # import here to avoid circular import
         self.init_spatial_index()
         igrp = self.group_index_from_name(data_type)
-        stnd_name = Mesh._get_standard_data_type_name(data_type)
+        stnd_name = MapOutput._get_standard_data_type_name(data_type)
 
         res = ScalarMeshResult(self.lyr, self.qgsmesh, self.dp, self.si, QgsPointXY(*point))
         if res in self._point_results:

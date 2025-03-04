@@ -4,7 +4,7 @@ from datetime import datetime
 
 from qgis.core import QgsApplication
 
-from pytuflow import XMDF, NCMesh, CATCHJson, DAT
+from pytuflow import XMDF, NCMesh, CATCHJson, DAT, NCGrid
 
 
 @contextmanager
@@ -478,3 +478,72 @@ class TestDAT(unittest.TestCase):
             res = DAT(p)
             dtypes = res.data_types()
             self.assertEqual(8, len(dtypes))
+
+
+class TestNCGrid(unittest.TestCase):
+
+    def test_load(self):
+        p = './tests/nc_grid/small_model_001.nc'
+        res = NCGrid(p)
+        self.assertEqual('small_model_001', res.name)
+
+    def test_times(self):
+        p = './tests/nc_grid/small_model_001.nc'
+        res = NCGrid(p)
+        times = res.times()
+        self.assertEqual(13, len(times))
+
+    def test_data_types(self):
+        p = './tests/nc_grid/small_model_001.nc'
+        res = NCGrid(p)
+        dtypes = res.data_types()
+        self.assertEqual(8, len(dtypes))
+
+    def test_time_series(self):
+        p = './tests/nc_grid/small_model_001.nc'
+        pnt = './tests/nc_grid/time_series_point.shp'
+        res = NCGrid(p)
+        df = res.time_series(pnt, 'wl')
+        self.assertEqual((13, 1), df.shape)
+
+    def test_section_horiz(self):
+        p = './tests/nc_grid/small_model_001.nc'
+        line = './tests/nc_grid/section_line_horiz.shp'
+        res = NCGrid(p)
+        df = res.section(line, 'h', 0)
+        self.assertEqual((6, 2), df.shape)
+
+    def test_section_vert(self):
+        p = './tests/nc_grid/small_model_001.nc'
+        line = './tests/nc_grid/section_line_vert.shp'
+        res = NCGrid(p)
+        df = res.section(line, 'h', 0)
+        self.assertEqual((6, 2), df.shape)
+
+    def test_section_diag_x(self):
+        p = './tests/nc_grid/small_model_001.nc'
+        line = './tests/nc_grid/section_line_diag_x.shp'
+        res = NCGrid(p)
+        df = res.section(line, 'h', 0)
+        self.assertEqual((10, 2), df.shape)
+
+    def test_section_diag_y(self):
+        p = './tests/nc_grid/small_model_001.nc'
+        line = './tests/nc_grid/section_line_diag_y.shp'
+        res = NCGrid(p)
+        df = res.section(line, 'h', 0)
+        self.assertEqual((12, 2), df.shape)
+
+    def test_section_horiz_long(self):
+        p = './tests/nc_grid/small_model_001.nc'
+        line = './tests/nc_grid/section_line_horiz_long.shp'
+        res = NCGrid(p)
+        df = res.section(line, 'h', 0)
+        self.assertEqual((14, 2), df.shape)
+
+    def test_section_polyline(self):
+        p = './tests/nc_grid/small_model_001.nc'
+        line = './tests/nc_grid/section_polyline.shp'
+        res = NCGrid(p)
+        df = res.section(line, 'h', 0)
+        self.assertEqual((18, 2), df.shape)
