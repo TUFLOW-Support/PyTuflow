@@ -148,4 +148,5 @@ class XMDF(Mesh):
 
     @staticmethod
     def _looks_like_this(fpath: Path) -> bool:
-        return fpath.suffix.lower() == '.xmdf'
+        return (fpath.suffix.lower() == '.xmdf' or
+                (fpath.suffix.lower() == '.sup' or Path(fpath.stem).suffix.lower() == '.xmdf'))

@@ -6,12 +6,12 @@ from typing import Union
 import numpy as np
 import pandas as pd
 
-from pytuflow._outputs.helpers.tpc_reader import TPCReader
-from pytuflow._outputs.itime_series_1d import ITimeSeries1D
-from pytuflow._outputs.time_series import TimeSeries
-from pytuflow._pytuflow_types import PathLike, TimeLike, AppendDict
-from pytuflow.util._util.logging import get_logger
-from pytuflow.results import ResultTypeError
+from .helpers.tpc_reader import TPCReader
+from .itime_series_1d import ITimeSeries1D
+from .time_series import TimeSeries
+from .._pytuflow_types import PathLike, TimeLike, AppendDict
+from ..util._util.logging import get_logger
+from ..results import ResultTypeError
 
 logger = get_logger()
 

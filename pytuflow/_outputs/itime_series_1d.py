@@ -94,14 +94,20 @@ class ITimeSeries1D(ABC):
         if '1d' in ctx:
             filtered_something = True
             ctx.remove('1d')
-        if 'node' in ctx:
+        if 'node' in ctx or 'point' in ctx:
             filtered_something = True
             df = df[df['geometry'] == 'point']
-            ctx.remove('node')
-        if 'channel' in ctx:
+            if 'node' in ctx:
+                ctx.remove('node')
+            if 'point' in ctx:
+                ctx.remove('point')
+        if 'channel' in ctx or 'line' in ctx:
             filtered_something = True
             df = df[df['geometry'] == 'line']
-            ctx.remove('channel')
+            if 'channel' in ctx:
+                ctx.remove('channel')
+            if 'line' in ctx:
+                ctx.remove('line')
 
         # data types
         ctx1 = [self._get_standard_data_type_name(x) for x in ctx]
