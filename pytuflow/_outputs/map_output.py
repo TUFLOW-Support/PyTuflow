@@ -53,6 +53,9 @@ class MapOutput(Output):
     def _filter(self, filter_by: str) -> pd.DataFrame:
         filter_by = [x.strip().lower() for x in filter_by.split('/')] if filter_by else []
 
+        while 'section' in filter_by:  # section is everything
+            filter_by.remove('section')
+
         # type - Scalar / Vector
         df = self._info.copy()
         ctx = []
@@ -90,12 +93,14 @@ class MapOutput(Output):
             df3 = df[df['static']]
             while 'static' in filter_by:
                 filter_by.remove('static')
-        if 'temporal' in filter_by:
+        if 'temporal' in filter_by or 'timeseries' in filter_by:
             ctx.append('temporal')
             df_ = df[~df['static']]
             df3 = pd.concat([df3, df_]) if not df3.empty else df_
             while 'temporal' in filter_by:
                 filter_by.remove('temporal')
+            while 'timeseries' in filter_by:
+                filter_by.remove('timeseries')
         if ctx:
             df = df3
 
@@ -202,7 +207,8 @@ class MapOutput(Output):
             raise ValueError(f'Invalid WKT line-string string: {line}')
         return [tuple([float(x) for x in p.split()]) for p in re.split(r'\s*,\s*', line.strip('\n\t )').split('(')[1])]
 
-    def _list_depth(self, lst: Iterable) -> int:
+    @staticmethod
+    def _list_depth(lst: Iterable) -> int:
         def is_bottom(lst: Iterable) -> bool:
             return all(isinstance(x, (float, int, str)) for x in lst)
 
