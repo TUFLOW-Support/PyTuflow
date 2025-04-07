@@ -50,6 +50,8 @@ class ITimeSeries2D(ABC):
         pd.DataFrame
             The filtered 1D objects
         """
+        from .map_output import MapOutput
+
         ctx = filter_by.copy() if filter_by else []
         df = pd.DataFrame(columns=['id', 'data_type', 'geometry', 'start', 'end', 'dt', 'domain'])
 
@@ -98,14 +100,14 @@ class ITimeSeries2D(ABC):
                     ctx.pop(j - i)
 
         # data types
-        ctx1 = [self._get_standard_data_type_name(x) for x in ctx]
+        ctx1 = [MapOutput._get_standard_data_type_name(x) for x in ctx]
         ctx1 = [x for x in ctx1 if x in df['data_type'].unique()]
         if ctx1:
             filtered_something = True
             df = df[df['data_type'].isin(ctx1)]
             j = len(ctx) - 1
             for i, x in enumerate(reversed(ctx.copy())):
-                if self._get_standard_data_type_name(x) in ctx1:
+                if MapOutput._get_standard_data_type_name(x) in ctx1:
                     ctx.pop(j - i)
 
         # ids

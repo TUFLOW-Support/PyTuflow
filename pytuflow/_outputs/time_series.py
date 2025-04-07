@@ -169,6 +169,7 @@ class TimeSeries(TabularOutput):
                                enumerate(df1.columns)]
                 df = df1 if df.empty else pd.concat([df, df1], axis=1)
 
+        df[df < -99998.] = np.nan
         return df
 
     def _maximum_extractor(self, data_types: list[str], custom_names: list[str], maximum_data: dict,
