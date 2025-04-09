@@ -169,7 +169,10 @@ class TimeSeries(TabularOutput):
                                enumerate(df1.columns)]
                 df = df1 if df.empty else pd.concat([df, df1], axis=1)
 
-        df[df < -99998.] = np.nan
+        # remove -99999 values as these are used to indicate dry for RL results
+        mask = (df.select_dtypes(include=[np.number]) < -99998)
+        df.loc[:, mask.columns] = df.loc[:, mask.columns].where(~mask, np.nan)
+
         return df
 
     def _maximum_extractor(self, data_types: list[str], custom_names: list[str], maximum_data: dict,

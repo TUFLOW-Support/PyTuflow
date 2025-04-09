@@ -583,7 +583,7 @@ class Test_TPC_GPKG(TestCase):
     def test_data_types_context(self):
         p = './tests/tpc_gpkg/EG15_001.tpc'
         res = TPC(p)
-        self.assertEqual(4, len(res.data_types('line')))
+        self.assertEqual(10, len(res.data_types('line')))
 
     def test_ids(self):
         p = './tests/tpc_gpkg/EG15_001.tpc'
