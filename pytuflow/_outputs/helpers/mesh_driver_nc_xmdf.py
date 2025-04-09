@@ -27,4 +27,4 @@ class NCMeshDriverXmdf(NCMeshDriver):
                         name = f'{dtypename}/{grpname}' if grpname.lower() in ['maximums', 'minimums'] else dtypename
                         type_ = 'vector' if 'vector' in dtype.Grouptype.lower() else 'scalar'
                         times = dtype.variables['Times'][:].tolist()
-                        yield DatasetGroup(name, type_, times)
+                        yield DatasetGroup(name, type_, times, 1)

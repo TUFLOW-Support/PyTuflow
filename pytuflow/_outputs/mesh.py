@@ -71,6 +71,7 @@ class Mesh(MapOutput):
         * ``scalar/vector`` - filter by scalar or vector data types
         * ``max/min`` - filter by data types that have maximum or minimum values
         * ``static/temporal`` - filter by static or temporal data types
+        * ``2d/3d`` - filter by 2D or 3D data types
 
         Filters can be combined by delimiting with a forward slash, e.g. ``'scalar/max'``.
 
@@ -493,7 +494,7 @@ class Mesh(MapOutput):
             driver = self._driver
         if driver.has_inherent_reference_time:
             self.reference_time = driver.reference_time
-        d = {'data_type': [], 'type': [], 'is_max': [], 'is_min': [], 'static': [], 'start': [], 'end': [], 'dt': []}
+        d = {'data_type': [], 'type': [], 'is_max': [], 'is_min': [], 'static': [], '3d': [], 'start': [], 'end': [], 'dt': []}
         for dtype in driver.data_groups():
             d['type'].append(dtype.type)
             d['is_min'].append('/minimums' in dtype.name.lower())
@@ -503,6 +504,7 @@ class Mesh(MapOutput):
             d['end'].append(np.round(dtype.times[-1], decimals=6))
             static = len(dtype.times) == 1
             d['static'].append(static)
+            d['3d'].append(dtype.vert_lyr_count > 1)
             dt = 0.
             if not static:
                 dif = np.diff(dtype.times) * 3600.

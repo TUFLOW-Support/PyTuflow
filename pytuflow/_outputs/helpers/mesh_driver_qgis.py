@@ -53,7 +53,8 @@ class QgisMeshDriver(MeshDriver):
             name = grp.name()
             type_ = 'vector' if grp.isVector() else 'scalar'
             times = [self.lyr.datasetMetadata(QgsMeshDatasetIndex(ind.group(), i)).time() for i in range(self.lyr.datasetCount(ind))]
-            yield DatasetGroup(name, type_, times)
+            vert_lyr_count = grp.maximumVerticalLevelsCount()
+            yield DatasetGroup(name, type_, times, vert_lyr_count)
 
     def init_mesh_layer(self, name: str):
         if not has_qgis:

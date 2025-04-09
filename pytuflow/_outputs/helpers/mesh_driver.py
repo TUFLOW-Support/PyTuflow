@@ -6,11 +6,12 @@ import numpy as np
 
 class DatasetGroup:
 
-    def __init__(self, name: str, type_: str, times: list[float]):
+    def __init__(self, name: str, type_: str, times: list[float], vert_lyr_count):
         self.name = name
         self.type = type_
         self.times = np.array(times)
         self.units = 'h'
+        self.vert_lyr_count = vert_lyr_count
 
     def __repr__(self):
         return f'<{self.__class__.__name__} {self.name} ({self.type})>'

@@ -104,6 +104,23 @@ class MapOutput(Output):
         if ctx:
             df = df3
 
+        # 2d/3d datasets
+        ctx = []
+        df4 = pd.DataFrame()
+        if '2d' in filter_by:
+            ctx.append('2d')
+            df4 = df[~df['3d']]
+            while '2d' in filter_by:
+                filter_by.remove('2d')
+        if '3d' in filter_by:
+            ctx.append('3d')
+            df_ = df[df['3d']]
+            df4 = pd.concat([df4, df_]) if not df4.empty else df_
+            while '3d' in filter_by:
+                filter_by.remove('3d')
+        if ctx:
+            df = df4
+
         # data type
         if filter_by:
             ctx = [self._get_standard_data_type_name(x) for x in filter_by]

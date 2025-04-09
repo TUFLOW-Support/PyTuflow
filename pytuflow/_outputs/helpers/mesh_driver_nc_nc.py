@@ -24,7 +24,7 @@ class NCMeshDriverNC(NCMeshDriver):
         skip_var = ['ResTime', 'cell_Nvert', 'cell_node', 'NL', 'idx2', 'idx3', 'cell_X',
                     'cell_Y', 'cell_Zb', 'cell_A', 'node_X', 'node_Y', 'node_Zb', 'layerface_Z', 'stat']
 
-        yield DatasetGroup('Bed Elevation', 'scalar', [0.])
+        yield DatasetGroup('Bed Elevation', 'scalar', [0.], 1)
 
         with Dataset(self.mesh) as nc:
             times = nc['ResTime'][:].tolist()
@@ -47,7 +47,9 @@ class NCMeshDriverNC(NCMeshDriver):
                     if name[-2:] == '_x' and type_ == 'vector':
                         name = name[:-2]
 
-                yield DatasetGroup(name, type_, times)
+                vert_lyr_count = 2 if 'NumCells3D' in var.dimensions else 1
+
+                yield DatasetGroup(name, type_, times, vert_lyr_count)
 
     @staticmethod
     def parse_reference_time(string):
