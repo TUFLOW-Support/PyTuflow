@@ -57,4 +57,4 @@ class QgisDATMeshDriver(QgisMeshDriver):
             else:
                 name = f'special time unknown: {time}'
 
-            yield DatasetGroup(name, 'scalar', [0.])
+            yield DatasetGroup(name, 'scalar', [0.], 1)

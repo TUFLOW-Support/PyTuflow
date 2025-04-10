@@ -18,7 +18,7 @@ class NCMeshDriverXmdf(NCMeshDriver):
         if not has_nc:
             raise ImportError('netCDF4 not available')
 
-        yield DatasetGroup('Bed Elevation', 'scalar', [0.])
+        yield DatasetGroup('Bed Elevation', 'scalar', [0.], 1)
 
         with Dataset(self.xmdf) as nc:
             for res_name, res in nc.groups.items():
