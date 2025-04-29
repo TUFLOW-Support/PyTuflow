@@ -441,7 +441,7 @@ class TPC(INFO, ITimeSeries2D):
         return df
 
     def time_series(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
-                    time_fmt: str = 'relative') -> pd.DataFrame:
+                    time_fmt: str = 'relative', *args, **kwargs) -> pd.DataFrame:
         """Returns a time series dataframe for the given location(s) and data type(s).
 
         It's possible to pass in a well known shorthand for the data type e.g. :code:`q` for :code:`flow`.

@@ -342,7 +342,7 @@ class INFO(TimeSeries, ITimeSeries1D):
         return df
 
     def time_series(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
-                    time_fmt: str = 'relative') -> pd.DataFrame:
+                    time_fmt: str = 'relative', *args, **kwargs) -> pd.DataFrame:
         """Returns a time-series DataFrame for the given location(s) and data type(s).
 
         It's possible to pass in a well known shorthand for the data type e.g. :code:`q` for :code:`flow`.
@@ -423,7 +423,7 @@ class INFO(TimeSeries, ITimeSeries1D):
         return df
 
     def section(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
-                time: TimeLike) -> pd.DataFrame:
+                time: TimeLike, *args, **kwargs) -> pd.DataFrame:
         """Returns a long plot for the given location and data types at the given time. If one location is given,
         the long plot will connect the given location down to the outlet. If 2 locations are given, then the
         long plot will connect the two locations (they must be connectable). If more than 2 locations are given,
