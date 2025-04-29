@@ -170,7 +170,7 @@ class CrossSections(TabularOutput):
         return df['type'].unique().tolist()
 
     def section(self, locations: Union[str, list[str]], data_types: Union[str, list[str]] = None,
-                time: TimeLike = -1) -> pd.DataFrame:
+                time: TimeLike = -1, *args, **kwargs) -> pd.DataFrame:
         """Return the cross-section data for given location and cross-section type.
 
         The returned dataframe uses a multi-index with the first level being the cross-section ID and the second level
@@ -225,7 +225,7 @@ class CrossSections(TabularOutput):
         return df1
 
     def time_series(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
-                    time_fmt: str = 'relative') -> pd.DataFrame:
+                    time_fmt: str = 'relative', *args, **kwargs) -> pd.DataFrame:
         """Not supported for ``CrossSection`` results. Raises a :code:`NotImplementedError`."""
         raise NotImplementedError(f'{__class__.__name__} does not support time-series plotting.')
 
