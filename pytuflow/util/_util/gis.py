@@ -35,7 +35,7 @@ OrderedDict([('Name', 'RL_05')])
 from contextlib import contextmanager
 
 from pytuflow._pytuflow_types import PathLike, TuflowPath
-from pytuflow._tmf.tmf.convert_tuflow_model_gis_format.conv_tf_gis_format.helpers.gis import GPKG, ogr_basic_geom_type
+from pytuflow._tmf.tmf.tuflow_model_files.utils.gis import GPKG, ogr_basic_geom_type
 from pytuflow._tmf.tmf.tuflow_model_files.db.drivers.gis_attr_driver import GISAttributes
 
 try:
