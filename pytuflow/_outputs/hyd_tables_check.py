@@ -206,7 +206,7 @@ class HydTablesCheck(TabularOutput):
         return df.data_type.unique().tolist()
 
     def section(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
-                time: TimeLike = -1) -> pd.DataFrame:
+                time: TimeLike = -1, *args, **kwargs) -> pd.DataFrame:
         """Returns section data for the given locations and data types from the 1D tables check file.
 
         This method supports returning multiple locations and data types. As a consequence,
@@ -288,7 +288,7 @@ class HydTablesCheck(TabularOutput):
         return df1
 
     def time_series(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
-                    time_fmt: str = 'relative') -> pd.DataFrame:
+                    time_fmt: str = 'relative', *args, **kwargs) -> pd.DataFrame:
         """Not supported for ``HydTablesCheck`` results. Raises a :code:`NotImplementedError`."""
         raise NotImplementedError(f'{__class__.__name__} does not support time-series plotting.')
 

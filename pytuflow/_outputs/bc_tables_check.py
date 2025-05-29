@@ -393,7 +393,7 @@ class BCTablesCheck(TimeSeries):
         return mx
 
     def time_series(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
-                    time_fmt: str = 'relative') -> pd.DataFrame:
+                    time_fmt: str = 'relative', *args, **kwargs) -> pd.DataFrame:
         """Returns time-series data for the given locations and data types.
 
         Because boundary data is not guaranteed to share a common index, the return DataFrame will contain
@@ -451,7 +451,7 @@ class BCTablesCheck(TimeSeries):
         return df
 
     def section(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
-                time: TimeLike = -1) -> pd.DataFrame:
+                time: TimeLike = -1, *args, **kwargs) -> pd.DataFrame:
         """Not supported for ``BCTablesCheck`` results. Raises a :code:`NotImplementedError`."""
         raise NotImplementedError(f'{__class__.__name__} does not support section plotting.')
 

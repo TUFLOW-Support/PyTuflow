@@ -304,7 +304,7 @@ class FVBCTide(TimeSeries):
         return df
 
     def time_series(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
-                    time_fmt: str = 'relative') -> pd.DataFrame:
+                    time_fmt: str = 'relative', *args, **kwargs) -> pd.DataFrame:
         """Returns a time-series DataFrame for the given location(s) and data type(s).
 
         It's possible to pass in a well known shorthand for the data type e.g. :code:`h` for :code:`water level`.
@@ -362,7 +362,7 @@ class FVBCTide(TimeSeries):
         return df
 
     def section(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
-                time: TimeLike) -> pd.DataFrame:
+                time: TimeLike, *args, **kwargs) -> pd.DataFrame:
         """Returns a DataFrame containing the long plot data for the given location(s) and data type(s).
 
         Multiple locations can be passed in as a list. To be consistent with section data extraction, the data is

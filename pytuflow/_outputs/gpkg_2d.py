@@ -344,7 +344,7 @@ class GPKG2D(TimeSeries, ITimeSeries2D, GPKGBase):
         return df
 
     def time_series(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
-                    time_fmt: str = 'relative') -> pd.DataFrame:
+                    time_fmt: str = 'relative', *args, **kwargs) -> pd.DataFrame:
         """Returns a time-series DataFrame for the given location(s) and data type(s).
 
         It's possible to pass in a well known shorthand for the data type e.g. :code:`q` for :code:`flow`.
@@ -405,7 +405,7 @@ class GPKG2D(TimeSeries, ITimeSeries2D, GPKGBase):
         return df
 
     def section(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
-                time: TimeLike) -> pd.DataFrame:
+                time: TimeLike, *args, **kwargs) -> pd.DataFrame:
         """Not supported for ``GPKG2D`` results. Raises a :code:`NotImplementedError`."""
         raise NotImplementedError(f'{__class__.__name__} files do not support section plotting.')
 
