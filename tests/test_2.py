@@ -612,6 +612,14 @@ class Test_TPC_GPKG(TestCase):
         df = res.section('pipe1', ['Bed Level', 'water level'], 1)
         self.assertEqual((10, 6), df.shape)
 
+    def test_tpc_gpkg_swmm_initial_load(self):
+        p = './tests/tpc_gpkg/basin_HPC-2m_SWMM_____2016_8_12.tpc'
+        res = TPC(p)
+        self.assertEqual('basin_HPC-2m_SWMM_____2016_8_12', res.name)
+        self.assertEqual(8, res.po_point_count)
+        self.assertEqual(6, res.node_count)
+        self.assertEqual(False, res._loaded)  # an initial load only
+
 
 class Test_TPC_Frankenmodel(TestCase):
 

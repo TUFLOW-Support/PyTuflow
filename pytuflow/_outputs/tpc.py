@@ -98,6 +98,7 @@ class TPC(INFO, ITimeSeries2D):
         self._nc_file = None
         self._ncid = None
         self._gis_layers_initialised = False
+        self._gpkgswmm = None
         self._gpkg1d = None
         self._gpkg2d = None
         self._gpkgrl = None
@@ -114,7 +115,8 @@ class TPC(INFO, ITimeSeries2D):
 
     @property
     def po_point_count(self) -> int:
-        self._load()
+        if self.format != 'GPKG':
+            self._load()
         return self._po_point_count
 
     @po_point_count.setter
@@ -123,7 +125,8 @@ class TPC(INFO, ITimeSeries2D):
 
     @property
     def po_line_count(self) -> int:
-        self._load()
+        if self.format != 'GPKG':
+            self._load()
         return self._po_line_count
 
     @po_line_count.setter
@@ -132,7 +135,8 @@ class TPC(INFO, ITimeSeries2D):
 
     @property
     def po_poly_count(self) -> int:
-        self._load()
+        if self.format != 'GPKG':
+            self._load()
         return self._po_poly_count
 
     @po_poly_count.setter
@@ -157,9 +161,12 @@ class TPC(INFO, ITimeSeries2D):
     @staticmethod
     def _looks_empty(fpath: PathLike) -> bool:
         # docstring inherited
-        target_line_count = 10  # fairly arbitrary
+        target_line_count = 7  # fairly arbitrary
         try:
             tpc_reader = TPCReader(fpath)
+            gpkgs = list(tpc_reader.iter_properties('GPKG Time Series'))
+            if gpkgs:
+                return False
             if tpc_reader.property_count() < target_line_count:
                 return True
             node_count = tpc_reader.get_property('Number 1D Nodes')
@@ -579,6 +586,12 @@ class TPC(INFO, ITimeSeries2D):
         if 'CSV' in self.format:
             self.format = 'CSV'  # it is possible to have both CSV and NC and CSV is a more complete format
 
+        if self.format == 'GPKG':
+            self.name = self._tpc_reader.get_property('Simulation ID')
+            self.units = 'si' if self._tpc_reader.get_property('Units') == 'METRIC' else 'us customary'
+            self._initial_gpkg_load()
+            return
+
         self.reference_time = self._tpc_reader.get_property('Reference Time', self.reference_time)
 
         # rl counts - up here since it's easy to get and useful when loading time series and maximum data
@@ -718,26 +731,49 @@ class TPC(INFO, ITimeSeries2D):
             logger.warning(f'TPC._load_time_series_nc(): No data found in NetCDF file for {dtype} for domain {domain}.')
         return df
 
-    def _load_time_series_gpkg(self):
+    def _initial_gpkg_load(self):
+        reference_time_set = False
         for prop, value in self._tpc_reader.iter_properties('GPKG Time Series'):
             if str(value).lower().endswith('_1d.gpkg'):
                 self._gpkg1d = GPKG1D(self._expand_property_path(prop, value=value))
-                self._gpkg1d._load()
+                self.node_count += self._gpkg1d.node_count
+                self.channel_count += self._gpkg1d.channel_count
+                self.reference_time = self._gpkg1d.reference_time if not reference_time_set else self.reference_time
+            elif str(value).lower().endswith('_swmm_ts.gpkg'):
+                self._gpkgswmm = GPKG1D(self._expand_property_path(prop, value=value))
+                self.node_count += self._gpkgswmm.node_count
+                self.channel_count += self._gpkgswmm.channel_count
+                self.reference_time = self._gpkgswmm.reference_time if not reference_time_set else self.reference_time
             elif str(value).lower().endswith('_2d.gpkg'):
                 self._gpkg2d = GPKG2D(self._expand_property_path(prop, value=value))
-                self._gpkg2d._load()
+                self.po_point_count += self._gpkg2d.po_point_count
+                self.po_line_count += self._gpkg2d.po_line_count
+                self.po_poly_count += self._gpkg2d.po_poly_count
+                self.reference_time = self._gpkg2d.reference_time if not reference_time_set else self.reference_time
             elif str(value).lower().endswith('_rl.gpkg'):
                 self._gpkgrl = GPKGRL(self._expand_property_path(prop, value=value))
-                self._gpkgrl._load()
+                self.rl_point_count += self._gpkgrl.rl_point_count
+                self.rl_line_count += self._gpkgrl.rl_line_count
+                self.rl_poly_count += self._gpkgrl.rl_poly_count
+                self.reference_time = self._gpkgrl.reference_time if not reference_time_set else self.reference_time
 
+    def _load_time_series_gpkg(self):
         if self._gpkg1d is not None:
+            self._gpkg1d._load()
             self._time_series_data = self._gpkg1d._time_series_data
             self._nd_res_types = self._gpkg1d._nd_res_types
 
+        if self._gpkgswmm is not None:
+            self._gpkgswmm._load()
+            self._time_series_data.update(self._gpkgswmm._time_series_data)
+            self._nd_res_types.extend(self._gpkgswmm._nd_res_types)
+
         if self._gpkg2d is not None:
+            self._gpkg2d._load()
             self._time_series_data_2d = self._gpkg2d._time_series_data_2d
 
         if self._gpkgrl is not None:
+            self._gpkgrl._load()
             self._time_series_data_rl = self._gpkgrl._time_series_data_rl
 
     def _post_process_channel_losses(self, df: pd.DataFrame, dtype: str) -> pd.DataFrame:
