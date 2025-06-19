@@ -16,7 +16,7 @@ authors = [
 ]
 description = "Official Python library for TUFLOW. A library for working with TUFLOW input and outputs with basic running capabilities."
 readme = "README.md"
-license = {file = "LICENSE.txt"}
+license-files = ["LICENSE.txt"]
 keywords = ["tuflow", "hydraulics", "hydraulic modelling", "hydraulic modeling", "flood", "flood modelling", "flood modeling", "flooding", "floodplain", "flood plain", "floodplain modelling", "floodplain modeling", "floodplain management"]
 classifiers = [
     "Development Status :: 4 - Beta",
