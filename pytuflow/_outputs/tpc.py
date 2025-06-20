@@ -1,3 +1,4 @@
+from datetime import datetime
 from pathlib import Path
 import re
 from typing import Union
@@ -570,6 +571,16 @@ class TPC(INFO, ITimeSeries2D):
 
         return df
 
+    def section(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
+                time: TimeLike, *args, **kwargs) -> pd.DataFrame:
+        e = None
+        if self._gpkgswmm is not None:
+            try:
+                return self._gpkgswmm.section(locations, data_types, time, *args, **kwargs)
+            except NameError as e:
+                pass
+        return super().section(locations, data_types, time, *args, **kwargs)
+
     def curtain(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
                 time: TimeLike) -> pd.DataFrame:
         """Not supported for ``TPC`` results. Raises a :code:`NotImplementedError`."""
@@ -832,6 +843,9 @@ class TPC(INFO, ITimeSeries2D):
                 max_ = res.max()
                 tmax = res.idxmax()
                 self._maximum_data_2d[data_type] = pd.DataFrame({'max': max_, 'tmax': tmax})
+
+        if self._gpkgswmm is not None:
+            self._maximum_data.update(self._gpkgswmm._maximum_data)
 
     def _load_maximum_from_property(self, prop: str) -> pd.DataFrame:
         p = self._expand_property_path(prop)

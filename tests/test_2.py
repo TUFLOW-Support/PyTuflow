@@ -620,6 +620,46 @@ class Test_TPC_GPKG(TestCase):
         self.assertEqual(6, res.node_count)
         self.assertEqual(False, res._loaded)  # an initial load only
 
+    def test_tpc_gpkg_swmm_times(self):
+        p = './tests/tpc_gpkg/basin_HPC-2m_SWMM_____2016_8_12.tpc'
+        res = TPC(p)
+        times = res.times()
+        self.assertEqual(286, len(times))
+
+    def test_tpc_gpkg_swmm_ids(self):
+        p = './tests/tpc_gpkg/basin_HPC-2m_SWMM_____2016_8_12.tpc'
+        res = TPC(p)
+        ids = res.ids()
+        self.assertEqual(18, len(ids))
+        ids = res.ids('1d/node')
+        self.assertEqual(6, len(ids))
+
+    def test_tpc_gpkg_swmm_data_types(self):
+        p = './tests/tpc_gpkg/basin_HPC-2m_SWMM_____2016_8_12.tpc'
+        res = TPC(p)
+        dtypes = res.data_types()
+        self.assertEqual(20, len(dtypes))
+        dtypes = res.data_types('1d')
+        self.assertEqual(12, len(dtypes))
+
+    def test_tpc_gpkg_swmm_maximums(self):
+        p = './tests/tpc_gpkg/basin_HPC-2m_SWMM_____2016_8_12.tpc'
+        res = TPC(p)
+        df = res.maximum('Underdrain', 'q')
+        self.assertEqual((1, 2), df.shape)
+
+    def test_tpc_gpkg_swmm_time_series(self):
+        p = './tests/tpc_gpkg/basin_HPC-2m_SWMM_____2016_8_12.tpc'
+        res = TPC(p)
+        df = res.time_series('Underdrain', 'q')
+        self.assertEqual((286, 1), df.shape)
+
+    def test_tpc_gpkg_swmm_section(self):
+        p = './tests/tpc_gpkg/basin_HPC-2m_SWMM_____2016_8_12.tpc'
+        res = TPC(p)
+        df = res.section('Underdrain', ['Bed Level', 'water level'], 1)
+        self.assertEqual((6, 6), df.shape)
+
 
 class Test_TPC_Frankenmodel(TestCase):
 
