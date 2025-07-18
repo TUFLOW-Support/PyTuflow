@@ -7,7 +7,7 @@ try:
     import shapely
     has_shapely = True
 except ImportError:
-    shapely = None
+    from ...stubs import shapely_ as shapely
     has_shapely = False
 
 
