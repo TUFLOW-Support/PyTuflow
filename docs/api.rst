@@ -50,8 +50,8 @@ This page gives an overview of the public modules, classes, and functions within
    :nosignatures:
 
    SettingInput
-   AttrInput
    FileInput
+   FolderInput
    GisInput
    GridInput
    TinInput

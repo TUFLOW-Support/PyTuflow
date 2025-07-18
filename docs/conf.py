@@ -122,6 +122,20 @@ class CustomAutosummary(Autosummary):
         return [table_spec, table]
 
 
+def skip_member(app, what, name, obj, skip, options):
+    # Optionally skip all private methods:
+    if name.startswith("_"):
+        return True
+
+    # Or skip based on docstring tag
+    doc = getattr(obj, '__doc__', '') or ''
+    if doc.startswith('no-doc'):
+        return True
+
+    return skip  # fallback to default behavior
+
+
 def setup(app: Sphinx):
     app.add_directive("autosummary", CustomAutosummary, override=True)
+    app.connect("autodoc-skip-member", skip_member)
     app.add_domain(CustomPythonDomain, override=True)

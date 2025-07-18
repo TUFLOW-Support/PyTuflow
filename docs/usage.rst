@@ -110,7 +110,7 @@ For more detailed examples, see the :doc:`cookbook` page.
       geoms = inp.geoms
 
       # File Input - check if any of the referenced files don't exist
-      missing_files = inp.missing_files
+      missing_files = inp.has_missing_files
 
 7. Databases can be viewed as a Pandas DataFrame
 
@@ -120,6 +120,6 @@ For more detailed examples, see the :doc:`cookbook` page.
       bc_dbase = tcf.bc_dbase()
 
       # get the bc_dbase as a DataFrame object
-      df = bc_dbase.db()
+      df = bc_dbase.df
 
 For more examples, see the :doc:`cookbook` page.
