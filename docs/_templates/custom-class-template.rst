@@ -3,9 +3,8 @@
 .. currentmodule:: {{ module }}
 
 .. autoclass:: {{ objname }}
-   :members:
-   :show-inheritance: 
-   :inherited-members:
+   :exclude-members: __init__
+   :show-inheritance:
 
    {% block methods %}
    .. automethod:: __init__
@@ -14,6 +13,7 @@
    .. rubric:: {{ _('Methods') }}
 
    .. autosummary::
+      :toctree:
       :nosignatures:
    {% for item in methods %}
       ~{{ name }}.{{ item }}
@@ -26,6 +26,7 @@
    .. rubric:: {{ _('Attributes') }}
 
    .. autosummary::
+      :toctree:
    {% for item in attributes %}
       ~{{ name }}.{{ item }}
    {%- endfor %}
