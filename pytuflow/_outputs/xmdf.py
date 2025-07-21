@@ -1,6 +1,7 @@
 from pathlib import Path
 
-from .helpers.mesh_driver_qgis_xmdf import QgisXmdfMeshDriver
+from .helpers.mesh_driver_qgis_xmdf import QgisXmdfMeshDriver, has_qgis
+from .helpers.mesh_driver_nc import has_nc
 from .helpers.mesh_driver_nc_xmdf import NCMeshDriverXmdf
 from .helpers.super_file import SuperFile
 from .mesh import Mesh
@@ -118,6 +119,9 @@ class XMDF(Mesh):
     """
 
     def __init__(self, fpath: PathLike, twodm: PathLike = None):
+        if not has_nc and not has_qgis:
+            raise ImportError('XMDF requires QGIS python libraries or some data can be accessed with netCDF4.')
+
         if not Path(fpath).exists():
             raise FileNotFoundError(f'XMDF file does not exist: {fpath}')
 
