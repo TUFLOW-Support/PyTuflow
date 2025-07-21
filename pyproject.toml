@@ -9,6 +9,7 @@ dependencies = [
     "numpy",
     "pandas",
     "packaging",
+    "dbfread",
 ]
 requires-python = ">= 3.9"
 authors = [
