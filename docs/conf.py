@@ -68,7 +68,7 @@ class CustomPythonDomain(PythonDomain):
             if "#" in refuri:
                 ref_page, ref_anchor = refuri.split("#", 1)
                 # Only modify links for :py:class: references
-                if ref_page != fromdocname and typ == "class":
+                if ref_page != fromdocname and typ in ["class", "meth", "attr"]:
                     result["refuri"] = ref_page
         return result
 
