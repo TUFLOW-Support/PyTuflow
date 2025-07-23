@@ -7,6 +7,7 @@
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 import sys
+from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -27,8 +28,8 @@ sys.path.append((Path(__file__).resolve().parents[1]).as_posix())
 sys.path.append((Path(__file__).resolve().parent / '_ext').as_posix())
 
 project = 'pytuflow'
-copyright = '2025, BMT'
-author = 'Ellis Symons'
+copyright = f'{datetime.now().year}, BMT'
+author = 'TUFLOW'
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
