@@ -2,7 +2,7 @@
 #
 # For the full list of built-in configuration values, see the documentation:
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
-
+import re
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from sphinx.application import Sphinx
+from sphinx.builders.html import StandaloneHTMLBuilder
 from sphinx.domains.python import PythonDomain
 from sphinx.ext.autosummary import Autosummary, autosummary_table
 from docutils import nodes
@@ -59,6 +60,23 @@ html_favicon = 'assets/favicon/TUFLOW.ico'
 # html_static_path = ['_static']
 
 
+
+
+def strip_redundant_fragments(app: Sphinx, doctree, docname):
+    for node in doctree.traverse(nodes.reference):
+        if 'refuri' in node:
+            refuri = node['refuri']
+            if '#' in refuri:
+                base, frag = refuri.split('#', 1)
+                parts = base.split('/')
+                if len(parts) < 2:
+                    continue
+                base_ = ''.join(re.split(r'\s|_|-', parts[-2]))
+                frag_ = ''.join(re.split(r'\s|_|-', frag))
+                if base_ == frag_:
+                    node['refuri'] = base
+
+
 class CustomPythonDomain(PythonDomain):
     """Override the Python domain to remove fragments from cross-page links when using :py:class:."""
 
@@ -69,7 +87,7 @@ class CustomPythonDomain(PythonDomain):
             if "#" in refuri:
                 ref_page, ref_anchor = refuri.split("#", 1)
                 # Only modify links for :py:class: references
-                if ref_page != fromdocname and typ in ["class", "meth", "attr"]:
+                if ref_page != fromdocname and typ in ["class", "meth", "attr", "func", "exc"]:
                     result["refuri"] = ref_page
         return result
 
@@ -139,4 +157,5 @@ def skip_member(app, what, name, obj, skip, options):
 def setup(app: Sphinx):
     app.add_directive("autosummary", CustomAutosummary, override=True)
     app.connect("autodoc-skip-member", skip_member)
+    app.connect('doctree-resolved', strip_redundant_fragments)
     app.add_domain(CustomPythonDomain, override=True)
