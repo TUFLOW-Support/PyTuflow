@@ -2,7 +2,8 @@ Examples
 ========
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
    :caption: Examples:
 
-   tcf_load_and_run
+   examples/tcf_load_and_run
+   examples/tcf_working_with_scenarios
