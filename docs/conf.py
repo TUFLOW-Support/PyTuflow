@@ -12,7 +12,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from sphinx.application import Sphinx
-from sphinx.builders.html import StandaloneHTMLBuilder
 from sphinx.domains.python import PythonDomain
 from sphinx.ext.autosummary import Autosummary, autosummary_table
 from docutils import nodes
@@ -57,9 +56,11 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 
 html_theme = 'sphinx_book_theme'
 html_favicon = 'assets/favicon/TUFLOW.ico'
-# html_static_path = ['_static']
+html_static_path = ['_static']
+html_css_files = ['custom.css']
+# html_js_files = ['custom.js']
 
-
+pygments_style = "friendly"
 
 
 def strip_redundant_fragments(app: Sphinx, doctree, docname):
