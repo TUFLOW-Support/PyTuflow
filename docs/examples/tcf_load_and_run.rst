@@ -108,6 +108,8 @@ to a new file. Since "EG00_002.tcf" is already present in the example models, we
     >>> tcf.write(inc='001a')
     <TuflowControlFile> EG00_001a.tcf
 
+.. _setting_up_tuflow_binary_folder:
+
 Running the TUFLOW Model
 -------------------------
 

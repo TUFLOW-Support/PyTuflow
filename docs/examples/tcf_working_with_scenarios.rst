@@ -26,7 +26,7 @@ required to run the model.
 .. code-block:: pycon
 
     >>> from pytuflow import TCF
-    >>> tcf = TCF('path/to/EG16_s1_s2_002.tcf')
+    >>> tcf = TCF('path/to/EG16_~s1~_~s2~_002.tcf')
 
 In this model, the following command reading in the base DEM is always active:
 ``Read GRID Zpts == grid\DEM_SI_Unit_01.tif`` and the ``z shape`` command
@@ -58,4 +58,85 @@ included in the run.
 Adding Scenarios to a Model
 ---------------------------
 
+Scenarios can be added to an existing model, or inputs can be put into a "If Scenario" / "End If" block, by setting
+the scope of a given input. The below example uses ``EG00_001.tcf`` from the
+`TUFLOW Example Model Dataset <https://wiki.tuflow.com/TUFLOW_Example_Models>`_. In the below example, we will
+set the hardware command inside a scenario called ``"GPU"``.
 
+.. code-block:: pycon
+
+    >>> from pytuflow import TCF, Scope
+    >>> tcf = TCF('path/to/EG00_001.tcf')
+    >>> inp = tcf.find_input('hardware')[0]
+    >>> inp.scope = [Scope('Scenario', 'GPU')]
+
+    >>> tcf.preview()
+    ! TUFLOW CONTROL FILE (.TCF) defines the model simulation parameters and directs input from other data sources
+
+    ! MODEL INITIALISATION
+    Tutorial Model == ON                                ! This command allows for this model to be simulated without a TUFLOW licence
+    GIS Format == SHP									! Specify SHP as the output format for all GIS files
+    SHP Projection == ..\model\gis\projection.prj       ! Sets the GIS projection for the TUFLOW Model
+    TIF Projection == ..\model\grid\DEM_SI_Unit_01.tif  ! Sets the GIS projection for the ouput grid files
+    !Write Empty GIS Files == ..\model\gis\empty        ! This command is commented out. It is only needed for the project establishment
+
+    ! SOLUTION SCHEME
+    Solution Scheme == HPC								! Heavily Parallelised Compute, uses adaptive timestepping
+    If Scenario == GPU
+        Hardware == GPU										! Comment out if GPU card is not available or replace with "Hardware == CPU"
+    End If
+    SGS == ON											! Switches on Sub-Grid Sampling
+    SGS Sample Target Distance == 0.5					! Sets SGS Sample Target Distance to 0.5m
+
+    ! MODEL INPUTS
+    Geometry Control File == ..\model\EG00_001.tgc		! Reference the TUFLOW Geometry Control File
+    BC Control File == ..\model\EG00_001.tbc			! Reference the TUFLOW Boundary Conditions Control File
+    BC Database == ..\bc_dbase\bc_dbase_EG00_001.csv	! Reference the Boundary Conditions Database
+    Read Materials File == ..\model\materials.csv  		! Reference the Materials Definition File
+    Set IWL == 36.5										! Define an initial 2D water level at start of simulation
+
+    Timestep == 1
+    Start Time == 0
+    End Time == 3
+
+    ! OUTPUT FOLDERS
+    Log Folder == log		  							! Redirects log output files log folder
+    Output Folder == ..\results\EG00\	  				! Specifies the location of the 2D result files
+    Write Check Files == ..\check\EG00\		  			! Specifies the location of the 2D check files and prefixes them with the .tcf filename
+
+    Map Output Format == XMDF TIF						! Result file types
+    Map Output Data Types == h V d z0					! Specify the output data types
+    TIF Map Output Data Types == h						! Specify the output data types for TIF Format
+    Map Output Interval == 300  						! Outputs map data every 300 seconds
+    TIF Map Output Interval == 0						! Outputs only maximums for grids
+
+Note, that the input scope is set to a list of scope objects, which is required as inputs can have multiple scopes. The
+next thing to note is that the "IF Scenario" and "End If" commands are automatically added to the TCF when
+the scope is set to a scenario. Also, the indentation of the command is automatically set to match the indentation of the
+"IF Scenario" command. This means that the user does not need to worry about any leading whitespace or indentation
+when adding commands to the control file.
+
+Running Scenarios in a Model
+----------------------------
+
+Let's save the modified model and run it with the ``"GPU"`` scenario active. First, let's rename the TCF file to
+include a scenario slot ``~s1~``. In the previous example (:ref:`tcf_load_and_run`) we used the ``inc`` parameter in
+the :meth:`TCF.write()<pytuflow.TCF.write>` method to modify the TCF file name. Unfortunately, the ``inc`` parameter
+does not support complex renaming, and is designed only as a convenience method for incrementing the version number of the
+model. So we will instead rename the TCF file path manually, then write the TCF in-place.
+
+.. code-block:: pycon
+
+    >>> tcf.fpath = tcf.fpath.with_name('EG00_~s1~_001.tcf')
+    >>> tcf.write(inc='inplace')
+    <TuflowControlFile> EG00_~s1~_001.tcf
+
+Once the TCF file has been written to disk, we can run the model with the ``"GPU"`` scenario active. First of all, make
+sure you have registered the TUFLOW binary folder as described in the previous example (:ref:`setting_up_tuflow_binary_folder`).
+Then we can tell pytuflow which scenario to run by passing the scenario name as a parameter to the run context method:
+
+.. code-block:: pycon
+
+    >>> tcf_run = tcf.context('-s1 GPU')
+    >>> proc = tcf_run.run('2025.1.2')
+    >>> proc.wait()  # Wait for the model to finish running
