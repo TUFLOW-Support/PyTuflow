@@ -191,7 +191,13 @@ to ``EG16_~e1~_~e2~_005.tcf``:
     FC01       EG16__event1__event2_.csv  inflow_time_hr  inflow_FC01        NaN         NaN        NaN       NaN       NaN
     dns_bndry                        NaN             NaN          0.5        NaN         NaN        NaN       NaN       NaN
 
-We can then write the modified files to disk using the :meth:`TCF.write()<pytuflow.TCF.write>` method. We will
+In the above example, we first get the name of the value column from the DataFrame to ensure we can merge our new
+boundary data correctly. The "Name" column is the index, so the value column ("Column 2" in this case) is at index 2.
+We then create a new DataFrame with the new boundary data, and concatenate it with the existing DataFrame.
+
+Modifying the bc_dbase DataFrame will set the BCDatabase instance as ``dirty``, which means when we call the
+:meth:`TCF.write()<pytuflow.TCF.write>` method, it will write the modified BCDatabase to disk.
+We can test this by writing the modified files to disk using the :meth:`TCF.write()<pytuflow.TCF.write>` method. We will
 save the new file as ``005a``:
 
 .. code-block:: pycon
@@ -199,3 +205,15 @@ save the new file as ``005a``:
     >>> tcf.write(inc='005a')
     <TuflowControlFile> EG16_~e1~_~e2~_005a.tcf
 
+We can check the new file to confirm that ``bc_dbase_EG15_005.csv`` name has been incremented to ``bc_dbase_EG15_005a.csv``:
+
+.. code-block:: pycon
+
+    >>> tcf.find_input('BC Database')[0]
+    <DatabaseInput> BC Database == ..\bc_dbase\bc_dbase_EG16_005a.csv
+
+    >>> tcf.bc_dbase().fpath
+    WindowsPath('../bc_dbase/bc_dbase_EG16_005a.csv')
+
+    >>> tcf.bc_dbase().fpath.exists()
+    True
