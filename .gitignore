@@ -6,7 +6,6 @@ build*
 dist*
 tests/_test.py
 docs/_build*
-docs/_static*
 docs/api*
 *.gz
 test_tmp.py

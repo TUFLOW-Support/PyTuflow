@@ -1,4 +1,4 @@
-.. _tcf_working_with_scenarios:
+.. _working_with_scenarios:
 
 Working with Scenarios and Events
 =================================
