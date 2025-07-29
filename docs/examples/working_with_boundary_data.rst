@@ -102,7 +102,7 @@ If you need to, you can check the available events in the model by using the :me
 .. code-block:: pycon
 
     >>> event_db = tcf.event_database()
-    >>> print(event_db.df)
+    >>> print(event_db)
     {'Q100': {'_event1_': '100yr'},
      'QPMF': {'_event1_': 'PMFyr'},
      '2hr': {'_event2_': '2hr'},
@@ -173,8 +173,8 @@ Editing the Boundary Database
 
 Editing the boundary database is done by modifying the pandas DataFrame that is stored in the
 :attr:`BCDatabase.df<pytuflow.BCDatabase.df>` attribute. For example, we can add a new boundary that might be
-a constant downstream water level boundary with the name ``dns_bndry`` and a value of ``0.5m``. We will add this
-to ``EG16_~e1~_~e2~_005.tcf``:
+a constant downstream water level boundary with the name ``"dns_bndry"`` and a value of ``0.5m``. We will add this
+to the previous model we were working with, ``EG16_~e1~_~e2~_005.tcf``:
 
 .. code-block:: pycon
 
@@ -195,17 +195,17 @@ In the above example, we first get the name of the value column from the DataFra
 boundary data correctly. The "Name" column is the index, so the value column ("Column 2" in this case) is at index 2.
 We then create a new DataFrame with the new boundary data, and concatenate it with the existing DataFrame.
 
-Modifying the bc_dbase DataFrame will set the BCDatabase instance as ``dirty``, which means when we call the
+Modifying the bc_dbase DataFrame will set the :class:`BCDatabase<pytuflow.BCDatabase>` instance as ``dirty``, which means when we call the
 :meth:`TCF.write()<pytuflow.TCF.write>` method, it will write the modified BCDatabase to disk.
 We can test this by writing the modified files to disk using the :meth:`TCF.write()<pytuflow.TCF.write>` method. We will
-save the new file as ``005a``:
+save the updated model as ``005a``:
 
 .. code-block:: pycon
 
     >>> tcf.write(inc='005a')
     <TuflowControlFile> EG16_~e1~_~e2~_005a.tcf
 
-We can check the new file to confirm that ``bc_dbase_EG15_005.csv`` name has been incremented to ``bc_dbase_EG15_005a.csv``:
+We can check the new file to confirm that the ``bc_dbase_EG15_005.csv`` file name has been incremented to ``bc_dbase_EG15_005a.csv``:
 
 .. code-block:: pycon
 

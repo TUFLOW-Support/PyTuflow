@@ -142,6 +142,44 @@ Then we can tell pytuflow which scenario to run by passing the scenario name as 
     >>> proc.wait()  # Wait for the model to finish running
 
 
+Build State and Run State
+-------------------------
+
+It is worth quickly describing how pytuflow's data structure and how it handles TUFLOW's capability to run different
+scenarios and events. Pytuflow is made up of three main building blocks:
+
+1. **Control Files** - e.g. TCF, TBC, TGC, etc.
+2. **Databases** - e.g. bc_dbase, materials file, soils file, etc
+3. **Inputs** - e.g. the individual commands within a control file, such as ``Solution Scheme == HPC``
+
+Each of these building block classes has a "build state" and a "run state". The build state is when the model
+is being constructed and modified. The model appears as it would do in a text editor where the user can see
+the different scenarios and events. The run state is when the model has been resolved down into a single
+simulation event, which is how TUFLOW sees the model when it is run.
+
+The key differences between the build state and run state are:
+
+- The build state can be edited and modified, while the run state is a resolved version of the model and is not editable.
+- The run state has more information about the model for a given event, and all the inputs are resolved. This means
+  that some properties of the model, such as the output name, can be accessed from the run state but not from the build state.
+
+The run state can be created by calling the ``context()`` method from a build state object. Each build state object
+has this method, and it will return a run state object that is specific to the scenarios and events. Quite often
+the same methods will be available for both the build state and run state instances. An example of this is the
+:meth:`find_input()<pytuflow.TCF.find_input>` method. You can call this method to find all ``2d_zsh`` inputs in the
+model
+
+.. code-block:: pycon
+
+    >>> tcf.find_input('2d_zsh')
+
+Or, if you want to check what inputs are active in a given scenario, you can first create a run context:
+
+.. code-block:: pycon
+
+    >>> tcf.context('-s DEV01').find_input('2d_zsh')
+
+
 Adding "Else If", "Else", and "Pause" Commands
 ----------------------------------------------
 
