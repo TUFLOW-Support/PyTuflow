@@ -116,6 +116,8 @@ the scope is set to a scenario. Also, the indentation of the command is automati
 "IF Scenario" command. This means that the user does not need to worry about any leading whitespace or indentation
 when adding commands to the control file.
 
+.. _running_scenarios_in_a_model:
+
 Running Scenarios in a Model
 ----------------------------
 
@@ -179,6 +181,7 @@ Or, if you want to check what inputs are active in a given scenario, you can fir
 
     >>> tcf.context('-s DEV01').find_input('2d_zsh')
 
+.. _adding_else_if_else_pause_commands:
 
 Adding "Else If", "Else", and "Pause" Commands
 ----------------------------------------------
