@@ -17,7 +17,7 @@ more readable and maintainable. Typical examples of when read files are used inc
 
 Read files in pytuflow are not represented as separate control files, but rather the inputs are treated
 as part of the calling control file. The command "Read File == " itself will not be present in the list of
-inputs. Inputs have a :attr:`trd<pytuflow.SettingInput.trd>` attribute that is set to the read file path if the
+inputs. Instead, inputs have a :attr:`trd<pytuflow.SettingInput.trd>` attribute that is set to the read file path if the
 input is from a read file, or it is set to ``None`` if the input is not from a read file.
 
 Creating a Model with a Read File
@@ -30,11 +30,12 @@ This example will use scenarios, variables, and a read file to accomplish this.
 We will use ``EG00_001.tcf`` and the goal is to:
 
 1. Create a new scenario group that represents the model cell size.
-2. The model cell size will be set based on the scenario name.
-3. We will place the logic for setting the cell size in a read file.
+2. Update the model settings so that the cell size will be based on the scenario that is being run.
+3. Place the logic for setting the cell size in a read file.
+4. Run the model through the new sensitivity analysis scenarios.
 
 The following example is a nice use case example for pytuflow, where a sensitivity analysis can be inserted into an
-existing model. Setting up a script for this allows common sensitivity analyses to be run quickly and easily on
+existing model (not necessarily with a read file). Setting up a script for this allows common sensitivity analyses to be run quickly and easily on
 any existing model.
 
 1. Create a New Scenario Group
@@ -48,17 +49,19 @@ new scenario group.
     >>> from pytuflow import TCF
     >>> tcf = TCF('path/to/EG00_001.tcf')
 
-    >>> tcf.fpath = tcf.fpath.with_name('EG00_~s1~_001.tcf')
+    >>> tcf.fpath = tcf.fpath.with_name('EG00_~s1~_001a.tcf')
     >>> tcf.write('inplace')
+    <TuflowControlFile> EG00_~s1~_001a.tcf
 
 The above example is similar to the example in the :ref:`running_scenarios_in_a_model`, for more description of
-what the above code does, please refer to that section.
+what the above code does, please refer to that section. The difference is that we are updating the number to 001a so
+that this new number is propagated to the TGC when we update the model settings.
 
 2. Setting the Model Cell Size
 ------------------------------
 
 Next, we will create a new variable called ``"CELL_SIZE"`` that will be set to the cell size depending on the scenario
-name. Since we are setting up a variable, and not actually setting the cell size directly (yet), we will create
+that is being run. Since we are setting up a variable, and not actually setting the cell size directly, we will create
 these commands in the TCF and not the TGC.
 
 It doesn't matter where these commands are placed in the TCF, but for organisation, we will place these
@@ -107,6 +110,7 @@ placed in the loop in the previous step, but for clarity, we will do it in a sep
     ...     inp.trd = trd_path
 
     >>> tcf.write('inplace')
+    <TuflowControlFile> EG00_~s1~_001a.tcf
 
 4. Running the Model with the Read File
 ---------------------------------------
@@ -116,7 +120,8 @@ a series of simulations to run our sensitivity analysis. We don't need to do any
 the read file.
 
 Note, this step might require a TUFLOW license as the smaller cell sizes might not be supported by the free TUFLOW
-license, You can just run the 10m and 5m if you want to run this example without a license.
+license. You can just run the 10m and 5m if you want to run this example without a license (or you don't want
+to wait for the smaller cell sizes to run).
 
 .. code-block:: pycon
 
