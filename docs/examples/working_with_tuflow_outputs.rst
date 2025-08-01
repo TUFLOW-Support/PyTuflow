@@ -171,6 +171,8 @@ The :class:`NCGrid<pytuflow.NCGrid>` class does not require QGIS, and just requi
 Therefore the :class:`NCGrid<pytuflow.NCGrid>` format is the preferred format for map outputs if you want to use
 ``pytuflow`` outside of QGIS.
 
+.. _qgis_environment:
+
 QGIS Environment
 ^^^^^^^^^^^^^^^^
 

@@ -17,23 +17,25 @@ Checking for Scenarios and Events
 
 Pytuflow deals with scenarios and events by assigning each input a list of :class:`Scope <pyutflow.Scope>` objects that
 describe the context in which the input sits within the model. For example, a command that is within an
-"If Scenario" / "End If" block will have a scope list that tells pytuflow that the command is only relevant
-if that particular scenario is active.
+"If Scenario" block will have a scope list that tells pytuflow that the command is only relevant
+if a particular scenario is active.
 
-As an exmaple, we can load in the example model ``EG16_~s1~_~s2~_002.tcf`` which has two scenario groups that are
-required to run the model.
+As an example, we can load the model ``EG16_~s1~_~s2~_002.tcf``, which has two scenario groups.
 
 .. code-block:: pycon
 
     >>> from pytuflow import TCF
     >>> tcf = TCF('path/to/EG16_~s1~_~s2~_002.tcf')
 
-In this model, the following command reading in the base DEM is always active:
-``Read GRID Zpts == grid\DEM_SI_Unit_01.tif`` and the ``z shape`` command
-``Read GIS Z Shape == gis\2d_zsh_EG07_006_R.shp`` is only relevant
-if the scenario ``"D01"``  is active.
+In this model, the command:
 
-So we can find those commands and check their scopes:
+``Read GRID Zpts == grid\DEM_SI_Unit_01.tif``
+
+is always active, and the ``z shape`` command:
+
+``Read GIS Z Shape == gis\2d_zsh_EG07_006_R.shp``
+
+is only active if the scenario ``"D01"``  is active. So we can find those commands and check their scopes:
 
 .. code-block:: pycon
 
@@ -50,18 +52,18 @@ So we can find those commands and check their scopes:
     [<ScenarioScope> !EXG, <ScenarioScope> D01]
 
 The output tells us that the DEM is always active (it has a "Global Scope"), while the Z Shape command is only active
-if the scenario ``"D01"`` is active. The addition of ``!`` at the front of the ``"EXG"`` scenario negates that
-scenario, meaning that the command is not active if the ``"EXG"`` scenario is active. This part is important, as
+if the scenario ``"D01"`` is active. The addition of ``!`` at the front of the ``"EXG"`` scenario makes that scope negative,
+meaning that the command is not active if the ``"EXG"`` scenario is active. This part is important, as
 if the user passes in both ``"EXG"`` and ``"D01"`` scenarios when running the model, the Z Shape command will not be
-included in the run.
+included in the simulation.
 
 Adding Scenarios to a Model
 ---------------------------
 
-Scenarios can be added to an existing model, or inputs can be put into a "If Scenario" / "End If" block, by setting
+Scenarios can be added to an existing model, i.e. inputs can be put into a "If Scenario" block, by setting
 the scope of a given input. The below example uses ``EG00_001.tcf`` from the
 `TUFLOW Example Model Dataset <https://wiki.tuflow.com/TUFLOW_Example_Models>`_. In the below example, we will
-set the hardware command inside a scenario called ``"GPU"``.
+put the hardware command inside a scenario called ``"GPU"``.
 
 .. code-block:: pycon
 
@@ -69,6 +71,12 @@ set the hardware command inside a scenario called ``"GPU"``.
     >>> tcf = TCF('path/to/EG00_001.tcf')
     >>> gpu_inp = tcf.find_input('hardware')[0]
     >>> gpu_inp.scope = [Scope('Scenario', 'GPU')]
+
+Note, that the input scope must be set to a list of scope objects, which is required as inputs can have multiple scopes.
+
+We can view how this has modified the TCF by calling the :meth:`preview()<pytuflow.TCF.preview>` method:
+
+.. code-block:: pycon
 
     >>> tcf.preview()
     ! TUFLOW CONTROL FILE (.TCF) defines the model simulation parameters and directs input from other data sources
@@ -110,11 +118,10 @@ set the hardware command inside a scenario called ``"GPU"``.
     Map Output Interval == 300  						! Outputs map data every 300 seconds
     TIF Map Output Interval == 0						! Outputs only maximums for grids
 
-Note, that the input scope is set to a list of scope objects, which is required as inputs can have multiple scopes. The
-next thing to note is that the "IF Scenario" and "End If" commands are automatically added to the TCF when
-the scope is set to a scenario. Also, the indentation of the command is automatically set to match the indentation of the
-"IF Scenario" command. This means that the user does not need to worry about any leading whitespace or indentation
-when adding commands to the control file.
+We can see that the "IF Scenario" and "End If" commands are automatically added to the TCF when
+the scope is set to a scenario. Another thing to note, is that the indentation of the command is automatically set to the
+correct level. This means that the user does not need to worry about any leading whitespace or indentation
+when adding new commands to the control file.
 
 .. _running_scenarios_in_a_model:
 
@@ -147,7 +154,7 @@ Then we can tell pytuflow which scenario to run by passing the scenario name as 
 Build State and Run State
 -------------------------
 
-It is worth quickly describing how pytuflow's data structure and how it handles TUFLOW's capability to run different
+It is worth quickly describing how ``pytuflow`` handles TUFLOW's capability to run different
 scenarios and events. Pytuflow is made up of three main building blocks:
 
 1. **Control Files** - e.g. TCF, TBC, TGC, etc.
@@ -165,8 +172,8 @@ The key differences between the build state and run state are:
 - The run state has more information about the model for a given event, and all the inputs are resolved. This means
   that some properties of the model, such as the output name, can be accessed from the run state but not from the build state.
 
-The run state can be created by calling the ``context()`` method from a build state object. Each build state object
-has this method, and it will return a run state object that is specific to the scenarios and events. Quite often
+The run state can be created by calling the :meth:`context()<pytuflow.TCF.context>` method from a build state object. Each build state object
+has this method, and it will return a run state object that is specific to a given set of scenarios and events. Quite often
 the same methods will be available for both the build state and run state instances. An example of this is the
 :meth:`find_input()<pytuflow.TCF.find_input>` method. You can call this method to find all ``2d_zsh`` inputs in the
 model
@@ -197,6 +204,24 @@ that will catch situations where neither the ``"GPU"`` nor ``"CPU"`` scenarios a
 
     >>> pause_inp = tcf.insert_input(cpu_inp, 'Pause == No hardware scenario specified', after=True)
     >>> pause_inp.scope = [Scope('Scenario', '!GPU'), Scope('Scenario', '!CPU')]
+
+In the above example, we:
+
+1. Create a new input for the CPU hardware option after the ``Hardware == GPU`` command
+   using the :meth:`insert_input()<pytuflow.TCF.insert_input>` method. This method returns the new input instance, which
+   we can use to set the input's scope.
+2. We set the scope for the new input to not be active when the ``"GPU"`` scenario is active
+   (by negating the scenario with ``!``) and when the ``"CPU"`` scenario is active.
+3. We add a new pause command after the new ``Hardware == CPU`` command using the same
+   :meth:`insert_input()<pytuflow.TCF.insert_input` method.
+4. We set the scope for the pause command to be active when neither the ``"GPU"`` nor the ``"CPU"`` scenarios are active,
+
+The negative scenario scopes are important here and are required to trigger "Else If" and "Else" blocks.
+Note, the order of the scope in the list is also important.
+
+We can preview our changes to the TCF by calling the :meth:`preview()<pytuflow.TCF.preview>` method:
+
+.. code-block:: pycon
 
     >>> tcf.preview()
     ! TUFLOW CONTROL FILE (.TCF) defines the model simulation parameters and directs input from other data sources
@@ -241,12 +266,6 @@ that will catch situations where neither the ``"GPU"`` nor ``"CPU"`` scenarios a
     TIF Map Output Data Types == h						! Specify the output data types for TIF Format
     Map Output Interval == 300  						! Outputs map data every 300 seconds
     TIF Map Output Interval == 0						! Outputs only maximums for grids
-
-In the above example, we create a new input for the CPU hardware option after the ``Hardware == GPU`` command, and set the command's scope
-to be not active when the ``"GPU"`` scenario is active (by negating the scenario with ``!``) and when the ``"CPU"``
-scenario is active. And then we add a new pause command after the ``Hardware == CPU`` command, which is only active
-when neither the ``"GPU"`` nor the ``"CPU"`` scenarios are active. The negative scenario scopes are important here and
-are required to trigger "Else If" and "Else" blocks. Note, the order of the scope in the list is also important.
 
 It's also possible to create a scope variable and to call the :meth:`Scope.as_neg()<pytuflow.Scope.as_neg>` method to
 accomplish the same thing:

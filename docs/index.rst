@@ -25,6 +25,15 @@ Check out the :doc:`usage` section for further information, including how to :re
    examples
 
 
+Changelog
+---------
+
+1.0.0
+"""""
+
+Initial release of pytuflow.
+
+
 
 Indices and tables
 ------------------

@@ -110,7 +110,7 @@ example models:
 Similar to the material file and bc_dbase, the soil file is stored as as database class, and the data can
 be accessed using the :attr:`SoilDatabase.df<pytuflow.SoilDatabase.df>` attribute.
 
-The soil database is different, and a bit more awkward, than the other databases as the columns change depending
+The soil database is different, and a bit more awkward than the other databases as the columns change depending
 on the method used, or they can even be different for the same method. For example, the ``"GA"`` (Green-Ampt)
 method expects the first column to be the name of the USDA soil type, or it can be the
 "Suction" parameter for the Green-Ampt method. If the method is ``"ILCL"``, then the first column is the

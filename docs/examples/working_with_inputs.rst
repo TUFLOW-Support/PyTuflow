@@ -39,7 +39,7 @@ be multiple:
 
   ``Read GIS Z Shape == gis\2d_zsh_<<~s1~>>_R.shp``
 
-- The GIS file references a file in the attribute table. A typical example is a ``1d_xs`` input, but this can also be
+- The GIS layer references a file in the attribute table. A typical example is a ``1d_xs`` input, but this can also be
   the case for a ``1d_nwk`` layer that has a channel using the ``"M"`` (matrix) type, which references a csv fle.
 
 TuflowPath
@@ -116,6 +116,8 @@ Inputs have a :attr:`has_missing_files<pytuflow.Input.has_missing_files>` attrib
 any missing files. This attribute can be useful when used with the :meth:`find_input()<pytuflow.TCF.find_input>`
 method to filter inputs that have missing files.
 
+First, let's modify the code input to remove the ``_R`` suffix, this causes the file path to be incorrect.
+
 .. code-block:: pycon
 
     >>> tcf = TCF('path/to/EG00_001.tcf')
@@ -124,15 +126,13 @@ method to filter inputs that have missing files.
     >>> print(inp)
     Read GIS Code == gis\2d_code_EG00_001.shp
 
+Then we can use the ``attrs`` parameter of the :meth:`find_input()<pytuflow.TCF.find_input>` method to filter inputs that have missing files.
+The ``attrs`` parameter tells the filter to check the :attr:`has_missing_files<pytuflow.Input.has_missing_files>` attribute of each input.
+If the attribute evaluates to ``True``, then the input will be returned.
+
     >>> for inp in tcf.find_input(attrs='has_missing_files'):
     ...     print(f'Input has missing files: {inp}')
     Read GIS Code == gis\2d_code_EG00_001.shp
-
-In the above example, we first modify the code input to remove the ``_R`` suffix, this causes the file to be missing.
-This step is just so that something is returned when we search for inputs with missing files. We then use the
-``attrs`` parameter of the :meth:`find_input()<pytuflow.TCF.find_input>` method to filter inputs that have missing files.
-The ``attrs`` parameter tells the filter to check the :attr:`has_missing_files<pytuflow.Input.has_missing_files>` attribute of each input.
-If the attribute evaluates to ``True``, then the input will be returned.
 
 More than one attribute can be passed into the ``attrs`` parameter.
 For example, if you wanted to return only missing files from GIS inputs:
@@ -207,23 +207,32 @@ The :attr:`value<pytuflow.Input.value>` attribute will also be resolved if possi
 of the command is set to a variable, and the variable has a global scope (i.e. is not scenario or event dependent),
 then the :attr:`value<pytuflow.Input.value>` attribute will return the resolved value of the variable.
 
+To show this, let's first insert a new variable into the TCF after the ``sgs sample target distance`` input.
+
 .. code-block:: pycon
 
     >>> tcf = TCF('path/to/EG00_001.tcf')
     >>> ref_inp = tcf.find_input('sgs sample target distance')[0]
     >>> tcf.insert_input(ref_inp, 'Set Variable CELL_SIZE == 2.5', after=True)
 
+Then, let's change the ``rhs`` of the ``Cell Size`` command to reference the variable we just created.
+
+.. code-block:: pycon
+
     >>> cell_size = tcf.find_input('cell size')[0]
     >>> print(cell_size)
     'Cell Size == 5.0'
 
     >>> cell_size.rhs = '<<CELL_SIZE>>'
-    >>> print(cell_size)
-    Cell Size == <<CELL_SIZE>>
 
+Finally, we can check the :attr:`value<pytuflow.Input.value>` attribute to see the resolved value of the variable.
+
+.. code-block:: pycon
+
+    >>> print(cell_size.rhs)
+    <<CELL_SIZE>>
     >>> print(cell_size.value)
     2.5
 
-In the above example, we first add a new variable called ``"CELL_SIZE"`` and set to to ``2.5``. We then change
-the rhs of the ``Cell Size`` command to reference the variable. The :attr:`value<pytuflow.Input.value>`
-attribute is then resolved to the value of the variable.
+As you can see in the above example, the :attr:`rhs<pytuflow.Input.rhs>` attribute returns the variable name,
+and the :attr:`value<pytuflow.Input.value>` attribute returns the resolved value of the variable.

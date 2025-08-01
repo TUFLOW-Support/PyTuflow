@@ -24,8 +24,8 @@ that match the given filter. For example, finding all SGS related commands:
     >>> tcf.find_input('sgs')
     [<SettingInput> SGS == ON, <SettingInput> SGS Sample Target Distance == 0.5]
 
-The :class:`TCF<pytuflow.TCF>` class will return all inputs within the model for the given filter, e.g. you can
-search for ``"2d_zsh"`` commands and it will return commands from the TUFLOW Geometry Control File (TGC). There are
+The :class:`TCF<pytuflow.TCF>` class will return all inputs within the model for the given filter, and not just the TCF file. For example, you can
+search for ``"2d_zsh"`` and it will return commands from the TUFLOW Geometry Control File (TGC). There are
 also some convenience methods that will return the other control file instances if you want to work with them directly:
 
 .. code-block:: pycon
@@ -37,8 +37,8 @@ also some convenience methods that will return the other control file instances 
     >>> tgc.find_input('2d_mat')
     [<GisInput> Read GIS Mat == gis\2d_mat_EG00_001_R.shp]
 
-Updating a TCF
---------------
+Editing and Updating a TCF
+--------------------------
 
 Let's update the map output format command to include the ``NC`` format, as this will be useful later for querying
 the results in Python. The first step is to find the relevant command, and then we can update it by setting the
@@ -136,7 +136,7 @@ that folder:
     >>> from pytuflow import register_tuflow_binary_folder
     >>> register_tuflow_binary_folder('/path/to/tuflow/binaries')
 
-Now we can run the model using the :meth:`TCF.context()<pytuflow.TCF.context>` method the TUFLOW version name.
+Now we can run the model using the :meth:`TCF.context()<pytuflow.TCF.context>` method and the TUFLOW version name.
 The context method is used to pass in what event and scenario combination we want to run.
 An empty context is still required even if there are no events or scenarios to run.
 
@@ -149,24 +149,12 @@ An empty context is still required even if there are no events or scenarios to r
 Interrogating the Results
 -------------------------
 
-With the ``tcf_run`` instance, we can also get the output folder and result name. With this, we can access the results:
+With the ``tcf_run`` instance, we can also get the output folder and output name. With this, we can access the results:
 
 .. code-block:: pycon
 
     >>> from pytuflow import XMDF
     >>> xmdf_path = tcf_run.output_folder_2d() / f'{tcf_run.output_name()}.xmdf'
-    >>> xmdf = XMDF(xmdf_path)
-
-Currently, the XMDF class requires QGIS Python libraries to extract results (e.g. time series). However,
-if the
-    >>> from pytuflow import XMDF
-    >>> xmdf_path = tcf_run.output_folder_2d() / f'{tcf_run.output_name()}.xmdf'
-    >>> xmdf = XMDF(xmdf_path)
-
-Currently, the XMDF class requires QGIS Python libraries to extract results (e.g. time series). However,
-if the
-    >>> from pytuflow import XMDF
-    >>> xmdf_path = tcf_run.output_folder_2d() / f'{tcf_run.result_name()}.xmdf'
     >>> xmdf = XMDF(xmdf_path)
 
 Currently, the XMDF class requires QGIS Python libraries to extract results (e.g. time series). However,
@@ -187,6 +175,7 @@ if the ``netCDF4`` package is installed, we can query some of the header informa
      'water level',
      'z0',
      'tmax water level']
+
     >>> xmdf.times()
     [0.0,
     0.08333333333333333,
@@ -200,7 +189,8 @@ if the ``netCDF4`` package is installed, we can query some of the header informa
     2.9166666666666665,
     3.0]
 
-We added the ``NC`` format to the TCF, so that we could easily query the results in Python:
+We added the ``NC`` map output format to the TCF, so that we could easily query the results in Python using the
+:class:`NCGrid<pytuflow.NCGrid>` class.
 
 .. code-block:: pycon
 
@@ -219,38 +209,8 @@ We added the ``NC`` format to the TCF, so that we could easily query the results
      'tmax water level']
 
 We can extract a time series of water level results by using a point location, either in the form of a coordinate tuple
-    >>> from pytuflow import NCGrid
-    >>> ncgrid_path = tcf_run.output_folder_2d() / f'{tcf_run.output_name()}.nc'
-    >>> ncgrid = NCGrid(ncgrid_path)
-    >>> nc_grid.data_types()
-    ['water level',
-     'depth',
-     'velocity',
-     'z0',
-     'max water level',
-     'max depth',
-     'max velocity',
-     'max z0',
-     'tmax water level']
-
-We can extract a time series of water level results by using a point location, either in the form of a coordinate tuple
-    >>> from pytuflow import NCGrid
-    >>> ncgrid_path = tcf_run.output_folder_2d() / f'{tcf_run.result_name()}.nc'
-    >>> ncgrid = NCGrid(ncgrid_path)
-    >>> nc_grid.data_types()
-    ['water level',
-     'depth',
-     'velocity',
-     'z0',
-     'max water level',
-     'max depth',
-     'max velocity',
-     'max z0',
-     'tmax water level']
-
-We can extract a time series of water level results by using a point location, either in the form of a coordinate tuple
 ``(x, y)`` (or list of coordinates), or a GIS point file. You will need GDAL Python bindings installed to use the latter
-approach. For simplicity, we will use a list coordinate tuples that match the location of the features in the
+approach. For simplicity, we will use a list of coordinate tuples that match the location of the features in the
 ``2d_po_EG02_010_P.shp`` file that is included as part of the example model dataset. If you have GDAL installed, you
 can use a file path reference to the ``TUFLOW/model/gis/2d_po_EG02_010_P.shp`` file instead.
 
@@ -268,3 +228,11 @@ the cell is dry.
     0.166667                NaN          36.457958
     0.250000                NaN          36.441391
     0.333333                NaN          36.431271
+    0.416667                NaN          36.426140
+    0.500000                NaN          36.423336
+    0.583333                NaN          36.421467
+    0.666667          40.110428          36.420143
+    ...                  ...                   ...
+    2.833333          42.804726          38.509300
+    2.916667          42.793350          38.429859
+    3.000000          42.781895          38.342941

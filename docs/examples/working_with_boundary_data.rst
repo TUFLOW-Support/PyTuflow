@@ -173,7 +173,7 @@ Editing the Boundary Database
 
 Editing the boundary database is done by modifying the pandas DataFrame that is stored in the
 :attr:`BCDatabase.df<pytuflow.BCDatabase.df>` attribute. For example, we can add a new boundary that might be
-a constant downstream water level boundary with the name ``"dns_bndry"`` and a value of ``0.5m``. We will add this
+a constant downstream water level boundary with the name ``"dns_bndry"`` and a has value of ``0.5m``. We will add this
 to the previous model we were working with, ``EG16_~e1~_~e2~_005.tcf``:
 
 .. code-block:: pycon
