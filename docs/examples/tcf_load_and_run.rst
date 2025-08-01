@@ -154,6 +154,18 @@ With the ``tcf_run`` instance, we can also get the output folder and result name
 .. code-block:: pycon
 
     >>> from pytuflow import XMDF
+    >>> xmdf_path = tcf_run.output_folder_2d() / f'{tcf_run.output_name()}.xmdf'
+    >>> xmdf = XMDF(xmdf_path)
+
+Currently, the XMDF class requires QGIS Python libraries to extract results (e.g. time series). However,
+if the
+    >>> from pytuflow import XMDF
+    >>> xmdf_path = tcf_run.output_folder_2d() / f'{tcf_run.output_name()}.xmdf'
+    >>> xmdf = XMDF(xmdf_path)
+
+Currently, the XMDF class requires QGIS Python libraries to extract results (e.g. time series). However,
+if the
+    >>> from pytuflow import XMDF
     >>> xmdf_path = tcf_run.output_folder_2d() / f'{tcf_run.result_name()}.xmdf'
     >>> xmdf = XMDF(xmdf_path)
 
@@ -192,6 +204,36 @@ We added the ``NC`` format to the TCF, so that we could easily query the results
 
 .. code-block:: pycon
 
+    >>> from pytuflow import NCGrid
+    >>> ncgrid_path = tcf_run.output_folder_2d() / f'{tcf_run.output_name()}.nc'
+    >>> ncgrid = NCGrid(ncgrid_path)
+    >>> nc_grid.data_types()
+    ['water level',
+     'depth',
+     'velocity',
+     'z0',
+     'max water level',
+     'max depth',
+     'max velocity',
+     'max z0',
+     'tmax water level']
+
+We can extract a time series of water level results by using a point location, either in the form of a coordinate tuple
+    >>> from pytuflow import NCGrid
+    >>> ncgrid_path = tcf_run.output_folder_2d() / f'{tcf_run.output_name()}.nc'
+    >>> ncgrid = NCGrid(ncgrid_path)
+    >>> nc_grid.data_types()
+    ['water level',
+     'depth',
+     'velocity',
+     'z0',
+     'max water level',
+     'max depth',
+     'max velocity',
+     'max z0',
+     'tmax water level']
+
+We can extract a time series of water level results by using a point location, either in the form of a coordinate tuple
     >>> from pytuflow import NCGrid
     >>> ncgrid_path = tcf_run.output_folder_2d() / f'{tcf_run.result_name()}.nc'
     >>> ncgrid = NCGrid(ncgrid_path)

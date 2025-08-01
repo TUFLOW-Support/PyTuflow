@@ -214,6 +214,14 @@ obtain the path to the ``.nc`` file from your TUFLOW model. The example below us
 
     >>> from pytuflow import TCF, NCGrid
     >>> tcf = TCF('path/to/EG00_001.tcf')
+    >>> nc_path = tcf.context().output_folder_2d() / f'{tcf.context().output_name()}.nc'
+    >>> ncgrid = NCGrid(nc_path)
+    >>> from pytuflow import TCF, NCGrid
+    >>> tcf = TCF('path/to/EG00_001.tcf')
+    >>> nc_path = tcf.context().output_folder_2d() / f'{tcf.context().output_name()}.nc'
+    >>> ncgrid = NCGrid(nc_path)
+    >>> from pytuflow import TCF, NCGrid
+    >>> tcf = TCF('path/to/EG00_001.tcf')
     >>> nc_path = tcf.context().output_folder_2d() / f'{tcf.context().result_name()}.nc'
     >>> ncgrid = NCGrid(nc_path)
 
