@@ -59,6 +59,7 @@ html_favicon = 'assets/favicon/TUFLOW.ico'
 html_static_path = ['_static']
 html_css_files = ['custom.css']
 # html_js_files = ['custom.js']
+html_baseurl = 'https://docs.tuflow.com/pytuflow/'
 
 pygments_style = "friendly"
 
