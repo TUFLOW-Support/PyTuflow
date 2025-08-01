@@ -9,3 +9,5 @@ docs/_build*
 docs/api*
 *.gz
 test_tmp.py
+docs_copy*
+*.cfg.json
