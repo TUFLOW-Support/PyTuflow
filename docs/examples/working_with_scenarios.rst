@@ -213,7 +213,7 @@ In the above example, we:
 2. We set the scope for the new input to not be active when the ``"GPU"`` scenario is active
    (by negating the scenario with ``!``) and when the ``"CPU"`` scenario is active.
 3. We add a new pause command after the new ``Hardware == CPU`` command using the same
-   :meth:`insert_input()<pytuflow.TCF.insert_input` method.
+   :meth:`insert_input()<pytuflow.TCF.insert_input>` method.
 4. We set the scope for the pause command to be active when neither the ``"GPU"`` nor the ``"CPU"`` scenarios are active,
 
 The negative scenario scopes are important here and are required to trigger "Else If" and "Else" blocks.
