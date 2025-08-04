@@ -17,7 +17,7 @@ TPC
 ---
 
 The :class:`TPC<pytuflow.TPC>` class can be loaded by initialising the class with the path to the ``.tpc`` file, or
-by using the :meth:`TCF.tpc()<pytuflow.TCF.tpc>` method. The below example uses results from ``EG15_001.tcf``.
+by using the :meth:`TCF.tpc()<pytuflow.TCFRunState.tpc>` method. The below example uses results from ``EG15_001.tcf``.
 
 .. code-block:: pycon
 
@@ -106,7 +106,7 @@ Since a given ID could exist in multiple domains, for example, a 1D node, a 2D P
 have the same name (TUFLOW allows this), the return DataFrame header will include the domain, result type, and ID
 in the column name.
 
-It's also possible to pass in a list of IDs and/or result types to the :meth:`TPC.timeseries()<pytuflow.TPC.timeseries>`
+It's also possible to pass in a list of IDs and/or result types to the :meth:`TPC.time_series()<pytuflow.TPC.time_series>`
 method to get multiple time-series at once:
 
 .. code-block:: pycon
@@ -149,11 +149,11 @@ or if a second channel ID is provided, to that channel.
     5           0  Pipe16     Pit13   140.0  43.7653
     11          0  Pipe16  Pipe16.2   212.8  43.7648
 
-In the example above, we use the well known short-hand ``"h"`` for the ``"water level"`` result type. ``pytufow``
+In the example above, we use the well known short-hand ``"h"`` for the ``"water level"`` result type. ``pytuflow``
 accepts well known short-hands for result types, and it's worth nothing that the column name in the returned DataFrame
 will be set based on the result type the user provided. For example, in the example above, ``"h"`` is provided and the
 column name is set to ``"h"``. If the user provided ``"water level"``, then column would be set to ``"water level"``.
-This is also true for the :meth:`TPC.time_series()<pytuflow.TPC.timeseries>`.
+This is also true for the :meth:`TPC.time_series()<pytuflow.TPC.time_series>`.
 
 A flow trace downstream could branch into multiple channels that go in different directions, the
 :meth:`TPC.section()<pytuflow.TPC.section>` method will return data for all branches. The ``branch_id`` column
@@ -167,7 +167,7 @@ the methods for accessing the data are identical. Currently the :class:`XMDF<pyt
 QGIS Python libraries, which means it needs to be used either inside QGIS, or a QGIS Python environment with QGIS
 initialised.
 
-The :class:`NCGrid<pytuflow.NCGrid>` class does not require QGIS, and just requires the ``netCDF`` Python package.
+The :class:`NCGrid<pytuflow.NCGrid>` class does not require QGIS, and just requires the ``netCDF4`` Python package.
 Therefore the :class:`NCGrid<pytuflow.NCGrid>` format is the preferred format for map outputs if you want to use
 ``pytuflow`` outside of QGIS.
 
@@ -181,12 +181,12 @@ overview on how you could set one up.
 
 1. The key to setting up a QGIS Python environment can be copied from the ``bin/python-qgis.bat`` file that can be
    found in the QGIS installation directory. You can can either copy the environment setup from this batch file and
-   create your own batch file that uses the same setup and then runs your Python script, or starts your IDE.
+   create your own batch file that starts your process.
    Alternatively, you can copy the Python paths (``sys.path``) and executable path (``sys.executable``) and set them
    up in your IDE Python interpreter settings. The latter is the preferred method, and is possible in most IDEs such
    as PyCharm.
 2. The second step, once you have your Python environment setup, is to initialise QGIS in your script, as this
-   is required to initialise QGIS' providers.
+   is required to initialise the QGIS providers.
 
    .. code-block:: pycon
 
@@ -207,7 +207,7 @@ environments, however, as stated above, the methods are identical for the :class
 
 Similar to the :class:`TPC<pytuflow.TPC>` class, the :class:`NCGrid<pytuflow.NCGrid>` class can be loaded by
 initialising the class with the path to the ``.nc`` file. Unlike the :class:`TPC<pytuflow.TPC>` class, the
-:class:`TCF<pytuflow.TCF>` class does not have a method to load the ``NCGrid`` automatically. The reason for this, is that
+:class:`TCF<pytuflow.TCF>` class does not have a method to load the :class:`NCGrid<pytuflow.NCGrid>` automatically. The reason for this, is that
 the ``.tpc`` output is always created by TUFLOW, whereas the ``.nc`` output is optional. It is very easy to
 obtain the path to the ``.nc`` file from your TUFLOW model. The example below uses results from
 ``EG00_001.tcf``, which will need to be modified to add the ``"NC"`` map output format.
@@ -217,14 +217,6 @@ obtain the path to the ``.nc`` file from your TUFLOW model. The example below us
     >>> from pytuflow import TCF, NCGrid
     >>> tcf = TCF('path/to/EG00_001.tcf')
     >>> nc_path = tcf.context().output_folder_2d() / f'{tcf.context().output_name()}.nc'
-    >>> ncgrid = NCGrid(nc_path)
-    >>> from pytuflow import TCF, NCGrid
-    >>> tcf = TCF('path/to/EG00_001.tcf')
-    >>> nc_path = tcf.context().output_folder_2d() / f'{tcf.context().output_name()}.nc'
-    >>> ncgrid = NCGrid(nc_path)
-    >>> from pytuflow import TCF, NCGrid
-    >>> tcf = TCF('path/to/EG00_001.tcf')
-    >>> nc_path = tcf.context().output_folder_2d() / f'{tcf.context().result_name()}.nc'
     >>> ncgrid = NCGrid(nc_path)
 
 Result Information
@@ -266,7 +258,7 @@ It's possible to filter the return data by whether the result type is ``temporal
 Time-Series
 """""""""""
 
-The :meth:`NCGrid.timeseries()<pytuflow.NCGrid.timeseries>` method is very similar to the :meth:`TPC.timeseries()<pytuflow.TPC.timeseries>`
+The :meth:`NCGrid.time_series()<pytuflow.NCGrid.time_series>` method is very similar to the :meth:`TPC.time_series()<pytuflow.TPC.time_series>`
 method, except that it takes a spatial location (coordinates) instead of an ID. The coordinates can be a
 tuple ``(x, y)`` coordinate, a WKT string ``"POINT (x y)"``, a list of the previous two,
 or a file path to a GIS point file (e.g. ``.shp``) containing one or more points.
