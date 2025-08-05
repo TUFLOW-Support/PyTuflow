@@ -33,4 +33,4 @@ from .util._util.logging import get_logger
 
 
 name = 'PyTuflow'
-__version__ = '1.0.0-dev55'
+__version__ = '1.0.0-dev58'
