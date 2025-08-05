@@ -11,3 +11,4 @@ docs/api*
 test_tmp.py
 docs_copy*
 *.cfg.json
+/identifier.sqlite
