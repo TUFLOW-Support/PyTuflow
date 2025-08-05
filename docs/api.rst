@@ -106,9 +106,9 @@ This page gives an overview of the public modules, classes, and functions within
    :toctree: ./api
    :nosignatures:
 
-   util.register_tuflow_binary
-   util.register_tuflow_binary_folder
-   util.tuflow_binaries
+   register_tuflow_binary
+   register_tuflow_binary_folder
+   tuflow_binaries
 
 .. rubric:: Logging
 
