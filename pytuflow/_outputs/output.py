@@ -21,7 +21,7 @@ class Output(ABC):
     """Base class for all TUFLOW output classes. This class should not be initialised directly."""
 
     @abstractmethod
-    def __init__(self, *fpath: PathLike) -> None:
+    def __init__(self, *fpath: PathLike, **kwargs) -> None:
         super().__init__()
         self._fpath = fpath
 
@@ -33,14 +33,7 @@ class Output(ABC):
     def __repr__(self) -> str:
         return f"{self.__class__.__name__} ({self.name})"
 
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self.close()
-
     @staticmethod
-    @abstractmethod
     def _looks_like_this(*fpath: PathLike) -> bool:
         """Check if the given file(s) look like this output type.
 
@@ -54,10 +47,9 @@ class Output(ABC):
         bool
             True if the file(s) look like this output type.
         """
-        pass
+        return True
 
     @staticmethod
-    @abstractmethod
     def _looks_empty(*fpath: PathLike) -> bool:
         """Check if the given file(s) look empty or incomplete.
 
@@ -71,7 +63,7 @@ class Output(ABC):
         bool
             True if the file(s) look empty.
         """
-        pass
+        return False
 
     def times(self, filter_by: str = None, fmt: str = 'relative') -> list[TimeLike]:
         """Returns all the available times for the given context.
@@ -143,7 +135,7 @@ class Output(ABC):
 
     @abstractmethod
     def time_series(self, locations: PlotExtractionLocation, data_types: Union[str, list[str]],
-                    time_fmt: str = 'relative') -> pd.DataFrame:
+                    time_fmt: str = 'relative', **kwargs) -> pd.DataFrame:
         """Returns a time series dataframe for the given location and data type. The return DataFrame may have multiple
         time columns if the output time series data do not share a common time key.
 
@@ -165,7 +157,7 @@ class Output(ABC):
 
     @abstractmethod
     def section(self, locations: PlotExtractionLocation, data_types: Union[str, list[str]],
-                time: TimeLike) -> pd.DataFrame:
+                time: TimeLike, **kwargs) -> pd.DataFrame:
         """Returns a section dataframe for the given location and data type.
 
         Parameters
@@ -207,7 +199,7 @@ class Output(ABC):
 
     @abstractmethod
     def profile(self, locations: PlotExtractionLocation, data_types: Union[str, list[str]],
-                time: TimeLike) -> pd.DataFrame:
+                time: TimeLike, **kwargs) -> pd.DataFrame:
         """Returns a dataframe containing vertical profile data for the given location and data type.
 
         Parameters
@@ -227,7 +219,7 @@ class Output(ABC):
         pass
 
     @abstractmethod
-    def _filter(self, filter_by: str):
+    def _filter(self, filter_by: str) -> pd.DataFrame:
         """Returns a DataFrame with the output combinations for the given filter string.
 
         Parameters
@@ -239,41 +231,6 @@ class Output(ABC):
         -------
         pd.DataFrame
             The context combinations.
-
-        Examples
-        --------
-        Extracting the available :code:`channel` output combinations. The returned DataFrame contains a row for each
-        :code:`id` / :code:`data_type` combination that is available for :code:`channel` types.
-
-        >>> res._filter('channel')
-                   id data_type geometry  start  end    dt domain
-        55        ds1      flow     line    0.0  3.0  60.0     1d
-        56        ds2      flow     line    0.0  3.0  60.0     1d
-        57        ds3      flow     line    0.0  3.0  60.0     1d
-        58        ds4      flow     line    0.0  3.0  60.0     1d
-        59        ds5      flow     line    0.0  3.0  60.0     1d
-        ..        ...       ...      ...    ...  ...   ...    ...
-        158   FC02.04  velocity     line    0.0  3.0  60.0     1d
-        159   FC02.05  velocity     line    0.0  3.0  60.0     1d
-        160   FC02.06  velocity     line    0.0  3.0  60.0     1d
-        161  FC04.1_C  velocity     line    0.0  3.0  60.0     1d
-        162  FC_weir1  velocity     line    0.0  3.0  60.0     1d
-
-        Similarly, extracting combinations for :code:`flow`:
-
-        >>> res._filter('flow')
-                           id data_type geometry  start  end    dt domain
-        55        ds1      flow     line    0.0  3.0  60.0     1d
-        56        ds2      flow     line    0.0  3.0  60.0     1d
-        57        ds3      flow     line    0.0  3.0  60.0     1d
-        58        ds4      flow     line    0.0  3.0  60.0     1d
-        59        ds5      flow     line    0.0  3.0  60.0     1d
-        ..        ...       ...      ...    ...  ...   ...    ...
-        104   FC02.04      flow     line    0.0  3.0  60.0     1d
-        105   FC02.05      flow     line    0.0  3.0  60.0     1d
-        106   FC02.06      flow     line    0.0  3.0  60.0     1d
-        107  FC04.1_C      flow     line    0.0  3.0  60.0     1d
-        108  FC_weir1      flow     line    0.0  3.0  60.0     1d
         """
         pass
 
@@ -295,8 +252,11 @@ class Output(ABC):
 
         return name.lower()
 
+    def _load(self):
+        pass
+
     @staticmethod
-    def _parse_time_units_string(string: str, regex: str, format: str) -> tuple[datetime, str]:
+    def _parse_time_units_string(string: str, regex: str, fmt: str) -> tuple[datetime, str]:
         """Parses a string containing the time units and reference time
         e.g. hours since 1990-01-01 00:00:00
         Returns the reference time as a datetime object, the time units as a single character.
@@ -307,7 +267,7 @@ class Output(ABC):
            String containing the time units and reference time.
         regex : str
             Regular expression to match the format of the reference time.
-        format : str
+        fmt : str
             Format of the reference time.
 
         Returns
@@ -327,7 +287,7 @@ class Output(ABC):
             u = string
         time = re.findall(regex, string)
         if time:
-            return datetime.strptime(time[0], format), u
+            return datetime.strptime(time[0], fmt), u
         return DEFAULT_REFERENCE_TIME, u
 
     @staticmethod
@@ -357,9 +317,9 @@ class Output(ABC):
             else:
                 return 0
         elif method == 'next':
-            next = a > time
-            if next.any():
-                return int(np.argwhere(next).flatten()[0])
+            next_ = a > time
+            if next_.any():
+                return int(np.argwhere(next_).flatten()[0])
             else:
                 return len(timesteps) - 1
 

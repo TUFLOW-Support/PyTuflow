@@ -156,6 +156,7 @@ class CATCHJson(MapOutput):
 
         Examples
         --------
+        >>> res = CATCHJson('./path/to/json')
         >>> res.times()
         [0.0, 0.016666666666666666, ..., 3.0]
         """
@@ -185,12 +186,13 @@ class CATCHJson(MapOutput):
 
         Examples
         --------
-        >>> mesh.data_types()
+        >>> res = CATCHJson('./path/to/json')
+        >>> res.data_types()
         ['bed level', 'depth', 'vector velocity', 'velocity', 'water level', 'time of peak h']
 
         Return only the data types that have maximum values:
 
-        >>> mesh.data_types('max')
+        >>> res.data_types('max')
         ['depth', 'vector velocity', 'velocity', 'water level']
         """
         return super().data_types(filter_by)
@@ -258,6 +260,7 @@ class CATCHJson(MapOutput):
         --------
         Get the water level time-series data for a given point defined as ``(x, y)``:
 
+        >>> res = CATCHJson('./path/to/json')
         >>> res.time_series((293250, 6178030), 'water level')
             time  pnt1/water level
         0.000000               NaN
@@ -370,7 +373,8 @@ class CATCHJson(MapOutput):
         --------
         Get the water level section data for a given line string defined as a list of points:
 
-        >>> xmdf.section([(293250, 6178030), (293500, 6178030)], 'water level', 1.5)
+        >>> res = ... # Assume res is a loaded CATCHJson object
+        >>> res.section([(293250, 6178030), (293500, 6178030)], 'water level', 1.5)
                  line1
                 offset water level
         0     0.000000   42.724101
@@ -388,7 +392,7 @@ class CATCHJson(MapOutput):
         Get the bed level and max water level data using a shapefile to define the locations (both datasets are
         static and therefore the time argument won't have any effect):
 
-        >>> xmdf.section('path/to/shapefile.shp', ['bed level', 'max h'], -1)
+        >>> res.section('path/to/shapefile.shp', ['bed level', 'max h'], -1)
                Line_1                                 Line_2
                offset  bed level max water level      offset  bed level max water level
         0    0.000000  43.646312             NaN    0.000000  43.112894             NaN
@@ -427,7 +431,7 @@ class CATCHJson(MapOutput):
                     continue
                 df2 = provider.section(loc, data_types, time, averaging_method)
                 if not df2.empty:
-                    dfs.append((df2, provider._driver.start_end_locs.copy()))
+                    dfs.append((df2, provider.driver.start_end_locs.copy()))
 
             if dfs:
                 for df2, start_end_locs in reversed(dfs):
@@ -481,7 +485,8 @@ class CATCHJson(MapOutput):
         --------
         Get the velocity (scalar) curtain data for a given line string defined as in a shapefile:
 
-        >>> mesh.curtain('path/to/shapefile.shp', 'velocity', 1.5)
+        >>> res = ... # Assume res is a loaded CATCHJson object
+        >>> res.curtain('path/to/shapefile.shp', 'velocity', 1.5)
                  Line_1
                       x          y  velocity
         0     53.431056  42.898541  0.009024
@@ -509,7 +514,7 @@ class CATCHJson(MapOutput):
                     continue
                 df2 = provider.curtain(loc, data_types, time)
                 if not df2.empty:
-                    dfs.append((df2, provider._driver.start_end_locs.copy()))
+                    dfs.append((df2, provider.driver.start_end_locs.copy()))
 
             if dfs:
                 for df2, start_end_locs in reversed(dfs):
@@ -561,6 +566,7 @@ class CATCHJson(MapOutput):
         --------
         Get The profile for a given point defined in a shapefile:
 
+        >>> res = ... # Assume res is a loaded CATCHJson object
         >>> res.profile('path/to/shapefile.shp', 'velocity', 1.5)
                        pnt1
           elevation  velocity
@@ -619,7 +625,8 @@ class CATCHJson(MapOutput):
 
         self._info = self._info.drop_duplicates()
 
-    def _stamp_section(self, df1: pd.DataFrame, df2: pd.DataFrame, start_loc: float, end_loc: float) -> pd.DataFrame:
+    @staticmethod
+    def _stamp_section(df1: pd.DataFrame, df2: pd.DataFrame, start_loc: float, end_loc: float) -> pd.DataFrame:
         """Inserts the second dataframe into the first dataframe based on the start and end locations."""
         # Cut out the desired section from the second dataframe that will be inserted into the first dataframe
         mask2 = (df2.iloc[:, 0] >= start_loc) & (df2.iloc[:, 0] <= end_loc)
@@ -675,7 +682,8 @@ class CATCHJson(MapOutput):
 
         return df
 
-    def _stamp_curtain(self, df1: pd.DataFrame, df2: pd.DataFrame, start_loc: float, end_loc: float) -> pd.DataFrame:
+    @staticmethod
+    def _stamp_curtain(df1: pd.DataFrame, df2: pd.DataFrame, start_loc: float, end_loc: float) -> pd.DataFrame:
         """Inserts the second dataframe into the first dataframe based on the start and end locations.
         Similar to the _stamp_section() method, but curtain data is a bit different and needs a custom method.
         """

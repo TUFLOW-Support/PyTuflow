@@ -19,7 +19,7 @@ LineString = list[Point] | tuple[Point]
 Points = list[Point]
 LineStrings = list[LineString]
 
-PointLocation = Points | PathLike
+PointLocation = Point | Points | PathLike
 LineStringLocation = LineStrings | PathLike
 
 
