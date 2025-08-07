@@ -101,6 +101,7 @@ class BCTablesCheck(TimeSeries):
     @staticmethod
     def _looks_empty(fpath: Path) -> bool:
         # docstring inherited
+        # noinspection PyBroadException
         try:
             with fpath.open() as f:
                 for _ in range(3):
@@ -115,24 +116,14 @@ class BCTablesCheck(TimeSeries):
         # docstring inherited
         filtered_something = False
         ctx = [x.strip().lower() for x in filter_by.split('/') if x] if filter_by else []
-        if not ctx:
-            filtered_something = True
 
         df = self.objs.copy()
+        if not ctx:
+            return df
 
         # type
         possible_types = ['qt', 'hq', 'qh', 'sa', 'rf', 'ht']
-        df, filtered_something_ = self._filter_by_type(possible_types, ctx, df)
-        if filtered_something_:
-            filtered_something = True
-
-        # data types
-        df, filtered_something_ = self._filter_by_data_type(ctx, df)
-        if filtered_something_:
-            filtered_something = True
-
-        # ids
-        df, filtered_something_ = self._filter_by_id(['id', 'uid'], ctx, df)
+        df, filtered_something_ = self._tabular_type_filter(possible_types, ctx, df)
         if filtered_something_:
             filtered_something = True
 

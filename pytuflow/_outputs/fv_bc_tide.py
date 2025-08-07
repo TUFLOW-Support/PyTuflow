@@ -446,50 +446,62 @@ class FVBCTide(TimeSeries):
         self.node_count = int(self.objs['geometry'].value_counts().get('point', 0))
         self.node_string_count = int(self.objs['geometry'].value_counts().get('line', 0))
 
+    @staticmethod
+    def _filter_by_domain(ctx: list[str], df: pd.DataFrame) -> tuple[pd.DataFrame, bool]:
+        def remove_from_ctx(ctx_, types):
+            for typ in types:
+                while typ in ctx_:
+                    ctx_.remove(typ)
+
+        filtered_something = False
+        if '2d' in ctx:
+            filtered_something = True
+            remove_from_ctx(ctx, ['2d'])
+        if 'timeseries' in ctx:
+            ctx.append('node')
+            remove_from_ctx(ctx, ['node'])
+        if 'section' in ctx or 'nodestring' in ctx:
+            ctx.append('line')
+            remove_from_ctx(ctx, ['section', 'nodestring'])
+
+        if 'node' in ctx or 'point' in ctx:
+            filtered_something = True
+            df = df[(df['geometry'] == 'point')]
+            remove_from_ctx(ctx, ['node', 'point'])
+        if 'line' in ctx:
+            filtered_something = True
+            df = df[(df['geometry'] == 'line')]
+            remove_from_ctx(ctx, ['line'])
+
+        return df, filtered_something
+
     def _filter(self, filter_by: str) -> pd.DataFrame:
         # docstring inherited
         # split filter into list
+        filtered_something = False
         filter_by = [x.strip().lower() for x in filter_by.split('/')] if filter_by else []
+
         df = self.objs.copy()
         df['domain'] = '2d'
+        if not filter_by:
+            return df
 
         # domain
-        filtered_something = False
-        if '2d' in filter_by:
+        df, filtered_something_ = self._filter_by_domain(filter_by, df)
+        if filtered_something_:
             filtered_something = True
-            filter_by.remove('2d')
-        if 'timeseries' in filter_by:
-            filter_by.remove('timeseries')
-            filter_by.append('node')
-        if 'section' in filter_by or 'nodestring' in filter_by:
-            filter_by.remove('section') if 'section' in filter_by else filter_by.remove('nodestring')
-            filter_by.append('line')
-        if 'node' in filter_by or 'point' in filter_by:
-            filtered_something = True
-            df = df[(df['geometry'] == 'point')]
-            filter_by.remove('node') if 'node' in filter_by else filter_by.remove('point')
-        if 'line' in filter_by:
-            filtered_something = True
-            df = df[(df['geometry'] == 'line')]
-            filter_by.remove('line')
 
         # data types
-        df, filtered_something_ = self._filter_by_data_type(filter_by, df)
+        df, filtered_something_ = self._filter_by_data_type(filter_by, df, self._get_standard_data_type_name)
         if filtered_something_:
             filtered_something = True
 
         # ids
-        if filter_by and not df.empty:
-            df = df[df['id'].str.lower().isin(filter_by)] if not df.empty else pd.DataFrame()
-            if not df.empty:
-                j = len(filter_by) - 1
-                for i, x in enumerate(reversed(filter_by.copy())):
-                    if df['id'].str.lower().isin([x.lower()]).any():
-                        filter_by.pop(j - i)
-                if filter_by and not filtered_something:
-                    df = pd.DataFrame()
+        df, filtered_something_ = self._filter_by_id(['id'], filter_by, df)
+        if filtered_something_:
+            filtered_something = True
 
-        return df if not df.empty else pd.DataFrame(
+        return df if not df.empty and filtered_something else pd.DataFrame(
             columns=['id', 'data_type', 'geometry', 'start', 'end', 'dt', 'domain'])
 
     def _load_time_series(self):
