@@ -5,15 +5,15 @@ from typing import Union
 import numpy as np
 import pandas as pd
 
-from pytuflow._outputs.helpers.tpc_reader import TPCReader
-from pytuflow._outputs.info import INFO
-from pytuflow._pytuflow_types import PathLike, TimeLike
-from pytuflow._outputs.helpers.fm_res_driver import FM_ResultDriver
-from pytuflow._outputs.helpers.lp_1d_fm import LP1D_FM
-from pytuflow._fm import GXY
-from pytuflow._fm import DAT
-from pytuflow.util._util.logging import get_logger
-from pytuflow.results import ResultTypeError
+from .helpers.tpc_reader import TPCReader
+from .info import INFO
+from .._pytuflow_types import PathLike, TimeLike
+from .helpers.fm_res_driver import FM_ResultDriver
+from .helpers.lp_1d_fm import LP1D_FM
+from .._fm import GXY
+from .._fm import DAT
+from ..util import get_logger
+from ..results import ResultTypeError
 
 
 logger = get_logger()

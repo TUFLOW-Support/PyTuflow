@@ -10,8 +10,8 @@ from .tabular_output import TabularOutput
 from .helpers.hyd_tables_cross_section_provider import HydTablesCrossSectionProvider
 from .helpers.hyd_tables_channel_provider import HydTablesChannelProvider
 from .._pytuflow_types import PathLike, TimeLike
-from pytuflow.util._util.logging import get_logger
-from pytuflow.results import ResultTypeError
+from ..util import get_logger
+from ..results import ResultTypeError
 
 
 logger = get_logger()
@@ -318,14 +318,10 @@ class HydTablesCheck(TabularOutput):
             self.channel_count = len(self._channels.database)
         self._load_objs()
 
-    def _filter(self, filter_by: str) -> pd.DataFrame:
-        # docstring inherited
-        # split filter into components
-        ctx = [x.strip().lower() for x in filter_by.split('/') if x] if filter_by else []
-
-        # domain - xs, processed, or channel
-        ctx_ = []
+    @staticmethod
+    def _filter_by_domain(ctx: list[str], df: pd.DataFrame) -> tuple[pd.DataFrame, bool]:
         filtered_something = False
+        ctx_ = []
         if np.intersect1d(ctx, ['xs', 'cross-section', 'cross_section', 'cross section']).size:
             filtered_something = True
             ctx_.append('xs')
@@ -337,56 +333,47 @@ class HydTablesCheck(TabularOutput):
         if np.intersect1d(ctx, ['channel']).size:
             filtered_something = True
             ctx_.append('channel')
-            ctx = [x for x in ctx if x not in  ['channel']]
+            ctx = [x for x in ctx if x not in ['channel']]
         if filtered_something:
-            df = self._objs[self._objs['geometry'].isin(ctx_)]
-        else:
-            df = self._objs.copy()
+            df = df[df['geometry'].isin(ctx_)]
+        return df, filtered_something
+
+    def _filter(self, filter_by: str) -> pd.DataFrame:
+        # docstring inherited
+        # split filter into components
+        filtered_something = False
+        ctx = [x.strip().lower() for x in filter_by.split('/') if x] if filter_by else []
+        if not ctx:
+            filtered_something = True
+
+        df = self._objs.copy()
+
+        df, filtered_something_ = self._filter_by_domain(ctx, df)
+        if filtered_something_:
+            filtered_something = True
+
+        # domain - xs, processed, or channel
+        df, filtered_something_ = self._filter_by_domain(ctx, df)
+        if filtered_something_:
+            filtered_something = True
 
         # type
         possible_types = ['xz', 'hw', 'cs', 'bg', 'lc']
-        ctx1 = [x for x in ctx if x in possible_types]
-        ctx1 = [x for x in ctx1 if x in df['type'].str.lower().unique()]
-        if ctx1:
+        df, filtered_something_ = self._filter_by_type(possible_types, ctx, df)
+        if filtered_something_:
             filtered_something = True
-            df = df[df['type'].str.lower().isin(ctx1)]
-            j = len(ctx) - 1
-            for i, x in enumerate(reversed(ctx.copy())):
-                if x in ctx1:
-                    ctx.pop(j - i)
 
         # data types
-        ctx1 = [self._get_standard_data_type_name(x) for x in ctx]
-        ctx1 = [x for x in ctx1 if x in df['data_type'].unique()]
-        if ctx1:
+        df, filtered_something_ = self._filter_by_data_type(ctx, df)
+        if filtered_something_:
             filtered_something = True
-            df = df[df['data_type'].isin(ctx1)]
-            j = len(ctx) - 1
-            for i, x in enumerate(reversed(ctx.copy())):
-                if self._get_standard_data_type_name(x) in ctx1:
-                    ctx.pop(j - i)
 
         # ids
-        if ctx and not df.empty:
-            df1 = df[df['id'].str.lower().isin(ctx)]
-            df2 = df[df['uid'].str.lower().isin(ctx)]
-            if not df1.empty and not df2.empty:
-                df = pd.concat([df1, df2], axis=0)
-            elif not df1.empty:
-                df = df1
-            elif not df2.empty:
-                df = df2
-            else:
-                df = pd.DataFrame()
-            if not df.empty:
-                j = len(ctx) - 1
-                for i, x in enumerate(reversed(ctx.copy())):
-                    if df['id'].str.lower().isin([x.lower()]).any() or df['uid'].str.lower().isin([x.lower()]).any():
-                        ctx.pop(j - i)
-                if ctx and not filtered_something:
-                    df = pd.DataFrame()
+        df, filtered_something_ = self._filter_by_id(['id', 'uid'], ctx, df)
+        if filtered_something_:
+            filtered_something = True
 
-        return df if not df.empty else pd.DataFrame(columns=['id', 'uid', 'type', 'data_type', 'geometry'])
+        return df if not df.empty and filtered_something else pd.DataFrame(columns=['id', 'uid', 'type', 'data_type', 'geometry'])
 
     def _load_objs(self):
         def add_xs_prop(d, xs):

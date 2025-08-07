@@ -3,10 +3,11 @@ try:
     import traceback
     has_traceback = True
 except ImportError:
+    traceback = 'traceback'
     has_traceback = False
 
 
-class Logging_:
+class _Logging:
     """Compatibility class so routines can be copied from qgis tuflow plugin code."""
 
     @staticmethod
@@ -17,14 +18,17 @@ class Logging_:
             return ''.join(traceback.extract_tb(exc_traceback).format()) + '{0}{1}'.format(exc_type, exc_value)
         return ''
 
+    # noinspection PyMethodMayBeStatic
     def info(self, msg):
         """Prints a message to the console."""
         print(msg)
 
+    # noinspection PyMethodMayBeStatic
     def warning(self, msg):
         """Prints a warning message to the console."""
         print('PyTUFLOW WARNING:', msg)
 
+    # noinspection PyMethodMayBeStatic
     def error(self, msg, additional_info=None):
         """Prints an error message to the console."""
         print('PyTUFLOW ERROR:', msg)
@@ -32,4 +36,4 @@ class Logging_:
             print(additional_info)
 
 
-Logging = Logging_()
+Logging = _Logging()

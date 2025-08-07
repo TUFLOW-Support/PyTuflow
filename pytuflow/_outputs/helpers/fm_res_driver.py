@@ -5,7 +5,7 @@ from typing import Generator, Union
 
 import pandas as pd
 
-from pytuflow._fm import ZZN
+from ..._fm import ZZN
 
 
 class FM_ResultDriver:

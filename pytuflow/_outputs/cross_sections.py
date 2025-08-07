@@ -5,10 +5,10 @@ from typing import Union
 import pandas as pd
 
 from .tabular_output import TabularOutput
-from pytuflow._tmf import TuflowCrossSection
-from pytuflow.util._util.gis import GISAttributes
-from pytuflow._pytuflow_types import PathLike, TimeLike, TuflowPath
-from pytuflow.util._util.logging import get_logger
+from .._tmf import TuflowCrossSection
+from .._tmf import GISAttributes
+from ..util import get_logger
+from .._pytuflow_types import PathLike, TimeLike, TuflowPath
 from pytuflow.results import ResultTypeError
 
 
@@ -116,6 +116,7 @@ class CrossSections(TabularOutput):
         --------
         Return all the cross-section IDs in the layer:
 
+        >>> xs = CrossSections('/path/to/1d_xs.shp')
         >>> xs.ids()
         ['1d_xs_M14_C99', '1d_xs_M14_C100', '1d_xs_M14_C101', ..., '1d_xs_M14_ds_weir', '1d_xs_M14_rd_weir']
 
@@ -157,6 +158,7 @@ class CrossSections(TabularOutput):
         --------
         Return all the cross-section types in the layer:
 
+        >>> xs = CrossSections('/path/to/1d_xs.shp')
         >>> xs.data_types()
         ['xz', 'hw']
 
@@ -235,7 +237,7 @@ class CrossSections(TabularOutput):
         raise NotImplementedError(f'{__class__.__name__} does not support curtain plotting.')
 
     def profile(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
-                time: TimeLike) -> pd.DataFrame:
+                time: TimeLike, **kwargs) -> pd.DataFrame:
         """Not supported for ``CrossSection`` results. Raises a :code:`NotImplementedError`."""
         raise NotImplementedError(f'{__class__.__name__} does not support vertical profile plotting.')
 
@@ -250,53 +252,52 @@ class CrossSections(TabularOutput):
     def _filter(self, filter_by: str) -> pd.DataFrame:
         # docstring inherited
         ctx = [x.strip().lower() for x in filter_by.split('/') if x] if filter_by else []
+        if not ctx:
+            filtered_something = True
 
         df = self.objs.copy()
-        filtered_something = False
 
         # type
         possible_types = ['xz', 'hw', 'cs', 'bg', 'lc']
-        ctx1 = [x for x in ctx if x in possible_types]
-        ctx1 = [x for x in ctx1 if x in df['type'].str.lower().unique()]
-        if ctx1:
+        df, filtered_something_ = self._filter_by_type(possible_types, ctx, df)
+        if filtered_something_:
             filtered_something = True
-            df = df[df['type'].str.lower().isin(ctx1)]
-            j = len(ctx) - 1
-            for i, x in enumerate(reversed(ctx.copy())):
-                if x in ctx1:
-                    ctx.pop(j - i)
 
         # ids
-        if ctx and not df.empty:
-            df1 = df[df['id'].str.lower().isin(ctx)]
-            df2 = df[df['source'].str.lower().isin(ctx)]
-            df3 = df[df['filename'].str.lower().isin(ctx)]
-            df4 = df[df['uid'].str.lower().isin(ctx)]
-            df5 = df[df['filepath'].str.lower().isin(ctx)]
-            df = pd.DataFrame()
-            if not df1.empty:
-                df = df1
-            if not df2.empty:
-                df = pd.concat([df, df2], axis=0) if not df.empty else df2
-            if not df3.empty:
-                df = pd.concat([df, df3], axis=0) if not df.empty else df3
-            if not df4.empty:
-                df = pd.concat([df, df4], axis=0) if not df.empty else df4
-            if not df5.empty:
-                df = pd.concat([df, df5], axis=0) if not df.empty else df5
-            if not df.empty:
-                j = len(ctx) - 1
-                for i, x in enumerate(reversed(ctx.copy())):
-                    if (df['id'].str.lower().isin([x.lower()]).any()
-                        or df['filename'].str.lower().isin([x.lower()]).any()
-                        or df['source'].str.lower().isin([x.lower()]).any()
-                        or df['uid'].str.lower().isin([x.lower()]).any()
-                        or df['filepath'].str.lower().isin([x.lower()]).any()):
-                        ctx.pop(j - i)
-                if ctx and not filtered_something:
-                    df = pd.DataFrame()
+        df, filtered_something_ = self._filter_by_id(['id', 'uid', 'source', 'filename', 'filepath'], ctx, df)
+        if filtered_something_:
+            filtered_something = True
 
-        return df if not df.empty else pd.DataFrame(columns=['id', 'uid', 'type', 'data_type', 'geometry'])
+        # if ctx and not df.empty:
+        #     df1 = df[df['id'].str.lower().isin(ctx)]
+        #     df2 = df[df['source'].str.lower().isin(ctx)]
+        #     df3 = df[df['filename'].str.lower().isin(ctx)]
+        #     df4 = df[df['uid'].str.lower().isin(ctx)]
+        #     df5 = df[df['filepath'].str.lower().isin(ctx)]
+        #     df = pd.DataFrame()
+        #     if not df1.empty:
+        #         df = df1
+        #     if not df2.empty:
+        #         df = pd.concat([df, df2], axis=0) if not df.empty else df2
+        #     if not df3.empty:
+        #         df = pd.concat([df, df3], axis=0) if not df.empty else df3
+        #     if not df4.empty:
+        #         df = pd.concat([df, df4], axis=0) if not df.empty else df4
+        #     if not df5.empty:
+        #         df = pd.concat([df, df5], axis=0) if not df.empty else df5
+        #     if not df.empty:
+        #         j = len(ctx) - 1
+        #         for i, x in enumerate(reversed(ctx.copy())):
+        #             if (df['id'].str.lower().isin([x.lower()]).any()
+        #                 or df['filename'].str.lower().isin([x.lower()]).any()
+        #                 or df['source'].str.lower().isin([x.lower()]).any()
+        #                 or df['uid'].str.lower().isin([x.lower()]).any()
+        #                 or df['filepath'].str.lower().isin([x.lower()]).any()):
+        #                 ctx.pop(j - i)
+        #         if ctx and not filtered_something:
+        #             df = pd.DataFrame()
+
+        return df if not df.empty and filtered_something else pd.DataFrame(columns=['id', 'uid', 'type', 'data_type', 'geometry'])
 
     def _load_objs(self):
         d = {'id': [], 'filename': [], 'source': [], 'filepath': [], 'type': [], 'uid': [], 'ind': []}

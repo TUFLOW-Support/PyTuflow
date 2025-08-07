@@ -473,15 +473,9 @@ class FVBCTide(TimeSeries):
             filter_by.remove('line')
 
         # data types
-        ctx1 = [self._get_standard_data_type_name(x) for x in filter_by]
-        ctx1 = [x for x in ctx1 if x in df['data_type'].unique()]
-        if ctx1:
+        df, filtered_something_ = self._filter_by_data_type(filter_by, df)
+        if filtered_something_:
             filtered_something = True
-            df = df[df['data_type'].isin(ctx1)]
-            j = len(filter_by) - 1
-            for i, x in enumerate(reversed(filter_by.copy())):
-                if self._get_standard_data_type_name(x) in ctx1:
-                    filter_by.pop(j - i)
 
         # ids
         if filter_by and not df.empty:
