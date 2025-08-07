@@ -10,7 +10,7 @@ from .helpers.tpc_reader import TPCReader
 from .itime_series_1d import ITimeSeries1D
 from .time_series import TimeSeries
 from .._pytuflow_types import PathLike, TimeLike, AppendDict
-from ..util._util.logging import get_logger
+from ..util import get_logger
 from ..results import ResultTypeError
 
 logger = get_logger()

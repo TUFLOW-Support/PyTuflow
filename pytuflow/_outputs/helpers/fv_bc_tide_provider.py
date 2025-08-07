@@ -2,32 +2,34 @@ from pathlib import Path
 
 import numpy as np
 
-from pytuflow._pytuflow_types import PathLike, TimeLike
+from ..._pytuflow_types import PathLike, TimeLike
 from .fv_bc_tide_gis_provider import FVBCTideGISProvider
 from .fv_bc_tide_nc_provider import FVBCTideNCProvider
-from pytuflow.util._util.gis import has_gdal
+from ...gis import has_gdal
 
 try:
     import shapely
     has_shapely = True
 except ImportError:
+    shapely = 'shapely'
     has_shapely = False
 
 
 class FVBCTideProvider:
-    """Class for providing FV BC tide data to the FVBCTide result class."""
+    """Class for providing FV BC tide data to the FVBCTide result class.
+
+    Parameters
+    ----------
+    nc_path : PathLike
+        Path to the netCDF file.
+    gis_path : PathLike
+        Path to the node string GIS file.
+    use_local_time : bool
+        Use local time from the NetCDF file if it exists. If local time does not exist, UTC will be used.
+        Default is True.
+    """
 
     def __init__(self, nc_path: PathLike, gis_path: PathLike, use_local_time: bool = True) -> None:
-        """
-        Parameters
-        ----------
-        nc_path : PathLike
-            Path to the netCDF file.
-        gis_path : PathLike
-            Path to the node string GIS file.
-        label: str
-            The boundary label / name within the netCDF file.
-        """
         if not has_shapely:
             raise ImportError('Shapely is required for FVBCTideProvider')
         if not has_gdal:
@@ -36,6 +38,8 @@ class FVBCTideProvider:
         self.reference_time = None
         self.nc = FVBCTideNCProvider(nc_path, use_local_time)
         self.gis = FVBCTideGISProvider(gis_path)
+        self.name = ''
+        self.gis_name = ''
         self.load()
 
     def __del__(self) -> None:

@@ -236,7 +236,9 @@ class Output(ABC):
 
     @staticmethod
     def _get_standard_data_type_name(name: str) -> str:
-        """Returns the standard data type name for a given name. The name can be a short name, long name, or
+        """no-doc
+
+        Returns the standard data type name for a given name. The name can be a short name, long name, or
         any standard alternate name of the given data type.
         """
         for key, vals in DATA_TYPE_NAME_ALTERNATIVES['data_types'].items():

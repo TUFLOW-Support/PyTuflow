@@ -9,15 +9,16 @@ try:
     from netCDF4 import Dataset
     has_netcdf4 = True
 except ImportError:
+    Dataset = 'Dataset'
     has_netcdf4 = False
 
 from .time_series import TimeSeries
-from pytuflow._pytuflow_types import PathLike, TuflowPath, TimeLike
+from .._pytuflow_types import PathLike, TuflowPath, TimeLike
 from .helpers.fv_bc_tide_provider import FVBCTideProvider
-from pytuflow.util._util.gis import has_gdal
-from pytuflow._tmf.tmf.tuflow_model_files.misc.append_dict import AppendDict
-from pytuflow.util._util.logging import get_logger
-from pytuflow.results import ResultTypeError
+from ..gis import has_gdal
+from ..misc import AppendDict
+from ..util import get_logger
+from ..results import ResultTypeError
 
 
 logger = get_logger()

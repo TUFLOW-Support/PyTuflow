@@ -4,17 +4,19 @@ try:
     import shapely
     has_shapely = True
 except ImportError:
+    shapely = 'shapely'
     has_shapely = False
 
 try:
     from osgeo import ogr
     has_gdal = True
 except ImportError:
+    from ...stubs import ogr_ as ogr
     has_gdal = False
 
-from pytuflow._pytuflow_types import PathLike, TuflowPath
-from pytuflow.util._util.gis import get_driver_name_from_extension
-from pytuflow.util._util.geom import calc_spherical_length
+from ..._pytuflow_types import PathLike, TuflowPath
+from ...gis import get_driver_name_from_extension
+from ...util import calc_spherical_length
 
 
 class FVBCTideGISProvider:
