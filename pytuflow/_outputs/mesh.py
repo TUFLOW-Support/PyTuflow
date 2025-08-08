@@ -26,7 +26,6 @@ class Mesh(MapOutput):
         self.fpath = Path(fpath)
         self._driver = QgisMeshDriver(self.fpath)
         self._soft_load_driver = NCMeshDriver(self.fpath)  # QGIS driver cannot soft load (i.e. without loading 2dm)
-        self._info = pd.DataFrame()
         self._loaded = False
 
     @staticmethod

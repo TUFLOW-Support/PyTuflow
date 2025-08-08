@@ -657,7 +657,7 @@ class TPC(INFO, ITimeSeries2D):
                 df = pd.concat([df, df2], axis=0, ignore_index=True) if not df.empty else df2
         return df
 
-    def _filter(self, filter_by: str) -> pd.DataFrame:
+    def _filter(self, filter_by: str, filtered_something: bool = False, df: pd.DataFrame = None) -> pd.DataFrame:
         # docstring inherited
         filter_by = self._replace_1d_aliases(filter_by)
         return super()._filter(filter_by)

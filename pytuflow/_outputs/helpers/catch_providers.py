@@ -4,6 +4,7 @@ from typing import Union
 
 import pandas as pd
 
+from .mesh_driver import MeshDriver
 from ..output import Output
 from ..xmdf import XMDF
 from ..nc_mesh import NCMesh
@@ -16,8 +17,8 @@ class CATCHProvider(Output):
     def __init__(self, *args, **kwargs):
         self.time_offset = 0  # seconds
         self._reference_time = None
-        self._driver = None
-        self._soft_load_driver = None
+        self._driver = MeshDriver(Path())
+        self._soft_load_driver = MeshDriver(Path())
         self._loaded = False
         self._info = pd.DataFrame()
         super().__init__(*args, **kwargs)
@@ -42,12 +43,11 @@ class CATCHProvider(Output):
 
     @reference_time.setter
     def reference_time(self, ref_time: datetime):
-        if hasattr(self, '_soft_load_driver') and self._soft_load_driver.valid:
+        if self._soft_load_driver.valid:
             self._soft_load_driver.reference_time = ref_time
-        if hasattr(self, '_loaded') and self._loaded:
+        if self._loaded:
             self._driver.reference_time = ref_time
-        if hasattr(self, '_loaded') and hasattr(self, '_soft_load_driver'):
-            self._reference_time = ref_time
+        self._reference_time = ref_time
 
     @property
     def has_inherent_reference_time(self) -> bool:
@@ -113,7 +113,7 @@ class CATCHProvider(Output):
         if self._reference_time:
             self._driver.reference_time = self._reference_time
 
-    def _filter(self, filter_by: str) -> pd.DataFrame:
+    def _filter(self, filter_by: str, filtered_something: bool = False, df: pd.DataFrame = None) -> pd.DataFrame:
         return super()._filter(filter_by)
 
 

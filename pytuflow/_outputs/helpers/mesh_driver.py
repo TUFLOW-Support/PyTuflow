@@ -23,12 +23,16 @@ class MeshDriver:
         self.mesh = mesh
         self.reference_time = None
         self.has_inherent_reference_time = False
+        self.valid = False
 
     def __repr__(self):
         return f'<{self.__class__.__name__} {self.mesh.stem}>'
 
     def __str__(self):
         return self.__repr__()
+
+    def load(self):
+        raise NotImplementedError
 
     def data_groups(self) -> Generator[DatasetGroup, None, None]:
         raise NotImplementedError

@@ -227,22 +227,27 @@ class Output(ABC):
     def _overview_dataframe(self) -> pd.DataFrame:
         pass
 
-    def _filter(self, filter_by: str) -> pd.DataFrame:
+    def _filter(self, filter_by: str, filtered_something: bool = False, df: pd.DataFrame = None) -> pd.DataFrame:
         """Returns a DataFrame with the output combinations for the given filter string.
 
         Parameters
         ----------
         filter_by : str
             The context to extract the combinations for.
+        filtered_something : bool, optional
+            Sets the filtered_something flag to True immediately. This allows the method to be overridden in subclasses,
+            and to call the super() method with some filtering already applied.
+        df : pd.DataFrame, optional
+            Sets the DataFrame to filter. If not provided, it will use the overview DataFrame. This allows the method to
+            be overridden in subclasses and to call the super() method with some filtering already applied.
 
         Returns
         -------
         pd.DataFrame
             The context combinations.
         """
-        filtered_something = False
         filter_by = [x.strip().lower() for x in filter_by.split('/')] if filter_by else []
-        df = self._overview_dataframe()
+        df = self._overview_dataframe() if df is None else df
         if not filter_by:
             return df
 
@@ -374,8 +379,9 @@ class Output(ABC):
     @staticmethod
     def _filter_generic(ctx: list[str],
                    df: pd.DataFrame,
-                   possible_types: dict[str, list[str]],
-                   column_name: str) -> tuple[pd.DataFrame, bool]:
+                   possible_types: dict[typing.Any, list[str]],
+                   column_name: str,
+                   exclude: bool = False) -> tuple[pd.DataFrame, bool]:
         def remove_from_ctx(ctx1, types):
             for typ in types:
                 while typ in ctx1:
@@ -390,7 +396,10 @@ class Output(ABC):
                 remove_from_ctx(ctx, aliases)
 
         if filtered_something:
-            df = df[df[column_name].str.lower().isin(ctx_)]
+            if ctx_ and isinstance(ctx_[0], str):
+                df = df[df[column_name].str.lower().isin(ctx_)] if not exclude else df[~df[column_name].str.lower().isin(ctx_)]
+            else:
+                df = df[df[column_name].isin(ctx_)] if not exclude else df[~df[column_name].isin(ctx_)]
 
         return df, filtered_something
 

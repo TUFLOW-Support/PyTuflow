@@ -24,6 +24,11 @@ LineStringLocation = LineStrings | PathLike
 
 
 class MapOutput(Output):
+    ATTRIBUTE_TYPES = {'scalar': ['scalar'], 'vector': ['vector']}
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._info = pd.DataFrame(columns=['data_type', 'type', 'is_max', 'is_min', 'static', '3d', 'start', 'end', 'dt'])
 
     @staticmethod
     def _get_standard_data_type_name(name: str) -> str:
@@ -50,83 +55,48 @@ class MapOutput(Output):
 
         return 'min ' + stnd_name
 
-    def _filter(self, filter_by: str) -> pd.DataFrame:
+    def _overview_dataframe(self) -> pd.DataFrame:
+        return self._info.copy()
+
+    def _replace_aliases(self, filter_by: str) -> str:
+        """Replace aliases in the filter_by string."""
+        filter_by = [x.strip().lower() for x in filter_by.split('/')] if filter_by else []
+        while 'section' in filter_by:
+            filter_by.remove('section')
+        return '/'.join(filter_by)
+
+    def _filter(self, filter_by: str, filtered_something: bool = False, df: pd.DataFrame = None) -> pd.DataFrame:
+        filter_by = self._replace_aliases(filter_by)
         filter_by = [x.strip().lower() for x in filter_by.split('/')] if filter_by else []
 
-        while 'section' in filter_by:  # section is everything
-            filter_by.remove('section')
+        filtered_something = False
+        df = self._overview_dataframe()
 
-        # type - Scalar / Vector
-        df = self._info.copy()
-        ctx = []
-        if 'scalar' in filter_by:
-            ctx.append('scalar')
-            while 'scalar' in filter_by:
-                filter_by.remove('scalar')
-        if 'vector' in filter_by:
-            ctx.append('vector')
-            while 'vector' in filter_by:
-                filter_by.remove('vector')
-        if ctx:
-            df = self._info[self._info['type'].isin(ctx)] if ctx else pd.DataFrame()
-
-        # max/mins
-        ctx = []
-        df2 = pd.DataFrame()
-        if np.intersect1d(filter_by, ['max', 'maximum']).size:
-            ctx.append('max')
-            df2 = df[df['is_max']]
-            filter_by = [x for x in filter_by if x not in ['max', 'maximum']]
-        if np.intersect1d(filter_by, ['min', 'minimum']).size:
-            ctx.append('min')
-            df_ = df[df['is_min']]
-            df2 = pd.concat([df2, df_]) if not df2.empty else df_
-            filter_by = [x for x in filter_by if x not in ['min', 'minimum']]
-        if ctx:
-            df = df2
+        # min/max
+        max_min = {'is_max': {True: ['max', 'maximum']}, 'is_min': {True: ['min', 'minimum']}}
+        for col_name, filter_dict in max_min.items():
+            df, filtered_something_ = self._filter_generic(filter_by, df, filter_dict, col_name)
+            if filtered_something_:
+                filtered_something = True
 
         # static/temporal
-        ctx = []
-        df3 = pd.DataFrame()
-        if 'static' in filter_by:
-            ctx.append('static')
-            df3 = df[df['static']]
-            while 'static' in filter_by:
-                filter_by.remove('static')
-        if 'temporal' in filter_by or 'timeseries' in filter_by:
-            ctx.append('temporal')
-            df_ = df[~df['static']]
-            df3 = pd.concat([df3, df_]) if not df3.empty else df_
-            while 'temporal' in filter_by:
-                filter_by.remove('temporal')
-            while 'timeseries' in filter_by:
-                filter_by.remove('timeseries')
-        if ctx:
-            df = df3
+        df, filtered_something_ = self._filter_generic(filter_by, df, {True: ['static']}, 'static')
+        if filtered_something_:
+            filtered_something = True
+        df, filtered_something_ = self._filter_generic(filter_by, df, {True: ['temporal', 'timeseries']}, 'static', exclude=True)
+        if filtered_something_:
+            filtered_something = True
 
-        # 2d/3d datasets
-        ctx = []
-        df4 = pd.DataFrame()
-        if '2d' in filter_by:
-            ctx.append('2d')
-            df4 = df[~df['3d']]
-            while '2d' in filter_by:
-                filter_by.remove('2d')
-        if '3d' in filter_by:
-            ctx.append('3d')
-            df_ = df[df['3d']]
-            df4 = pd.concat([df4, df_]) if not df4.empty else df_
-            while '3d' in filter_by:
-                filter_by.remove('3d')
-        if ctx:
-            df = df4
+        # 2d/3d
+        df, filtered_something_ = self._filter_generic(filter_by, df, {True: ['2d']}, '3d', exclude=True)
+        if filtered_something_:
+            filtered_something = True
+        df, filtered_something_ = self._filter_generic(filter_by, df, {True: ['3d']},'3d')
+        if filtered_something_:
+            filtered_something = True
 
-        # data type
-        if filter_by:
-            ctx = [self._get_standard_data_type_name(x) for x in filter_by]
-            df = df[df['data_type'].isin(ctx)] if ctx else pd.DataFrame()
-
-        return df
+        filter_by = '/'.join(filter_by)
+        return super()._filter(filter_by, filtered_something, df)
 
     def _figure_out_data_types(self, data_types: Union[str, list[str]], filter_by: str | None) -> list[str]:
         if not data_types:
