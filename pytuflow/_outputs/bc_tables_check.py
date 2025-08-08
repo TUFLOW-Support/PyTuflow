@@ -60,6 +60,11 @@ class BCTablesCheck(TimeSeries):
     40      3.333     1.45
     """
 
+    DOMAIN_TYPES = {}
+    GEOMETRY_TYPES = {}
+    ATTRIBUTE_TYPES = {'qt': ['qt'], 'hq': ['hq'], 'qh': ['qh'], 'sa': ['sa'], 'rf': ['rf'], 'ht': ['ht']}
+    ID_COLUMNS = ['id', 'uid']
+
     def __init__(self, fpath: PathLike):
         super().__init__(fpath)
 
@@ -70,7 +75,7 @@ class BCTablesCheck(TimeSeries):
         #: BCCheckProvider: BC Check Provider class
         self.provider = BCCheckProvider(self.fpath)
         #: pd.DataFrame: DataFrame with all the data combinations
-        self.objs = pd.DataFrame()
+        self.objs = pd.DataFrame(columns=['id', 'uid', 'type', 'data_type'])
 
         if not self.fpath.exists():
             raise FileNotFoundError(f'File does not exist: {fpath}')
@@ -111,23 +116,6 @@ class BCTablesCheck(TimeSeries):
         except Exception:
             return True
         return False
-
-    def _filter(self, filter_by: str) -> pd.DataFrame:
-        # docstring inherited
-        filtered_something = False
-        ctx = [x.strip().lower() for x in filter_by.split('/') if x] if filter_by else []
-
-        df = self.objs.copy()
-        if not ctx:
-            return df
-
-        # type
-        possible_types = ['qt', 'hq', 'qh', 'sa', 'rf', 'ht']
-        df, filtered_something_ = self._tabular_type_filter(possible_types, ctx, df)
-        if filtered_something_:
-            filtered_something = True
-
-        return df if not df.empty and filtered_something else pd.DataFrame(columns=['id', 'uid', 'type', 'data_type'])
 
     def times(self, filter_by: str = None, fmt: str = 'relative') -> list[TimeLike]:
         """Returns a list of unique times in the BC Tables Check file for the given context.
@@ -428,7 +416,7 @@ class BCTablesCheck(TimeSeries):
         raise NotImplementedError(f'{__class__.__name__} does not support curtain plotting.')
 
     def profile(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
-                time: TimeLike) -> pd.DataFrame:
+                time: TimeLike, **kwargs) -> pd.DataFrame:
         """Not supported for ``BCTablesCheck`` results. Raises a :code:`NotImplementedError`."""
         raise NotImplementedError(f'{__class__.__name__} does not support vertical profile plotting.')
 
@@ -437,6 +425,9 @@ class BCTablesCheck(TimeSeries):
         self.provider.load()
         self.tcf = self.provider.tcf
         self._load_objs()
+
+    def _overview_dataframe(self) -> pd.DataFrame:
+        return self.objs.copy()
 
     def _load_objs(self):
         d = {'id': [], 'type': [], 'uid': [], 'data_type': []}

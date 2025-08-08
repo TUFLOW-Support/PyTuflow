@@ -195,6 +195,7 @@ class FMTS(INFO):
 
         Examples
         --------
+        >>> res = FMTS('path/to/result.zzn', dat='path/to/result.dat', gxy='path/to/result.gxy')
         >>> res.ids()
         ['FC01.36', 'FC01.35', 'FC01.351cu',... 'FC02', 'ds2_S', 'FC01']
         >>> res.ids('node')
@@ -295,6 +296,7 @@ class FMTS(INFO):
         --------
         Extracting the maximum flow for a given channel:
 
+        >>> res = FMTS('path/to/result.zzn', dat='path/to/result.dat')
         >>> res.maximum('ds1', 'flow')
              node/flow/max  node/flow/tmax
         ds2       22.05114        1.583333
@@ -361,6 +363,7 @@ class FMTS(INFO):
         --------
         Extracting flow for a given channel.
 
+        >>> res = FMTS('path/to/result.zzn', dat='path/to/result.dat')
         >>> res.time_series('ds2', 'q')
         time      node/q/ds1
         0.000000    0.920000
@@ -459,6 +462,7 @@ class FMTS(INFO):
         --------
         Extracting a long plot from a given channel :code:`ds1` to the outlet at :code:`1.0` hours:
 
+        >>> res = FMTS('path/to/result.zzn', dat='path/to/result.dat')
         >>> res.section('ds1', ['bed', 'level', 'max level'], 1.)
             branch_id  channel       node  offset     bed    level  max level
         0           0      ds1      ds1.1     0.0  35.950  38.7880    39.0671
@@ -548,7 +552,7 @@ class FMTS(INFO):
         return super().curtain(locations, data_types, time)
 
     def profile(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
-                time: TimeLike) -> pd.DataFrame:
+                time: TimeLike, **kwargs) -> pd.DataFrame:
         """Not supported for ``FMTS`` results. Raises a :code:`NotImplementedError`."""
         return super().profile(locations, data_types, time)
 

@@ -90,6 +90,11 @@ class TPC(INFO, ITimeSeries2D):
     For more examples, see the documentation for the individual methods.
     """
 
+    DOMAIN_TYPES = {'1d': ['1d'], '2d': ['2d', 'po'], 'rl': ['rl', '0d']}
+    GEOMETRY_TYPES = {'point': ['point'], 'line': ['line'], 'polygon': ['polygon', 'region']}
+    ATTRIBUTE_TYPES = {}
+    ID_COLUMNS = ['id']
+
     def __init__(self, fpath: PathLike):
         # private
         self._time_series_data_2d = AppendDict()
@@ -643,22 +648,19 @@ class TPC(INFO, ITimeSeries2D):
         self._ncid = None
         self._loaded = True
 
+    def _overview_dataframe(self) -> pd.DataFrame:
+        df = pd.DataFrame(columns=self._oned_objs.columns)
+        for domain, df1 in {'1d': self._oned_objs, '2d': self._po_objs, 'rl': self._rl_objs}.items():
+            if not df1.empty:
+                df2 = df1.copy()
+                df2['domain'] = domain
+                df = pd.concat([df, df2], axis=0, ignore_index=True) if not df.empty else df2
+        return df
+
     def _filter(self, filter_by: str) -> pd.DataFrame:
         # docstring inherited
-        # split filter into components
-        filter_by = [x.strip().lower() for x in filter_by.split('/')] if filter_by else []
-
-        # 1D
-        df = super()._combinations_1d(filter_by)
-
-        # 2D
-        df1 = self._combinations_2d(filter_by)
-
-        if df.empty:
-            return df1
-        if df1.empty:
-            return df
-        return pd.concat([df, df1], axis=0, ignore_index=True)
+        filter_by = self._replace_1d_aliases(filter_by)
+        return super()._filter(filter_by)
 
     def _info_name_correction(self, name: str) -> str:
         # override this as it isn't needed for TPC

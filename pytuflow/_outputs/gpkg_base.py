@@ -1,4 +1,5 @@
 from contextlib import contextmanager
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import pandas as pd
@@ -9,18 +10,38 @@ if TYPE_CHECKING:
 
 class GPKGBase:
 
+    def __init__(self, *args, **kwargs):
+        self.fpath = None
+        super().__init__(*args, **kwargs)
+
+    @staticmethod
     @contextmanager
-    def _connect(self):
+    def connect(fpath: str | Path):
         import sqlite3
         conn = None
         try:
-            conn = sqlite3.connect(self.fpath)
+            conn = sqlite3.connect(fpath)
             yield conn
         finally:
             if conn is not None:
                 conn.close()
 
-    def _gpkg_time_series_extractor(self, cur: 'Cursor', dtype_name: str, table_name: str) -> pd.DataFrame:
+    @staticmethod
+    def _looks_empty(fpath: str | Path) -> bool:
+        # docstring inherited
+        import sqlite3
+        try:
+            with GPKGBase.connect(fpath) as conn:
+                cur = conn.cursor()
+                cur.execute('SELECT DISTINCT Table_name, Count FROM Timeseries_info;')
+                count = sum([int(x[1]) for x in cur.fetchall()])
+                empty = count == 0
+        except sqlite3.Error:
+            empty = True
+        return empty
+
+    @staticmethod
+    def _gpkg_time_series_extractor(cur: 'Cursor', dtype_name: str, table_name: str) -> pd.DataFrame:
         """Extract the time series data from a TUFLOW GeoPackage Time Series file for
         a given data type from a given table.
         """

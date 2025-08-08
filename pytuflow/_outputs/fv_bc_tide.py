@@ -92,6 +92,12 @@ class FVBCTide(TimeSeries):
     11          0       Ocean  29317.599609    -0.138558
     """
 
+    DOMAIN_TYPES = {}
+    GEOMETRY_TYPES = {'2d': ['2d'], 'point': ['node', 'timeseries', 'point'],
+                      'line': ['section', 'nodestring', 'line']}
+    ATTRIBUTE_TYPES = {}
+    ID_COLUMNS = ['id']
+
     def __init__(self, nc_fpath: PathLike, node_string_gis_fpath: PathLike, use_local_time: bool = True) -> None:
         super().__init__(nc_fpath)
 
@@ -107,7 +113,7 @@ class FVBCTide(TimeSeries):
         #: FVBCTideProvider: FV BC Tide provider object.
         self.provider = None
         #: pd.DataFrame: Result objects
-        self.objs = pd.DataFrame()
+        self.objs = pd.DataFrame(columns=['id', 'data_type', 'geometry', 'start', 'end', 'dt', 'domain'])
         #: int: Number of nodes
         self.node_count = 0
         #: int: Number of node strings
@@ -393,7 +399,9 @@ class FVBCTide(TimeSeries):
 
         Examples
         --------
+
         >>> from datetime import datetime
+        >>> bndry = FVBCTide('/path/to/fv_bc_tide.nc', '/path/to/fv_bc_tide.shp')
         >>> bndry.section('Ocean', 'water level', datetime(2023, 1, 1, 12, 0, 0))
             branch_id node_string        offset  water level
         0           0       Ocean      0.000000    -0.136288
@@ -430,7 +438,7 @@ class FVBCTide(TimeSeries):
         raise NotImplementedError(f'{__class__.__name__} does not support curtain plotting.')
 
     def profile(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
-                time: TimeLike) -> pd.DataFrame:
+                time: TimeLike, **kwargs) -> pd.DataFrame:
         """Not supported for ``FVBCTide`` results. Raises a :code:`NotImplementedError`."""
         raise NotImplementedError(f'{__class__.__name__} does not support vertical profile plotting.')
 
@@ -446,63 +454,8 @@ class FVBCTide(TimeSeries):
         self.node_count = int(self.objs['geometry'].value_counts().get('point', 0))
         self.node_string_count = int(self.objs['geometry'].value_counts().get('line', 0))
 
-    @staticmethod
-    def _filter_by_domain(ctx: list[str], df: pd.DataFrame) -> tuple[pd.DataFrame, bool]:
-        def remove_from_ctx(ctx_, types):
-            for typ in types:
-                while typ in ctx_:
-                    ctx_.remove(typ)
-
-        filtered_something = False
-        if '2d' in ctx:
-            filtered_something = True
-            remove_from_ctx(ctx, ['2d'])
-        if 'timeseries' in ctx:
-            ctx.append('node')
-            remove_from_ctx(ctx, ['node'])
-        if 'section' in ctx or 'nodestring' in ctx:
-            ctx.append('line')
-            remove_from_ctx(ctx, ['section', 'nodestring'])
-
-        if 'node' in ctx or 'point' in ctx:
-            filtered_something = True
-            df = df[(df['geometry'] == 'point')]
-            remove_from_ctx(ctx, ['node', 'point'])
-        if 'line' in ctx:
-            filtered_something = True
-            df = df[(df['geometry'] == 'line')]
-            remove_from_ctx(ctx, ['line'])
-
-        return df, filtered_something
-
-    def _filter(self, filter_by: str) -> pd.DataFrame:
-        # docstring inherited
-        # split filter into list
-        filtered_something = False
-        filter_by = [x.strip().lower() for x in filter_by.split('/')] if filter_by else []
-
-        df = self.objs.copy()
-        df['domain'] = '2d'
-        if not filter_by:
-            return df
-
-        # domain
-        df, filtered_something_ = self._filter_by_domain(filter_by, df)
-        if filtered_something_:
-            filtered_something = True
-
-        # data types
-        df, filtered_something_ = self._filter_by_data_type(filter_by, df, self._get_standard_data_type_name)
-        if filtered_something_:
-            filtered_something = True
-
-        # ids
-        df, filtered_something_ = self._filter_by_id(['id'], filter_by, df)
-        if filtered_something_:
-            filtered_something = True
-
-        return df if not df.empty and filtered_something else pd.DataFrame(
-            columns=['id', 'data_type', 'geometry', 'start', 'end', 'dt', 'domain'])
+    def _overview_dataframe(self) -> pd.DataFrame:
+        return self.objs.copy()
 
     def _load_time_series(self):
         df = pd.DataFrame()

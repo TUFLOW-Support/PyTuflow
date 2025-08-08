@@ -39,6 +39,15 @@ class HydTablesCheck(TabularOutput):
     >>> hyd_tables = HydTablesCheck('path/to/1d_ta_tables_check.csv')
     """
 
+    DOMAIN_TYPES = {}
+    GEOMETRY_TYPES = {
+        'xs': ['xs', 'cross-section', 'cross_section', 'cross section'],
+        'processed': ['processed', 'proc'],
+        'channel': ['channel', 'chan'],
+    }
+    ATTRIBUTE_TYPES = {'xz': ['xz'], 'hw': ['hw'], 'cs': ['cs'], 'bg': ['bg'], 'lc': ['lc']}
+    ID_COLUMNS = ['id', 'uid']
+
     def __init__(self, fpath: PathLike) -> None:
         super().__init__(fpath)
 
@@ -53,7 +62,7 @@ class HydTablesCheck(TabularOutput):
         #: :class:`HydTablesChannelProvider <pytuflow.outputs.helpers.hyd_tables_channel_provider.HydTablesChannelProvider>`: Channel data provider
         self._channels = HydTablesChannelProvider()
         #: pd.DataFrame: DataFrame with all the data combinations
-        self._objs = pd.DataFrame()
+        self._objs = pd.DataFrame(columns=['id', 'uid', 'type', 'data_type', 'geometry'])
         #: int: Number of cross-sections
         self.cross_section_count = 0
         #: int: Number of channels
@@ -323,52 +332,8 @@ class HydTablesCheck(TabularOutput):
             self.channel_count = len(self._channels.database)
         self._load_objs()
 
-    @staticmethod
-    def _filter_by_domain(ctx: list[str], df: pd.DataFrame) -> tuple[pd.DataFrame, bool]:
-        def remove_from_ctx(ctx1, types):
-            for typ in types:
-                while typ in ctx1:
-                    ctx1.remove(typ)
-
-        filtered_something = False
-        ctx_ = []
-        if np.intersect1d(ctx, ['xs', 'cross-section', 'cross_section', 'cross section']).size:
-            filtered_something = True
-            ctx_.append('xs')
-            remove_from_ctx(ctx, ['xs', 'cross-section', 'cross_section', 'cross section'])
-        if np.intersect1d(ctx, ['processed', 'proc']).size:
-            filtered_something = True
-            ctx_.append('processed')
-            remove_from_ctx(ctx, ['processed', 'proc'])
-        if np.intersect1d(ctx, ['channel']).size:
-            filtered_something = True
-            ctx_.append('channel')
-            remove_from_ctx(ctx, ['channel'])
-
-        if filtered_something:
-            df = df[df['geometry'].isin(ctx_)]
-        return df, filtered_something
-
-    def _filter(self, filter_by: str) -> pd.DataFrame:
-        # docstring inherited
-        # split filter into components
-        filtered_something = False
-        ctx = [x.strip().lower() for x in filter_by.split('/') if x] if filter_by else []
-
-        df = self._objs.copy()
-        if not ctx:
-            return df
-
-        df, filtered_something_ = self._filter_by_domain(ctx, df)
-        if filtered_something_:
-            filtered_something = True
-
-        possible_types = ['xz', 'hw', 'cs', 'bg', 'lc']
-        df, filtered_something_ = self._tabular_type_filter(possible_types, ctx, df)
-        if filtered_something_:
-            filtered_something = True
-
-        return df if not df.empty and filtered_something else pd.DataFrame(columns=['id', 'uid', 'type', 'data_type', 'geometry'])
+    def _overview_dataframe(self) -> pd.DataFrame:
+        return self._objs.copy()
 
     def _load_objs(self):
         def add_xs_prop(d_, xs_):

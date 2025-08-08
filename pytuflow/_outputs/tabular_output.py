@@ -39,19 +39,3 @@ class TabularOutput(Output):
             The available IDs.
         """
         pass
-
-    def _tabular_type_filter(self, possible_types: list[str], ctx: list[str], df: pd.DataFrame) -> tuple[pd.DataFrame, bool]:
-        """Common filtering method for tabular outputs."""
-        df, filtered_something = self._filter_by_type(possible_types, ctx, df)
-
-        # data types
-        df, filtered_something_ = self._filter_by_data_type(ctx, df, self._get_standard_data_type_name)
-        if filtered_something_:
-            filtered_something = True
-
-        # ids
-        df, filtered_something_ = self._filter_by_id(['id', 'uid'], ctx, df)
-        if filtered_something_:
-            filtered_something = True
-
-        return df, filtered_something

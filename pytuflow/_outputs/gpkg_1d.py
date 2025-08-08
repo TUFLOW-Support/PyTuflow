@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from sqlite3 import Cursor
 
 
-class GPKG1D(INFO, GPKGBase):
+class GPKG1D(GPKGBase, INFO):
     """Class for handling 1D GeoPackage time series results (:code:`.gpkg` - typically ending with :code:`_1D.gpkg`
     or :code:`_swmm_ts.gpkg`). The GPKG time series format is a specific format published by TUFLOW built
     on the GeoPackage standard.
@@ -94,47 +94,23 @@ class GPKG1D(INFO, GPKGBase):
         # docstring inherited
         import sqlite3
         try:
-            conn = sqlite3.connect(fpath)
-        except Exception as e:
-            return False
-        try:
-            cur = conn.cursor()
-            cur.execute('SELECT Version FROM TUFLOW_timeseries_version;')
-            version = Version(cur.fetchone()[0])
-            if version == Version('1.0'):
-                valid = True
-            else:
-                cur.execute('SELECT Type FROM Geom_L LIMIT 1;')
-                typ = cur.fetchone()
-                if typ:
-                    typ = typ[0]
-                    valid = bool(re.findall(r'^Chan', typ))
+            with GPKGBase.connect(fpath) as conn:
+                cur = conn.cursor()
+                cur.execute('SELECT Version FROM TUFLOW_timeseries_version;')
+                version = Version(cur.fetchone()[0])
+                if version == Version('1.0'):
+                    valid = True
                 else:
-                    valid = True  # cannot check any result if there aren't any
-        except Exception as e:
+                    cur.execute('SELECT Type FROM Geom_L LIMIT 1;')
+                    typ = cur.fetchone()
+                    if typ:
+                        typ = typ[0]
+                        valid = bool(re.findall(r'^Chan', typ))
+                    else:
+                        valid = True  # cannot check any result if there aren't any
+        except sqlite3.Error:
             valid = False
-        finally:
-            conn.close()
         return valid
-
-    @staticmethod
-    def _looks_empty(fpath: PathLike) -> bool:
-        # docstring inherited
-        import sqlite3
-        try:
-            conn = sqlite3.connect(fpath)
-        except Exception as e:
-            return True
-        try:
-            cur = conn.cursor()
-            cur.execute('SELECT DISTINCT Table_name, Count FROM Timeseries_info;')
-            count = sum([int(x[1]) for x in cur.fetchall()])
-            empty = count == 0
-        except Exception:
-            empty = True
-        finally:
-            conn.close()
-        return empty
 
     def times(self, filter_by: str = None, fmt: str = 'relative') -> list[TimeLike]:
         """Returns all the available times for the given filter.
@@ -163,6 +139,7 @@ class GPKG1D(INFO, GPKGBase):
 
         Examples
         --------
+        >>> res = GPKG1D('path/to/output_swmm_ts.gpkg')
         >>> res.times()
         [0.0, 0.016666666666666666, ..., 3.0]
         >>> res.times(fmt='absolute')
@@ -199,6 +176,7 @@ class GPKG1D(INFO, GPKGBase):
         The below examples demonstrate how to use the ``filter_by`` argument to filter the returned IDs.
         The first example returns all IDs:
 
+        >>> res = GPKG1D('path/to/output_swmm_ts.gpkg')
         >>> res.ids()
         ['FC01.1_R', 'FC01.2_R', 'FC04.1_C', 'FC01.1_R.1', 'FC01.1_R.2', 'FC01.2_R.1', 'FC01.2_R.2', 'FC04.1_C.1', 'FC04.1_C.2']
 
@@ -243,6 +221,7 @@ class GPKG1D(INFO, GPKGBase):
         The below examples demonstrate how to use the filter argument to filter the returned data types. The first
         example returns all data types:
 
+        >>> res = GPKG1D('path/to/output_swmm_ts.gpkg')
         >>> res.data_types()
         ['water level', 'flow', 'velocity']
 
@@ -302,6 +281,7 @@ class GPKG1D(INFO, GPKGBase):
         --------
         Extracting the maximum flow for a given channel:
 
+        >>> res = GPKG1D('path/to/output_swmm_ts.gpkg')
         >>> res.maximum('ds1', 'flow')
              channel/flow/max  channel/flow/tmax
         ds1            59.423           1.383333
@@ -363,6 +343,7 @@ class GPKG1D(INFO, GPKGBase):
         --------
         Extracting flow for a given channel.
 
+        >>> res = GPKG1D('path/to/output_swmm_ts.gpkg')
         >>> res.time_series('ds1', 'q')
         Time (h)   channel/q/ds1
         0.000000           0.000
@@ -441,6 +422,7 @@ class GPKG1D(INFO, GPKGBase):
         --------
         Extracting a long plot from a given channel :code:`ds1` to the outlet at :code:`1.0` hours:
 
+        >>> res = GPKG1D('path/to/output_swmm_ts.gpkg')
         >>> res.section('ds1', ['bed', 'level', 'max level'], 1.)
             branch_id  channel       node  offset     bed    level  max level
         0           0      ds1      ds1.1     0.0  35.950  38.7880    39.0671
@@ -477,12 +459,12 @@ class GPKG1D(INFO, GPKGBase):
         return super().curtain(locations, data_types, time)
 
     def profile(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
-                time: TimeLike) -> pd.DataFrame:
+                time: TimeLike, **kwargs) -> pd.DataFrame:
         """Not supported for ``GPKG1D`` results. Raises a :code:`NotImplementedError`."""
         return super().profile(locations, data_types, time)
 
     def _initial_load(self):
-        with self._connect() as conn:
+        with self.connect(self.fpath) as conn:
             cur = conn.cursor()
             cur.execute('SELECT Version FROM TUFLOW_timeseries_version;')
             self.format_version = Version(cur.fetchone()[0])
@@ -517,7 +499,7 @@ class GPKG1D(INFO, GPKGBase):
         if self._loaded:
             return
 
-        with self._connect() as conn:
+        with self.connect(self.fpath) as conn:
             cur = conn.cursor()
             self._load_channel_info(cur)
             self._load_node_info(cur)

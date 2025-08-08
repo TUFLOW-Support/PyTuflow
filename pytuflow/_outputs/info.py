@@ -7,16 +7,17 @@ import numpy as np
 import pandas as pd
 
 from .helpers.tpc_reader import TPCReader
-from .itime_series_1d import ITimeSeries1D
 from .time_series import TimeSeries
 from .._pytuflow_types import PathLike, TimeLike, AppendDict
 from ..util import get_logger
 from ..results import ResultTypeError
+from .helpers.lp_1d import LP1D
+
 
 logger = get_logger()
 
 
-class INFO(TimeSeries, ITimeSeries1D):
+class INFO(TimeSeries):
     """Class for reading TUFLOW info time series results (:code:`.info`). These are text files with a :code:`.info`
     extension (typically found in the 1D output folder and ending with :code:`_1d.info` and not :code:`.2dm.info`)
     that are output by the 2013 TUFLOW release. The format is similar to the TPC format, however
@@ -73,6 +74,11 @@ class INFO(TimeSeries, ITimeSeries1D):
     For more examples, see the documentation for the individual methods.
     """
 
+    DOMAIN_TYPES = {'1d': ['1d']}
+    GEOMETRY_TYPES = {'point': ['node', 'point'], 'line': ['channel', 'line', 'link']}
+    ATTRIBUTE_TYPES = {}
+    ID_COLUMNS = ['id']
+
     def __init__(self, fpath: PathLike):
         super().__init__(fpath)
 
@@ -92,11 +98,34 @@ class INFO(TimeSeries, ITimeSeries1D):
         if self._looks_empty(fpath):
             raise EOFError(f'File is empty or incomplete: {fpath}')
 
+        #: pd.DataFrame: Node information. Column headers are :code:`[id, bed_level, top_level, nchannel, channels]`
+        self._node_info = pd.DataFrame(
+            index=['id'],
+            columns=['bed_level', 'top_level', 'nchannel', 'channels']
+        )
+
+        #: pd.DataFrame: Channel information. Column headers are :code:`[id, us_node, ds_node, us_chan, ds_chan, ispipe, length, us_invert, ds_invert, lbus_obvert, rbus_obvert, lbds_obvert, rbds_obvert]`
+        self._channel_info = pd.DataFrame(
+            index=['id'],
+            columns=['us_node', 'ds_node', 'us_chan', 'ds_chan', 'ispipe', 'length', 'us_invert', 'ds_invert',
+                     'lbus_obvert', 'rbus_obvert', 'lbds_obvert', 'rbds_obvert']
+        )
+
+        #: pd.DataFrame: Information on all 1D output objects. Column headers are :code:`[id, data_type, geometry, start, end, dt]`
+        self._oned_objs = pd.DataFrame(columns=['id', 'data_type', 'geometry', 'start', 'end', 'dt'])
+
+        #: int: Number of nodes
+        self.node_count = 0
+
+        #: int: Number of channels
+        self.channel_count = 0
+
         # private properties
         self._tpc_reader = self._init_tpc_reader()
         self._time_series_data = AppendDict()
         self._maximum_data = AppendDict()
         self._nd_res_types = []
+        self._lp = None
 
         self._loaded = False  # whether the results have been fully loaded
         self._initial_load()
@@ -107,12 +136,13 @@ class INFO(TimeSeries, ITimeSeries1D):
         fpath = Path(fpath)
         if fpath.suffix.upper() != '.INFO':
             return False
+        # noinspection PyBroadException
         try:
             with fpath.open() as f:
                 line = f.readline()
                 if not line.startswith('Format Version == 1'):
                     return False
-        except Exception as e:
+        except Exception:
             return False
         return True
 
@@ -156,6 +186,7 @@ class INFO(TimeSeries, ITimeSeries1D):
 
         Examples
         --------
+        >>> res = ... # Assume res is loaded result class
         >>> res.times()
         [0.0, 0.016666666666666666, ..., 3.0]
         >>> res.times(fmt='absolute')
@@ -193,6 +224,7 @@ class INFO(TimeSeries, ITimeSeries1D):
         The below examples demonstrate how to use the ``filter_by`` argument to filter the returned IDs.
         The first example returns all IDs:
 
+        >>> res = ...  # Assume res is loaded result class
         >>> res.ids()
         ['FC01.1_R', 'FC01.2_R', 'FC04.1_C', 'FC01.1_R.1', 'FC01.1_R.2', 'FC01.2_R.1', 'FC01.2_R.2', 'FC04.1_C.1', 'FC04.1_C.2']
 
@@ -242,6 +274,7 @@ class INFO(TimeSeries, ITimeSeries1D):
         The below examples demonstrate how to use the filter argument to filter the returned data types. The first
         example returns all data types:
 
+        >>> res = ...  # Assume res is loaded result class
         >>> res.data_types()
         ['water level', 'flow', 'velocity']
 
@@ -308,6 +341,7 @@ class INFO(TimeSeries, ITimeSeries1D):
         --------
         Extracting the maximum flow for a given channel:
 
+        >>> res = ...  # Assume res is loaded result class
         >>> res.maximum('ds1', 'flow')
              channel/flow/max  channel/flow/tmax
         ds1            59.423           1.383333
@@ -380,6 +414,7 @@ class INFO(TimeSeries, ITimeSeries1D):
         --------
         Extracting flow for a given channel.
 
+        >>> res = ...  # Assume res is loaded result class
         >>> res.time_series('ds1', 'q')
         Time (h)   channel/q/ds1
         0.000000           0.000
@@ -470,6 +505,7 @@ class INFO(TimeSeries, ITimeSeries1D):
         --------
         Extracting a long plot from a given channel :code:`ds1` to the outlet at :code:`1.0` hours:
 
+        >>> res = ...  # Assume res is loaded result class
         >>> res.section('ds1', ['bed', 'level', 'max level'], 1.)
             branch_id  channel       node  offset     bed    level  max level
         0           0      ds1      ds1.1     0.0  35.950  38.7880    39.0671
@@ -544,7 +580,7 @@ class INFO(TimeSeries, ITimeSeries1D):
         raise NotImplementedError(f'{__class__.__name__} does not support curtain plotting.')
 
     def profile(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
-                time: TimeLike) -> pd.DataFrame:
+                time: TimeLike, **kwargs) -> pd.DataFrame:
         """Not supported for ``INFO`` results. Raises a :code:`NotImplementedError`."""
         raise NotImplementedError(f'{__class__.__name__} does not support vertical profile plotting.')
 
@@ -565,11 +601,10 @@ class INFO(TimeSeries, ITimeSeries1D):
         self._load_1d_info()
         self._loaded = True
 
-    def _filter(self, filter_by: str) -> pd.DataFrame:
-        # docstring inherited
-        # split filter into components
-        ctx = [x.strip().lower() for x in filter_by.split('/')] if filter_by else []
-        return super()._combinations_1d(ctx)
+    def _overview_dataframe(self) -> pd.DataFrame:
+        df = self._oned_objs.copy()
+        df['domain'] = '1d'
+        return df
 
     def _init_tpc_reader(self) -> TPCReader:
         """Initialise the TPCReader object."""
@@ -579,13 +614,14 @@ class INFO(TimeSeries, ITimeSeries1D):
         """Correct the name of the file. Only required for INFO results and should be overerriden by subclasses."""
         return name.replace('_1d_','_1d_1d_')
 
-    def _expand_property_path(self, prop: str, regex: bool = False, value: str = None) -> Path:
+    def _expand_property_path(self, prop: str, regex: bool = False, value: str = None) -> Path | None:
         """Expands the property value into a full path. Returns None if the property does not exist."""
         prop_path = self._tpc_reader.get_property(prop, None, regex) if value is None else value
         if prop_path not in [None, 'NONE']:
             if 'node info' in prop.lower() or 'channel info' in prop.lower():
                 prop_path = self._info_name_correction(prop_path)
             return self.fpath.parent / prop_path
+        return None
 
     def _load_node_info(self) -> None:
         """Load node info DataFrame."""
@@ -615,6 +651,7 @@ class INFO(TimeSeries, ITimeSeries1D):
         chan_info_csv = self._expand_property_path(r'(?:1D\s)?Channel Info', regex=True)
         if chan_info_csv is not None:
             try:
+                # noinspection PyTypeChecker
                 self._channel_info = pd.read_csv(
                     chan_info_csv,
                     engine='python',
@@ -686,7 +723,8 @@ class INFO(TimeSeries, ITimeSeries1D):
         df.rename(columns={x: self._csv_col_name_corr(x) for x in df.columns}, inplace=True)
         return df
 
-    def _csv_col_name_corr(self, name: str) -> str:
+    @staticmethod
+    def _csv_col_name_corr(name: str) -> str:
         """Correct the column name in the CSV file to be just the id."""
         if not re.findall(r'(Entry|Additional|Exit) LC', name):
             name = ' '.join(name.split(' ')[1:])
@@ -778,6 +816,8 @@ class INFO(TimeSeries, ITimeSeries1D):
                 y.append(self._channel_info.loc[pits[0], 'lbus_obvert'])
             else:
                 y.append(np.nan)
+
+            # noinspection PyTypeChecker
             if i + 1 == dfconn.shape[0]:
                 nd = row['ds_node']
                 pits = self._channel_info[
@@ -791,3 +831,28 @@ class INFO(TimeSeries, ITimeSeries1D):
                 y.append(np.nan)
 
         return np.array(y)
+
+    def _connectivity(self, ids: Union[str, list[str]]) -> pd.DataFrame:
+        """Return a DataFrame describing the connectivity between the :code:`ids`.
+
+        :code:`ids` can be a single ID, or a list of IDs. The connectivity for a single ID will trace downstream
+        to the outlet of the network. For multiple IDs, one ID must be downstream of all other IDs and the
+        connectivity will trace from IDs to the downstream ID.
+
+        Parameters
+        ----------
+        ids : str | list[str]
+            The IDs to trace the connectivity for.
+
+        Returns
+        -------
+        pd.DataFrame
+            The connectivity information.
+        """
+        lp = LP1D(ids, self._node_info, self._channel_info)
+        if self._lp is not None and lp == self._lp:
+            return self._lp.df
+
+        lp.connectivity()
+        self._lp = lp
+        return self._lp.df

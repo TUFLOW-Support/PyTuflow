@@ -17,7 +17,7 @@ if typing.TYPE_CHECKING:
     from sqlite3 import Cursor
 
 
-class GPKG2D(TimeSeries, ITimeSeries2D, GPKGBase):
+class GPKG2D(GPKGBase, ITimeSeries2D, TimeSeries):
     """Class for handling 2D GeoPackage time series results (:code:`.gpkg` - typically ending with :code:`_2D.gpkg`).
     The GPKG time series format is a specific format published by TUFLOW built on the GeoPackage standard.
 
@@ -82,6 +82,11 @@ class GPKG2D(TimeSeries, ITimeSeries2D, GPKGBase):
     3.000000                   40.485
     """
 
+    DOMAIN_TYPES = {'2d': ['2d', 'po']}
+    GEOMETRY_TYPES = {'point': ['point'], 'line': ['line'], 'polygon': ['polygon', 'region']}
+    ATTRIBUTE_TYPES = {}
+    ID_COLUMNS = ['id']
+
     def __init__(self, fpath: PathLike):
         super().__init__(fpath)
 
@@ -119,53 +124,28 @@ class GPKG2D(TimeSeries, ITimeSeries2D, GPKGBase):
         # docstring inherited
         import sqlite3
         try:
-            conn = sqlite3.connect(fpath)
-        except Exception as e:
-            return False
-        try:
-            cur = conn.cursor()
-            cur.execute('SELECT Version FROM TUFLOW_timeseries_version;')
-            version = Version(cur.fetchone()[0])
-            if version == Version('1.0'):
-                valid = False
-            else:
-                valid = None
-                for table_name in ['Geom_P', 'Geom_L', 'Geom_R']:
-                    cur.execute(f'SELECT count(*) FROM sqlite_master WHERE type=\'table\' AND name="{table_name}";')
-                    count = int(cur.fetchone()[0])
-                    if count:
-                        cur.execute(f'SELECT Type FROM "{table_name}" LIMIT 1;')
-                        typ = cur.fetchone()
-                        if typ:
-                            valid = typ[0].lower() == '2d'
-                            break
-                if valid is None:  # could not determine if it is valid - could be empty
-                    valid = True
-        except Exception as e:
+            with GPKGBase.connect(fpath) as conn:
+                cur = conn.cursor()
+                cur.execute('SELECT Version FROM TUFLOW_timeseries_version;')
+                version = Version(cur.fetchone()[0])
+                if version == Version('1.0'):
+                    valid = False
+                else:
+                    valid = None
+                    for table_name in ['Geom_P', 'Geom_L', 'Geom_R']:
+                        cur.execute(f'SELECT count(*) FROM sqlite_master WHERE type=\'table\' AND name="{table_name}";')
+                        count = int(cur.fetchone()[0])
+                        if count:
+                            cur.execute(f'SELECT Type FROM "{table_name}" LIMIT 1;')
+                            typ = cur.fetchone()
+                            if typ:
+                                valid = typ[0].lower() == '2d'
+                                break
+                    if valid is None:  # could not determine if it is valid - could be empty
+                        valid = True
+        except sqlite3.Error:
             valid = False
-        finally:
-            conn.close()
-
         return valid
-
-    @staticmethod
-    def _looks_empty(fpath: PathLike) -> bool:
-        # docstring inherited
-        import sqlite3
-        try:
-            conn = sqlite3.connect(fpath)
-        except Exception as e:
-            return True
-        try:
-            cur = conn.cursor()
-            cur.execute('SELECT DISTINCT Table_name, Count FROM Timeseries_info;')
-            count = sum([int(x[1]) for x in cur.fetchall()])
-            empty = count == 0
-        except Exception:
-            empty = True
-        finally:
-            conn.close()
-        return empty
 
     def times(self, filter_by: str = None, fmt: str = 'relative') -> list[TimeLike]:
         """Returns all the available times for the given filter.
@@ -415,13 +395,13 @@ class GPKG2D(TimeSeries, ITimeSeries2D, GPKGBase):
         raise NotImplementedError(f'{__class__.__name__} files do not support curtain plotting.')
 
     def profile(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
-                time: TimeLike) -> pd.DataFrame:
+                time: TimeLike, **kwargs) -> pd.DataFrame:
         """Not supported for ``GPKG2D`` results. Raises a :code:`NotImplementedError`."""
         raise NotImplementedError(f'{__class__.__name__} files do not support vertical profile plotting.')
 
     def _initial_load(self):
         self.name = re.sub(r'_TS_2D$', '', self.fpath.stem)
-        with self._connect() as conn:
+        with self.connect(self.fpath) as conn:
             cur = conn.cursor()
             cur.execute('SELECT Version FROM TUFLOW_timeseries_version;')
             self.format_version = Version(cur.fetchone()[0])
@@ -463,7 +443,7 @@ class GPKG2D(TimeSeries, ITimeSeries2D, GPKGBase):
         if self._loaded:
             return
 
-        with self._connect() as conn:
+        with self.connect(self.fpath) as conn:
             cur = conn.cursor()
             self._load_time_series(cur, self._time_series_data_2d)
             self._load_maximums(self._time_series_data_2d, self._maximum_data_2d)
@@ -471,11 +451,10 @@ class GPKG2D(TimeSeries, ITimeSeries2D, GPKGBase):
 
         self._loaded = True
 
-    def _filter(self, filter_by: str) -> pd.DataFrame:
-        # docstring inherited
-        # split filter into components
-        filter_by = [x.strip().lower() for x in filter_by.split('/')] if filter_by else []
-        return super()._combinations_2d(filter_by)
+    def _overview_dataframe(self) -> pd.DataFrame:
+        df = self._po_objs.copy()
+        df['domain'] = '2d'
+        return df
 
     def _load_time_series(self, cur: 'Cursor', storage: AppendDict):
         if self._gis_layer_p_name:

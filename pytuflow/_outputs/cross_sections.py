@@ -43,6 +43,11 @@ class CrossSections(TabularOutput):
     >>> xs = CrossSections('path/to/1d_xs.shp')
     """
 
+    DOMAIN_TYPES = {}
+    GEOMETRY_TYPES = {}
+    ATTRIBUTE_TYPES = {'xz': ['xz'], 'hw': ['hw'], 'cs': ['cs'], 'bg': ['bg'], 'lc': ['lc']}
+    ID_COLUMNS = ['id', 'uid', 'source', 'filename', 'filepath']
+
     def __init__(self, fpath: PathLike):
         super().__init__(fpath)
 
@@ -249,55 +254,10 @@ class CrossSections(TabularOutput):
         self.cross_section_count = len(self.cross_sections)
         self._load_objs()
 
-    def _filter(self, filter_by: str) -> pd.DataFrame:
-        # docstring inherited
-        ctx = [x.strip().lower() for x in filter_by.split('/') if x] if filter_by else []
-        if not ctx:
-            filtered_something = True
-
+    def _overview_dataframe(self) -> pd.DataFrame:
         df = self.objs.copy()
-
-        # type
-        possible_types = ['xz', 'hw', 'cs', 'bg', 'lc']
-        df, filtered_something_ = self._filter_by_type(possible_types, ctx, df)
-        if filtered_something_:
-            filtered_something = True
-
-        # ids
-        df, filtered_something_ = self._filter_by_id(['id', 'uid', 'source', 'filename', 'filepath'], ctx, df)
-        if filtered_something_:
-            filtered_something = True
-
-        # if ctx and not df.empty:
-        #     df1 = df[df['id'].str.lower().isin(ctx)]
-        #     df2 = df[df['source'].str.lower().isin(ctx)]
-        #     df3 = df[df['filename'].str.lower().isin(ctx)]
-        #     df4 = df[df['uid'].str.lower().isin(ctx)]
-        #     df5 = df[df['filepath'].str.lower().isin(ctx)]
-        #     df = pd.DataFrame()
-        #     if not df1.empty:
-        #         df = df1
-        #     if not df2.empty:
-        #         df = pd.concat([df, df2], axis=0) if not df.empty else df2
-        #     if not df3.empty:
-        #         df = pd.concat([df, df3], axis=0) if not df.empty else df3
-        #     if not df4.empty:
-        #         df = pd.concat([df, df4], axis=0) if not df.empty else df4
-        #     if not df5.empty:
-        #         df = pd.concat([df, df5], axis=0) if not df.empty else df5
-        #     if not df.empty:
-        #         j = len(ctx) - 1
-        #         for i, x in enumerate(reversed(ctx.copy())):
-        #             if (df['id'].str.lower().isin([x.lower()]).any()
-        #                 or df['filename'].str.lower().isin([x.lower()]).any()
-        #                 or df['source'].str.lower().isin([x.lower()]).any()
-        #                 or df['uid'].str.lower().isin([x.lower()]).any()
-        #                 or df['filepath'].str.lower().isin([x.lower()]).any()):
-        #                 ctx.pop(j - i)
-        #         if ctx and not filtered_something:
-        #             df = pd.DataFrame()
-
-        return df if not df.empty and filtered_something else pd.DataFrame(columns=['id', 'uid', 'type', 'data_type', 'geometry'])
+        df['domain'] = '1d'
+        return df
 
     def _load_objs(self):
         d = {'id': [], 'filename': [], 'source': [], 'filepath': [], 'type': [], 'uid': [], 'ind': []}

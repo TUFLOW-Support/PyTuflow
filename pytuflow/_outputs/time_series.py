@@ -67,9 +67,9 @@ class TimeSeries(TabularOutput):
         """
         pass
 
-    def _filter(self, filter_by: str) -> pd.DataFrame:
-        # docstring inherited
-        return pd.DataFrame(columns=['id', 'data_type', 'geometry', 'start', 'end', 'dt', 'domain'])
+    # def _filter(self, filter_by: str) -> pd.DataFrame:
+    #     # docstring inherited
+    #     return pd.DataFrame(columns=['id', 'data_type', 'geometry', 'start', 'end', 'dt', 'domain'])
 
     def data_types(self, filter_by: str = None) -> list[str]:
         """Returns all the available data types (result types) for the given context.

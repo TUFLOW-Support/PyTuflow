@@ -68,6 +68,11 @@ class GPKGRL(GPKG2D):
     3.000000                   40.084
     """
 
+    DOMAIN_TYPES = {'rl': ['rl', '0d']}
+    GEOMETRY_TYPES = {'point': ['point'], 'line': ['line'], 'polygon': ['polygon', 'region']}
+    ATTRIBUTE_TYPES = {}
+    ID_COLUMNS = ['id']
+
     def __init__(self, fpath: PathLike):
         # private
         self._time_series_data_rl = AppendDict()
@@ -354,7 +359,7 @@ class GPKGRL(GPKG2D):
         raise NotImplementedError(f'{__class__.__name__} files do not support curtain plotting.')
 
     def profile(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
-                time: TimeLike) -> pd.DataFrame:
+                time: TimeLike, **kwargs) -> pd.DataFrame:
         """Not supported for ``GPKGRL`` results. Raises a :code:`NotImplementedError`."""
         raise NotImplementedError(f'{__class__.__name__} files do not support vertical profile plotting.')
 
@@ -366,13 +371,18 @@ class GPKGRL(GPKG2D):
         if self._loaded:
             return
 
-        with self._connect() as conn:
+        with self.connect(self.fpath) as conn:
             cur = conn.cursor()
             self._load_time_series(cur, self._time_series_data_rl)
             self._load_maximums(self._time_series_data_rl, self._maximum_data_rl)
             self._load_rl_info(cur)
 
         self._loaded = True
+
+    def _overview_dataframe(self) -> pd.DataFrame:
+        df = self._rl_objs.copy()
+        df['domain'] = 'rl'
+        return df
 
     def _load_rl_info(self, cur: 'Cursor'):
         rl_info = {'id': [], 'data_type': [], 'geometry': [], 'start': [], 'end': [], 'dt': []}

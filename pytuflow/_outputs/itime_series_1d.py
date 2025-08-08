@@ -1,3 +1,4 @@
+import typing
 from abc import ABC, abstractmethod
 from typing import Union
 
@@ -68,67 +69,3 @@ class ITimeSeries1D(ABC):
         lp.connectivity()
         self._lp = lp
         return self._lp.df
-
-    def _combinations_1d(self, filter_by: list[str]) -> pd.DataFrame:
-        """Returns a DataFrame of all the 1D output objects that match the filter.
-
-        For example, the filter may be :code:`['channel']` or :code:`['channel', 'flow']`. The return DataFrame
-        is a filtered version of the :code:`oned_objs` DataFrame that matches the context.
-
-        Parameters
-        ----------
-        filter_by : list[str]
-            The string to filter the 1D objects by.
-
-        Returns
-        -------
-        pd.DataFrame
-            The filtered 1D objects
-        """
-        ctx = filter_by.copy() if filter_by else []
-        df = self._oned_objs.copy()
-        df['domain'] = '1d'
-
-        # domain
-        filtered_something = False
-        if '1d' in ctx:
-            filtered_something = True
-            ctx.remove('1d')
-        if 'node' in ctx or 'point' in ctx:
-            filtered_something = True
-            df = df[df['geometry'] == 'point']
-            if 'node' in ctx:
-                ctx.remove('node')
-            if 'point' in ctx:
-                ctx.remove('point')
-        if 'channel' in ctx or 'line' in ctx:
-            filtered_something = True
-            df = df[df['geometry'] == 'line']
-            if 'channel' in ctx:
-                ctx.remove('channel')
-            if 'line' in ctx:
-                ctx.remove('line')
-
-        # data types
-        ctx1 = [self._get_standard_data_type_name(x) for x in ctx]
-        ctx1 = [x for x in ctx1 if x in df['data_type'].unique()]
-        if ctx1:
-            filtered_something = True
-            df = df[df['data_type'].isin(ctx1)]
-            j = len(ctx) - 1
-            for i, x in enumerate(reversed(ctx.copy())):
-                if self._get_standard_data_type_name(x) in ctx1:
-                    ctx.pop(j - i)
-
-        # ids
-        if ctx and not df.empty:
-            df = df[df['id'].str.lower().isin(ctx)] if not df.empty else pd.DataFrame()
-            if not df.empty:
-                j = len(ctx) - 1
-                for i, x in enumerate(reversed(ctx.copy())):
-                    if df['id'].str.lower().isin([x.lower()]).any():
-                        ctx.pop(j - i)
-                if ctx and not filtered_something:
-                    df = pd.DataFrame()
-
-        return df if not df.empty else pd.DataFrame(columns=['id', 'data_type', 'geometry', 'start', 'end', 'dt', 'domain'])

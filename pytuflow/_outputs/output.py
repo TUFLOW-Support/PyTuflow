@@ -21,6 +21,11 @@ DEFAULT_REFERENCE_TIME = datetime(1990, 1, 1)
 class Output(ABC):
     """Base class for all TUFLOW output classes. This class should not be initialised directly."""
 
+    DOMAIN_TYPES = {}
+    GEOMETRY_TYPES = {}
+    ATTRIBUTE_TYPES = {}
+    ID_COLUMNS = []
+
     @abstractmethod
     def __init__(self, *fpath: PathLike, **kwargs) -> None:
         super().__init__()
@@ -219,7 +224,9 @@ class Output(ABC):
         """
         pass
 
-    @abstractmethod
+    def _overview_dataframe(self) -> pd.DataFrame:
+        pass
+
     def _filter(self, filter_by: str) -> pd.DataFrame:
         """Returns a DataFrame with the output combinations for the given filter string.
 
@@ -233,7 +240,43 @@ class Output(ABC):
         pd.DataFrame
             The context combinations.
         """
-        pass
+        filtered_something = False
+        filter_by = [x.strip().lower() for x in filter_by.split('/')] if filter_by else []
+        df = self._overview_dataframe()
+        if not filter_by:
+            return df
+
+        # domain
+        if self.DOMAIN_TYPES:
+            df, filtered_something_ = self._filter_generic(filter_by, df, self.DOMAIN_TYPES, 'domain')
+            if filtered_something_:
+                filtered_something = True
+
+        # geometry
+        if self.GEOMETRY_TYPES:
+            df, filtered_something_ = self._filter_generic(filter_by, df, self.GEOMETRY_TYPES, 'geometry')
+            if filtered_something_:
+                filtered_something = True
+
+        # attribute types
+        if self.ATTRIBUTE_TYPES:
+            df, filtered_something_ = self._filter_generic(filter_by, df, self.ATTRIBUTE_TYPES, 'type')
+            if filtered_something_:
+                filtered_something = True
+            elif any([x for x in filter_by if x.lower() in [x.lower() for x in self.ATTRIBUTE_TYPES]]):
+                df = pd.DataFrame(columns=df.columns)
+
+        # data types
+        df, filtered_something_ = self._filter_by_data_type(filter_by, df)
+        if filtered_something_:
+            filtered_something = True
+
+        # ids
+        df, filtered_something_ = self._filter_by_id(self.ID_COLUMNS, filter_by, df)
+        if filtered_something_:
+            filtered_something = True
+
+        return df if not df.empty and filtered_something and not filter_by else pd.DataFrame(columns=df.columns)
 
     @staticmethod
     def _get_standard_data_type_name(name: str) -> str:
@@ -329,35 +372,37 @@ class Output(ABC):
         return 0
 
     @staticmethod
-    def _filter_by_type(possible_types: list[str], ctx: list[str], df: pd.DataFrame) -> tuple[pd.DataFrame, bool]:
+    def _filter_generic(ctx: list[str],
+                   df: pd.DataFrame,
+                   possible_types: dict[str, list[str]],
+                   column_name: str) -> tuple[pd.DataFrame, bool]:
+        def remove_from_ctx(ctx1, types):
+            for typ in types:
+                while typ in ctx1:
+                    ctx1.remove(typ)
+
         filtered_something = False
-        ctx1 = [x for x in ctx if x.lower() in possible_types]
-        ctx2 = [x for x in ctx1 if x in df['type'].str.lower().unique()]
-        if ctx2:
-            filtered_something = True
-            df = df[df['type'].str.lower().isin(ctx2)]
-            j = len(ctx) - 1
-            for i, x in enumerate(reversed(ctx.copy())):
-                if x in ctx2:
-                    ctx.pop(j - i)
-        elif ctx1:
-            df = pd.DataFrame(columns=df.columns)
+        ctx_ = []
+        for typ, aliases in possible_types.items():
+            if np.intersect1d(ctx, aliases).size:
+                filtered_something = True
+                ctx_.append(typ)
+                remove_from_ctx(ctx, aliases)
+
+        if filtered_something:
+            df = df[df[column_name].str.lower().isin(ctx_)]
+
         return df, filtered_something
 
-    @staticmethod
-    def _filter_by_data_type(ctx: list[str],
-                             df: pd.DataFrame,
-                             data_type_name_callable: typing.Callable[[str], str]) -> tuple[pd.DataFrame, bool]:
+    def _filter_by_data_type(self, ctx: list[str], df: pd.DataFrame) -> tuple[pd.DataFrame, bool]:
         filtered_something = False
-        ctx1 = [data_type_name_callable(x) for x in ctx]
-        ctx2 = [x for x in ctx1 if x in df['data_type'].unique()]
-        if ctx2:
-            filtered_something = True
-            df = df[df['data_type'].isin(ctx2)]
-            j = len(ctx) - 1
-            for i, x in enumerate(reversed(ctx.copy())):
-                if data_type_name_callable(x) in ctx2:
-                    ctx.pop(j - i)
+        if 'data_type' not in df.columns:
+            return df, filtered_something
+        for i in range(len(ctx)):
+            ctx[i] = self._get_standard_data_type_name(ctx[i])
+        ctx_dict = {x: [x] for x in ctx if x in df['data_type'].unique()}
+        if ctx_dict:
+            df, filtered_something = self._filter_generic(ctx, df, ctx_dict, 'data_type')
         return df, filtered_something
 
     @staticmethod
