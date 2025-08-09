@@ -160,7 +160,7 @@ class Test_Info_2013(unittest.TestCase):
         self.assertEqual((4, 7), df.shape)
 
     def test_long_plot_incorrect_id(self):
-        expected_msgs = ['INFO.section(): Location "FCo1.1_R" not found in the output - removing.']
+        expected_msgs = ['Location "FCo1.1_R" not found in the output - removing.']
         with custom_log_handler.with_filter(expected_msgs) as custom_logger:
             p = './tests/2013/M04_5m_001_1d.info'
             res = INFO(p)
@@ -368,7 +368,7 @@ class Test_TPC_2016(TestCase):
         self.assertEqual((12, 7), df.shape)
 
     def test_long_plot_error(self):
-        msgs = ['INFO.section(): Location "ds0" not found in the output - removing.']
+        msgs = ['Location "ds0" not found in the output - removing.']
         with custom_log_handler.with_filter(msgs) as custom_logger:
             p = './tests/2016/EG14_001.tpc'
             res = TPC(p)
@@ -379,7 +379,7 @@ class Test_TPC_2016(TestCase):
                 self.assertEqual(1, custom_logger.msg_count)
 
     def test_long_plot_error_2(self):
-        msgs = ['INFO.section(): Data type "lvl" is not a valid section data type or not in output - removing.']
+        msgs = ['Data type "lvl" is not a valid section data type or not in output - removing.']
         with custom_log_handler.with_filter(msgs) as custom_logger:
             p = './tests/2016/EG14_001.tpc'
             res = TPC(p)

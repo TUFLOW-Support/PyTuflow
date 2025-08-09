@@ -104,14 +104,20 @@ class GridLine:
     def in_grid(self, p: 'Point') -> bool:
         return self.ox <= p[0] <= self.ox + self.ncol * self.dx and self.oy <= p[1] <= self.oy + self.nrow * self.dy
 
-    def grid_intersect_point(self, p0: 'Point', p1: 'Point', start: bool) -> 'Point':
-        """start=True - return the first intersection point, start=False - return the last intersection point."""
-        linestring = shapely.LineString([p0, p1])
-        poly = shapely.Polygon([(self.ox, self.oy),
+    def _create_polygon(self) -> shapely.Polygon:
+        return shapely.Polygon([(self.ox, self.oy),
                                 (self.ox + self.ncol * self.dx, self.oy),
                                 (self.ox + self.ncol * self.dx, self.oy + self.nrow * self.dy),
                                 (self.ox, self.oy + self.nrow * self.dy)])
-        intersection = shapely.intersection(linestring, poly)
+
+    def _grid_intersect(self, p0: 'Point', p1: 'Point') -> shapely.Polygon:
+        linestring = shapely.LineString([p0, p1])
+        poly = self._create_polygon()
+        return shapely.intersection(linestring, poly)
+
+    def grid_intersect_point(self, p0: 'Point', p1: 'Point', start: bool) -> 'Point':
+        """start=True - return the first intersection point, start=False - return the last intersection point."""
+        intersection = self._grid_intersect(p0, p1)
         if intersection.is_empty:
             return (-1, -1)
         if start:
@@ -122,12 +128,7 @@ class GridLine:
         if self.in_grid(p0) and self.in_grid(p1):
             return self.to_mn(p0), self.to_mn(p1)
 
-        linestring = shapely.LineString([p0, p1])
-        poly = shapely.Polygon([(self.ox, self.oy),
-                                (self.ox + self.ncol * self.dx, self.oy),
-                                (self.ox + self.ncol * self.dx, self.oy + self.nrow * self.dy),
-                                (self.ox, self.oy + self.nrow * self.dy)])
-        intersection = shapely.intersection(linestring, poly)
+        intersection = self._grid_intersect(p0, p1)
         if intersection.is_empty:
             return (-1, -1), (-1, -1)
 

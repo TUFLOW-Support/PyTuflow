@@ -43,16 +43,7 @@ class LP1D_FM(LP1D):
                     branches.extend(conn.branches)
 
         # merge branches
-        df = pd.DataFrame([], columns=['channel'] + self._columns + ['branch_id'])
-        df['branch_id'] = df['branch_id'].astype(int)
-        for i, branch in enumerate(branches):
-            df_ = self.chan_info.loc[branch, self._columns]
-            df_.index.name = 'channel'
-            df_['branch_id'] = [i for _ in range(df_.shape[0])]
-            df_.reset_index(inplace=True)
-            df = pd.concat([df, df_], ignore_index=True, axis=0) if not df.empty else df_
-
-        self.df = df
+        self.df = self._merge_branches(branches)
 
     def _init_ids(self, ids: list[str], chan_info: pd.DataFrame, node_info: pd.DataFrame) -> list[str]:
         ids1 = []

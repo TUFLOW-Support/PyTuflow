@@ -528,10 +528,22 @@ class GPKG1D(GPKGBase, INFO):
             dtype1 = 'channel flow regime' if dtype == 'Flow Regime' else self._get_standard_data_type_name(dtype)
             self._time_series_data[dtype1] = self._gpkg_time_series_extractor(cur, dtype, self._gis_layer_l_name)
 
+    def _sqlite_return_to_df(self, ret: list[tuple], columns: list[str], type_map: list[type]) -> pd.DataFrame:
+        d = OrderedDict({x: [] for x in columns})
+        for row in ret:
+            for i, col in enumerate(columns):
+                try:
+                    d[col].append(type_map[i](row[i]))
+                except (TypeError, ValueError):
+                    d[col].append(np.nan)
+        df = pd.DataFrame(d)
+        df.set_index('id', inplace=True)
+        return df
+
     def _load_channel_info(self, cur: 'Cursor'):
-        COLUMNS = ['id', 'flags', 'length', 'us_node', 'ds_node', 'us_invert', 'ds_invert',
+        columns = ['id', 'flags', 'length', 'us_node', 'ds_node', 'us_invert', 'ds_invert',
                    'lbus_obvert', 'rbus_obvert', 'lbds_obvert', 'rbds_obvert']
-        TYPE_MAP = [str, str, float, str, str, float, float, float, float, float, float]
+        type_map = [str, str, float, str, str, float, float, float, float, float, float]
         if self._is_swmm:
             cur.execute(
                 'SELECT '
@@ -570,15 +582,7 @@ class GPKG1D(GPKGBase, INFO):
             )
         ret = cur.fetchall()
         if ret:
-            d = OrderedDict({x: [] for x in COLUMNS})
-            for row in ret:
-                for i, col in enumerate(COLUMNS):
-                    try:
-                        d[col].append(TYPE_MAP[i](row[i]))
-                    except (TypeError, ValueError):
-                        d[col].append(np.nan)
-            self._channel_info = pd.DataFrame(d)
-            self._channel_info.set_index('id', inplace=True)
+            self._channel_info = self._sqlite_return_to_df(ret, columns, type_map)
             self._channel_info['flags'].apply(lambda x: x.split('[')[1].strip(']') if '[' in x else x)
             if self._is_swmm:
                 self._channel_info['ispipe'] = (~np.isnan(self._channel_info['lbus_obvert']) & ~np.isnan(self._channel_info['lbds_obvert']))
@@ -587,12 +591,12 @@ class GPKG1D(GPKGBase, INFO):
                 self._channel_info['ispipe'] = self._channel_info['flags'].str.match(r'.*[CR].*', False)
                 self._channel_info['ispit'] = self._channel_info.index == self._channel_info['ds_node']
         else:
-            self._channel_info = pd.DataFrame([], columns=COLUMNS)
+            self._channel_info = pd.DataFrame([], columns=columns)
 
     def _load_node_info(self, cur: 'Cursor'):
         if self._is_swmm:
-            COLUMNS = ['id', 'bed_level', 'top_level', 'inlet_level']
-            TYPE_MAP = [str, float, float, float]
+            columns = ['id', 'bed_level', 'top_level', 'inlet_level']
+            type_map = [str, float, float, float]
             cur.execute(
                 'SELECT '
                 'ID as id, '
@@ -603,17 +607,9 @@ class GPKG1D(GPKGBase, INFO):
             )
             ret = cur.fetchall()
             if ret:
-                d = OrderedDict({x: [] for x in COLUMNS})
-                for row in ret:
-                    for i, col in enumerate(COLUMNS):
-                        try:
-                            d[col].append(TYPE_MAP[i](row[i]))
-                        except (TypeError, ValueError):
-                            d[col].append(np.nan)
-                self._node_info = pd.DataFrame(d)
-                self._node_info.set_index('id', inplace=True)
+                self._node_info = self._sqlite_return_to_df(ret, columns, type_map)
             else:
-                self._node_info = pd.DataFrame([], columns=COLUMNS + ['nchannel', 'channels'])
+                self._node_info = pd.DataFrame([], columns=columns + ['nchannel', 'channels'])
                 self._node_info.set_index('id', inplace=True)
         else:
             cur.execute('SELECT ID as id FROM Geom_P;')

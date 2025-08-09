@@ -30,6 +30,7 @@ class Output(ABC):
     def __init__(self, *fpath: PathLike, **kwargs) -> None:
         super().__init__()
         self._fpath = fpath
+        self._loaded = False
 
         #: str: The result name
         self.name = ''

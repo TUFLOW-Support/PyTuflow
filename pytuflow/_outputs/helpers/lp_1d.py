@@ -37,6 +37,17 @@ class LP1D:
         """Override the equality operator so that it checks against the ids it's connecting."""
         return sorted([x.lower() for x in self.ids]) == sorted([x.lower() for x in other.ids])
 
+    def _merge_branches(self, branches: list[list[str]]) -> pd.DataFrame:
+        df = pd.DataFrame([], columns=['channel'] + self._columns + ['branch_id'])
+        df['branch_id'] = df['branch_id'].astype(int)
+        for i, branch in enumerate(branches):
+            df_ = self.chan_info.loc[branch, self._columns]
+            df_.index.name = 'channel'
+            df_['branch_id'] = [i for _ in range(df_.shape[0])]
+            df_.reset_index(inplace=True)
+            df = pd.concat([df, df_], ignore_index=True, axis=0) if not df.empty else df_
+        return df
+
     def connectivity(self) -> None:
         """Calculate connectivity between channels. More than one ID is allowed, but all channels
         must connect to a common downstream channel.
@@ -71,17 +82,7 @@ class LP1D:
                 if conn.connected:
                     branches.extend(conn.branches)
 
-        # merge branches
-        df = pd.DataFrame([], columns=['channel'] + self._columns + ['branch_id'])
-        df['branch_id'] = df['branch_id'].astype(int)
-        for i, branch in enumerate(branches):
-            df_ = self.chan_info.loc[branch, self._columns]
-            df_.index.name = 'channel'
-            df_['branch_id'] = [i for _ in range(df_.shape[0])]
-            df_.reset_index(inplace=True)
-            df = pd.concat([df, df_], ignore_index=True, axis=0) if not df.empty else df_
-
-        self.df = df
+        self.df = self._merge_branches(branches)
 
     def init_lp(self, conn_df: pd.DataFrame) -> pd.DataFrame:
         """Initialise the long plot DataFrame. The initialised DataFrame will contain data on

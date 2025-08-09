@@ -356,9 +356,7 @@ class FVBCTide(TimeSeries):
         290025.75               -0.085668
         290026.00               -0.133717
         """
-        locations, data_types = self._loc_data_types_to_list(locations, data_types)
-        filter_by = '/'.join(locations + data_types)
-        ctx = self._filter(filter_by)
+        ctx, locations, data_types = self._time_series_filter_by(locations, data_types)
         if ctx.empty:
             return pd.DataFrame()
 
@@ -444,6 +442,8 @@ class FVBCTide(TimeSeries):
         raise NotImplementedError(f'{__class__.__name__} does not support vertical profile plotting.')
 
     def _load(self):
+        if self._loaded:
+            return
         self.provider = FVBCTideProvider(self.nc_fpath, self.node_string_gis_fpath, self.use_local_time)
         self.name = self.provider.name
         self.name_tz = self.provider.display_name
@@ -454,6 +454,7 @@ class FVBCTide(TimeSeries):
         self._load_obj_df()
         self.node_count = int(self.objs['geometry'].value_counts().get('point', 0))
         self.node_string_count = int(self.objs['geometry'].value_counts().get('line', 0))
+        self._loaded = True
 
     def _overview_dataframe(self) -> pd.DataFrame:
         return self.objs.copy()
