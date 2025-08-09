@@ -210,3 +210,12 @@ class MapOutput(Output):
                 break
 
         return dep
+
+    @staticmethod
+    def _calculate_time_step(times: np.ndarray) -> float | tuple[float, ...]:
+        dif = np.diff(times)
+        if np.isclose(dif[:-1], dif[0], atol=0.01, rtol=0).all():
+            dt = float(np.round(dif[0], decimals=2))
+        else:
+            dt = tuple(times)
+        return dt

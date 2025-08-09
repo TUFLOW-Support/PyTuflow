@@ -64,12 +64,14 @@ def calculate_barycentric_weightings(mesh: 'QgsMesh',
     py = point.y()  # point y
 
     # weighting vertex 1
+    # noinspection DuplicatedCode
     w1numer = (v2y - v3y) * (px - v3x) + (v3x - v2x) * (py - v3y)
     w1denom = (v2y - v3y) * (v1x - v3x) + (v3x - v2x) * (v1y - v3y)
     w1 = w1numer / w1denom
     assert w1 >= 0, "barycentric weighting cannot be negative"
 
     # weighting vertex 2
+    # noinspection DuplicatedCode
     w2numer = (v3y - v1y) * (px - v3x) + (v1x - v3x) * (py - v3y)
     w2denom = (v2y - v3y) * (v1x - v3x) + (v3x - v2x) * (v1y - v3y)
     w2 = w2numer / w2denom

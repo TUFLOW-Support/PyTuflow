@@ -545,36 +545,6 @@ class TPC(INFO, ITimeSeries2D):
 
         return df
 
-        #
-        # # 1D
-        # df = self._time_series_extractor(ctx[ctx['domain'] == '1d'].data_type.unique(), data_types,
-        #                                  self._time_series_data, ctx, time_fmt, share_idx, self.reference_time)
-        # df.columns = self._prepend_1d_type_to_column_name(df.columns)
-
-        # 2D
-        # df1 = self._time_series_extractor(ctx[ctx['domain'] == '2d'].data_type.unique(), data_types,
-        #                                   self._time_series_data_2d, ctx, time_fmt, share_idx, self.reference_time)
-        # df1.columns = ['{0}/po/{1}/{2}'.format(*x.split('/')) if x.split('/')[0] == 'time' else f'po/{x}' for x in df1.columns]
-        # if df.empty and not df1.empty:
-        #     df = df1
-        # elif not df1.empty:
-        #     if share_idx:
-        #         df1.index = df.index
-        #     df = pd.concat([df, df1], axis=1)
-
-        # rl
-        df1 = self._time_series_extractor(ctx[ctx['domain'] == 'rl'].data_type.unique(), data_types,
-                                          self._time_series_data_rl, ctx, time_fmt, share_idx, self.reference_time)
-        df1.columns = ['{0}/rl/{1}/{2}'.format(*x.split('/')) if x.split('/')[0] == 'time' else f'rl/{x}' for x in df1.columns]
-        if df.empty and not df1.empty:
-            df = df1
-        elif not df1.empty:
-            if share_idx:
-                df1.index = df.index
-            df = pd.concat([df, df1], axis=1, ignore_index=not share_idx)
-
-        return df
-
     def section(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
                 time: TimeLike, *args, **kwargs) -> pd.DataFrame:
         e = None
@@ -875,6 +845,7 @@ class TPC(INFO, ITimeSeries2D):
 
     def _load_po_info(self) -> pd.DataFrame:
         d = {'P': 'point', 'L': 'line', 'R': 'polygon'}
+        # noinspection DuplicatedCode
         po_info = {'id': [], 'data_type': [], 'geometry': [], 'start': [], 'end': [], 'dt': []}
         if self.format.lower() == 'gpkg':
             if self._gpkg2d is not None:
@@ -933,6 +904,7 @@ class TPC(INFO, ITimeSeries2D):
 
     def _load_rl_info(self) -> pd.DataFrame:
         d = {'water level': 'point', 'flow': 'line', 'volume': 'polygon'}
+        # noinspection DuplicatedCode
         rl_info = {'id': [], 'data_type': [], 'geometry': [], 'start': [], 'end': [], 'dt': []}
         if self.format.lower() == 'gpkg':
             if self._gpkgrl is not None:

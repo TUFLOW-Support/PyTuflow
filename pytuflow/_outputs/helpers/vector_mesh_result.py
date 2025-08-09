@@ -58,7 +58,5 @@ class VectorMeshResult(MeshResult):
         for x, y in zip(x_, y_):
             yield y, x
 
-    # def _2d_elevations(self, dataset_index: 'QgsMeshDatasetIndex') -> Generator[float, None, None]:
-    #     wl = self.result_from_name(dataset_index, ['water level', 'water surface elevation'])
-    #     z = self.bed_elevation()
-    #     yield (wl + z) / 2.
+    def _convert_vector_values(self, values: list[float]) -> list[tuple[float, float]]:
+        return [(values[i], values[i + 1]) for i in range(0, len(values), 2)]

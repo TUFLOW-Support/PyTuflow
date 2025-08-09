@@ -335,11 +335,7 @@ class Mesh(MapOutput):
                 if df2.empty:
                     continue
                 df1 = pd.concat([df1, df2], axis=1) if not df1.empty else df2
-            if df1.empty:
-                continue
-            df1.reset_index(inplace=True, drop=False)
-            df1.columns = pd.MultiIndex.from_tuples([(name, x) for x in df1.columns])
-            df = pd.concat([df, df1], axis=1) if not df.empty else df1
+            df = self._merge_line_dataframe(df, df1, name, reset_index=True)
 
         return df
 
@@ -409,10 +405,7 @@ class Mesh(MapOutput):
                 if df2.empty:
                     continue
                 df1 = pd.concat([df1, df2[dtype]], axis=1) if not df1.empty else df2
-            if df1.empty:
-                continue
-            df1.columns = pd.MultiIndex.from_tuples([(name, x) for x in df1.columns])
-            df = pd.concat([df, df1], axis=1) if not df.empty else df1
+            df = self._merge_line_dataframe(df, df1, name, reset_index=False)
 
         return df
 
@@ -506,11 +499,7 @@ class Mesh(MapOutput):
             d['3d'].append(dtype.vert_lyr_count > 1)
             dt = 0.
             if not static:
-                dif = np.diff(dtype.times) * 3600.
-                if np.isclose(dif[:-1], dif[0], atol=0.01, rtol=0).all():
-                    dt = float(np.round(dif[0], decimals=2))
-                else:
-                    dt = tuple(dtype.times)
+                dt = self._calculate_time_step(np.array(dtype.times) * 3600.)
             d['dt'].append(dt)
 
         self._info = pd.DataFrame(d)
@@ -520,3 +509,12 @@ class Mesh(MapOutput):
             return
         self._driver.load()
         self._loaded = True
+
+    @staticmethod
+    def _merge_line_dataframe(df1: pd.DataFrame, df2: pd.DataFrame, name: str, reset_index: bool) -> pd.DataFrame:
+        if df2.empty:
+            return df1
+        if reset_index:
+            df2.reset_index(inplace=True, drop=False)
+        df2.columns = pd.MultiIndex.from_tuples([(name, x) for x in df2.columns])
+        return pd.concat([df1, df2], axis=1) if not df1.empty else df2

@@ -21,6 +21,16 @@ except ImportError:
     has_qgis = False
     MeshResult = 'MeshResult'
     IntersectResult = 'IntersectResult'
+    QgsMeshDatasetIndex = 'QgsMeshDatasetIndex'
+    QgsMesh = 'QgsMesh'
+    QgsPointXY = 'QgsPointXY'
+    QgsInterval = 'QgsInterval'
+    QgsGeometry = 'QgsGeometry'
+    QgsLineString = 'QgsLineString'
+    QgsApplication = 'QgsApplication'
+    QgsMeshLayer = 'QgsMeshLayer'
+    ScalarMeshResult = 'ScalarMeshResult'
+    VectorMeshResult = 'VectorMeshResult'
 
 
 Point = tuple[float, float]
@@ -114,11 +124,7 @@ class QgisMeshDriver(MeshDriver):
         igrp = self.group_index_from_name(data_type)
         stnd_name = MapOutput._get_standard_data_type_name(data_type)
 
-        res = ScalarMeshResult(self.lyr, self.qgsmesh, self.dp, self.si, QgsPointXY(*point))
-        if res in self._point_results:
-            res = self._point_results[self._point_results.index(res)]
-        else:
-            self._point_results.append(res)
+        res = self._scalar_point_result(QgsPointXY(*point))
 
         data = []
         valid = False
@@ -140,6 +146,7 @@ class QgisMeshDriver(MeshDriver):
 
     def section(self, linestring: list[Point], data_type: str, time: TimeLike,
                 averaging_method: str | None = None) -> pd.DataFrame:
+        # noinspection DuplicatedCode
         df = pd.DataFrame()
 
         mesh_line = MeshLine(self, linestring, data_type, time, return_magnitude=True)
@@ -185,6 +192,7 @@ class QgisMeshDriver(MeshDriver):
         return df
 
     def curtain(self, linestring: list[Point], data_type: str, time: TimeLike) -> pd.DataFrame:
+        # noinspection DuplicatedCode
         df = pd.DataFrame()
         mesh_line = MeshLine(self, linestring, data_type, time, vel_to_vec_vel=True)
 
@@ -248,11 +256,7 @@ class QgisMeshDriver(MeshDriver):
         time_interval = QgsInterval(reltime)
         index = self.lyr.datasetIndexAtRelativeTime(time_interval, igrp)
 
-        res = ScalarMeshResult(self.lyr, self.qgsmesh, self.dp, self.si, QgsPointXY(*point))
-        if res in self._point_results:
-            res = self._point_results[self._point_results.index(res)]
-        else:
-            self._point_results.append(res)
+        res = self._scalar_point_result(QgsPointXY(*point))
 
         data_ = []
         valid = False
@@ -267,6 +271,14 @@ class QgisMeshDriver(MeshDriver):
             df.set_index('elevation', inplace=True)
 
         return df
+
+    def _scalar_point_result(self, point: QgsPointXY) -> ScalarMeshResult:
+        res = ScalarMeshResult(self.lyr, self.qgsmesh, self.dp, self.si, QgsPointXY(*point))
+        if res in self._point_results:
+            res = self._point_results[self._point_results.index(res)]
+        else:
+            self._point_results.append(res)
+        return res
 
 
 class MeshLine:

@@ -267,11 +267,7 @@ class NCGrid(Grid):
                 d['end'].append(0)
                 d['dt'].append(0)
             else:
-                dif = np.diff(var.times) * 3600.
-                if np.isclose(dif[:-1], dif[0], atol=0.01, rtol=0).all():
-                    dt = float(np.round(dif[0], decimals=2))
-                else:
-                    dt = tuple(var.times)
+                dt = self._calculate_time_step(np.array(var.times) * 3600.)
                 start = float(var.times[0])
                 end = float(var.times[-1])
                 d['start'].append(start)
