@@ -546,7 +546,7 @@ class INFO(TimeSeries):
         dfconn = self._connectivity(locations)
 
         # init long plot DataFrame
-        df = self._lp.init_lp(dfconn)
+        df = self._init_lp(dfconn)
 
         # loop through data types and add them to the data frame
         for dtype in data_types:
@@ -754,56 +754,6 @@ class INFO(TimeSeries):
 
         return columns.to_series().apply(col_names)
 
-    def _loc_data_types_to_list(self, locations: Union[str, list[str], None],
-                                       data_types: Union[str, list[str], None]) -> tuple[list[str], list[str]]:
-        """Convert locations and data_types to list format."""
-        locations = locations if locations is not None else []
-        locations = locations if isinstance(locations, list) else [locations]
-        data_types = data_types if data_types is not None else []
-        data_types = data_types if isinstance(data_types, list) else [data_types]
-        return locations, data_types
-
-    def _figure_out_loc_and_data_types_lp(self, locations: Union[str, list[str]],
-                                          data_types: Union[str, list[str], None],
-                                          filter_by: str) -> tuple[list[str], list[str]]:
-        """Figure out the locations and data types to use - long profile edition."""
-        # sort out locations and data types
-        if not locations:
-            raise ValueError('No locations provided.')
-        else:
-            valid_loc = self.ids(filter_by)
-            valid_loc_lower = [x.lower() for x in valid_loc]
-            locations1 = []
-            locations = [locations] if not isinstance(locations, list) else locations
-            for loc in locations:
-                if loc.lower() not in valid_loc_lower:
-                    logger.warning(f'INFO.section(): Location "{loc}" not found in the output - removing.')
-                else:
-                    locations1.append(valid_loc[valid_loc_lower.index(loc.lower())])
-            locations = locations1
-            if not locations:
-                raise ValueError('No valid locations provided.')
-
-        if not data_types:
-            data_types = self.data_types('section')
-        else:
-            data_types = [data_types] if not isinstance(data_types, list) else data_types
-            valid_types = self.data_types('section')
-            data_types1 = []
-            for dtype in data_types:
-                if self._get_standard_data_type_name(dtype) not in valid_types:
-                    logger.warning(
-                        f'INFO.section(): Data type "{dtype}" is not a valid section data type or '
-                        f'not in output - removing.'
-                    )
-                else:
-                    data_types1.append(dtype)
-            if not data_types1:
-                raise ValueError('No valid data types provided.')
-            data_types = data_types1
-
-        return locations, data_types
-
     def _get_pits(self, dfconn: pd.DataFrame) -> np.ndarray:
         """Get the pit data for the long plot."""
         y = []
@@ -856,3 +806,6 @@ class INFO(TimeSeries):
         lp.connectivity()
         self._lp = lp
         return self._lp.df
+
+    def _init_lp(self, dfconn: pd.DataFrame) -> pd.DataFrame:
+        return self._lp.init_lp(dfconn)

@@ -527,15 +527,3 @@ class GPKG2D(GPKGBase, ITimeSeries2D, TimeSeries):
                 return 'poly'
 
         return ''
-
-    def _loc_data_types_to_list(self, locations: Union[str, list[str]],
-                                data_types: Union[str, list[str]]) -> tuple[list[str], list[str]]:
-        if locations is None:
-            locations = []
-        if not isinstance(locations, list):
-            locations = [locations]
-        if data_types is None:
-            data_types = []
-        if not isinstance(data_types, list):
-            data_types = [data_types]
-        return locations, data_types

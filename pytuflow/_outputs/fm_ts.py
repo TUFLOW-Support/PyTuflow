@@ -508,43 +508,7 @@ class FMTS(INFO):
         if not locs:
             raise ValueError('No valid locations provided.')
 
-        # get locations and data types
-        locs, data_types = self._figure_out_loc_and_data_types_lp(locs, data_types, 'node')
-
-        # get the time index
-        times = self.times(fmt='absolute') if isinstance(time, datetime) else self.times()
-        timeidx = self._closest_time_index(times, time)
-
-        # get connectivity
-        dfconn = self._connectivity(locs)
-
-        # init long plot DataFrame
-        df = self._lp.init_lp(dfconn)
-        df['node'] = df['node'].str.split('_', n=2).str[-1]
-
-        # loop through data types and add them to the data frame
-        for dtype in data_types:
-            dtype1 = self._get_standard_data_type_name(dtype)
-
-            if dtype1 == 'bed level':
-                df1 = self._lp.melt_2_columns(dfconn, ['us_invert', 'ds_invert'], dtype)
-                df[dtype] = df1[dtype]
-            elif dtype1 == 'pipes':
-                df1 = self._lp.melt_2_columns(dfconn, ['lbus_obvert', 'lbds_obvert'], dtype)
-                df1 = df1.join(self._channel_info['ispipe'], on='channel')
-                df1.loc[~df1['ispipe'], dtype] = np.nan
-                df[dtype] = df1[dtype]
-            elif 'tmax' in dtype1:
-                dtype1 = dtype1.replace('TMax', '').strip()
-                df[dtype] = self._maximum_data[dtype1][0].loc[df['node'], 'tmax'].tolist()
-            elif 'max' in dtype1:
-                dtype1 = dtype1.replace('Max', '').strip()
-                df[dtype] = self._maximum_data[dtype1][0].loc[df['node'], 'max'].tolist()
-            else:  # temporal result
-                idx = self._time_series_data[dtype1][0].index[timeidx]
-                df[dtype] = self._time_series_data[dtype1][0].loc[idx, df['node']].tolist()
-
-        return df
+        return super().section(locs, data_types, time, filter_by='node', **kwargs)
 
     def curtain(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
                 time: TimeLike) -> pd.DataFrame:
@@ -788,3 +752,13 @@ class FMTS(INFO):
 
         self._channel_info = pd.DataFrame(d)
         self._channel_info.set_index('id', inplace=True)
+
+    def _init_lp(self, dfconn: pd.DataFrame) -> pd.DataFrame:
+        df = self._lp.init_lp(dfconn)
+        df['node'] = df['node'].str.split('_', n=2).str[-1]
+        return df
+
+    def _figure_out_loc_and_data_types_lp(self, locations: str | list[str],
+                                          data_types: str | list[str] | None,
+                                          filter_by: str) -> tuple[list[str], list[str]]:
+        return super()._figure_out_loc_and_data_types_lp(locations, data_types, 'node')
