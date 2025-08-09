@@ -216,10 +216,13 @@ class CrossSections(TabularOutput):
         27      43.05550  37.6766
         28      44.40290  37.7324
         """
-        locations, data_types = self._figure_out_loc_and_data_types(locations, data_types)
-
-        ctx = '/'.join(locations + data_types)
-        df = self._filter(ctx)
+        if locations is not None:
+            if not isinstance(locations, (list, tuple)):
+                locations = [locations]
+            locations = [Path(str(x)).stem for x in locations]
+        df, locations, data_types = self._time_series_filter_by(locations, data_types)
+        if df.empty:
+            return pd.DataFrame()
 
         df1 = pd.DataFrame()
         for i, row in df.iterrows():

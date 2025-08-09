@@ -232,7 +232,7 @@ class GPKGRL(GPKG2D):
         """
         return super().data_types(filter_by)
 
-    def maximum(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
+    def maximum(self, locations: str | list[str] | None, data_types: str | list[str] | None,
                 time_fmt: str = 'relative') -> pd.DataFrame:
         """Returns a DataFrame containing the maximum values for the given data types. The returned DataFrame
         will include time of maximum results as well.
@@ -275,19 +275,15 @@ class GPKGRL(GPKG2D):
                   rl/flow/max       rl/flow/tmax
         ds1            59.423           1.383333
         """
-        self._load()
-        locations, data_types = self._loc_data_types_to_list(locations, data_types)
-        context = '/'.join(locations + data_types)
-        ctx = self._filter(context)
+        ctx, locations, data_types = self._time_series_filter_by(locations, data_types)
         if ctx.empty:
             return pd.DataFrame()
 
-        df = self._maximum_extractor(ctx[ctx['domain'] == 'rl'].data_type.unique(), data_types,
-                                     self._maximum_data_rl, ctx, time_fmt, self.reference_time)
-        df.columns = [f'rl/{x}' for x in df.columns]
-        return df
+        # 2D
+        return self._append_maximum_2d('rl', self._maximum_data_rl, pd.DataFrame(), ctx, data_types,
+                                       time_fmt, self.reference_time)
 
-    def time_series(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
+    def time_series(self, locations: str | list[str] | None, data_types: str | list[str] | None,
                     time_fmt: str = 'relative', *args, **kwargs) -> pd.DataFrame:
         """Returns a time-series DataFrame for the given location(s) and data type(s).
 
@@ -334,19 +330,20 @@ class GPKGRL(GPKG2D):
         2.983334           8.670
         3.000000           8.391
         """
-        self._load()
-        locations, data_types = self._loc_data_types_to_list(locations, data_types)
-        context = '/'.join(locations + data_types)
-        ctx = self._filter(context)
+        ctx, locations, data_types = self._time_series_filter_by(locations, data_types)
         if ctx.empty:
             return pd.DataFrame()
 
         share_idx = ctx[['start', 'end', 'dt']].drop_duplicates().shape[0] < 2
-        df = self._time_series_extractor(ctx[ctx['domain'] == 'rl'].data_type.unique(), data_types,
-                                         self._time_series_data_rl, ctx, time_fmt, share_idx, self.reference_time)
-        df.columns = ['{0}/rl/{1}/{2}'.format(*x.split('/')) if x.split('/')[0] == 'time' else f'rl/{x}' for x in
-                      df.columns]
-        return df
+
+        return self._append_time_series_2d('rl', self._time_series_data_rl, pd.DataFrame(), ctx, data_types,
+                                           time_fmt, share_idx, self.reference_time)
+
+        # df = self._time_series_extractor(ctx[ctx['domain'] == 'rl'].data_type.unique(), data_types,
+        #                                  self._time_series_data_rl, ctx, time_fmt, share_idx, self.reference_time)
+        # df.columns = ['{0}/rl/{1}/{2}'.format(*x.split('/')) if x.split('/')[0] == 'time' else f'rl/{x}' for x in
+        #               df.columns]
+        # return df
 
     def section(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
                 time: TimeLike, *args, **kwargs) -> pd.DataFrame:

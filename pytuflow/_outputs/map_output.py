@@ -65,7 +65,8 @@ class MapOutput(Output):
             filter_by.remove('section')
         return '/'.join(filter_by)
 
-    def _filter(self, filter_by: str, filtered_something: bool = False, df: pd.DataFrame = None) -> pd.DataFrame:
+    def _filter(self, filter_by: str, filtered_something: bool = False, df: pd.DataFrame = None,
+                ignore_excess_filters: bool = False) -> pd.DataFrame:
         filter_by = self._replace_aliases(filter_by)
         filter_by = [x.strip().lower() for x in filter_by.split('/')] if filter_by else []
 

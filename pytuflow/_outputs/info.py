@@ -302,7 +302,7 @@ class INFO(TimeSeries):
             filter_by = None
         return super().data_types(filter_by)
 
-    def maximum(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
+    def maximum(self, locations: str | list[str] | None, data_types: str | list[str] | None,
                 time_fmt: str = 'relative') -> pd.DataFrame:
         """Returns a DataFrame containing the maximum values for the given data types. The returned DataFrame
         will include time of maximum results as well.
@@ -362,10 +362,7 @@ class INFO(TimeSeries):
         FC04.1_C             9.530           1.316667
         FC_weir1            67.995           0.966667
         """
-        self._load()
-        locations, data_types = self._loc_data_types_to_list(locations, data_types)
-        filter_by = '/'.join(locations + data_types)
-        ctx = self._filter(filter_by)
+        ctx, locations, data_types = self._time_series_filter_by(locations, data_types)
         if ctx.empty:
             return pd.DataFrame()
 
@@ -375,7 +372,7 @@ class INFO(TimeSeries):
 
         return df
 
-    def time_series(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
+    def time_series(self, locations: str | list[str] | None, data_types: str | list[str] | None,
                     time_fmt: str = 'relative', *args, **kwargs) -> pd.DataFrame:
         """Returns a time-series DataFrame for the given location(s) and data type(s).
 
@@ -443,10 +440,7 @@ class INFO(TimeSeries):
         2.983334             8.670  ...                    0.0
         3.000000             8.391  ...                    0.0
         """
-        self._load()
-        locations, data_types = self._loc_data_types_to_list(locations, data_types)
-        filter_by = '/'.join(locations + data_types)
-        ctx = self._filter(filter_by)
+        ctx, locations, data_types = self._time_series_filter_by(locations, data_types)
         if ctx.empty:
             return pd.DataFrame()
 

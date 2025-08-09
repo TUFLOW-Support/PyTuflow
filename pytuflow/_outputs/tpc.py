@@ -349,7 +349,7 @@ class TPC(INFO, ITimeSeries2D):
         """
         return super().data_types(filter_by)
 
-    def maximum(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
+    def maximum(self, locations: str | list[str] | None, data_types: str | list[str] | None,
                 time_fmt: str = 'relative') -> pd.DataFrame:
         """Returns a dataframe containing the maximum values for the given data types. The returned dataframe
         will include time of maximum results as well.
@@ -423,10 +423,7 @@ class TPC(INFO, ITimeSeries2D):
         FC04.1_C             9.530           1.316667
         FC_weir1            67.995           0.966667
         """
-        self._load()
-        locations, data_types = self._loc_data_types_to_list(locations, data_types)
-        filter_by = '/'.join(locations + data_types)
-        ctx = self._filter(filter_by)
+        ctx, locations, data_types = self._time_series_filter_by(locations, data_types)
         if ctx.empty:
             return pd.DataFrame()
 
@@ -434,26 +431,16 @@ class TPC(INFO, ITimeSeries2D):
         df = super().maximum(locations, data_types, time_fmt)
 
         # 2D
-        df1 = self._maximum_extractor(ctx[ctx['domain'] == '2d'].data_type.unique(), data_types,
-                                     self._maximum_data_2d, ctx, time_fmt, self.reference_time)
-        df1.columns = [f'po/{x}' for x in df1.columns]
-        if df.empty and not df1.empty:
-            df = df1
-        elif not df1.empty:
-            df = pd.concat([df, df1], axis=0)
+        df = self._append_maximum_2d('2d', self._maximum_data_2d, df, ctx, data_types,
+                                     time_fmt, self.reference_time)
 
         # rl
-        df1 = self._maximum_extractor(ctx[ctx['domain'] == 'rl'].data_type.unique(), data_types,
-                                      self._maximum_data_rl, ctx, time_fmt, self.reference_time)
-        df1.columns = [f'rl/{x}' for x in df1.columns]
-        if df.empty and not df1.empty:
-            df = df1
-        elif not df1.empty:
-            df = pd.concat([df, df1], axis=0)
+        df = self._append_maximum_2d('rl', self._maximum_data_rl, df, ctx, data_types,
+                                     time_fmt, self.reference_time)
 
         return df
 
-    def time_series(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
+    def time_series(self, locations: str | list[str] | None, data_types: str | list[str] | None,
                     time_fmt: str = 'relative', *args, **kwargs) -> pd.DataFrame:
         """Returns a time series dataframe for the given location(s) and data type(s).
 
@@ -510,6 +497,7 @@ class TPC(INFO, ITimeSeries2D):
         --------
         Extracting flow for a given channel.
 
+        >>> res = TPC('path/to/file.tpc')
         >>> res.time_series('ds1', 'q')
         Time (h)   channel/q/ds1
         0.000000           0.000
@@ -538,30 +526,41 @@ class TPC(INFO, ITimeSeries2D):
         2.983334             8.670  ...                    0.0
         3.000000             8.391  ...                    0.0
         """
-        self._load()
-        locations, data_types = self._loc_data_types_to_list(locations, data_types)
-        filter_by = '/'.join(locations + data_types)
-        ctx = self._filter(filter_by)
+        ctx, locations, data_types = self._time_series_filter_by(locations, data_types)
         if ctx.empty:
             return pd.DataFrame()
 
         share_idx = ctx[['start', 'end', 'dt']].drop_duplicates().shape[0] < 2
 
         # 1D
-        df = self._time_series_extractor(ctx[ctx['domain'] == '1d'].data_type.unique(), data_types,
-                                         self._time_series_data, ctx, time_fmt, share_idx, self.reference_time)
-        df.columns = self._prepend_1d_type_to_column_name(df.columns)
+        df = super().time_series(locations, data_types, time_fmt, *args, **kwargs)
+
+        # 2d/po
+        df = self._append_time_series_2d('2d', self._time_series_data_2d, df, ctx, data_types, time_fmt,
+                                         share_idx, self.reference_time)
+
+        # rl
+        df = self._append_time_series_2d('rl', self._time_series_data_rl, df, ctx, data_types, time_fmt,
+                                         share_idx, self.reference_time)
+
+        return df
+
+        #
+        # # 1D
+        # df = self._time_series_extractor(ctx[ctx['domain'] == '1d'].data_type.unique(), data_types,
+        #                                  self._time_series_data, ctx, time_fmt, share_idx, self.reference_time)
+        # df.columns = self._prepend_1d_type_to_column_name(df.columns)
 
         # 2D
-        df1 = self._time_series_extractor(ctx[ctx['domain'] == '2d'].data_type.unique(), data_types,
-                                          self._time_series_data_2d, ctx, time_fmt, share_idx, self.reference_time)
-        df1.columns = ['{0}/po/{1}/{2}'.format(*x.split('/')) if x.split('/')[0] == 'time' else f'po/{x}' for x in df1.columns]
-        if df.empty and not df1.empty:
-            df = df1
-        elif not df1.empty:
-            if share_idx:
-                df1.index = df.index
-            df = pd.concat([df, df1], axis=1)
+        # df1 = self._time_series_extractor(ctx[ctx['domain'] == '2d'].data_type.unique(), data_types,
+        #                                   self._time_series_data_2d, ctx, time_fmt, share_idx, self.reference_time)
+        # df1.columns = ['{0}/po/{1}/{2}'.format(*x.split('/')) if x.split('/')[0] == 'time' else f'po/{x}' for x in df1.columns]
+        # if df.empty and not df1.empty:
+        #     df = df1
+        # elif not df1.empty:
+        #     if share_idx:
+        #         df1.index = df.index
+        #     df = pd.concat([df, df1], axis=1)
 
         # rl
         df1 = self._time_series_extractor(ctx[ctx['domain'] == 'rl'].data_type.unique(), data_types,
@@ -657,10 +656,11 @@ class TPC(INFO, ITimeSeries2D):
                 df = pd.concat([df, df2], axis=0, ignore_index=True) if not df.empty else df2
         return df
 
-    def _filter(self, filter_by: str, filtered_something: bool = False, df: pd.DataFrame = None) -> pd.DataFrame:
+    def _filter(self, filter_by: str, filtered_something: bool = False, df: pd.DataFrame = None,
+                ignore_excess_filters: bool = False) -> pd.DataFrame:
         # docstring inherited
         filter_by = self._replace_1d_aliases(filter_by)
-        return super()._filter(filter_by)
+        return super()._filter(filter_by, ignore_excess_filters=True)
 
     def _info_name_correction(self, name: str) -> str:
         # override this as it isn't needed for TPC

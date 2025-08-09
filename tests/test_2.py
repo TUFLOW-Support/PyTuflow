@@ -4,6 +4,8 @@ from contextlib import contextmanager
 from logging import StreamHandler
 from unittest import TestCase
 
+import pytest
+
 from pytuflow.results import ResultTypeError
 from pytuflow._outputs.bc_tables_check import BCTablesCheck
 from pytuflow._fm import GXY
@@ -713,14 +715,15 @@ class Test_TPC_Frankenmodel(TestCase):
             self.assertEqual(9, len(dtypes))
 
     def test_maximums(self):
-        msgs = ['TPC._load_po_info(): Missing or invalid PLOT.csv. Using TPC to guess PO geometry.']
+        msgs = ['TPC._load_po_info(): Missing or invalid PLOT.csv. Using TPC to guess PO geometry.',
+                'Data type "tracer conc" is not a valid section data type or not in output - removing.']
         with custom_log_handler.with_filter(msgs) as custom_logger:
             p = './tests/2021/frankenmodel.tpc'
             res = TPC(p)
             df = res.maximum('ADCP1', 'tracer 1 conc')
             self.assertEqual((1, 2), df.shape)
-            df = res.maximum('ADCP1', 'tracer conc')
-            self.assertTrue(df.empty)
+            with pytest.raises(ValueError):
+                df = res.maximum('ADCP1', 'tracer conc')
 
     def test_time_series(self):
         msgs = ['TPC._load_po_info(): Missing or invalid PLOT.csv. Using TPC to guess PO geometry.']

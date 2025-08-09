@@ -67,10 +67,6 @@ class TimeSeries(TabularOutput):
         """
         pass
 
-    # def _filter(self, filter_by: str) -> pd.DataFrame:
-    #     # docstring inherited
-    #     return pd.DataFrame(columns=['id', 'data_type', 'geometry', 'start', 'end', 'dt', 'domain'])
-
     def data_types(self, filter_by: str = None) -> list[str]:
         """Returns all the available data types (result types) for the given context.
 
@@ -217,12 +213,3 @@ class TimeSeries(TabularOutput):
                 else:
                     df = pd.concat([df, df1], axis=1)
         return df
-
-    def _loc_data_types_to_list(self, locations: Union[str, list[str], None],
-                                data_types: Union[str, list[str], None]) -> tuple[list[str], list[str]]:
-        """Convert locations and data_types to list format."""
-        locations = locations if locations is not None else []
-        locations = locations if isinstance(locations, list) else [locations]
-        data_types = data_types if data_types is not None else []
-        data_types = data_types if isinstance(data_types, list) else [data_types]
-        return locations, data_types

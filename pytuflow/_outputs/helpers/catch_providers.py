@@ -113,8 +113,9 @@ class CATCHProvider(Output):
         if self._reference_time:
             self._driver.reference_time = self._reference_time
 
-    def _filter(self, filter_by: str, filtered_something: bool = False, df: pd.DataFrame = None) -> pd.DataFrame:
-        return super()._filter(filter_by)
+    def _filter(self, filter_by: str, filtered_something: bool = False, df: pd.DataFrame = None,
+                ignore_excess_filters: bool = False) -> pd.DataFrame:
+        return super()._filter(filter_by, ignore_excess_filters=ignore_excess_filters)
 
 
 class CATCHProviderXMDF(CATCHProvider, XMDF):

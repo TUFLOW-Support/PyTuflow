@@ -17,7 +17,7 @@ if typing.TYPE_CHECKING:
     from sqlite3 import Cursor
 
 
-class GPKG2D(GPKGBase, ITimeSeries2D, TimeSeries):
+class GPKG2D(GPKGBase, TimeSeries, ITimeSeries2D):
     """Class for handling 2D GeoPackage time series results (:code:`.gpkg` - typically ending with :code:`_2D.gpkg`).
     The GPKG time series format is a specific format published by TUFLOW built on the GeoPackage standard.
 
@@ -268,7 +268,7 @@ class GPKG2D(GPKGBase, ITimeSeries2D, TimeSeries):
         self._load()
         return super().data_types(filter_by)
 
-    def maximum(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
+    def maximum(self, locations: str | list[str] | None, data_types: str | list[str] | None,
                 time_fmt: str = 'relative') -> pd.DataFrame:
         """Returns a DataFrame containing the maximum values for the given data types. The returned DataFrame
         will include time of maximum results as well.
@@ -311,19 +311,15 @@ class GPKG2D(GPKGBase, ITimeSeries2D, TimeSeries):
                   po/flow/max       po/flow/tmax
         ds1            59.423           1.383333
         """
-        self._load()
-        locations, data_types = self._loc_data_types_to_list(locations, data_types)
-        filter_by = '/'.join(locations + data_types)
-        ctx = self._filter(filter_by)
+        ctx, locations, data_types = self._time_series_filter_by(locations, data_types)
         if ctx.empty:
             return pd.DataFrame()
 
-        df = self._maximum_extractor(ctx[ctx['domain'] == '2d'].data_type.unique(), data_types,
-                                     self._maximum_data_2d, ctx, time_fmt, self.reference_time)
-        df.columns = [f'po/{x}' for x in df.columns]
-        return df
+        # 2D
+        return self._append_maximum_2d('2d', self._maximum_data_2d, pd.DataFrame(), ctx, data_types,
+                                       time_fmt, self.reference_time)
 
-    def time_series(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
+    def time_series(self, locations: str | list[str] | None, data_types: str | list[str] | None,
                     time_fmt: str = 'relative', *args, **kwargs) -> pd.DataFrame:
         """Returns a time-series DataFrame for the given location(s) and data type(s).
 
@@ -362,6 +358,7 @@ class GPKG2D(GPKGBase, ITimeSeries2D, TimeSeries):
         --------
         Extracting flow for a given line.
 
+        >>> res = GPKG2D('path/to/file_2D.gpkg')
         >>> res.time_series('po_line', 'q')
         Time (h)        po/q/ds1
         0.000000           0.000
@@ -370,19 +367,20 @@ class GPKG2D(GPKGBase, ITimeSeries2D, TimeSeries):
         2.983334           8.670
         3.000000           8.391
         """
-        self._load()
-        locations, data_types = self._loc_data_types_to_list(locations, data_types)
-        filter_by = '/'.join(locations + data_types)
-        ctx = self._filter(filter_by)
+        ctx, locations, data_types = self._time_series_filter_by(locations, data_types)
         if ctx.empty:
             return pd.DataFrame()
 
         share_idx = ctx[['start', 'end', 'dt']].drop_duplicates().shape[0] < 2
-        df = self._time_series_extractor(ctx[ctx['domain'] == '2d'].data_type.unique(), data_types,
-                                         self._time_series_data_2d, ctx, time_fmt, share_idx, self.reference_time)
-        df.columns = ['{0}/po/{1}/{2}'.format(*x.split('/')) if x.split('/')[0] == 'time' else f'po/{x}' for x in
-                      df.columns]
-        return df
+
+        return self._append_time_series_2d('2d', self._time_series_data_2d, pd.DataFrame(), ctx, data_types,
+                                           time_fmt, share_idx, self.reference_time)
+
+        # df = self._time_series_extractor(ctx[ctx['domain'] == '2d'].data_type.unique(), data_types,
+        #                                  self._time_series_data_2d, ctx, time_fmt, share_idx, self.reference_time)
+        # df.columns = ['{0}/po/{1}/{2}'.format(*x.split('/')) if x.split('/')[0] == 'time' else f'po/{x}' for x in
+        #               df.columns]
+        # return df
 
     def section(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
                 time: TimeLike, *args, **kwargs) -> pd.DataFrame:

@@ -341,6 +341,7 @@ class FVBCTide(TimeSeries):
         --------
         Extracting flow for a given channel.
 
+        >>> bndry = FVBCTide('/path/to/fv_bc_tide.nc', '/path/to/fv_bc_tide.shp')
         >>> bndry.time_series('ds1', 'q')
         time       point/level/Ocean_pt_0
         289258.00               -0.228474

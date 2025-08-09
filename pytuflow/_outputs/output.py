@@ -227,7 +227,8 @@ class Output(ABC):
     def _overview_dataframe(self) -> pd.DataFrame:
         pass
 
-    def _filter(self, filter_by: str, filtered_something: bool = False, df: pd.DataFrame = None) -> pd.DataFrame:
+    def _filter(self, filter_by: str, filtered_something: bool = False, df: pd.DataFrame = None,
+                ignore_excess_filters: bool = False) -> pd.DataFrame:
         """Returns a DataFrame with the output combinations for the given filter string.
 
         Parameters
@@ -240,6 +241,9 @@ class Output(ABC):
         df : pd.DataFrame, optional
             Sets the DataFrame to filter. If not provided, it will use the overview DataFrame. This allows the method to
             be overridden in subclasses and to call the super() method with some filtering already applied.
+        ignore_excess_filters : bool, optional
+            If True, the method will ignore any filters that do not match any of the available contexts. Otherwise,
+            leftover filters will result in an empty DataFrame.
 
         Returns
         -------
@@ -281,7 +285,7 @@ class Output(ABC):
         if filtered_something_:
             filtered_something = True
 
-        return df if not df.empty and filtered_something and not filter_by else pd.DataFrame(columns=df.columns)
+        return df if not df.empty and filtered_something and not (filter_by and not ignore_excess_filters) else pd.DataFrame(columns=df.columns)
 
     @staticmethod
     def _get_standard_data_type_name(name: str) -> str:
@@ -408,7 +412,10 @@ class Output(ABC):
         if 'data_type' not in df.columns:
             return df, filtered_something
         for i in range(len(ctx)):
+            max_ = 'max' in ctx[i].lower()
             ctx[i] = self._get_standard_data_type_name(ctx[i])
+            if max_:
+                ctx[i] = f'max {ctx[i]}'
         ctx_dict = {x: [x] for x in ctx if x in df['data_type'].unique()}
         if ctx_dict:
             df, filtered_something = self._filter_generic(ctx, df, ctx_dict, 'data_type')
