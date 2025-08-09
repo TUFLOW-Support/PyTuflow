@@ -382,23 +382,4 @@ class GPKGRL(GPKG2D):
         return df
 
     def _load_rl_info(self, cur: 'Cursor'):
-        rl_info = {'id': [], 'data_type': [], 'geometry': [], 'start': [], 'end': [], 'dt': []}
-        for dtype, vals in self._time_series_data_rl.items():
-            for df1 in vals:
-                if df1.empty:
-                    continue
-                dt = np.round((df1.index[1] - df1.index[0]) * 3600., decimals=2)
-                start = df1.index[0]
-                end = df1.index[-1]
-                for col in df1.columns:
-                    rl_info['id'].append(col)
-                    rl_info['data_type'].append(dtype)
-                    if len(self._geoms[dtype]) == 1:
-                        rl_info['geometry'].append(self._geoms[dtype][0])
-                    else:
-                        rl_info['geometry'].append(self._geom_from_id(cur, col))
-                    rl_info['start'].append(start)
-                    rl_info['end'].append(end)
-                    rl_info['dt'].append(dt)
-
-        self._rl_objs = pd.DataFrame(rl_info)
+        self._rl_objs = self._load_info_2d(cur, self._time_series_data_rl)

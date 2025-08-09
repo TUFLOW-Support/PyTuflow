@@ -486,9 +486,9 @@ class GPKG2D(GPKGBase, TimeSeries, ITimeSeries2D):
                 tmax = res.idxmax()
                 storage[data_type] = pd.DataFrame({'max': max_, 'tmax': tmax})
 
-    def _load_po_info(self, cur: 'Cursor'):
-        po_info = {'id': [], 'data_type': [], 'geometry': [], 'start': [], 'end': [], 'dt': []}
-        for dtype, vals in self._time_series_data_2d.items():
+    def _load_info_2d(self, cur: 'Cursor', time_series_data: dict) -> pd.DataFrame:
+        info = {'id': [], 'data_type': [], 'geometry': [], 'start': [], 'end': [], 'dt': []}
+        for dtype, vals in time_series_data.items():
             for df1 in vals:
                 if df1.empty:
                     continue
@@ -496,17 +496,20 @@ class GPKG2D(GPKGBase, TimeSeries, ITimeSeries2D):
                 start = df1.index[0]
                 end = df1.index[-1]
                 for col in df1.columns:
-                    po_info['id'].append(col)
-                    po_info['data_type'].append(dtype)
+                    info['id'].append(col)
+                    info['data_type'].append(dtype)
                     if len(self._geoms[dtype]) == 1:
-                        po_info['geometry'].append(self._geoms[dtype][0])
+                        info['geometry'].append(self._geoms[dtype][0])
                     else:
-                        po_info['geometry'].append(self._geom_from_id(cur, col))
-                    po_info['start'].append(start)
-                    po_info['end'].append(end)
-                    po_info['dt'].append(dt)
+                        info['geometry'].append(self._geom_from_id(cur, col))
+                    info['start'].append(start)
+                    info['end'].append(end)
+                    info['dt'].append(dt)
 
-        self._po_objs = pd.DataFrame(po_info)
+        return pd.DataFrame(info)
+
+    def _load_po_info(self, cur: 'Cursor'):
+        self._po_objs = self._load_info_2d(cur, self._time_series_data_2d)
 
     def _geom_from_id(self, cur: 'Cursor', id_: str) -> str:
         if self._gis_layer_p_name:
