@@ -1,4 +1,3 @@
-from datetime import datetime
 from pathlib import Path
 from typing import Union
 
@@ -12,11 +11,11 @@ from .helpers.fm_res_driver import FM_ResultDriver
 from .helpers.lp_1d_fm import LP1D_FM
 from .._fm import GXY
 from .._fm import DAT
-from ..util import get_logger
+from ..util import pytuflow_logging
 from ..results import ResultTypeError
 
 
-logger = get_logger()
+logger = pytuflow_logging.get_logger()
 
 
 class FMTS(INFO):
@@ -646,7 +645,7 @@ class FMTS(INFO):
                 d['has_results'].append(unit.id in self._storage[0].ids)
                 d['name'].append(unit.id)
         elif self._gxy:
-            for unit in self._gxy._nodes:
+            for unit in self._gxy.nodes:
                 d['id'].append(unit.uid)
                 d['bed_level'].append(np.nan)
                 d['top_level'].append(np.nan)

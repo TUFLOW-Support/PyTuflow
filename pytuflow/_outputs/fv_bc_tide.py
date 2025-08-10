@@ -17,11 +17,11 @@ from .._pytuflow_types import PathLike, TuflowPath, TimeLike
 from .helpers.fv_bc_tide_provider import FVBCTideProvider
 from ..gis import has_gdal
 from ..misc import AppendDict
-from ..util import get_logger
+from ..util import pytuflow_logging
 from ..results import ResultTypeError
 
 
-logger = get_logger()
+logger = pytuflow_logging.get_logger()
 
 
 class FVBCTide(TimeSeries):

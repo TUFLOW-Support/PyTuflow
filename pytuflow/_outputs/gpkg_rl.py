@@ -377,9 +377,9 @@ class GPKGRL(GPKG2D):
         self._loaded = True
 
     def _overview_dataframe(self) -> pd.DataFrame:
-        df = self._rl_objs.copy()
+        df = self.rl_objs.copy()
         df['domain'] = 'rl'
         return df
 
     def _load_rl_info(self, cur: 'Cursor'):
-        self._rl_objs = self._load_info_2d(cur, self._time_series_data_rl)
+        self.rl_objs = self._load_info_2d(cur, self._time_series_data_rl)

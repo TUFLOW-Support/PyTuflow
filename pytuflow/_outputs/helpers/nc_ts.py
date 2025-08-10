@@ -127,7 +127,7 @@ class NCTS:
         return data_types
 
     @staticmethod
-    def extract_result(ncfpath: Union[PathLike, Dataset], data_type: str, domain: str) -> pd.DataFrame:
+    def extract_result(ncfpath: Union[PathLike, Dataset], data_type: str, domain: str) -> None | pd.DataFrame:
         """Returns a DataFrame with the extracted results based on the data_Type and domain.
 
         Parameters
@@ -152,7 +152,7 @@ class NCTS:
         else:
             var = TPC_INTERNAL_NAMES['po_labels'].get(data_type, None)
         if not var or var['nc'] not in cls.nc.variables:
-            return
+            return None
         varname = var['nc']
         var = cls.nc.variables[varname]
         if domain.lower() == '1d' and 'losses_1d' not in varname:

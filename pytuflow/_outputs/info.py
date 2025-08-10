@@ -9,12 +9,12 @@ import pandas as pd
 from .helpers.tpc_reader import TPCReader
 from .time_series import TimeSeries
 from .._pytuflow_types import PathLike, TimeLike, AppendDict
-from ..util import get_logger
+from ..util import pytuflow_logging
 from ..results import ResultTypeError
 from .helpers.lp_1d import LP1D
 
 
-logger = get_logger()
+logger = pytuflow_logging.get_logger()
 
 
 class INFO(TimeSeries):
@@ -112,7 +112,7 @@ class INFO(TimeSeries):
         )
 
         #: pd.DataFrame: Information on all 1D output objects. Column headers are :code:`[id, data_type, geometry, start, end, dt]`
-        self._oned_objs = pd.DataFrame(columns=['id', 'data_type', 'geometry', 'start', 'end', 'dt'])
+        self.oned_objs = pd.DataFrame(columns=['id', 'data_type', 'geometry', 'start', 'end', 'dt'])
 
         #: int: Number of nodes
         self.node_count = 0
@@ -596,7 +596,7 @@ class INFO(TimeSeries):
         self._loaded = True
 
     def _overview_dataframe(self) -> pd.DataFrame:
-        df = self._oned_objs.copy()
+        df = self.oned_objs.copy()
         df['domain'] = '1d'
         return df
 
@@ -691,7 +691,7 @@ class INFO(TimeSeries):
                     info['end'].append(end)
                     info['dt'].append(dt)
 
-        self._oned_objs = pd.DataFrame(info)
+        self.oned_objs = pd.DataFrame(info)
 
     def _load_time_series(self) -> None:
         """Load time-series data into memory."""

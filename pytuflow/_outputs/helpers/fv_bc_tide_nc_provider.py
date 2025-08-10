@@ -11,7 +11,7 @@ except ImportError:
     has_netcdf4 = False
 
 from ..._pytuflow_types import TimeLike
-from ...util import get_logger
+from ...util import pytuflow_logging
 
 
 class FVBCTideNCProvider:
@@ -77,7 +77,7 @@ class FVBCTideNCProvider:
         None
         """
         if self.use_local_time and 'local_time' not in self._nc.variables:
-            get_logger().warning('Local time not available in netCDF file. Using UTC time instead.')
+            pytuflow_logging.get_logger().warning('Local time not available in netCDF file. Using UTC time instead.')
         self.use_local_time = 'local_time' in self._nc.variables and self.use_local_time
         self._timevar = 'local_time' if self.use_local_time else 'time'
         self._get_units()

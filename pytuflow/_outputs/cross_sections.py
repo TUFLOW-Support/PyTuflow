@@ -7,12 +7,12 @@ import pandas as pd
 from .tabular_output import TabularOutput
 from .._tmf import TuflowCrossSection
 from .._tmf import GISAttributes
-from ..util import get_logger
+from ..util import pytuflow_logging
 from .._pytuflow_types import PathLike, TimeLike, TuflowPath
-from pytuflow.results import ResultTypeError
+from ..results import ResultTypeError
 
 
-logger = get_logger()
+logger = pytuflow_logging.get_logger()
 
 
 class CrossSections(TabularOutput):

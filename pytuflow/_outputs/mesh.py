@@ -1,5 +1,3 @@
-import re
-from datetime import timedelta
 from pathlib import Path
 from typing import Union
 
@@ -10,11 +8,10 @@ from .helpers.mesh_driver_qgis import QgisMeshDriver
 from .helpers.mesh_driver_nc import NCMeshDriver
 from .map_output import MapOutput, PointLocation, LineStringLocation
 from .._pytuflow_types import PathLike, TimeLike
-from ..util._util.logging import get_logger
-from .output import Output
+from ..util import pytuflow_logging
 
 
-logger = get_logger()
+logger = pytuflow_logging.get_logger()
 
 
 class Mesh(MapOutput):
@@ -56,6 +53,7 @@ class Mesh(MapOutput):
 
         Examples
         --------
+        >>> mesh = ... # Assume mesh is a loaded Mesh result
         >>> mesh.times()
         [0.0, 0.016666666666666666, ..., 3.0]
         """
@@ -86,6 +84,7 @@ class Mesh(MapOutput):
 
         Examples
         --------
+        >>> mesh = ... # Assume mesh is a loaded Mesh result
         >>> mesh.data_types()
         ['bed level', 'depth', 'vector velocity', 'velocity', 'water level', 'time of peak h']
 
@@ -159,7 +158,8 @@ class Mesh(MapOutput):
         --------
         Get the water level time-series data for a given point defined as ``(x, y)``:
 
-        >>> xmdf.time_series((293250, 6178030), 'water level')
+        >>> mesh = ... # Assume mesh is a loaded Mesh result
+        >>> mesh.time_series((293250, 6178030), 'water level')
             time  pnt1/water level
         0.000000               NaN
         0.083333               NaN
@@ -180,7 +180,7 @@ class Mesh(MapOutput):
 
         Get velocity time-series using all the points within a shapefile:
 
-        >>> xmdf.time_series('path/to/shapefile.shp', 'vel')
+        >>> mesh.time_series('path/to/shapefile.shp', 'vel')
             time  pnt1/velocity
         0.000000            NaN
         0.083333            NaN
@@ -284,7 +284,8 @@ class Mesh(MapOutput):
         --------
         Get the water level section data for a given line string defined as a list of points:
 
-        >>> xmdf.section([(293250, 6178030), (293500, 6178030)], 'water level', 1.5)
+        >>> mesh = ... # Assume mesh is a loaded Mesh result
+        >>> mesh.section([(293250, 6178030), (293500, 6178030)], 'water level', 1.5)
                  line1
                 offset water level
         0     0.000000   42.724101
@@ -302,7 +303,7 @@ class Mesh(MapOutput):
         Get the bed level and max water level data using a shapefile to define the locations (both datasets are
         static and therefore the time argument won't have any effect):
 
-        >>> xmdf.section('path/to/shapefile.shp', ['bed level', 'max h'], -1)
+        >>> mesh.section('path/to/shapefile.shp', ['bed level', 'max h'], -1)
                Line_1                                 Line_2
                offset  bed level max water level      offset  bed level max water level
         0    0.000000  43.646312             NaN    0.000000  43.112894             NaN
@@ -379,6 +380,7 @@ class Mesh(MapOutput):
         --------
         Get the velocity (scalar) curtain data for a given line string defined as in a shapefile:
 
+        >>> mesh = ... # Assume mesh is a loaded Mesh result
         >>> mesh.curtain('path/to/shapefile.shp', 'velocity', 1.5)
                  Line_1
                       x          y  velocity
@@ -447,6 +449,7 @@ class Mesh(MapOutput):
         --------
         Get The profile for a given point defined in a shapefile:
 
+        >>> mesh = ... # Assume mesh is a loaded Mesh result
         >>> mesh.profile('path/to/shapefile.shp', 'velocity', 1.5)
                        pnt1
           elevation  velocity

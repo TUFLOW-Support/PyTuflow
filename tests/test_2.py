@@ -18,7 +18,7 @@ from pytuflow._outputs.gpkg_rl import GPKGRL
 from pytuflow._outputs.fm_ts import FMTS
 from pytuflow._outputs.fv_bc_tide import FVBCTide
 from pytuflow._outputs.cross_sections import CrossSections
-from pytuflow import get_logger
+from pytuflow import pytuflow_logging
 
 
 class CustomLoggingHandler(StreamHandler):
@@ -33,7 +33,7 @@ class CustomLoggingHandler(StreamHandler):
     def with_filter(self, msgs):
         """Use a context manager so that the previous handlers can be restored no matter how the test exits."""
         self.msg_filters = msgs
-        logger = get_logger()
+        logger = pytuflow_logging.get_logger()
         exist_hdlrs = logger.handlers
         for hdlr in exist_hdlrs:
             logger.removeHandler(hdlr)

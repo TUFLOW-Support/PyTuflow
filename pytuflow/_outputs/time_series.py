@@ -6,8 +6,7 @@ import numpy as np
 import pandas as pd
 
 from .tabular_output import TabularOutput
-from pytuflow._pytuflow_types import TimeLike
-from pytuflow.util._util.misc_tools import flatten
+from ..util import misc
 
 
 class TimeSeries(TabularOutput):
@@ -45,6 +44,7 @@ class TimeSeries(TabularOutput):
         --------
         Extracting the maximum flow for a given channel:
 
+        >>> res = ... # Assume res is a time-series result instance
         >>> res.maximum('ds1', 'flow')
              channel/flow/max  channel/flow/tmax
         ds1            59.423           1.383333
@@ -153,11 +153,12 @@ class TimeSeries(TabularOutput):
                     continue
                 df1 = res_df.loc[:, idx]
                 if time_fmt == 'absolute':
+                    # noinspection PyTypeChecker
                     df1.index = [reference_time + timedelta(hours=x) for x in df1.index]
                 df1.index.name = 'time'
                 index_name = df1.index.name
                 if not share_idx:
-                    col_names = flatten([index_name, x] for x in df1.columns)
+                    col_names = misc.flatten([[index_name, x] for x in df1.columns])
                     df1.reset_index(inplace=True, drop=False)
                     df1 = df1[col_names]
 

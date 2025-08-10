@@ -1,4 +1,5 @@
 import re
+from abc import ABC
 from collections.abc import Iterable
 from typing import Union
 
@@ -7,11 +8,11 @@ import pandas as pd
 
 from .output import Output
 from .._pytuflow_types import PathLike
-from ..util._util.gis import point_gis_file_to_dict, line_gis_file_to_dict
-from ..util._util.logging import get_logger
+from ..util import gis
+from ..util import pytuflow_logging
 
 
-logger = get_logger()
+logger = pytuflow_logging.get_logger()
 
 Point = tuple[float, float] | str
 LineString = list[Point] | tuple[Point]
@@ -23,7 +24,7 @@ PointLocation = Point | Points | PathLike
 LineStringLocation = LineStrings | PathLike
 
 
-class MapOutput(Output):
+class MapOutput(Output, ABC):
     ATTRIBUTE_TYPES = {'scalar': ['scalar'], 'vector': ['vector']}
 
     def __init__(self, *args, **kwargs):
@@ -58,7 +59,8 @@ class MapOutput(Output):
     def _overview_dataframe(self) -> pd.DataFrame:
         return self._info.copy()
 
-    def _replace_aliases(self, filter_by: str) -> str:
+    @staticmethod
+    def _replace_aliases(filter_by: str) -> str:
         """Replace aliases in the filter_by string."""
         filter_by = [x.strip().lower() for x in filter_by.split('/')] if filter_by else []
         while 'section' in filter_by:
@@ -151,7 +153,7 @@ class MapOutput(Output):
             except ValueError:
                 pass
 
-        return point_gis_file_to_dict(locations)
+        return gis.point_gis_file_to_dict(locations)
 
     def _translate_line_string_location(self, locations: LineStringLocation) -> dict[str, LineString]:
         if not locations:
@@ -183,22 +185,24 @@ class MapOutput(Output):
                     lines[key] = loc
                 return lines
 
-        return line_gis_file_to_dict(locations)  # assume it is a file path
+        return gis.line_gis_file_to_dict(locations)  # assume it is a file path
 
-    def _wkt_point_to_tuple(self, point: str) -> tuple[float, float]:
+    @staticmethod
+    def _wkt_point_to_tuple(point: str) -> tuple[float, ...]:
         if not re.match(r'^POINT\s*\(\s*[-+]?\d*\.?\d+\s+[-+]?\d*\.?\d+\s*\)$', point):
             raise ValueError(f'Invalid WKT point string: {point}')
         return tuple([float(x) for x in re.split(r'\s+', point.strip('\n\t )').split('(')[1], 1)])
 
-    def _wkt_line_to_list(self, line: str) -> list[tuple[float, float]]:
+    @staticmethod
+    def _wkt_line_to_list(line: str) -> list[tuple[float, ...]]:
         if not re.match(r'^LINESTRING\s*\(\s*[-+]?\d*\.?\d+\s+[-+]?\d*\.?\d+\s*(,\s*[-+]?\d*\.?\d+\s+[-+]?\d*\.?\d+\s*)*\)$', line):
             raise ValueError(f'Invalid WKT line-string string: {line}')
         return [tuple([float(x) for x in p.split()]) for p in re.split(r'\s*,\s*', line.strip('\n\t )').split('(')[1])]
 
     @staticmethod
     def _list_depth(lst: Iterable) -> int:
-        def is_bottom(lst: Iterable) -> bool:
-            return all(isinstance(x, (float, int, str)) for x in lst)
+        def is_bottom(lst_: Iterable) -> bool:
+            return all(isinstance(x, (float, int, str)) for x in lst_)
 
         dep = 1
         lst_ = lst

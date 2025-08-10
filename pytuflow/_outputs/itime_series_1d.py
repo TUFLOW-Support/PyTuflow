@@ -34,7 +34,7 @@ class ITimeSeries1D(ABC):
         )
 
         #: pd.DataFrame: Information on all 1D output objects. Column headers are :code:`[id, data_type, geometry, start, end, dt]`
-        self._oned_objs = pd.DataFrame(columns=['id', 'data_type', 'geometry', 'start', 'end', 'dt'])
+        self.oned_objs = pd.DataFrame(columns=['id', 'data_type', 'geometry', 'start', 'end', 'dt'])
 
         #: int: Number of nodes
         self.node_count = 0

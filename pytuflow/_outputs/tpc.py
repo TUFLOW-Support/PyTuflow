@@ -1,4 +1,3 @@
-from datetime import datetime
 from pathlib import Path
 import re
 from typing import Union
@@ -19,11 +18,11 @@ from .info import INFO
 from .itime_series_2d import ITimeSeries2D
 from .helpers.tpc_reader import TPCReader
 from .._pytuflow_types import PathLike, AppendDict, TimeLike
-from ..util._util.logging import get_logger
+from ..util import pytuflow_logging
 from .._outputs.helpers.nc_dataset_wrapper import DatasetWrapper
 
 
-logger = get_logger()
+logger = pytuflow_logging.get_logger()
 
 
 class TPC(INFO, ITimeSeries2D):
@@ -155,12 +154,13 @@ class TPC(INFO, ITimeSeries2D):
         fpath = Path(fpath)
         if fpath.suffix.upper() != '.TPC':
             return False
+        # noinspection PyBroadException
         try:
             with fpath.open() as f:
                 line = f.readline()
                 if not line.startswith('Format Version == 2'):
                     return False
-        except Exception as e:
+        except Exception:
             return False
         return True
 
@@ -168,6 +168,7 @@ class TPC(INFO, ITimeSeries2D):
     def _looks_empty(fpath: PathLike) -> bool:
         # docstring inherited
         target_line_count = 7  # fairly arbitrary
+        # noinspection PyBroadException
         try:
             tpc_reader = TPCReader(fpath)
             gpkgs = list(tpc_reader.iter_properties('GPKG Time Series'))
@@ -186,7 +187,7 @@ class TPC(INFO, ITimeSeries2D):
             if node_count + channel_count + rlp_count + rll_count + rlr_count + po_count == 0:
                 return True
             return False
-        except Exception as e:
+        except Exception:
             return True
 
     def times(self, filter_by: str = None, fmt: str = 'relative') -> list[TimeLike]:
@@ -230,6 +231,7 @@ class TPC(INFO, ITimeSeries2D):
 
         Examples
         --------
+        >>> res = TPC('/path/to/result.tpc')
         >>> res.times()
         [0.0, 0.016666666666666666, ..., 3.0]
         >>> res.times(fmt='absolute')
@@ -279,6 +281,7 @@ class TPC(INFO, ITimeSeries2D):
         --------
         Get the IDs for all :code:`po` results:
 
+        >>> res = TPC('/path/to/result.tpc')
         >>> res.ids('po')
         ['po_poly', 'po_point', 'po_line']
 
@@ -331,6 +334,7 @@ class TPC(INFO, ITimeSeries2D):
         --------
         Get the available data types for 1D :code:`channel` results:
 
+        >>> res = TPC('/path/to/result.tpc')
         >>> res.data_types('channel')
         ['flow', 'velocity', 'channel entry losses', 'channel additional losses', 'channel exit losses', 'channel flow regime']
 
@@ -403,6 +407,7 @@ class TPC(INFO, ITimeSeries2D):
         --------
         Extracting the maximum flow for a given channel:
 
+        >>> res = TPC('/path/to/result.tpc')
         >>> res.maximum('ds1', 'flow')
              channel/flow/max  channel/flow/tmax
         ds1            59.423           1.383333
@@ -547,11 +552,10 @@ class TPC(INFO, ITimeSeries2D):
 
     def section(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
                 time: TimeLike, *args, **kwargs) -> pd.DataFrame:
-        e = None
         if self._gpkgswmm is not None:
             try:
                 return self._gpkgswmm.section(locations, data_types, time, *args, **kwargs)
-            except NameError as e:
+            except NameError:
                 pass
         return super().section(locations, data_types, time, *args, **kwargs)
 
@@ -561,7 +565,7 @@ class TPC(INFO, ITimeSeries2D):
         raise NotImplementedError(f'{__class__.__name__} does not support curtain plotting.')
 
     def profile(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
-                time: TimeLike) -> pd.DataFrame:
+                time: TimeLike, **kwargs) -> pd.DataFrame:
         """Not supported for ``TPC`` results. Raises a :code:`NotImplementedError`."""
         raise NotImplementedError(f'{__class__.__name__} does not support vertical profile plotting.')
 
@@ -605,21 +609,21 @@ class TPC(INFO, ITimeSeries2D):
             super()._load()
 
             # po
-            self._po_objs = self._load_po_info()
-            if not self._po_objs.empty:
-                self._po_point_count = self._po_objs[self._po_objs['geometry'] == 'point']['id'].unique().size
-                self._po_line_count = self._po_objs[self._po_objs['geometry'] == 'line']['id'].unique().size
-                self._po_poly_count = self._po_objs[self._po_objs['geometry'] == 'polygon']['id'].unique().size
+            self.po_objs = self._load_po_info()
+            if not self.po_objs.empty:
+                self._po_point_count = self.po_objs[self.po_objs['geometry'] == 'point']['id'].unique().size
+                self._po_line_count = self.po_objs[self.po_objs['geometry'] == 'line']['id'].unique().size
+                self._po_poly_count = self.po_objs[self.po_objs['geometry'] == 'polygon']['id'].unique().size
 
             # rl
-            self._rl_objs = self._load_rl_info()
+            self.rl_objs = self._load_rl_info()
 
         self._ncid = None
         self._loaded = True
 
     def _overview_dataframe(self) -> pd.DataFrame:
-        df = pd.DataFrame(columns=self._oned_objs.columns)
-        for domain, df1 in {'1d': self._oned_objs, '2d': self._po_objs, 'rl': self._rl_objs}.items():
+        df = pd.DataFrame(columns=self.oned_objs.columns)
+        for domain, df1 in {'1d': self.oned_objs, '2d': self.po_objs, 'rl': self.rl_objs}.items():
             if not df1.empty:
                 df2 = df1.copy()
                 df2['domain'] = domain
@@ -694,19 +698,21 @@ class TPC(INFO, ITimeSeries2D):
                     data_type = self._get_standard_data_type_name(data_type)
                 self._time_series_data_2d[data_type.lower()] = df
 
-    def _load_time_series_from_property(self, prop: str, data_type: str, domain: str, value: str = None) -> pd.DataFrame:
+    def _load_time_series_from_property(self, prop: str, data_type: str, domain: str, value: str = None) -> None | pd.DataFrame:
         p = self._expand_property_path(prop, value=value)
         if p or self.format == 'NC':
             try:
+                # noinspection PyUnreachableCode
                 if self.format == 'CSV':
-                    df = self._load_time_series_csv(p)
+                    return self._load_time_series_csv(p)
                 elif self.format == 'NC':
-                    df = self._load_time_series_nc(data_type, domain)
+                    return self._load_time_series_nc(data_type, domain)
                 else:  # GPKG
-                    df = self._load_time_series_gpkg(data_type, domain)
-                return df
+                    self._load_time_series_gpkg()
+                    return None
             except Exception as e:
                 logger.warning(f'TPC._load_time_series_from_property(): Error loading from {prop}: {e}')
+        return None
 
     def _load_time_series_nc(self, dtype: str, domain: str) -> pd.DataFrame:
         df = NCTS.extract_result(self._ncid, dtype, domain)
@@ -740,6 +746,7 @@ class TPC(INFO, ITimeSeries2D):
                 self.rl_poly_count += self._gpkgrl.rl_poly_count
                 self.reference_time = self._gpkgrl.reference_time if not reference_time_set else self.reference_time
 
+    # noinspection PyProtectedMember
     def _load_time_series_gpkg(self):
         if self._gpkg1d is not None:
             self._gpkg1d._load()
@@ -759,22 +766,26 @@ class TPC(INFO, ITimeSeries2D):
             self._gpkgrl._load()
             self._time_series_data_rl = self._gpkgrl._time_series_data_rl
 
-    def _post_process_channel_losses(self, df: pd.DataFrame, dtype: str) -> pd.DataFrame:
+    @staticmethod
+    def _post_process_channel_losses(df: pd.DataFrame, dtype: str) -> None | pd.DataFrame:
         d = {'Channel Entry Losses': 'Entry', 'Channel Additional Losses': 'Additional', 'Channel Exit Losses': 'Exit'}
         cols = df.columns.str.contains(d[dtype])
         if cols.any():
             df1 = df.loc[:,cols].copy()
             df1.columns = [' '.join(x.split(' ')[2:]) for x in df1.columns]
             return df1
+        return None
 
-    def _post_process_channel_losses_2(self, df: pd.DataFrame) -> pd.DataFrame:
+    @staticmethod
+    def _post_process_channel_losses_2(df: pd.DataFrame) -> None | pd.DataFrame:
         cols = df.columns.str.startswith('LC')
         if cols.any():
             df1 = df.loc[:,cols].copy()
             df1.columns = [' '.join(x.split(' ')[1:]) for x in df1.columns]
             return df1
+        return None
 
-    def _load_maximums(self) -> None:
+    def _load_maximums(self):
         # override
         # node maximums
         df = self._load_maximum_from_property('1D Node Maximums')
@@ -817,9 +828,10 @@ class TPC(INFO, ITimeSeries2D):
                 self._maximum_data_2d[data_type] = pd.DataFrame({'max': max_, 'tmax': tmax})
 
         if self._gpkgswmm is not None:
+            # noinspection PyProtectedMember
             self._maximum_data.update(self._gpkgswmm._maximum_data)
 
-    def _load_maximum_from_property(self, prop: str) -> pd.DataFrame:
+    def _load_maximum_from_property(self, prop: str) -> None | pd.DataFrame:
         p = self._expand_property_path(prop)
         if p:
             try:
@@ -831,6 +843,7 @@ class TPC(INFO, ITimeSeries2D):
                 return df
             except Exception as e:
                 logger.warning(f'TPC._load_maximum_from_property(): Error loading maximums {prop}: {e}')
+        return None
 
     def _split_maximum_columns(self, df: pd.DataFrame, col_name: str) -> tuple[str, pd.DataFrame]:
         name = col_name.replace('max', '').strip()
@@ -845,11 +858,12 @@ class TPC(INFO, ITimeSeries2D):
 
     def _load_po_info(self) -> pd.DataFrame:
         d = {'P': 'point', 'L': 'line', 'R': 'polygon'}
+        plot_objs = pd.DataFrame()
         # noinspection DuplicatedCode
         po_info = {'id': [], 'data_type': [], 'geometry': [], 'start': [], 'end': [], 'dt': []}
         if self.format.lower() == 'gpkg':
             if self._gpkg2d is not None:
-                return self._gpkg2d._po_objs
+                return self._gpkg2d.po_objs
             else:
                 return pd.DataFrame(po_info)
 
@@ -874,7 +888,7 @@ class TPC(INFO, ITimeSeries2D):
 
         return pd.DataFrame(po_info)
 
-    def _gis_plot_objects(self) -> pd.DataFrame:
+    def _gis_plot_objects(self) -> None | pd.DataFrame:
         prop = self._expand_property_path('GIS Plot Objects')
         if prop:
             try:
@@ -885,6 +899,7 @@ class TPC(INFO, ITimeSeries2D):
             pass
         else:
             logger.error('TPC._gis_plot_objects(): Could not find GIS Plot Objects property.')
+        return None
 
     def _geom_from_tpc(self):
         d = AppendDict()
@@ -908,7 +923,7 @@ class TPC(INFO, ITimeSeries2D):
         rl_info = {'id': [], 'data_type': [], 'geometry': [], 'start': [], 'end': [], 'dt': []}
         if self.format.lower() == 'gpkg':
             if self._gpkgrl is not None:
-                return self._gpkgrl._rl_objs
+                return self._gpkgrl.rl_objs
             else:
                 return pd.DataFrame(rl_info)
 

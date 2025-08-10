@@ -174,6 +174,7 @@ class GPKG2D(GPKGBase, TimeSeries, ITimeSeries2D):
 
         Examples
         --------
+        >>> res = GPKG2D('path/to/plot_result_2D.gpkg')
         >>> res.times()
         [0.0, 0.016666666666666666, ..., 3.0]
         >>> res.times(fmt='absolute')
@@ -209,6 +210,7 @@ class GPKG2D(GPKGBase, TimeSeries, ITimeSeries2D):
         The below examples demonstrate how to use the ``filter_by`` argument to filter the returned IDs.
         The first example returns all IDs:
 
+        >>> res = GPKG2D('path/to/plot_result_2D.gpkg')
         >>> res.ids()
         ['po_point', 'po_line', 'po_polygon']
 
@@ -252,6 +254,7 @@ class GPKG2D(GPKGBase, TimeSeries, ITimeSeries2D):
         The below examples demonstrate how to use the ``filter_by`` argument to filter the returned data types.
         The first example returns all data types:
 
+        >>> res = GPKG2D('path/to/plot_result_2D.gpkg')
         >>> res.data_types()
         ['water level', 'flow', 'velocity']
 
@@ -307,6 +310,7 @@ class GPKG2D(GPKGBase, TimeSeries, ITimeSeries2D):
         --------
         Extracting the maximum flow for a given location:
 
+        >>> res = GPKG2D('path/to/plot_result_2D.gpkg')
         >>> res.maximum('po_line', 'flow')
                   po/flow/max       po/flow/tmax
         ds1            59.423           1.383333
@@ -450,7 +454,7 @@ class GPKG2D(GPKGBase, TimeSeries, ITimeSeries2D):
         self._loaded = True
 
     def _overview_dataframe(self) -> pd.DataFrame:
-        df = self._po_objs.copy()
+        df = self.po_objs.copy()
         df['domain'] = '2d'
         return df
 
@@ -509,7 +513,7 @@ class GPKG2D(GPKGBase, TimeSeries, ITimeSeries2D):
         return pd.DataFrame(info)
 
     def _load_po_info(self, cur: 'Cursor'):
-        self._po_objs = self._load_info_2d(cur, self._time_series_data_2d)
+        self.po_objs = self._load_info_2d(cur, self._time_series_data_2d)
 
     def _geom_from_id(self, cur: 'Cursor', id_: str) -> str:
         if self._gis_layer_p_name:

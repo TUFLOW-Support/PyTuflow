@@ -10,11 +10,11 @@ from .tabular_output import TabularOutput
 from .helpers.hyd_tables_cross_section_provider import HydTablesCrossSectionProvider
 from .helpers.hyd_tables_channel_provider import HydTablesChannelProvider
 from .._pytuflow_types import PathLike, TimeLike
-from ..util import get_logger
+from ..util import pytuflow_logging
 from ..results import ResultTypeError
 
 
-logger = get_logger()
+logger = pytuflow_logging.get_logger()
 
 
 class HydTablesCheck(TabularOutput):

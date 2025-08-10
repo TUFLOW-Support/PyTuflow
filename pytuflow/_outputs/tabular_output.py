@@ -4,10 +4,10 @@ import pandas as pd
 
 from .output import Output
 from .._pytuflow_types import PathLike
-from ..util import get_logger
+from ..util import pytuflow_logging
 
 
-logger = get_logger()
+logger = pytuflow_logging.get_logger()
 
 
 class TabularOutput(Output):
