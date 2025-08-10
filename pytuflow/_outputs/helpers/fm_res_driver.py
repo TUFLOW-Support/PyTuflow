@@ -8,7 +8,7 @@ import pandas as pd
 from ..._fm import ZZN
 
 
-class FM_ResultDriver:
+class FMResultDriver:
     """Flood Modeller Result Driver. This class helps decode/parse the different supported result files.
 
     This class can be initialised directly and the correct subclass will be returned based on the file extension
@@ -22,13 +22,13 @@ class FM_ResultDriver:
 
     def __new__(cls, fpath: Path):
         if fpath.suffix.lower() == '.csv':
-            csv_version = FM_ResultDriver.fm_csv_version(fpath)
+            csv_version = FMResultDriver.fm_csv_version(fpath)
             if csv_version == 'gui':
-                cls = FM_GuiCSVResult
+                cls = FMGuiCSVResult
             elif csv_version == 'python':
-                cls = FM_PythonCSVResult
+                cls = FMPythonCSVResult
         elif fpath.suffix.lower() == '.zzn':
-            cls = FM_ZZNResult
+            cls = FMZZNResult
         return object.__new__(cls)
 
     def __init__(self, fpath: Path):
@@ -37,6 +37,9 @@ class FM_ResultDriver:
 
         #: str: The driver name
         self.driver_name = ''
+
+        #: str: Display name of the result file.
+        self.display_name = ''
 
         #: Path: Path to the result file.
         self.fpath = fpath
@@ -86,6 +89,8 @@ class FM_ResultDriver:
                     line1 = None
                 if line == '\n':
                     line1 = '\n'
+        raise ValueError(f'Unable to determine whether the Flood Modeller '
+                         f'CSV file was written by python or from the GUI: {fpath}.')
 
     def load(self) -> None:
         """Loads the result file."""
@@ -101,7 +106,7 @@ class FM_ResultDriver:
         self._reference_time = value
 
 
-class FM_GuiCSVResult(FM_ResultDriver):
+class FMGuiCSVResult(FMResultDriver):
     """Flood Modeller GUI CSV result driver.
 
     Parameters
@@ -133,6 +138,10 @@ class FM_GuiCSVResult(FM_ResultDriver):
             return self.fpath.stem
         return ''
 
+    @display_name.setter
+    def display_name(self, value: str) -> None:
+        pass
+
     def load(self) -> None:
         # docstring inherited
         self.header = self.get_header()
@@ -141,6 +150,7 @@ class FM_GuiCSVResult(FM_ResultDriver):
             df = pd.read_csv(self.fpath, skiprows=ind, nrows=nrows)
             df.set_index('Time (hr)', inplace=True)
             if not self.ids:
+                # noinspection PyUnresolvedReferences
                 self.ids = df.columns.tolist()
             df.columns = [f'{res_type}::{x}' for x in df.columns]
             if self.df is None:
@@ -148,7 +158,7 @@ class FM_GuiCSVResult(FM_ResultDriver):
             else:
                 self.df = pd.concat([self.df, df], axis=1)
 
-    def get_header(self) -> Union[str, None]:
+    def get_header(self) -> str | None:
         """Get the header of the CSV file. The GUI CSV may not always be exported with the header.
 
         Returns
@@ -160,6 +170,7 @@ class FM_GuiCSVResult(FM_ResultDriver):
             line = f.readline()
             if 'Output data from file' in line:
                 return line.strip()
+        return None
 
 
     def find_results(self) -> Generator[tuple[str, int, int], None, None]:
@@ -186,7 +197,7 @@ class FM_GuiCSVResult(FM_ResultDriver):
                     start, type_ = None, None
 
 
-class FM_PythonCSVResult(FM_ResultDriver):
+class FMPythonCSVResult(FMResultDriver):
     """Flood Modeller Python API CSV result driver.
 
     Parameters
@@ -219,7 +230,7 @@ class FM_PythonCSVResult(FM_ResultDriver):
         self.display_name = self.fpath.stem
 
 
-class FM_ZZNResult(FM_ResultDriver):
+class FMZZNResult(FMResultDriver):
     """Flood Modeller ZZN result driver.
 
     Parameters

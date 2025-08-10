@@ -7,7 +7,7 @@ import pandas as pd
 from .helpers.tpc_reader import TPCReader
 from .info import INFO
 from .._pytuflow_types import PathLike, TimeLike
-from .helpers.fm_res_driver import FM_ResultDriver
+from .helpers.fm_res_driver import FMResultDriver
 from .helpers.lp_1d_fm import LP1D_FM
 from .._fm import GXY
 from .._fm import DAT
@@ -151,13 +151,13 @@ class FMTS(INFO):
     @staticmethod
     def _looks_like_this(fpath: Path) -> bool:
         # docstring inherited
-        driver = FM_ResultDriver(fpath)
+        driver = FMResultDriver(fpath)
         return driver.driver_name != ''
 
     @staticmethod
     def _looks_empty(fpath: PathLike) -> bool:
         # docstring inherited
-        driver = FM_ResultDriver(fpath)
+        driver = FMResultDriver(fpath)
         return driver.df is None or driver.df.empty
 
     def times(self, filter_by: str = None, fmt: str = 'relative') -> list[TimeLike]:
@@ -570,7 +570,7 @@ class FMTS(INFO):
         # initialise the storage/drivers for each result file
         ids, res_types = None, None
         for fpath in self._fpaths:
-            driver = FM_ResultDriver(fpath)
+            driver = FMResultDriver(fpath)
             if driver.driver_name == 'zzn' and len(self._fpaths) > 1:
                 raise ResultTypeError('Cannot load multiple results and one of them is a ZZN file')
 
