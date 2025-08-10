@@ -1,9 +1,9 @@
 from datetime import datetime
 from pathlib import Path
 from typing import Union, Iterable, Any, Dict
+# noinspection PyUnusedImports
 from ._tmf import TuflowPath, AppendDict
 
-# from pytuflow.tmf.tmf.tuflow_model_files.dataclasses.types import SearchTagLike, ContextLike, VariableMap
 
 #: :class:`Path` | :code:`str`: Type hint for an object that represents a file path or directory.
 PathLike = Union[Path, str]

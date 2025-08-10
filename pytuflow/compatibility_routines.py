@@ -8,10 +8,9 @@ required).
 Hopefully this will not grow too big and can be deprecated (and removed) sometime in the near future (fingers crossed).
 """
 
-import os
-import re
 try:
     from pathlib import Path
 except ImportError:
     from .pathlib_ import Path_ as Path
+# noinspection PyUnusedImports
 from logging_ import Logging
