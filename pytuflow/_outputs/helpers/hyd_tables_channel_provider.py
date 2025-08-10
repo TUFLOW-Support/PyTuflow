@@ -30,7 +30,6 @@ class HydTablesChannelProvider:
             if re.findall(r'^Channel', line):
                 info = re.split(r'[\[\] ]', line)
                 channel_id = info[1].strip()
-                cross_sections = re.findall(r'XS\d{5}', line)
                 while True:
                     line_ = fo.readline()
                     if line_ == '\n' or not line_ or [x for x in line_.split(',') if x][0] == '\n':

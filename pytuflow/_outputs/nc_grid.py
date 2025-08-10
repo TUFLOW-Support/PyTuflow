@@ -210,7 +210,7 @@ class NCGrid(Grid):
             return super().time_series(locations, data_types, time_fmt)
 
     def section(self, locations: LineStringLocation, data_types: Union[str, list[str]],
-                time: TimeLike) -> pd.DataFrame:
+                time: TimeLike, **kwargs) -> pd.DataFrame:
         self._load()
         with self._open() as self._nc:
             return super().section(locations, data_types, time)
