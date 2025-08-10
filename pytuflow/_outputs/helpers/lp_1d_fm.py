@@ -14,7 +14,7 @@ class LP1DFM(LP1D):
         # docstring inherited
         branches = []
         if len(self.ids) == 1:
-            conn = Connectivity_FM(self.chan_info, self.node_info, self.ids[0], None)
+            conn = ConnectivityFM(self.chan_info, self.node_info, self.ids[0], None)
             branches.extend(conn.branches)
         else:
             # more than 1 id - find a connection
@@ -23,7 +23,7 @@ class LP1DFM(LP1D):
                 for id2 in self.ids:
                     if id1 == id2:
                         continue
-                    conn = Connectivity_FM(self.chan_info, self.node_info, id1, id2)
+                    conn = ConnectivityFM(self.chan_info, self.node_info, id1, id2)
                     if conn.connected:
                         ds_id = conn.id2
                         break
@@ -38,7 +38,7 @@ class LP1DFM(LP1D):
             for id_ in self.ids:
                 if id_ == ds_id:
                     continue
-                conn = Connectivity_FM(self.chan_info, self.node_info, id_, ds_id)
+                conn = ConnectivityFM(self.chan_info, self.node_info, id_, ds_id)
                 if conn.connected:
                     branches.extend(conn.branches)
 
@@ -56,7 +56,7 @@ class LP1DFM(LP1D):
         return ids
 
 
-class Connectivity_FM(Connectivity):
+class ConnectivityFM(Connectivity):
     """Override :class:`LP_1D<pytuflow.outputs.helpers.lp_1d.Connectivity>` for Flood Modeller
     connectivity because the start and end locations will be nodes and not channels.
     """
@@ -83,12 +83,12 @@ class Connectivity_FM(Connectivity):
 
         return finished
 
-    def _downstream_channels(self, id: str) -> Generator[tuple[str, str], None, None]:
+    def _downstream_channels(self, id_: str) -> Generator[tuple[str, str], None, None]:
         """Yield downstream channels given a channel ID."""
-        for chan in self.node_info.loc[id].channels:
+        for chan in self.node_info.loc[id_].channels:
             if chan not in self.chan_info.index:
                 continue
             us_node = self.chan_info.loc[chan, 'us_node']
-            if us_node == id:
+            if us_node == id_:
                 nd = self.chan_info.loc[chan, 'ds_node']
                 yield nd, chan

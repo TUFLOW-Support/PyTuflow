@@ -72,7 +72,8 @@ class BCCheckProvider:
                 return id_
         return ''
 
-    def _extract_tcf(self, line: str) -> Path:
+    @staticmethod
+    def _extract_tcf(line: str) -> Path:
         tcf = re.findall(r'".*"', line)
         if tcf:
             tcf = tcf[0].strip('"')

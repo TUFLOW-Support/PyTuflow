@@ -1,11 +1,9 @@
-import typing
 from abc import ABC, abstractmethod
 from typing import Union
 
 import pandas as pd
 
-from pytuflow._pytuflow_types import PathLike
-from pytuflow._outputs.helpers.lp_1d import LP1D
+from .helpers.lp_1d import LP1D
 
 
 class ITimeSeries1D(ABC):
@@ -18,8 +16,8 @@ class ITimeSeries1D(ABC):
     """
 
     @abstractmethod
-    def __init__(self, *fpath: PathLike) -> None:
-        super().__init__()
+    def __init__(self, *args) -> None:
+        super().__init__(*args)
         #: pd.DataFrame: Node information. Column headers are :code:`[id, bed_level, top_level, nchannel, channels]`
         self._node_info = pd.DataFrame(
             index=['id'],

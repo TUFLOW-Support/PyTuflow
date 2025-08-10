@@ -38,11 +38,13 @@ class QgisDATMeshDriver(QgisMeshDriver):
                 for special_time in self.special_times(data_type_group):
                     yield special_time
                 return
+            # noinspection PyUnresolvedReferences
             if data_type_group.times.tolist() in [[99999.], [-99999.]]:
                 data_type_group.times = [0.]
             yield data_type_group
 
-    def special_times(self, data_type_group: DatasetGroup) -> Generator[DatasetGroup, None, None]:
+    @staticmethod
+    def special_times(data_type_group: DatasetGroup) -> Generator[DatasetGroup, None, None]:
         for time in data_type_group.times:
             if time == 900001.:
                 name = 'tmax water level'

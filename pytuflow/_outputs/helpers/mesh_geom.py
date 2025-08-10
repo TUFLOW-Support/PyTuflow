@@ -47,7 +47,7 @@ def closest_face_indexes(
                 if (geom.contains(p) or geom.intersects(QgsGeometry.fromPointXY(p)) or
                         (len(points) > 1 and geom.contains(QgsGeometry.fromPointXY(mid_point(p, points[1]))))):
                     face_indexes.append(ind)
-                    if count > 0 and len(face_indexes) == count:
+                    if 0 < count == len(face_indexes):
                         break
 
     return face_indexes

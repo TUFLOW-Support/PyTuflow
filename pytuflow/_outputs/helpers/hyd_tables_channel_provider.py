@@ -26,16 +26,11 @@ class HydTablesChannelProvider:
         """
         buffer = io.StringIO()
         while True:
-            marker = fo.tell()
             line = fo.readline()
             if re.findall(r'^Channel', line):
                 info = re.split(r'[\[\] ]', line)
                 channel_id = info[1].strip()
                 cross_sections = re.findall(r'XS\d{5}', line)
-                xs1 = cross_sections[0]
-                xs2 = None
-                if len(cross_sections) > 1:
-                    xs2 = cross_sections[1]
                 while True:
                     line_ = fo.readline()
                     if line_ == '\n' or not line_ or [x for x in line_.split(',') if x][0] == '\n':

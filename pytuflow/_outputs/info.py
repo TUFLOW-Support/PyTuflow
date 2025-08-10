@@ -617,7 +617,7 @@ class INFO(TimeSeries):
             return self.fpath.parent / prop_path
         return None
 
-    def _load_node_info(self) -> None:
+    def _load_node_info(self, *args, **kwargs) -> None:
         """Load node info DataFrame."""
         node_info_csv = self._expand_property_path(r'(?:1D\s)?Node Info', regex=True)
         if node_info_csv is not None:
@@ -693,7 +693,7 @@ class INFO(TimeSeries):
 
         self.oned_objs = pd.DataFrame(info)
 
-    def _load_time_series(self) -> None:
+    def _load_time_series(self, *args, **kwargs) -> None:
         """Load time-series data into memory."""
         self._nd_res_types = ['water level']
         for res in ['Water Levels', 'Flows', 'Velocities']:

@@ -54,6 +54,7 @@ class Grid(MapOutput):
         --------
         Get the water level time-series data for a given point defined in a shapefile:
 
+        >>> grid = ... # Assume grid is a loaded grid result instance
         >>> grid.time_series('/path/to/point.shp', 'water level')
         time     water level/pnt1
         0.00000               NaN
@@ -87,7 +88,7 @@ class Grid(MapOutput):
         return df
 
     def section(self, locations: LineStringLocation, data_types: Union[str, list[str]],
-                time: TimeLike) -> pd.DataFrame:
+                time: TimeLike, **kwargs) -> pd.DataFrame:
         """Extracts section data for the given locations and data types.
 
         The ``locations`` can be a list of ``x, y`` tuple points, or a Well Known Text (WKT) line string. It can also
@@ -121,6 +122,7 @@ class Grid(MapOutput):
         --------
         Get a water level section from a line defined in a shapefile at time 0.5 hrs:
 
+        >>> grid = ... # Assume grid is a loaded grid result instance
         >>> grid.section('/path/to/line.shp', 'water level', 0.5)
                offset  water level/Line 1
         0    0.000000           45.994362
@@ -157,7 +159,8 @@ class Grid(MapOutput):
 
         return df
 
-    def _get_xy_index(self, pnt: Point, dx: float, dy: float, ox: float, oy: float, ncol: int, nrow: int):
+    @staticmethod
+    def _get_xy_index(pnt: Point, dx: float, dy: float, ox: float, oy: float, ncol: int, nrow: int):
         x, y = pnt
         if x < ox or x > ox + ncol * dx or pnt[1] < oy or pnt[1] > oy + nrow * dy:
             return None, None

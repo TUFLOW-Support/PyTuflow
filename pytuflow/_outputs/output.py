@@ -388,9 +388,9 @@ class Output(ABC):
                    column_name: str,
                    exclude: bool = False) -> tuple[pd.DataFrame, bool]:
         def remove_from_ctx(ctx1, types):
-            for typ in types:
-                while typ in ctx1:
-                    ctx1.remove(typ)
+            for typ1 in types:
+                while typ1 in ctx1:
+                    ctx1.remove(typ1)
 
         filtered_something = False
         ctx_ = []

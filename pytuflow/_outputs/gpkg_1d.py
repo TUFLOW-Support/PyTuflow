@@ -528,7 +528,8 @@ class GPKG1D(GPKGBase, INFO):
             dtype1 = 'channel flow regime' if dtype == 'Flow Regime' else self._get_standard_data_type_name(dtype)
             self._time_series_data[dtype1] = self._gpkg_time_series_extractor(cur, dtype, self._gis_layer_l_name)
 
-    def _sqlite_return_to_df(self, ret: list[tuple], columns: list[str], type_map: list[type]) -> pd.DataFrame:
+    @staticmethod
+    def _sqlite_return_to_df(ret: list[tuple], columns: list[str], type_map: list[type]) -> pd.DataFrame:
         d = OrderedDict({x: [] for x in columns})
         for row in ret:
             for i, col in enumerate(columns):
