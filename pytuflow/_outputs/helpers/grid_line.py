@@ -75,7 +75,7 @@ class GridLine:
         dx, dy = abs(dx), abs(dy)
         d = 2 * dy - dx
         n = y0
-        for m in range(x0, x1 + xi, xi):
+        for m in range(int(x0), int(x1 + xi), xi):
             # check line intersects cell and also check cells on either side.
             if self._intersects(m, n - yi, p0, p1, octant):
                 m_, n_ = self._octant_coords(m, n - yi, octant)
@@ -119,9 +119,11 @@ class GridLine:
         """start=True - return the first intersection point, start=False - return the last intersection point."""
         intersection = self._grid_intersect(p0, p1)
         if intersection.is_empty:
-            return (-1, -1)
+            return -1, -1
         if start:
+            # noinspection PyUnresolvedReferences
             return intersection.coords[0]
+        # noinspection PyUnresolvedReferences
         return intersection.coords[1]
 
     def _to_grid_coords(self, p0: 'Point', p1: 'Point') -> tuple['Point', 'Point']:
@@ -135,10 +137,12 @@ class GridLine:
         if self.in_grid(p0):
             p0_mn = self.to_mn(p0)
         else:
+            # noinspection PyUnresolvedReferences
             p0_mn = self.to_mn(intersection.coords[0])
         if self.in_grid(p1):
             p1_mn = self.to_mn(p1)
         else:
+            # noinspection PyUnresolvedReferences
             p1_mn = self.to_mn(intersection.coords[1])
 
         return p0_mn, p1_mn
@@ -201,9 +205,9 @@ class GridLine:
             return 1
         elif dx > 0 and dy > 0:
             return 2
-        elif dx < 0 and dy > 0 and not dx_larger:
+        elif dx < 0 < dy and not dx_larger:
             return 3
-        elif dx < 0 and dy > 0:
+        elif dx < 0 < dy:
             return 4
         elif dx < 0 and dx_larger:
             return 5

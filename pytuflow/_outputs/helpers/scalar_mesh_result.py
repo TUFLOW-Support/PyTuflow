@@ -1,6 +1,7 @@
-from typing import Union, Generator
+from typing import Union
 
 import numpy as np
+# noinspection PyUnresolvedReferences
 from qgis.core import QgsMeshDatasetValue, QgsMeshDataBlock, QgsMesh3dDataBlock, QgsMeshDatasetIndex
 
 from .mesh_result import MeshResult
@@ -8,6 +9,7 @@ from .mesh_result import MeshResult
 
 class ScalarMeshResult(MeshResult):
 
+    # noinspection PyTypeHints
     def _value_from_weightings(self,
                                data_blocks: list['QgsMeshDatasetValue'],
                                weightings: tuple[float, float, float]) -> float:

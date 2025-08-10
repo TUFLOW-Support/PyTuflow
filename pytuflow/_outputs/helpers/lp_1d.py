@@ -1,3 +1,4 @@
+import typing
 from typing import Union, Generator
 
 import pandas as pd
@@ -33,7 +34,7 @@ class LP1D:
             return f'<LongProfile 1D: {" ".join(self.ids)}>'
         return '<LongProfile 1D>'
 
-    def __eq__(self, other: any) -> bool:
+    def __eq__(self, other: typing.Any) -> bool:
         """Override the equality operator so that it checks against the ids it's connecting."""
         return sorted([x.lower() for x in self.ids]) == sorted([x.lower() for x in other.ids])
 
@@ -115,7 +116,8 @@ class LP1D:
 
         return df
 
-    def melt_2_columns(self, conn_df: pd.DataFrame, value_vars: list[str], new_col_name: str) -> pd.DataFrame:
+    @staticmethod
+    def melt_2_columns(conn_df: pd.DataFrame, value_vars: list[str], new_col_name: str) -> pd.DataFrame:
         df = pd.melt(
             conn_df.reset_index(),
             id_vars=['branch_id', 'channel', 'index'],
@@ -203,9 +205,9 @@ class Connectivity:
 
         return finished
 
-    def _downstream_channels(self, id: str) -> Generator[str, None, None]:
+    def _downstream_channels(self, id_: str) -> Generator[str, None, None]:
         """Yield downstream channels given a channel ID."""
-        nd = self.chan_info.loc[id, 'ds_node']
+        nd = self.chan_info.loc[id_, 'ds_node']
         channels = list(self.node_info.loc[nd, 'channels']) if self.node_info.loc[nd, 'nchannel'] > 1 else [self.node_info.loc[nd, 'channels']]
         for chan in channels:
             us_node = self.chan_info.loc[chan, 'us_node']

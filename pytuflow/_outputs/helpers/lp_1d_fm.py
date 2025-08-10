@@ -5,7 +5,7 @@ import pandas as pd
 from .lp_1d import LP1D, Connectivity
 
 
-class LP1D_FM(LP1D):
+class LP1DFM(LP1D):
     """Override :class:`LP_1D<pytuflow.outputs.helpers.lp_1d.LP_1D>` for Flood Modeller
     long profiles because the start and end locations will be nodes and not channels.
     """
@@ -83,7 +83,7 @@ class Connectivity_FM(Connectivity):
 
         return finished
 
-    def _downstream_channels(self, id: str) -> Generator[str, None, None]:
+    def _downstream_channels(self, id: str) -> Generator[tuple[str, str], None, None]:
         """Yield downstream channels given a channel ID."""
         for chan in self.node_info.loc[id].channels:
             if chan not in self.chan_info.index:

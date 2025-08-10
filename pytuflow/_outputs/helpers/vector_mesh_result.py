@@ -1,7 +1,7 @@
-from calendar import day_abbr
-from typing import Generator, Union, Any
+from typing import Union, Any
 import numpy as np
 
+# noinspection PyUnresolvedReferences
 from qgis.core import QgsMeshDatasetValue, QgsMeshDataBlock, QgsMesh3dDataBlock, QgsMeshDatasetIndex
 
 from .mesh_result import MeshResult
@@ -9,6 +9,7 @@ from .mesh_result import MeshResult
 
 class VectorMeshResult(MeshResult):
 
+    # noinspection PyTypeHints
     def _value_from_weightings(self,
                                data_blocks: list['QgsMeshDatasetValue'],
                                weightings: tuple[float, float, float]) -> tuple[float, float]:

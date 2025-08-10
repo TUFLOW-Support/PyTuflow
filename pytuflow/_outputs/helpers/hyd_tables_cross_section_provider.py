@@ -121,19 +121,21 @@ class HydTablesCrossSectionProvider:
         inds = info.split(',')
         for i, ind in enumerate(inds[:]):
             try:
+                # noinspection PyTypeChecker
                 inds[i] = int(ind) - 1  # will be 1 based fortran indexing
             except (ValueError, TypeError):
                 return fpath.stem
-        header_ind = self._find_header_index(fpath, max(inds))
+        header_ind = self._find_header_index(fpath, max([int(x) for x in inds]))
         if header_ind == -1:
             return fpath.stem
         with fpath.open() as f:
             for i, line in enumerate(f):
                 if i == header_ind:
-                    return line.split(',')[inds[1]].strip()
+                    return line.split(',')[int(inds[1])].strip()
         return ''
 
-    def _find_header_index(self, fpath: Path, ind: int) -> int:
+    @staticmethod
+    def _find_header_index(fpath: Path, ind: int) -> int:
         if fpath.exists():
             with fpath.open() as f:
                 for i, line in enumerate(f):

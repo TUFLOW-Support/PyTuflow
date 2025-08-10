@@ -7,7 +7,6 @@ import numpy as np
 import pandas as pd
 
 from .map_output import MapOutput, PointLocation, LineStringLocation
-from .mesh import Mesh
 from .._pytuflow_types import PathLike, TimeLike
 from .helpers.catch_providers import CATCHProvider
 
@@ -587,8 +586,10 @@ class CATCHJson(MapOutput):
     def _load_json(self, fpath: PathLike | str):
         if Path(fpath).is_file():
             with Path(fpath).open() as f:
+                # noinspection PyTypeChecker
                 self._data = json.load(f, object_pairs_hook=OrderedDict)
         else:
+            # noinspection PyTypeChecker
             self._data = json.JSONDecoder(object_pairs_hook=OrderedDict).decode(fpath)
 
     def _initial_load(self):

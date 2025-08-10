@@ -8,7 +8,7 @@ from .helpers.tpc_reader import TPCReader
 from .info import INFO
 from .._pytuflow_types import PathLike, TimeLike
 from .helpers.fm_res_driver import FMResultDriver
-from .helpers.lp_1d_fm import LP1D_FM
+from .helpers.lp_1d_fm import LP1DFM
 from .._fm import GXY
 from .._fm import DAT
 from ..util import pytuflow_logging
@@ -521,7 +521,7 @@ class FMTS(INFO):
 
     def _connectivity(self, ids: Union[str, list[str]]) -> pd.DataFrame:
         # docstring inherited
-        lp = LP1D_FM(ids, self._node_info, self._channel_info)
+        lp = LP1DFM(ids, self._node_info, self._channel_info)
         if self._lp is not None and lp == self._lp:
             return self._lp.df
 
