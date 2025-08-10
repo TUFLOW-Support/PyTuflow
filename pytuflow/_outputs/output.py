@@ -141,7 +141,7 @@ class Output(ABC):
         return ctx['data_type'].unique().tolist()
 
     @abstractmethod
-    def time_series(self, locations: PlotExtractionLocation, data_types: Union[str, list[str]],
+    def time_series(self, locations: PlotExtractionLocation, data_types: str | list[str] | None,
                     time_fmt: str = 'relative', **kwargs) -> pd.DataFrame:
         """Returns a time series dataframe for the given location and data type. The return DataFrame may have multiple
         time columns if the output time series data do not share a common time key.

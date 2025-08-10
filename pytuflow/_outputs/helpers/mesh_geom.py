@@ -2,11 +2,13 @@ from math import pi, cos, sin
 from typing import TYPE_CHECKING, Union, Any, Generator
 
 import numpy as np
+# noinspection PyUnresolvedReferences
 from qgis.core import (QgsPolygon, QgsLineString, QgsPoint, QgsPointXY, QgsGeometry, QgsMeshLayer, QgsProject,
                        QgsCoordinateReferenceSystem, QgsRectangle, QgsVectorLayer, QgsFeature,
                        QgsGeometryUtils, QgsMeshDatasetGroupMetadata)
 
 if TYPE_CHECKING:
+    # noinspection PyUnresolvedReferences
     from qgis.core import QgsMesh, QgsMeshSpatialIndex
 
 
@@ -19,6 +21,7 @@ def vertex_indices_to_polygon(mesh: 'QgsMesh', vertex_indices: list[int]) -> Qgs
     return QgsPolygon(QgsLineString([QgsPointXY(mesh.vertex(x).x(), mesh.vertex(x).y()) for x in vertex_indices]))
 
 
+# noinspection PyTypeHints
 def closest_face_indexes(
         points: list['QgsPointXY'],
         si: 'QgsMeshSpatialIndex',
@@ -129,9 +132,9 @@ class Intersect:
             p2: QgsPoint,
             p3: QgsPoint,
             p4: QgsPoint,
-            v1: int,
-            v2: int,
-            face: 'Face',
+            v1: int | None,
+            v2: int | None,
+            face: 'Face | None',
             segment_start: bool = False):
         self.p1 = QgsPointXY(p1)
         self.p2 = QgsPointXY(p2)
@@ -173,6 +176,7 @@ class Intersect:
         """Greater than operator to help sorting. Uses linear distance along the polyline."""
         if isinstance(other, Intersect):
             return self.dist > other.dist
+        return NotImplemented
 
     def __hash__(self):
         return hash(self.uid)

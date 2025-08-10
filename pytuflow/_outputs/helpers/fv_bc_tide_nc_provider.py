@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 import re
 
@@ -8,6 +8,7 @@ try:
     from netCDF4 import Dataset
     has_netcdf4 = True
 except ImportError:
+    Dataset = 'Dataset'
     has_netcdf4 = False
 
 from ..._pytuflow_types import TimeLike
@@ -82,6 +83,15 @@ class FVBCTideNCProvider:
         self._timevar = 'local_time' if self.use_local_time else 'time'
         self._get_units()
         self.labels = [self._strip_label(k) for k, v in self._nc.variables.items() if v.ndim == 2 and v.dimensions[0] == 'time']
+
+    def is_empty(self) -> bool:
+        """Returns True if the NC file is empty.
+
+        Returns
+        -------
+        bool
+        """
+        return bool(self.labels)
 
     def is_fv_tide_bc(self) -> bool:
         """Returns True if the netCDF file looks like a FV tide boundary condition file.
@@ -213,18 +223,22 @@ class FVBCTideNCProvider:
             data = data.filled(np.nan)
         return data
 
-    def _strip_label(self, label: str) -> str:
+    @staticmethod
+    def _strip_label(label: str) -> str:
         x = re.sub(r'^ns', '', label)
         x = re.sub(r'_wl$', '', x)
         return x
 
-    def _section_label(self, label: str) -> str:
+    @staticmethod
+    def _section_label(label: str) -> str:
         return f'ns{label}_wl'
 
-    def _chainage_label(self, label: str) -> str:
+    @staticmethod
+    def _chainage_label(label: str) -> str:
         return f'ns{label}_chainage'
 
-    def _chainage_dim_label(self, label: str) -> str:
+    @staticmethod
+    def _chainage_dim_label(label: str) -> str:
         return f'ns{label}_chain'
 
     def _get_closest_timestep_index(self, time: TimeLike, tol: float = 0.01) -> int:
@@ -233,6 +247,7 @@ class FVBCTideNCProvider:
         timesteps = self._get_relative_timesteps()
         a = np.isclose(time, timesteps, atol=tol, rtol=0.)
         if a[a].any():
+            # noinspection PyTypeChecker
             return np.where(a)[0][0]
         else:
             if time < timesteps.min():
@@ -275,6 +290,7 @@ class FVBCTideNCProvider:
         self.tz = self._nc.variables[self._timevar].timezone
 
     def _convert_from_masked_array(self, a: np.ma.MaskedArray) -> np.ndarray:
+        # noinspection PyUnreachableCode
         if not isinstance(a, np.ma.MaskedArray):
             return a
         if not a.mask.any():
@@ -283,7 +299,8 @@ class FVBCTideNCProvider:
             return self._convert_from_masked_array_1d(a)
         return a
 
-    def _convert_from_masked_array_1d(self, a: np.ma.MaskedArray) -> np.ndarray:
+    @staticmethod
+    def _convert_from_masked_array_1d(a: np.ma.MaskedArray) -> np.ndarray:
         x = np.arange(0, a.shape[0])
         xp = x[~a.mask]
         fp = a[~a.mask].filled(0)

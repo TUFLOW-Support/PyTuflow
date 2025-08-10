@@ -201,8 +201,8 @@ class MapOutput(Output, ABC):
 
     @staticmethod
     def _list_depth(lst: Iterable) -> int:
-        def is_bottom(lst_: Iterable) -> bool:
-            return all(isinstance(x, (float, int, str)) for x in lst_)
+        def is_bottom(lst1: Iterable) -> bool:
+            return all(isinstance(x, (float, int, str)) for x in lst1)
 
         dep = 1
         lst_ = lst

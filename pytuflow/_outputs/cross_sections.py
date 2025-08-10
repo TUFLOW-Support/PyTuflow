@@ -234,7 +234,7 @@ class CrossSections(TabularOutput):
 
         return df1
 
-    def time_series(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
+    def time_series(self, locations: str | list[str] | None, data_types: str | list[str] | None,
                     time_fmt: str = 'relative', *args, **kwargs) -> pd.DataFrame:
         """Not supported for ``CrossSection`` results. Raises a :code:`NotImplementedError`."""
         raise NotImplementedError(f'{__class__.__name__} does not support time-series plotting.')

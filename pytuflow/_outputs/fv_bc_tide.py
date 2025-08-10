@@ -131,7 +131,7 @@ class FVBCTide(TimeSeries):
             raise ResultTypeError(f'File does not look like a time series {self.__class__.__name__} file: {nc_fpath}')
 
         try:
-            with self.node_string_gis_fpath.open_gis('r') as f:
+            with self.node_string_gis_fpath.open_gis('r'):
                 pass
         except Exception as e:
             raise Exception(e)
@@ -149,13 +149,14 @@ class FVBCTide(TimeSeries):
     @staticmethod
     def _looks_like_this(fpath: Path) -> bool:
         # docstring inherited
+        # noinspection PyBroadException
         try:
             with Dataset(fpath) as nc:
                 hastime = 'time' in nc.dimensions and len(nc.dimensions) > 1
                 if not hastime:
                     return False
-                vars = [x for x in nc.variables.keys() if re.findall(r'^ns.*_wl$', x)]
-                has_res = len(vars) > 0
+                vars_ = [x for x in nc.variables.keys() if re.findall(r'^ns.*_wl$', x)]
+                has_res = len(vars_) > 0
                 return has_res
         except Exception:
             return False
@@ -193,6 +194,7 @@ class FVBCTide(TimeSeries):
 
         Examples
         --------
+        >>> bndry = FVBCTide('/path/to/fv_bc_tide.nc', '/path/to/fv_bc_tide.shp')
         >>> bndry.times()
         [0.0, 0.016666666666666666, ..., 3.0]
         >>> bndry.times(fmt='absolute')
@@ -229,6 +231,7 @@ class FVBCTide(TimeSeries):
         The below examples demonstrate how to use the filter argument to filter the returned IDs. The first example
         returns all IDs:
 
+        >>> bndry = FVBCTide('/path/to/fv_bc_tide.nc', '/path/to/fv_bc_tide.shp')
         >>> bndry.ids()
         ['Ocean_pt_0', 'Ocean_pt_1', 'Ocean_pt_2', 'Ocean_pt_3', 'Ocean_pt_4', 'Ocean']
         """
@@ -258,12 +261,13 @@ class FVBCTide(TimeSeries):
 
         Examples
         --------
+        >>> bndry = FVBCTide('/path/to/fv_bc_tide.nc', '/path/to/fv_bc_tide.shp')
         >>> bndry.data_types()
         ['water level']
         """
         return super().data_types(filter_by)
 
-    def maximum(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
+    def maximum(self, locations: str | list[str] | None, data_types: str | list[str] | None,
                 time_fmt: str = 'relative') -> pd.DataFrame:
         """Returns a DataFrame containing the maximum values for the given data types. The returned DataFrame
         will include time of maximum results as well.
@@ -294,6 +298,7 @@ class FVBCTide(TimeSeries):
         --------
         Extracting the maximum flow for a given channel:
 
+        >>> bndry = FVBCTide('/path/to/fv_bc_tide.nc', '/path/to/fv_bc_tide.shp')
         >>> bndry.maximum('Ocean_pt_0', 'level')
                     point/level/max  point/level/tmax
         Ocean_pt_0         1.191989         289784.25
@@ -310,7 +315,7 @@ class FVBCTide(TimeSeries):
 
         return df
 
-    def time_series(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
+    def time_series(self, locations: str | list[str] | None, data_types: str | list[str] | None,
                     time_fmt: str = 'relative', *args, **kwargs) -> pd.DataFrame:
         """Returns a time-series DataFrame for the given location(s) and data type(s).
 

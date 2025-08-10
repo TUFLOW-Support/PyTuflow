@@ -2,12 +2,11 @@ import re
 import typing
 from typing import Union
 
-import numpy as np
 import pandas as pd
 from packaging.version import Version
 
 from .gpkg_2d import GPKG2D
-from pytuflow._pytuflow_types import PathLike, AppendDict, TimeLike
+from .._pytuflow_types import PathLike, AppendDict, TimeLike
 
 if typing.TYPE_CHECKING:
     from sqlite3 import Cursor
@@ -84,15 +83,18 @@ class GPKGRL(GPKG2D):
     def _looks_like_this(fpath: PathLike) -> bool:
         # docstring inherited
         import sqlite3
+        # noinspection PyBroadException
         try:
             conn = sqlite3.connect(fpath)
-        except Exception as e:
+        except Exception:
             return False
+        # noinspection PyBroadException
         try:
             cur = conn.cursor()
             cur.execute('SELECT Version FROM TUFLOW_timeseries_version;')
             version = Version(cur.fetchone()[0])
             if version == Version('1.0'):
+                # noinspection PyUnusedLocal
                 valid = False
             else:
                 valid = None
@@ -106,8 +108,9 @@ class GPKGRL(GPKG2D):
                             valid = typ[0].lower() == 'rl'
                             break
                 if valid is None:  # could not determine if it is valid - could be empty
+                    # noinspection PyUnusedLocal
                     valid = True
-        except Exception as e:
+        except Exception:
             valid = False
         finally:
             conn.close()
@@ -141,6 +144,7 @@ class GPKGRL(GPKG2D):
 
         Examples
         --------
+        >>> res = GPKGRL('/path/to/plot_results_RL.gpkg')
         >>> res.times()
         [0.0, 0.016666666666666666, ..., 3.0]
         >>> res.times(fmt='absolute')
@@ -175,6 +179,7 @@ class GPKGRL(GPKG2D):
         The below examples demonstrate how to use the ``filter_by`` argument to filter the returned IDs.
         The first example returns all IDs:
 
+        >>> res = GPKGRL('/path/to/plot_results_RL.gpkg')
         >>> res.ids()
         ['rl_point', 'rl_line', 'rl_polygon']
 
@@ -217,6 +222,7 @@ class GPKGRL(GPKG2D):
         The below examples demonstrate how to use the ``filter_by`` argument to filter the returned data types.
         The first example returns all data types:
 
+        >>> res = GPKGRL('/path/to/plot_results_RL.gpkg')
         >>> res.data_types()
         ['water level', 'flow']
 
@@ -271,6 +277,7 @@ class GPKGRL(GPKG2D):
         --------
         Extracting the maximum flow for a given location:
 
+        >>> res = GPKGRL('/path/to/plot_results_RL.gpkg')
         >>> res.maximum('rl_line', 'flow')
                   rl/flow/max       rl/flow/tmax
         ds1            59.423           1.383333
@@ -322,6 +329,7 @@ class GPKGRL(GPKG2D):
         --------
         Extracting flow for a given line.
 
+        >>> res = GPKGRL('/path/to/plot_results_RL.gpkg')
         >>> res.time_series('rl_line', 'q')
         Time (h)        rl/q/ds1
         0.000000           0.000

@@ -1,6 +1,7 @@
 from typing import TYPE_CHECKING, Any, Union, Generator
 
 import numpy as np
+# noinspection PyUnresolvedReferences
 from qgis.core import (QgsGeometry, QgsMeshDatasetGroupMetadata, QgsMesh3dAveragingMethod, QgsMeshDataBlock,
                        QgsMeshLayer, QgsMeshDatasetValue, QgsMeshMultiLevelsAveragingMethod,
                        QgsMeshSigmaAveragingMethod, QgsMeshRelativeHeightAveragingMethod,
@@ -11,6 +12,7 @@ from .mesh_geom import vertex_indices_to_polygon, calculate_barycentric_weightin
 from .averaging_method import AveragingMethod
 
 if TYPE_CHECKING:
+    # noinspection PyUnresolvedReferences
     from qgis.core import (QgsPointXY, QgsMesh, QgsMeshDataProvider, QgsMeshSpatialIndex)
 
 
@@ -108,6 +110,7 @@ class MeshResult:
 
         return triangles
 
+    # noinspection PyTypeHints
     def _2d_vertex_values(self,
                           triangle: list[int],
                           dataset_index: 'QgsMeshDatasetIndex') -> list['QgsMeshDatasetValue']:
@@ -126,6 +129,7 @@ class MeshResult:
 
         return data_blocks
 
+    # noinspection PyTypeHints
     def _value_from_weightings(self,
                                data_blocks: list['QgsMeshDatasetValue'],
                                weightings: tuple[float, float, float]) -> float:
@@ -170,7 +174,7 @@ class MeshResult:
         except AssertionError:
             return np.nan
 
-        is_vector = self.dp.datasetGroupMetadata(dataset_group_index).isVector()
+        # is_vector = self.dp.datasetGroupMetadata(dataset_group_index).isVector()
 
         # calculate value
         return self._value_from_weightings(data_blocks, self.weightings)
@@ -207,6 +211,7 @@ class MeshResult:
     def _vertical_iter(self, dataset_3d: 'QgsMesh3dDataBlock', interpolation: str) -> Generator[tuple[float, float], None, None]:
         vertical_levels = dataset_3d.verticalLevels()
         values = dataset_3d.values()
+        x_, y_ = [], []
         if (len(vertical_levels) - 1) * 2 == len(values):  # vector
             values = self._convert_vector_values(values)
         if interpolation == 'stepped':
@@ -282,7 +287,7 @@ class MeshResult:
 
     def value(self,
               dataset_index: 'QgsMeshDatasetIndex',
-              averaging_method: str) -> float:
+              averaging_method: str | None) -> float:
         """Returns the scalar value at a point for a given QgsMeshDatasetIndex (result group and timestep)."""
         avg_method = AveragingMethod(averaging_method)
         if avg_method.valid:
@@ -318,17 +323,17 @@ class MeshResult:
         """Yields z and value."""
         if self._get_face(self.point) == -1:
             self.active = False
-            return np.nan
+            return None
 
         if not self.dp.isFaceActive(dataset_index, self.face):
-            return np.nan
+            return None
 
         # if value is on vertices, then 2d result - return bed and water surface and the 2d value
         if self.dp.datasetGroupMetadata(dataset_index.group()).dataType() == QgsMeshDatasetGroupMetadata.DataOnVertices:
             value = self._interpolate_from_mesh_vertices(self.point, dataset_index, self.mesh.face(self.face))
             for z in self._2d_elevations(dataset_index):
                 yield z, value
-            return
+            return None
 
         if self.dp.datasetGroupMetadata(dataset_index.group()).dataType() in \
                 [QgsMeshDatasetGroupMetadata.DataOnFaces, QgsMeshDatasetGroupMetadata.DataOnVolumes]:
@@ -340,4 +345,5 @@ class MeshResult:
                 value = self._value_from_mesh_face(dataset_index, self.face, None)
                 for z in self._2d_elevations(dataset_index):
                     yield z, value
-                return
+                return None
+        return None

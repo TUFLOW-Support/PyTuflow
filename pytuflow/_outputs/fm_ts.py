@@ -257,7 +257,7 @@ class FMTS(INFO):
                 dat_types.remove('pits')
         return dat_types
 
-    def maximum(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
+    def maximum(self, locations: str | list[str] | None, data_types: str | list[str] | None,
                 time_fmt: str = 'relative') -> pd.DataFrame:
         """Returns a DataFrame containing the maximum values for the given data types. The returned DataFrame
         will include time of maximum results as well.
@@ -324,7 +324,7 @@ class FMTS(INFO):
         """
         return super().maximum(locations, data_types, time_fmt)
 
-    def time_series(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
+    def time_series(self, locations: str | list[str] | None, data_types: str | list[str] | None,
                     time_fmt: str = 'relative', *args, **kwargs) -> pd.DataFrame:
         """Returns a time-series DataFrame for the given location(s) and data type(s).
 
@@ -529,7 +529,7 @@ class FMTS(INFO):
         self._lp = lp
         return self._lp.df
 
-    def _id_to_uid(self, id_: str) -> str:
+    def _id_to_uid(self, id_: str) -> str | None:
         """Converts a unit ID to its UID. Only searches through units that
         contain results. If multiple units are found, it will first preference units that have bed level information
         (requires that the class was initialised with a DAT file) as this will preference units such as
@@ -666,6 +666,7 @@ class FMTS(INFO):
             d['nchannel'] = [0 for _ in d['id']]
             d['channels'] = [[] for _ in d['id']]
             d['type'] = ['' for _ in d['id']]
+            # noinspection PyTypeChecker
             d['has_results'] = True
             d['name'] = d['id']
 

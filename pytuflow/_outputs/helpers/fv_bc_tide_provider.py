@@ -155,10 +155,10 @@ class FVBCTideProvider:
         section = self.nc.get_section(label, time)
         if data_at_ends:
             if not np.isclose(section[0, 0], 0, rtol=0.):
-                section = np.insert(section, 0, [[0, np.nan]], axis=0)
+                section = np.insert(section, 0, np.array([[0, np.nan]]), axis=0)
             length = self.gis.get_length(label)
             if not np.isclose(section[-1, 0], length, rtol=0.001):
-                section = np.append(section, [[length, np.nan]], axis=0)
+                section = np.append(section, np.array([[length, np.nan]]), axis=0)
         return section
 
     def get_time_series(self, label: str, point_ind: int, time_fmt: str = 'relative') -> np.ndarray:
@@ -168,6 +168,8 @@ class FVBCTideProvider:
 
         Parameters
         ----------
+        label : str
+            The boundary label / name within the netCDF file.
         point_ind : int
             The index of the point.
         time_fmt : str, optional

@@ -20,8 +20,8 @@ class Grid(MapOutput):
     def _value(self, n: int, m: int, timeidx: int, dtype: str) -> float:
         pass
 
-    def time_series(self, locations: PointLocation, data_types: Union[str, list[str]],
-                    time_fmt: str = 'relative') -> pd.DataFrame:
+    def time_series(self, locations: PointLocation, data_types: str | list[str] | None,
+                    time_fmt: str = 'relative', **kwargs) -> pd.DataFrame:
         """Extracts time-series data for the given locations and data types.
 
         The ``locations`` can be a single point in the form of a tuple ``(x, y)`` or in the Well Known Text (WKT)

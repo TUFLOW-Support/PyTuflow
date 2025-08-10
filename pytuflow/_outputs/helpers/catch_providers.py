@@ -78,7 +78,7 @@ class CATCHProvider(Output):
                 df.at[idx, 'dt'] = (row['dt'][0], row['dt'][1] + self.time_offset / 3600.)
         return df
 
-    def time_series(self, locations: PointLocation, data_types: Union[str, list[str]],
+    def time_series(self, locations: PointLocation, data_types: str | list[str] | None,
                     time_fmt: str = 'relative', averaging_method: str = None) -> pd.DataFrame:
         # override - output relative times may need to be adjusted to CATCH reference time
         df = super().time_series(locations, data_types, time_fmt, averaging_method=averaging_method)

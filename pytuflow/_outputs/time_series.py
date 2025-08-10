@@ -13,7 +13,7 @@ class TimeSeries(TabularOutput):
     """Abstract base class for TUFLOW tabular, time series outputs."""
 
     @abstractmethod
-    def maximum(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
+    def maximum(self, locations: str | list[str] | None, data_types: str | list[str] | None,
                 time_fmt: str = 'relative') -> pd.DataFrame:
         """Returns a dataframe containing the maximum values for the given data types. The returned dataframe
         will include time of maximum results as well.

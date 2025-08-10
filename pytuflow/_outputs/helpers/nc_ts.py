@@ -166,7 +166,7 @@ class NCTS:
             else:
                 names = f'name_{varname}'
             if names not in cls.nc.variables:
-                return
+                return None
             columns = [b''.join(x).decode().strip() for x in cls.nc.variables[names]]
 
         a = np.transpose(var[:])

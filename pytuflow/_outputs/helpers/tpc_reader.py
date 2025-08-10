@@ -40,7 +40,7 @@ class TPCReader:
         """
         return self._df.shape[0]
 
-    def find_property_name(self, name: str, regex_flags: int = 0) -> str:
+    def find_property_name(self, name: str, regex_flags: int = 0) -> str | None:
         """Returns the property name from a regex search string.
 
         Parameters
@@ -58,6 +58,7 @@ class TPCReader:
         for idx, row in self._df.iterrows():
             if re.match(name, row[0], flags=regex_flags):
                 return row[0]
+        return None
 
     def get_property(self, name: str, default: typing.Any = None, regex: bool = False, value: str = None) -> typing.Any:
         """Returns a property value from the property name. The return data type will be inferred from the data.
@@ -84,6 +85,7 @@ class TPCReader:
         if regex and not value:
             name = self.find_property_name(name)
 
+        # noinspection PyBroadException
         try:
             prop = self._df[self._df.iloc[:,0] == name].iloc[0,1] if value is None else value
             if os.name != 'nt' and '\\' in prop:
@@ -106,7 +108,7 @@ class TPCReader:
                 except ValueError:
                     pass
             return prop
-        except Exception as e:
+        except Exception:
             return default
 
     def get_property_index(self, name: str) -> int:
@@ -125,20 +127,21 @@ class TPCReader:
         int
             The index of the property.
         """
+        # noinspection PyBroadException
         try:
             ind = self._df[self._df.iloc[:,0] == name].index[0]
-        except Exception as e:
+        except Exception:
             ind = -1
         return ind
 
-    def iter_properties(self, filter: str = None, start_after: str = None,
+    def iter_properties(self, filter_by: str = None, start_after: str = None,
                         end_before: str = None, regex: bool = False,
                         regex_flags: int = 0) -> typing.Generator[tuple[str, typing.Any], None, None]:
         """Iterate over the properties in the file.
 
         Parameters
         ----------
-        filter : str, optional
+        filter_by : str, optional
             A search filter to apply to the property names.
         start_after : str, optional
             The property name to start after.
@@ -161,9 +164,9 @@ class TPCReader:
                 continue
             if i >= end_idx:
                 break
-            if filter and not regex and filter in self._df.iloc[i,0]:
+            if filter_by and not regex and filter_by in self._df.iloc[i,0]:
                 yield self._df.iloc[i,0], self.get_property(self._df.iloc[i,0], value=self._df.iloc[i,1])
-            elif filter and regex and re.findall(filter, self._df.iloc[i,0], regex_flags):
+            elif filter_by and regex and re.findall(filter_by, self._df.iloc[i,0], regex_flags):
                 yield self._df.iloc[i,0], self.get_property(self._df.iloc[i,0], value=self._df.iloc[i,1])
-            elif not filter:
+            elif not filter_by:
                 yield self._df.iloc[i,0], self.get_property(self._df.iloc[i,0], value=self._df.iloc[i,1])

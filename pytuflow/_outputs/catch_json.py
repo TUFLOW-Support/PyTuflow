@@ -197,7 +197,7 @@ class CATCHJson(MapOutput):
         """
         return super().data_types(filter_by)
 
-    def time_series(self, locations: PointLocation, data_types: Union[str, list[str]],
+    def time_series(self, locations: PointLocation, data_types: str | list[str] | None,
                     time_fmt: str = 'relative', averaging_method: str = None) -> pd.DataFrame:
         """Extracts time-series data for the given locations and data types.
 

@@ -16,7 +16,7 @@ except ImportError:
 
 from ..._pytuflow_types import PathLike, TuflowPath
 from ...gis import get_driver_name_from_extension
-from ...util import gis
+from ...util import geom as geom_util
 
 
 class FVBCTideGISProvider:
@@ -173,7 +173,7 @@ class FVBCTideGISProvider:
         if not self._lyr.GetSpatialRef().IsProjected():
             x, y = linestring.xy
             points = list(zip(x.tolist(), y.tolist()))
-            return gis.calc_spherical_length(points)
+            return geom_util.calc_spherical_length(points)
         return linestring.length
 
     def _geometry_type(self) -> int:

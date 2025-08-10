@@ -225,6 +225,7 @@ class BCTablesCheck(TimeSeries):
         --------
         Get all the boundary types in the model:
 
+        >>> bndry = BCTablesCheck('path/to/_bc_tables_check.csv')
         >>> bndry.data_types()
         ['QT', 'SA', 'HQ']
 
@@ -281,6 +282,7 @@ class BCTablesCheck(TimeSeries):
         --------
         Get all the :code:`QT` boundary IDs:
 
+        >>> bndry = BCTablesCheck('path/to/_bc_tables_check.csv')
         >>> bndry.ids('QT')
         ['FC01']
 
@@ -294,7 +296,7 @@ class BCTablesCheck(TimeSeries):
             return df.type.unique().tolist()
         return df.data_type.unique().tolist()
 
-    def maximum(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
+    def maximum(self, locations: str | list[str] | None, data_types: str | list[str] | None,
                 time_fmt: str = 'relative') -> pd.DataFrame:
         """Returns the maximum values for the given locations and data types. Only time-series data
         is supported (i.e. data with a time index, :code:`QH` boundaries are therefore not supporteD).
@@ -318,6 +320,7 @@ class BCTablesCheck(TimeSeries):
         --------
         Get the maximum values for all the flow boundaries:
 
+        >>> bndry = BCTablesCheck('path/to/_bc_tables_check.csv')
         >>> bndry.maximum(None, 'flow')
                  QT/max  QT/tmax  SA/max  SA/tmax
         FC01      92.24    0.917     NaN      NaN
@@ -347,8 +350,8 @@ class BCTablesCheck(TimeSeries):
 
         return mx
 
-    def time_series(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
-                    time_fmt: str = 'relative', *args, **kwargs) -> pd.DataFrame:
+    def time_series(self, locations: str | list[str] | None, data_types: str | list[str] | None,
+                    *args, **kwargs) -> pd.DataFrame:
         """Returns time-series data for the given locations and data types.
 
         Because boundary data is not guaranteed to share a common index, the return DataFrame will contain
@@ -365,7 +368,7 @@ class BCTablesCheck(TimeSeries):
         Returns
         -------
         pd.DataFrame
-            DataFrame with the time series data.
+            Data frame with the time series data.
 
         Examples
         --------

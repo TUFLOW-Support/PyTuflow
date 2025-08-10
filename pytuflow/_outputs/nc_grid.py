@@ -117,6 +117,7 @@ class NCGrid(Grid):
 
     @staticmethod
     def _looks_like_this(fpath: PathLike) -> bool:
+        # noinspection PyBroadException
         try:
             for _ in NCGrid._nc_grid_layers(fpath):
                 return True
@@ -156,6 +157,7 @@ class NCGrid(Grid):
 
         Examples
         --------
+        >>> nc = NCGrid('./path/to/result.nc')
         >>> nc.times()
         [0.0, 0.016666666666666666, ..., 3.0]
         """
@@ -185,6 +187,7 @@ class NCGrid(Grid):
 
         Examples
         --------
+        >>> nc = NCGrid('./path/to/result.nc')
         >>> nc.data_types()
         ['water level', 'depth', 'velocity', 'z0', 'max water level', 'max depth', 'max velocity', 'max z0', 'tmax water level']
 
@@ -200,8 +203,8 @@ class NCGrid(Grid):
         """
         return super().data_types(filter_by)
 
-    def time_series(self, locations: PointLocation, data_types: Union[str, list[str]],
-                    time_fmt: str = 'relative') -> pd.DataFrame:
+    def time_series(self, locations: PointLocation, data_types: str | list[str] | None,
+                    time_fmt: str = 'relative', **kwargs) -> pd.DataFrame:
         self._load()
         with self._open() as self._nc:
             return super().time_series(locations, data_types, time_fmt)
@@ -218,7 +221,7 @@ class NCGrid(Grid):
         raise NotImplementedError(f'{__class__.__name__} does not support curtain plotting.')
 
     def profile(self, locations: PointLocation, data_types: Union[str, list[str]],
-                time: TimeLike) -> pd.DataFrame:
+                time: TimeLike, **kwargs) -> pd.DataFrame:
         """Not supported for ``NCGrid`` results. Raises a :code:`NotImplementedError`."""
         raise NotImplementedError(f'{__class__.__name__} does not support vertical profile plotting.')
 
@@ -233,9 +236,9 @@ class NCGrid(Grid):
             self.reference_time = self._reference_time(nc)
             self._load_info(nc)
 
-    def _reference_time(self, nc: Dataset) -> datetime:
+    def _reference_time(self, nc: Dataset) -> datetime | None:
         if 'time' not in nc.variables:
-            return
+            return None
         units = nc.variables['time'].units
         if 'hour' in units:
             self.time_units = 'h'

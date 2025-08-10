@@ -483,7 +483,8 @@ class GPKG2D(GPKGBase, TimeSeries, ITimeSeries2D):
                 storage[dtype1] = self._gpkg_time_series_extractor(cur, dtype, self._gis_layer_r_name)
                 self._geoms[dtype1] = 'poly'
 
-    def _load_maximums(self, time_series_storage: AppendDict, storage: AppendDict) -> None:
+    @staticmethod
+    def _load_maximums(time_series_storage: AppendDict, storage: AppendDict) -> None:
         for data_type, results in time_series_storage.items():
             for res in results:
                 max_ = res.max()
