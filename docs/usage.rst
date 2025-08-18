@@ -24,7 +24,7 @@ are:
 - **GDAL**: This is required for reading GIS files, which extends the :class:`GisInput<pytuflow.GisInput>` class and
   allows the the use of GIS files as locations to extract data from map outputs.
 - **shapely**: Needed for extracting section data from map output formats.
-- **QGIS**: Currently, QGIS is required for extracting data from :class:`XMDF<pytuflow.XMDF>`, :class:`NCMesh<pytuflow.NCMesh>`,
+- **QGIS**: Currently QGIS is required for extracting data from :class:`XMDF<pytuflow.XMDF>`, :class:`NCMesh<pytuflow.NCMesh>`,
   and :class:`CATCHJson<pytuflow.CATCHJson>` output formats. We hope to remove this dependency in the future,
   but for now, it is required for these particular output formats. It isn't required for using ``pytuflow`` in general.
 

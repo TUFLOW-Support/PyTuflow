@@ -49,6 +49,7 @@ right-hand side (RHS) of the command to include ``"NC"``.
     >>> inp = tcf.find_input('map output format')[0]
     >>> print(inp)
     Map Output Format == XMDF TIF
+
     >>> inp.rhs = f'{inp.rhs} NC' # Append NC to the existing RHS
     >>> print(inp)
     Map Output Format == XMDF TIF NC
