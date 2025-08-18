@@ -110,14 +110,6 @@ This page gives an overview of the public modules, classes, and functions within
    register_tuflow_binary_folder
    tuflow_binaries
 
-.. rubric:: Logging
-
-.. autosummary::
-   :toctree: ./api
-   :nosignatures:
-
-   get_logger
-
 .. rubric:: Everything Else
 
 .. autosummary::
