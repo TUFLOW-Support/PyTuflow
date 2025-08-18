@@ -34,9 +34,9 @@ OrderedDict([('Name', 'RL_05')])
 """
 from contextlib import contextmanager
 
-from pytuflow._pytuflow_types import PathLike, TuflowPath
-from pytuflow._tmf.tmf.tuflow_model_files.gis import GPKG, ogr_basic_geom_type
-from pytuflow._tmf.tmf.tuflow_model_files.gis import GISAttributes
+from ..._pytuflow_types import PathLike, TuflowPath
+from ..._tmf.tmf.tuflow_model_files.gis import GPKG, ogr_basic_geom_type
+from ..._tmf.tmf.tuflow_model_files.gis import GISAttributes
 
 try:
     from osgeo import ogr

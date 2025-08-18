@@ -8,7 +8,7 @@ from math import cos, sin, asin, sqrt, radians
 
 import numpy as np
 import pandas as pd
-from fm_to_estry.helpers.geometry import Point, Line, Polygon, get_right_angle_line
+from ..._fm_to_estry.fm_to_estry.helpers.geometry import Point, Line, Polygon, get_right_angle_line
 
 
 def calc_spherical_length(points: list[tuple[float, float]]) -> float:

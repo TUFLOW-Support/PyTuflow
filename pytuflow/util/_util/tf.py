@@ -24,7 +24,7 @@ How to register a folder containing multiple TUFLOW releases:
 """
 
 
-from pytuflow._tmf.tmf.tuflow_model_files.tuflow_binaries import (tuflow_binaries,
+from ..._tmf.tmf.tuflow_model_files.tuflow_binaries import (tuflow_binaries,
                                                                   register_tuflow_binary,
                                                                   register_tuflow_binary_folder,
                                                                   TuflowBinaries)

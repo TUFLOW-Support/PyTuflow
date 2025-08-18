@@ -17,4 +17,4 @@ Examples
 """
 
 
-from pytuflow._tmf.tmf.tuflow_model_files.tfstrings.patterns import (increment_fpath, expand_and_get_files)
+from ..._tmf.tmf.tuflow_model_files.tfstrings.patterns import (increment_fpath, expand_and_get_files)
