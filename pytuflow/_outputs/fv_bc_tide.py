@@ -305,7 +305,7 @@ class FVBCTide(TimeSeries):
         """
         locations, data_types = self._loc_data_types_to_list(locations, data_types)
         filter_by = '/'.join(locations + data_types)
-        ctx = self._filter(filter_by)
+        ctx, _ = self._filter(filter_by)
         if ctx.empty:
             return pd.DataFrame()
 

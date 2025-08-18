@@ -136,7 +136,7 @@ class CrossSections(TabularOutput):
         >>> xs.ids('xz')
         ['1d_xs_M14_C99', '1d_xs_M14_C100', '1d_xs_M14_C101', ..., '1d_xs_M14_ds_weir', '1d_xs_M14_rd_weir']
         """
-        df = self._filter(filter_by)
+        df, _ = self._filter(filter_by)
         return df['id'].unique().tolist()
 
     def data_types(self, filter_by: str = None) -> list[str]:
@@ -173,7 +173,7 @@ class CrossSections(TabularOutput):
         >>> xs.data_types('/path/to/1d_CrossSection.csv')
         ['xz']
         """
-        df = self._filter(filter_by)
+        df, _ = self._filter(filter_by)
         return df['type'].unique().tolist()
 
     def section(self, locations: Union[str, list[str]], data_types: Union[str, list[str]] = None,

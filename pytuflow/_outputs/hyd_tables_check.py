@@ -160,7 +160,7 @@ class HydTablesCheck(TabularOutput):
         >>> hyd_tables.ids('channel')
         ['RD_weir', 'FC01.39', 'FC01.38'  ...  FC01.37', 'FC01.36', 'FC01.34']
         """
-        df = self._filter(filter_by)
+        df, _ = self._filter(filter_by)
         return df.id.unique().tolist()
 
     def data_types(self, filter_by: str = None) -> list[str]:
@@ -214,7 +214,7 @@ class HydTablesCheck(TabularOutput):
         ['depth', 'storage width', 'flow width', 'area', 'wetted perimeter',
         'radius', 'vertex resistance factor', 'k ']
         """
-        df = self._filter(filter_by)
+        df, _ = self._filter(filter_by)
         return df.data_type.unique().tolist()
 
     def section(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
@@ -272,7 +272,7 @@ class HydTablesCheck(TabularOutput):
 
         # get more filters on the inputs - e.g. what stage of processing they are from
         ctx = '/'.join(locations + data_types)
-        df = self._filter(ctx)
+        df, _ = self._filter(ctx)
 
         df1 = pd.DataFrame()
         for loc in locations:

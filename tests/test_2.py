@@ -344,6 +344,14 @@ class Test_TPC_2016(TestCase):
         ts = res.time_series(['po_line', 'po_line_2'], 'q', time_fmt='absolute')
         self.assertEqual((181, 4), ts.shape)
 
+    def test_time_series_empty(self):
+        p = './tests/2016/EG14_001.tpc'
+        res = TPC(p)
+        df = res.time_series('channel', 'water level')
+        assert df.empty
+        df = res.time_series('FC01.2_R', 'water level')
+        assert df.empty
+
     def test_long_plot_result_types(self):
         p = './tests/2016/EG14_001.tpc'
         res = TPC(p)

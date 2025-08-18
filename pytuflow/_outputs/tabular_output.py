@@ -63,7 +63,10 @@ class TabularOutput(Output):
         locations, data_types = self._loc_data_types_to_list(locations, data_types)
         locations, data_types = self._figure_out_loc_and_data_types(locations, data_types)
         filter_by = '/'.join(locations + data_types)
-        return self._filter(filter_by, ignore_excess_filters=True), locations, data_types
+        df, filtered = self._filter(filter_by, ignore_excess_filters=True)
+        if not (filtered['data_type'] or filtered['attribute']) or not filtered['id']:
+            df = pd.DataFrame(columns=df.columns)
+        return df, locations, data_types
 
     def _figure_out_loc_and_data_types(self, locations: str | list[str],
                                        data_types: str | list[str] | None) -> tuple[list[str], list[str]]:

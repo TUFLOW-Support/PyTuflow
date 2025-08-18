@@ -102,7 +102,7 @@ class Output(ABC):
                 return a[a <= row['end']]
 
         # generate a DataFrame with all a combination of result types that meet the context
-        ctx = self._filter(filter_by)
+        ctx, _ = self._filter(filter_by)
         if ctx.empty:
             return []
         if not np.intersect1d(['start', 'end', 'dt'], ctx.columns).all():
@@ -134,7 +134,7 @@ class Output(ABC):
         list[str]
             The available data types.
         """
-        ctx = self._filter(filter_by)
+        ctx, _ = self._filter(filter_by)
         if ctx.empty:
             return []
 
@@ -229,8 +229,9 @@ class Output(ABC):
         pass
 
     def _filter(self, filter_by: str, filtered_something: bool = False, df: pd.DataFrame = None,
-                ignore_excess_filters: bool = False) -> pd.DataFrame:
-        """Returns a DataFrame with the output combinations for the given filter string.
+                ignore_excess_filters: bool = False) -> tuple[pd.DataFrame, dict[str, bool]]:
+        """Returns a DataFrame with the output combinations for the given filter string and a dictionary
+        of what filters were triggered by the filter_by string.
 
         Parameters
         ----------
@@ -248,45 +249,52 @@ class Output(ABC):
 
         Returns
         -------
-        pd.DataFrame
-            The context combinations.
+        tuple[pd.DataFrame, dict[str, bool]]
+            The context combinations and a dictionary of what filters were triggered.
         """
+        domain_filter = False
+        geom_filter = False
+        attr_filter = False
+        dtype_filter = False
+        id_filter = False
+
         filter_by = [x.strip().lower() for x in filter_by.split('/')] if filter_by else []
         df = self._overview_dataframe() if df is None else df
         if not filter_by:
-            return df
+            return df, {'domain': False, 'geometry': False, 'attribute': False, 'data_type': False, 'id': False}
 
         # domain
         if self.DOMAIN_TYPES:
-            df, filtered_something_ = self._filter_generic(filter_by, df, self.DOMAIN_TYPES, 'domain')
-            if filtered_something_:
-                filtered_something = True
+            df, domain_filter = self._filter_generic(filter_by, df, self.DOMAIN_TYPES, 'domain')
 
         # geometry
         if self.GEOMETRY_TYPES:
-            df, filtered_something_ = self._filter_generic(filter_by, df, self.GEOMETRY_TYPES, 'geometry')
-            if filtered_something_:
-                filtered_something = True
+            df, geom_filter = self._filter_generic(filter_by, df, self.GEOMETRY_TYPES, 'geometry')
 
         # attribute types
         if self.ATTRIBUTE_TYPES:
-            df, filtered_something_ = self._filter_generic(filter_by, df, self.ATTRIBUTE_TYPES, 'type')
-            if filtered_something_:
-                filtered_something = True
-            elif any([x for x in filter_by if x.lower() in [x.lower() for x in self.ATTRIBUTE_TYPES]]):
+            df, attr_filter = self._filter_generic(filter_by, df, self.ATTRIBUTE_TYPES, 'type')
+            if not attr_filter and any([x for x in filter_by if x.lower() in [x.lower() for x in self.ATTRIBUTE_TYPES]]):
                 df = pd.DataFrame(columns=df.columns)
 
         # data types
-        df, filtered_something_ = self._filter_by_data_type(filter_by, df)
-        if filtered_something_:
-            filtered_something = True
+        df, dtype_filter = self._filter_by_data_type(filter_by, df)
 
         # ids
-        df, filtered_something_ = self._filter_by_id(self.ID_COLUMNS, filter_by, df)
-        if filtered_something_:
-            filtered_something = True
+        df, id_filter = self._filter_by_id(self.ID_COLUMNS, filter_by, df)
 
-        return df if not df.empty and filtered_something and not (filter_by and not ignore_excess_filters) else pd.DataFrame(columns=df.columns)
+        filtered_something = filtered_something or domain_filter or geom_filter or attr_filter or dtype_filter or id_filter
+        filtered = {
+            'domain': domain_filter,
+            'geometry': geom_filter,
+            'attribute': attr_filter,
+            'data_type': dtype_filter,
+            'id': id_filter
+        }
+
+        df = df if not df.empty and filtered_something and not (filter_by and not ignore_excess_filters) else pd.DataFrame(columns=df.columns)
+
+        return df, filtered
 
     @staticmethod
     def _get_standard_data_type_name(name: str) -> str:

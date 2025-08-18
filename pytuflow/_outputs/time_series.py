@@ -83,7 +83,7 @@ class TimeSeries(TabularOutput):
             The available data types.
         """
         # generate a DataFrame with all a combination of result types that meet the context
-        ctx = self._filter(filter_by)
+        ctx, _ = self._filter(filter_by)
         if ctx.empty:
             return []
 
@@ -106,7 +106,7 @@ class TimeSeries(TabularOutput):
             The available IDs.
         """
         # generate a DataFrame with all a combination of result types that meet the context
-        ctx = self._filter(filter_by)
+        ctx, _ = self._filter(filter_by)
         if ctx.empty:
             return []
 

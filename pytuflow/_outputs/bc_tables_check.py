@@ -161,7 +161,7 @@ class BCTablesCheck(TimeSeries):
         >>> bndry.times('FC01')
         [0.0, 0.08, 0.17 ... 3.17, 3.25, 3.33]
         """
-        df = self._filter(filter_by)
+        df, _ = self._filter(filter_by)
         times = []
         if df.empty:
             return times
@@ -239,7 +239,7 @@ class BCTablesCheck(TimeSeries):
         >>> bndry.ids('FC01')
         ['QT']
         """
-        df = self._filter(filter_by)
+        df, _ = self._filter(filter_by)
         if internal_id:
             return df.uid.unique().tolist()
         return df.id.unique().tolist()
@@ -291,7 +291,7 @@ class BCTablesCheck(TimeSeries):
         >>> bndry.ids('flow')
         ['FC01', 'FC04']
         """
-        df = self._filter(filter_by)
+        df, _ = self._filter(filter_by)
         if bndry_type:
             return df.type.unique().tolist()
         return df.data_type.unique().tolist()
@@ -390,7 +390,7 @@ class BCTablesCheck(TimeSeries):
         """
         locations, data_types = self._loc_data_types_to_list(locations, data_types)
         context = '/'.join(locations + data_types)
-        ctx = self._filter(context)
+        ctx, _ = self._filter(context)
         if ctx.empty:
             return pd.DataFrame()
 
