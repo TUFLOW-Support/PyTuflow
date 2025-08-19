@@ -28,7 +28,7 @@ class Output(ABC):
 
     @abstractmethod
     def __init__(self, *fpath: PathLike, **kwargs) -> None:
-        super().__init__()
+        super().__init__(*fpath, **kwargs)
         self._fpath = fpath
         self._loaded = False
 
