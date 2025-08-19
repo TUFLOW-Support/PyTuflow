@@ -18,7 +18,7 @@ from .info import INFO
 from .itime_series_2d import ITimeSeries2D
 from .helpers.tpc_reader import TPCReader
 from .._pytuflow_types import PathLike, AppendDict, TimeLike
-from ..util import pytuflow_logging
+from ..util import pytuflow_logging, patterns
 from .._outputs.helpers.nc_dataset_wrapper import DatasetWrapper
 
 
@@ -836,7 +836,7 @@ class TPC(INFO, ITimeSeries2D):
         if p:
             try:
                 with p.open() as f:
-                    index_col = f.readline().split(',')[1].strip('"')
+                    index_col = patterns.csv_line_split(f.readline())[1].strip('"')
                 df = pd.read_csv(p, index_col=index_col, na_values='**********')
                 df.index.name = 'id'
                 df.drop(df.columns[0], axis=1, inplace=True)
