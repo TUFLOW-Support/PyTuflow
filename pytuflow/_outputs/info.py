@@ -10,6 +10,7 @@ from .helpers.tpc_reader import TPCReader
 from .time_series import TimeSeries
 from .._pytuflow_types import PathLike, TimeLike, AppendDict
 from ..util import pytuflow_logging
+from ..util import patterns
 from ..results import ResultTypeError
 from .helpers.lp_1d import LP1D
 
@@ -710,11 +711,14 @@ class INFO(TimeSeries):
         """Load the time-series data from the CSV file into a DataFrame."""
         with fpath.open() as f:
             header = f.readline()
-            index_col = header.split(',')[1].strip('"')
-        df = pd.read_csv(fpath, na_values='**********', index_col=index_col)
+            index_col = patterns.csv_line_split(header)[1]
+        dtype = str if fpath.stem.endswith('_1d_CF') or fpath.stem.endswith('_1d_NF') else np.float32
+        df = pd.read_csv(fpath, na_values='**********', index_col=index_col, dtype=dtype)
         df.index.name = 'Time (h)'
         df.drop(df.columns[0], axis=1, inplace=True)
         df.rename(columns={x: self._csv_col_name_corr(x) for x in df.columns}, inplace=True)
+        if dtype is str:
+            df.index = df.index.astype(np.float32)
         return df
 
     @staticmethod

@@ -12,9 +12,11 @@ Examples
 'path/to/2d_code_005_R.shp'
 
 >>> # expand wildcard to get all matching files
->>> expand_and_get_files(r'C:\TUFLOW\model\gis', '2d_code_<<~s~>>_R.shp')
+>>> expand_and_get_files('C:\\TUFLOW\\model\\gis', '2d_code_<<~s~>>_R.shp')
 ['C:\\TUFLOW\\model\\gis\\2d_code_001_R.shp', 'C:\\TUFLOW\\model\\gis\\2d_code_002_R.shp', ...]
 """
 
 
-from ..._tmf.tmf.tuflow_model_files.tfstrings.patterns import (increment_fpath, expand_and_get_files)
+from ..._tmf.tmf.tuflow_model_files.tfstrings.patterns import (expand_and_get_files)
+from ..._tmf.tmf.tuflow_model_files.tfstrings.increment_number import increment_fpath
+from ..._tmf.tmf.tuflow_model_files.utils.csv_line import csv_line_split
