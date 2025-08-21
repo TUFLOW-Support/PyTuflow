@@ -14,3 +14,7 @@ from .nc_mesh import NCMesh
 from .catch_json import CATCHJson
 from .dat import DAT
 from .nc_grid import NCGrid
+
+# expose some base classes for convenience
+from .map_output import MapOutput
+from .time_series import TimeSeries
