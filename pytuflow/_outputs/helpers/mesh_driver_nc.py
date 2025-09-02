@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 from .mesh_driver import MeshDriver
@@ -15,5 +15,5 @@ class NCMeshDriver(MeshDriver):
 
     def __init__(self, mesh: Path):
         super().__init__(mesh)
-        self.reference_time = datetime(1990, 1, 1)
+        self.reference_time = datetime(1990, 1, 1, tzinfo=timezone.utc)
         self.valid = False
