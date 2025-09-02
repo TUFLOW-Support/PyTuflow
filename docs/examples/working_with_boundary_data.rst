@@ -39,7 +39,7 @@ The database content is stored in a pandas DataFrame, and we can view this by ac
     FC01  EG00_001.csv  inflow_time_hr  inflow_FC01        NaN         NaN        NaN       NaN       NaN
 
 This model contains a single inflow (``QT``) boundary called ``"FC01"``. To view the time-series data for this
-boundary, we can use the :meth:`BCDatabse.value()<pytuflow.BCDatabase.value>` method, which returns a
+boundary, we can use the :meth:`BCDatabase.value()<pytuflow.BCDatabase.value>` method, which returns a
 pandas DataFrame with the time-series data for the boundary:
 
 .. code-block:: pycon
