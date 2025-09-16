@@ -35,7 +35,7 @@ class Output(ABC):
         #: str: The result name
         self.name = ''
         #: datetime: The reference time for the output
-        self.reference_time = datetime(2000, 1, 1, tzinfo=timezone.utc)
+        self.reference_time = datetime(1990, 1, 1, tzinfo=timezone.utc)
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__} ({self.name})"

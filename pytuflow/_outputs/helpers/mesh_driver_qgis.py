@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Generator
 
@@ -35,6 +35,9 @@ except ImportError:
 
 Point = tuple[float, float]
 
+from ...util import pytuflow_logging
+logger = pytuflow_logging.get_logger()
+
 
 class QgisMeshDriver(MeshDriver):
 
@@ -44,7 +47,7 @@ class QgisMeshDriver(MeshDriver):
         self.dp = None
         self.si = None
         self.qgsmesh = None
-        self.reference_time = datetime(1990, 1, 1)
+        self.reference_time = datetime(1990, 1, 1, tzinfo=timezone.utc)
         self.start_end_locs = []
         self._point_results = []
         self._linestrings = []

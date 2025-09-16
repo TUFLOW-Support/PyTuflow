@@ -783,7 +783,7 @@ class ResData_GPKG(ResData):
             self.time_units = string.split(' ')[0]
 
         if not re.findall(r'\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}', string):
-            return datetime(2000, 1, 1)  # a default value
+            return datetime(1990, 1, 1)  # a default value
 
         return datetime.strptime(re.findall(r'\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}', string)[0], '%Y-%m-%d %H:%M:%S')
 
