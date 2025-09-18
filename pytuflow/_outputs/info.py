@@ -296,11 +296,15 @@ class INFO(TimeSeries):
         """
         self._load()
         if filter_by and 'section' in filter_by:
-            dtypes = super().data_types('node')
+            filter_by = '/'.join([x for x in filter_by.split('/') if x != 'section'])
+            filter_by = f'node/{filter_by}' if filter_by else 'node'
+            dtypes = super().data_types(filter_by)
             dtypes += [f'max {x}' for x in dtypes if x in self._maximum_data]
             return ['bed level', 'pipes', 'pits'] + dtypes
         elif filter_by and 'timeseries' in filter_by:
-            filter_by = None
+            filter_by = '/'.join([x for x in filter_by.split('/') if x.lower != 'timeseries'])
+            if not filter_by:
+                filter_by = None
         return super().data_types(filter_by)
 
     def maximum(self, locations: str | list[str] | None, data_types: str | list[str] | None,

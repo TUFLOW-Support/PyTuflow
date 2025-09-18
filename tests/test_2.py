@@ -476,6 +476,12 @@ class Test_TPC_2019(TestCase):
         res = TPC(p)
         self.assertEqual('EG15_001', res.name)
 
+    def test_data_types_3d(self):
+        p = './tests/2020/EG15_001.tpc'
+        res = TPC(p)
+        dt3d = res.data_types('timeseries/3d')
+        self.assertEqual(0, len(dt3d))
+
     def test_channel_count(self):
         p = './tests/2019/M03_5m_001.tpc'
         res = TPC(p)
