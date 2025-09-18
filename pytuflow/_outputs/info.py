@@ -302,7 +302,7 @@ class INFO(TimeSeries):
             dtypes += [f'max {x}' for x in dtypes if x in self._maximum_data]
             return ['bed level', 'pipes', 'pits'] + dtypes
         elif filter_by and 'timeseries' in filter_by:
-            filter_by = '/'.join([x for x in filter_by.split('/') if x.lower != 'timeseries'])
+            filter_by = '/'.join([x for x in filter_by.split('/') if x != 'timeseries'])
             if not filter_by:
                 filter_by = None
         return super().data_types(filter_by)
