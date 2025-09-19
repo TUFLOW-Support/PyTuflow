@@ -584,6 +584,12 @@ class Test_TPC_2019(TestCase):
         df = res.maximum(None, None)
         self.assertEqual((52, 6), df.shape)
 
+    def test_section_max_water_level(self):
+        p = './tests/2020/EG15_001.tpc'
+        res = TPC(p)
+        df = res.section('pipe1', 'max water level', 1)
+        self.assertEqual(42.5066, df['max water level'].max())
+
 
 class Test_TPC_GPKG(TestCase):
 

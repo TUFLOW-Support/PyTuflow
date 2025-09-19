@@ -564,8 +564,7 @@ class INFO(TimeSeries):
             elif 'tmax' in dtype1:
                 dtype1 = dtype1.replace('TMax', '').strip()
                 df[dtype] = self._maximum_data[dtype1][0].loc[df['node'], 'tmax'].tolist()
-            elif 'max' in dtype1:
-                dtype1 = dtype1.replace('Max', '').strip()
+            elif 'max' in dtype:
                 df[dtype] = self._maximum_data[dtype1][0].loc[df['node'], 'max'].tolist()
             else:  # temporal result
                 idx = self._time_series_data[dtype1][0].index[timeidx]
