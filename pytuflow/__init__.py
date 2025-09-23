@@ -32,4 +32,4 @@ from .util import TuflowBinaries, pytuflow_logging
 
 
 name = 'PyTuflow'
-__version__ = '1.0.0-dev71'
+__version__ = '1.0.0-dev72'
