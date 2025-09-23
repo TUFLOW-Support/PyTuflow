@@ -101,6 +101,9 @@ class QgisMeshDriver(MeshDriver):
         if not self.lyr:
             raise RuntimeError('Layer not loaded.')
 
+        if not self.dp:
+            self.dp = self.lyr.dataProvider()
+
         self.qgsmesh = QgsMesh()
         self.dp.populateMesh(self.qgsmesh)
         self.si = QgsMeshSpatialIndex(self.qgsmesh)
