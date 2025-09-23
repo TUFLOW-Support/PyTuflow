@@ -259,6 +259,18 @@ class Test_TPC_2016(TestCase):
         res = TPC(p)
         self.assertEqual(22, len(res.data_types()))
 
+    def test_data_types_static(self):
+        p = './tests/2016/EG14_001.tpc'
+        res = TPC(p)
+        dtypes = res.data_types('static')
+        self.assertEqual(4, len(dtypes))
+
+    def test_data_types_temporal(self):
+        p = './tests/2016/EG14_001.tpc'
+        res = TPC(p)
+        dtypes = res.data_types('temporal')
+        self.assertEqual(22, len(dtypes))
+
     def test_data_types_domain_context(self):
         p = './tests/2016/EG14_001.tpc'
         res = TPC(p)
@@ -1097,6 +1109,13 @@ class Test_FM_TS(unittest.TestCase):
         self.assertEqual(6, len(res.data_types()))
         self.assertEqual(6, len(res.data_types('node')))
         self.assertEqual(0, len(res.data_types('channel')))
+
+    def test_data_types_static(self):
+        p = './tests/fm/zzn/FMT_M01_001.zzn'
+        dat = './tests/fm/zzn/FMT_M01_001.dat'
+        res = FMTS(p, dat)
+        dtypes = res.data_types('static')
+        self.assertEqual(9, len(dtypes))
 
     def test_lp_types(self):
         p = './tests/fm/zzn/FMT_M01_001.zzn'

@@ -294,17 +294,37 @@ class INFO(TimeSeries):
         >>> res.data_types('section')
         ['bed level', 'pipes', 'pits', 'water level', 'max water level']
         """
+        def remove_filter_part(s: str, part: str) -> str:
+            return '/'.join([x for x in s.split('/') if x != part])
+
         self._load()
-        if filter_by and 'section' in filter_by:
-            filter_by = '/'.join([x for x in filter_by.split('/') if x != 'section'])
+        if filter_by and ('section' in filter_by or 'static' in filter_by) and not 'timeseries' in filter_by:
+            static = temporal = False
+            if 'static' in filter_by:
+                static = True
+                filter_by = remove_filter_part(filter_by, 'static')
+            if 'temporal' in filter_by:
+                temporal = True
+                filter_by = remove_filter_part(filter_by, 'temporal')
+
+            filter_by = remove_filter_part(filter_by, 'section')
             filter_by = f'node/{filter_by}' if filter_by else 'node'
             dtypes = super().data_types(filter_by)
-            dtypes += [f'max {x}' for x in dtypes if x in self._maximum_data]
-            return ['bed level', 'pipes', 'pits'] + dtypes
-        elif filter_by and 'timeseries' in filter_by:
-            filter_by = '/'.join([x for x in filter_by.split('/') if x != 'timeseries'])
+
+            if not temporal:
+                if static:
+                    dtypes = [f'max {x}' for x in dtypes if x in self._maximum_data]
+                else:
+                    dtypes.extend([f'max {x}' for x in dtypes if x in self._maximum_data])
+                dtypes.extend(['bed level', 'pipes', 'pits'])
+
+            return dtypes
+        elif filter_by and ('timeseries' in filter_by or 'temporal' in filter_by):
+            filter_by = remove_filter_part(filter_by, 'timeseries')
+            filter_by = remove_filter_part(filter_by, 'temporal')
             if not filter_by:
                 filter_by = None
+
         return super().data_types(filter_by)
 
     def maximum(self, locations: str | list[str] | None, data_types: str | list[str] | None,
