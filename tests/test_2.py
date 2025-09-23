@@ -590,6 +590,13 @@ class Test_TPC_2019(TestCase):
         df = res.section('pipe1', 'max water level', 1)
         self.assertEqual(42.5066, df['max water level'].max())
 
+    def test_branched_section(self):
+        p = './tests/branched_section/EG15_001.tpc'
+        res = TPC(p)
+        df = res.section('Pipe14', 'bed level', 99)
+        self.assertEqual(8, df[df['branch_id'] == 0].shape[0])
+        self.assertEqual(6, df[df['branch_id'] == 1].shape[0])
+
 
 class Test_TPC_GPKG(TestCase):
 
