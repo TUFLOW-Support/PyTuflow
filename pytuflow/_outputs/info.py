@@ -315,8 +315,8 @@ class INFO(TimeSeries):
                 if static:
                     dtypes = [f'max {x}' for x in dtypes if x in self._maximum_data]
                 else:
-                    dtypes.extend([f'max {x}' for x in dtypes if x in self._maximum_data])
-                dtypes.extend(['bed level', 'pipes', 'pits'])
+                    dtypes = [f'max {x}' for x in dtypes if x in self._maximum_data] + dtypes
+                dtypes = ['bed level', 'pipes', 'pits'] + dtypes
 
             return dtypes
         elif filter_by and ('timeseries' in filter_by or 'temporal' in filter_by):
