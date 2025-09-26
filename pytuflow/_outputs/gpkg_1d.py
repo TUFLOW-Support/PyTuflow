@@ -1,4 +1,5 @@
 import re
+from datetime import timezone
 from typing import Union, TYPE_CHECKING
 from collections import OrderedDict
 from packaging.version import Version
@@ -491,6 +492,7 @@ class GPKG1D(GPKGBase, INFO):
                     self.units = 'us imperial'
             if reference_time is not None:
                 self.reference_time = reference_time
+                self.reference_time.replace(tzinfo=timezone.utc)
 
             self.gis_layer_p_fpath = TuflowPath(self.fpath.parent) / f'{self.fpath.name} >> {self._gis_layer_p_name}'
             self.gis_layer_l_fpath = TuflowPath(self.fpath.parent) / f'{self.fpath.name} >> {self._gis_layer_l_name}'
