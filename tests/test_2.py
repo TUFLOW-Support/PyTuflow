@@ -610,6 +610,19 @@ class Test_TPC_2019(TestCase):
         self.assertEqual(6, df[df['branch_id'] == 1].shape[0])
 
 
+class Test_TPC_SWMM(TestCase):
+
+    def test_load(self):
+        p = './tests/tpc_swmm/TS02_5m_001.tpc'
+        res = TPC(p)
+        self.assertEqual('TS02_5m_001', res.name)
+        self.assertEqual(21, res.node_count)
+        self.assertEqual(17, res.channel_count)
+
+        df = res.time_series('pipe1', 'flow')
+        self.assertEqual((181, 1), df.shape)
+
+
 class Test_TPC_GPKG(TestCase):
 
     def test_load(self):

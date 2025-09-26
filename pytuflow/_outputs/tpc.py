@@ -596,6 +596,14 @@ class TPC(INFO, ITimeSeries2D):
         # 1d
         super()._initial_load()
 
+        # if gpkg_swmm is present
+        for prop, value in self._tpc_reader.iter_properties('GPKG Time Series'):
+            if str(value).lower().endswith('_swmm_ts.gpkg'):
+                self._gpkgswmm = GPKG1D(self._expand_property_path(prop, value=value))
+                self.node_count += self._gpkgswmm.node_count
+                self.channel_count += self._gpkgswmm.channel_count
+                self.reference_time = self._gpkgswmm.reference_time
+
     def _load(self):
         if self._loaded:
             return
@@ -674,6 +682,12 @@ class TPC(INFO, ITimeSeries2D):
                 else:
                     data_type = self._get_standard_data_type_name(data_type)
                     self._time_series_data[data_type] = df
+
+        # load swmm gpkg
+        if self._gpkgswmm is not None:
+            self._gpkgswmm._load()
+            self._time_series_data.update(self._gpkgswmm._time_series_data)
+            self._nd_res_types.extend(self._gpkgswmm._nd_res_types)
 
         # reporting locations
         if self.rl_point_count:
