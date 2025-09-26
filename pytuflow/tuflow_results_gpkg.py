@@ -5,8 +5,8 @@ from datetime import datetime
 
 import numpy as np
 
-from TUFLOW_results import ResData, ChanInfo, NodeInfo, Data1D
-from compatibility_routines import Path, Logging
+from .TUFLOW_results import ResData, ChanInfo, NodeInfo, Data1D
+from .compatibility_routines import Path, Logging
 
 try:
     from qgis.core import QgsVectorLayer
