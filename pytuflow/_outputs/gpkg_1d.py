@@ -6,10 +6,10 @@ from packaging.version import Version
 import numpy as np
 import pandas as pd
 
-from pytuflow._outputs.gpkg_base import GPKGBase
-from pytuflow._outputs.helpers.tpc_reader import TPCReader
-from pytuflow._outputs.info import INFO
-from pytuflow._pytuflow_types import PathLike, TimeLike, TuflowPath
+from .gpkg_base import GPKGBase
+from .helpers.tpc_reader import TPCReader
+from .info import INFO
+from .._pytuflow_types import PathLike, TimeLike, TuflowPath
 
 if TYPE_CHECKING:
     from sqlite3 import Cursor

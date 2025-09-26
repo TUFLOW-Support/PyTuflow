@@ -9,7 +9,7 @@ from typing import Union
 import numpy as np
 import pandas as pd
 
-from pytuflow._pytuflow_types import PathLike, TimeLike, PlotExtractionLocation
+from .._pytuflow_types import PathLike, TimeLike, PlotExtractionLocation
 
 
 with (Path(__file__).parent / 'data' / 'data_type_name_alternatives.json').open() as f:

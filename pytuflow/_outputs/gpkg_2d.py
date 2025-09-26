@@ -7,11 +7,11 @@ import numpy as np
 import pandas as pd
 from packaging.version import Version
 
-from pytuflow._outputs.gpkg_base import GPKGBase
-from pytuflow._outputs.time_series import TimeSeries
-from pytuflow._outputs.itime_series_2d import ITimeSeries2D
-from pytuflow._pytuflow_types import PathLike, AppendDict, TimeLike, TuflowPath
-from pytuflow.results import ResultTypeError
+from .gpkg_base import GPKGBase
+from .time_series import TimeSeries
+from .itime_series_2d import ITimeSeries2D
+from .._pytuflow_types import PathLike, AppendDict, TimeLike, TuflowPath
+from ..results import ResultTypeError
 
 if typing.TYPE_CHECKING:
     from sqlite3 import Cursor

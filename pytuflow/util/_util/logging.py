@@ -38,7 +38,7 @@ import logging
 from pathlib import Path
 from typing import Union
 
-from pytuflow._pytuflow_types import PathLike
+from ..._pytuflow_types import PathLike
 
 
 def get_logger() -> logging.Logger:

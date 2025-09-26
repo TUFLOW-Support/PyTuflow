@@ -12,7 +12,7 @@ except ImportError:
     has_netcdf4 = False
     Dataset = 'Dataset'
 
-from pytuflow._pytuflow_types import PathLike
+from ..._pytuflow_types import PathLike
 
 with (Path(__file__).parents[1] / 'data' / 'ts_labels.json').open() as f:
     TPC_INTERNAL_NAMES = json.load(f)

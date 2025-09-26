@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from pytuflow._pytuflow_types import PathLike
+from ..._pytuflow_types import PathLike
 
 
 class SuperFile:
