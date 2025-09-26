@@ -488,6 +488,13 @@ class Test_TPC_2019(TestCase):
         res = TPC(p)
         self.assertEqual('EG15_001', res.name)
 
+    def test_load_po_same_name_diff_geom(self):
+        p = './tests/tpc_same_name_diff_geom/EG02_010.tpc'
+        res = TPC(p)
+        res._load()
+        self.assertEqual('EG02_010', res.name)
+        self.assertEqual(['flow'], res.data_types('line'))
+
     def test_data_types_3d(self):
         p = './tests/2020/EG15_001.tpc'
         res = TPC(p)

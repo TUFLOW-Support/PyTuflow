@@ -887,18 +887,39 @@ class TPC(INFO, ITimeSeries2D):
                 logger.warning('TPC._load_po_info(): Missing or invalid PLOT.csv. Using TPC to guess PO geometry.')
                 plot_objs = self._geom_from_tpc()  # derive geometry from tpc rather than the gis/[...]_PLOT.csv
 
+        def is_valid_plot_row(dtype: str, data_types: str) -> bool:
+            # types can correspond to different geometries
+            # (valid type, types that could cause incorrect return)
+            d = {
+                'flow': ('q', ('qx', 'qy', 'qu', 'qv', 'gwq', 'gwqx', 'gwqy', 'gwqu', 'gwqv', 'qin', 'qout')),
+                'depth': ('d', ('gwd')),
+                'water level': ('h', ('gwh', 'havg', 'hmax')),
+                'velocity': ('v', ('vx', 'vy', 'vu', 'vv', 'gwv', 'gwvx', 'gwvy', 'gwvu', 'gwvv', 'havg', 'vol', 'gwvol')),
+            }
+            if dtype not in d:
+                return True
+            valid_type, invalid_types = d[dtype]
+            for invalid_type in invalid_types:
+                data_types = re.sub(invalid_type, '', data_types, flags=re.IGNORECASE)
+            return bool(re.findall(valid_type, data_types, flags=re.IGNORECASE))
+
         for dtype, vals in self._time_series_data_2d.items():
             for df1 in vals:
                 dt = np.round((df1.index[1] - df1.index[0]) * 3600., decimals=2)
                 start = df1.index[0]
                 end = df1.index[-1]
                 for col in df1.columns:
-                    po_info['id'].append(col)
-                    po_info['data_type'].append(dtype)
-                    po_info['geometry'].append(d[plot_objs.loc[col, 'geom']])
-                    po_info['start'].append(start)
-                    po_info['end'].append(end)
-                    po_info['dt'].append(dt)
+                    filtered_rows = plot_objs.loc[[col], ['data_types', 'geom']] if 'data_types' in plot_objs.columns else plot_objs.loc[[col], ['geom']]
+                    for idx, row in filtered_rows.iterrows():
+                        data_types = row['data_types'] if row.size > 1 else []
+                        geom = row['geom']
+                        if filtered_rows.size < 4 or is_valid_plot_row(dtype, data_types):
+                            po_info['id'].append(col)
+                            po_info['data_type'].append(dtype)
+                            po_info['geometry'].append(d[geom])
+                            po_info['start'].append(start)
+                            po_info['end'].append(end)
+                            po_info['dt'].append(dt)
 
         return pd.DataFrame(po_info)
 
