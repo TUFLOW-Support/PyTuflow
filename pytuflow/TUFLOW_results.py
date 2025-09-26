@@ -5,7 +5,7 @@ import ctypes
 import re
 from dateutil.parser import parse
 from datetime import timedelta, datetime
-from pytuflow.helper import getOSIndependentFilePath, roundSeconds
+from .helper import getOSIndependentFilePath, roundSeconds
 
 
 class NC_Error:
