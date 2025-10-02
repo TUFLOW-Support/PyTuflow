@@ -121,7 +121,7 @@ cd pytuflow/_fm_to_estry
 python -m unittest discover -s tests/integration_tests
 ```
 
-## Building the Package
+### Building the Package
 
 ```bash
 # from the pytuflow project root directory
