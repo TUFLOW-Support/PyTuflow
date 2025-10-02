@@ -3,7 +3,7 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to pytuflow's documentation!
+Welcome to PyTUFLOW's documentation!
 ====================================
 
 **pytuflow** is a library that acts as an API for your TUFLOW model. It allows easy interaction with the model results,
