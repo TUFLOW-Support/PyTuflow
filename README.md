@@ -61,15 +61,11 @@ GDAL python bindings will also need to be installed separately. Version 3.8 or l
 
 ### Building the Docs
 
-To build the docs, you will need to install `sphinx` and `sphinx_book_theme`. You can do this using pip:
-
-```bash
-pip install sphinx sphinx_book_theme
-```
-
 To build the documentation, navigate to the `docs` folder and run:
 
 ```bash
+# from the pytuflow project root directory
+cd docs
 make dirhtml
 ```
 
