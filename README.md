@@ -66,7 +66,7 @@ To build the documentation, navigate to the `docs` folder and run:
 ```bash
 # from the pytuflow project root directory
 cd docs
-make dirhtml
+.\make.bat dirhtml
 ```
 
 To serve the documentation locally, you can use (on Windows):
