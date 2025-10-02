@@ -68,7 +68,7 @@ class ResData():
 
     def close(self):
         """Closes the result file - only required for GPKG time series."""
-        if self._res and isinstance(self._res, tuflow_results_gpkg.ResData_GPKG):
+        if self._res and isinstance(self._res, ResData_GPKG):
             self._res.close()
         self._res = None
         
