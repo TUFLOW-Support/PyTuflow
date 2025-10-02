@@ -15,8 +15,8 @@ class ResData():
     
     def __init__(self, file=None):
         warnings.warn(
-            'ResData and ResData_GPKG are deprecated and will be removed in a future release. '
-            'Please use the TPC, INFO, or GPKG1D class instead.',
+            'ResData is deprecated and will be removed in a future release. '
+            'Please use the TPC class instead, or the INFO class for 2013 format results.',
             DeprecationWarning,
             stacklevel=2
         )
