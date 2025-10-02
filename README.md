@@ -40,8 +40,8 @@ For QGIS, there are some broad instructions on how to set up a [QGIS environment
 
 ## Quickstart
 
-The best place to get started is the [Load and Run a TUFLOW Model](https://docs.tuflow.com/examples/tcf_load_and_run/) example, or to browse through the other
-[Examples](https://docs.tuflow.com/examples/).
+The best place to get started is the [Load and Run a TUFLOW Model](https://docs.tuflow.com/pytuflow/examples/tcf_load_and_run/) example, or to browse through the other
+[Examples](https://docs.tuflow.com/pytuflow/examples/).
 
 ## Development
 
