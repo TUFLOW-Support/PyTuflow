@@ -36,7 +36,7 @@ are:
 One of the trickiest libraries to install is GDAL. For Windows, you can download pre-compiled binaries from
 here: https://github.com/cgohlke/geospatial-wheels/releases.
 
-For QGIS, there are some broad instructions on how to set up a [QGIS environment](https://https://docs.tuflow.com/pytuflow/examples/working_with_tuflow_outputs/#qgis-environment) in the output examples.
+For QGIS, there are some broad instructions on how to set up a [QGIS environment](https://docs.tuflow.com/pytuflow/examples/working_with_tuflow_outputs/#qgis-environment) in the output examples.
 
 ## Quickstart
 
@@ -127,3 +127,7 @@ python -m unittest discover -s tests/integration_tests
 # from the pytuflow project root directory
 python -m build --wheel --no-isolation
 ```
+
+## LICENCE
+
+MIT LICENCE (see `LICENSE` file for details).
