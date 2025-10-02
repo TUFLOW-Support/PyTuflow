@@ -1,4 +1,5 @@
 import os, sys
+import warnings
 sys.path.append(os.path.dirname(__file__))
 from .TUFLOW_results import ResData as _ResData
 from .TUFLOW_results2013 import ResData as _ResData2013
@@ -13,6 +14,12 @@ class ResData():
     """
     
     def __init__(self, file=None):
+        warnings.warn(
+            'ResData and ResData_GPKG are deprecated and will be removed in a future release. '
+            'Please use the TPC, INFO, or GPKG1D class instead.',
+            DeprecationWarning,
+            stacklevel=2
+        )
         self._res = None
         self._format = ''  # 2013 or 2016 file formats
         if file is not None:
