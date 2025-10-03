@@ -27,7 +27,7 @@ if TYPE_CHECKING:
 sys.path.append((Path(__file__).resolve().parents[1]).as_posix())
 sys.path.append((Path(__file__).resolve().parent / '_ext').as_posix())
 
-project = 'pytuflow'
+project = 'PyTUFLOW'
 copyright = f'{datetime.now().year}, BMT'
 author = 'TUFLOW'
 

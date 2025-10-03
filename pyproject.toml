@@ -24,8 +24,6 @@ classifiers = [
     "Intended Audience :: Engineers",
     "Topic :: Scientific/Engineering :: Hydraulics/Flooding",
 
-    "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
@@ -36,7 +34,7 @@ version = {attr = "pytuflow.__version__"}
 
 [project.urls]
 Homepage = "https://github.com/TUFLOW-Support/PyTuflow"
-Documentation = "https://github.com/TUFLOW-Support/PyTuflow"
+Documentation = "https://docs.tuflow.com/pytuflow/"
 Repository = "https://github.com/TUFLOW-Support/PyTuflow"
-Issues = "https://github.com/TUFLOW-Support/PyTuflow"
-Changelog = "https://github.com/TUFLOW-Support/PyTuflow"
+Issues = "https://github.com/TUFLOW-Support/PyTuflow/issues"
+Changelog = "https://docs.tuflow.com/pytuflow/#changelog"

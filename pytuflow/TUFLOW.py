@@ -1,4 +1,5 @@
 import os, sys
+import warnings
 sys.path.append(os.path.dirname(__file__))
 from .TUFLOW_results import ResData as _ResData
 from .TUFLOW_results2013 import ResData as _ResData2013
@@ -13,6 +14,12 @@ class ResData():
     """
     
     def __init__(self, file=None):
+        warnings.warn(
+            'ResData is deprecated and will be removed in a future release. '
+            'Please use the TPC class instead, or the INFO class for 2013 format results.',
+            DeprecationWarning,
+            stacklevel=2
+        )
         self._res = None
         self._format = ''  # 2013 or 2016 file formats
         if file is not None:
@@ -61,7 +68,7 @@ class ResData():
 
     def close(self):
         """Closes the result file - only required for GPKG time series."""
-        if self._res and isinstance(self._res, tuflow_results_gpkg.ResData_GPKG):
+        if self._res and isinstance(self._res, ResData_GPKG):
             self._res.close()
         self._res = None
         

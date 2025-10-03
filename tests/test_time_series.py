@@ -727,6 +727,12 @@ class Test_TPC_GPKG(TestCase):
         df = res.section('Underdrain', ['Bed Level', 'water level'], 1)
         self.assertEqual((6, 6), df.shape)
 
+    def test_tpc_gpkg_swmm_section_2(self):
+        p = './tests/tpc_gpkg/basin_HPC-2m_SWMM_____2016_8_12.tpc'
+        res = TPC(p)
+        df = res.section('Underdrain', ['Bed Level', 'water level', 'pits'], 1)
+        self.assertEqual((6, 7), df.shape)
+
 
 class Test_TPC_Frankenmodel(TestCase):
 
