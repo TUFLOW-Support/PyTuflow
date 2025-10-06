@@ -1604,7 +1604,7 @@ class Test_CrossSections(unittest.TestCase):
     def test_section_2(self):
         p = './tests/cross_sections/gis/1d_xs_EG14_001_L.shp'
         res = CrossSections(p)
-        df = res.section(['1d_xs_M14_C100.csv', r'..\csv\1d_xs_M14_C130.csv:1d_xs_M14_C130'], None)
+        df = res.section(['1d_xs_M14_C100.csv', r'../csv/1d_xs_M14_C130.csv:1d_xs_M14_C130'], None)
         self.assertEqual((30, 4), df.shape)
 
     def test_section_3(self):
