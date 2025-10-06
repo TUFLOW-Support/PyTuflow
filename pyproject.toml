@@ -20,10 +20,11 @@ readme = "README.md"
 license-files = ["LICENSE.txt"]
 keywords = ["tuflow", "hydraulics", "hydraulic modelling", "hydraulic modeling", "flood", "flood modelling", "flood modeling", "flooding", "floodplain", "flood plain", "floodplain modelling", "floodplain modeling", "floodplain management"]
 classifiers = [
-    "Development Status :: 4 - Beta",
+    "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Engineers",
     "Topic :: Scientific/Engineering :: Hydraulics/Flooding",
 
+    "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
