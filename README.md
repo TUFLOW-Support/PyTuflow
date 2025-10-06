@@ -121,7 +121,7 @@ python -m unittest discover -s tests/integration_tests
 
 ```bash
 # from the pytuflow project root directory
-python -m build --wheel --no-isolation
+python -m build --wheel
 ```
 
 ## LICENCE

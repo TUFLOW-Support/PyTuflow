@@ -1,6 +1,6 @@
 [build-system]
-requires = ["setuptools", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling >= 1.26"]
+build-backend = "hatchling.build"
 
 [project]
 name = "pytuflow"
@@ -17,12 +17,12 @@ authors = [
 ]
 description = "Official Python library for TUFLOW. A library for working with TUFLOW input and outputs with basic running capabilities."
 readme = "README.md"
-license-files = ["LICENSE.txt"]
+license-files = ["LICEN[CS]E*"]
 keywords = ["tuflow", "hydraulics", "hydraulic modelling", "hydraulic modeling", "flood", "flood modelling", "flood modeling", "flooding", "floodplain", "flood plain", "floodplain modelling", "floodplain modeling", "floodplain management"]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
-    "Intended Audience :: Engineers",
-    "Topic :: Scientific/Engineering :: Hydraulics/Flooding",
+    "Intended Audience :: Other Audience",
+    "Topic :: Scientific/Engineering :: Hydrology",
 
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.9",
@@ -31,8 +31,16 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
 ]
 
-[tool.setuptools.dynamic]
-version = {attr = "pytuflow.__version__"}
+[tool.hatch.metadata.hooks.custom]
+
+[tool.hatch.build.targets.wheel]
+packages = ["pytuflow"]
+include = [
+  "pytuflow/_tmf/tmf/data/*.json",
+  "pytuflow/_fm_to_estry/data/*.json",
+  "pytuflow/_outputs/data/*.json",
+]
+
 
 [project.urls]
 Homepage = "https://github.com/TUFLOW-Support/PyTuflow"
