@@ -36,3 +36,29 @@ html[data-theme="dark"] .admonition.note .admonition-title {
     color: #cd5c5c;
     font-weight: bold;
 }
+
+img {
+    background: transparent !important;
+}
+
+/* Hide dark version by default */
+.only-dark {
+  display: none;
+}
+
+/* Show dark version when the theme is dark */
+html[data-theme="dark"] .only-dark {
+  display: block;
+}
+
+/* Hide light version when the theme is dark */
+html[data-theme="dark"] .only-light {
+  display: none;
+}
+
+/* Center all theme-aware images */
+.theme-image {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+}

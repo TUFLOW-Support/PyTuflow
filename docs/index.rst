@@ -6,15 +6,19 @@
 Welcome to PyTUFLOW's documentation!
 ====================================
 
+.. image:: assets/TUFLOW_light.png
+   :width: 400px
+   :class: only-light theme-image
+
+.. image:: assets/TUFLOW_light.png
+   :width: 400px
+   :class: only-dark theme-image
+
 **PyTUFLOW** is a library that acts as an API for your TUFLOW model. It allows easy interaction with the model results,
 contains a number of useful utilities for building TUFLOW models, and contains some useful parsers for files within the
 TUFLOW eco-system.
 
 Check out the :doc:`usage` section for further information, including how to :ref:`install <installation>` the project.
-
-.. note::
-
-   This project is under active development.
 
 .. toctree::
    :maxdepth: 1
@@ -31,7 +35,7 @@ Changelog
 1.0.0
 """""
 
-Initial release of pytuflow.
+First full release of PyTUFLOW.
 
 
 
