@@ -1,0 +1,11 @@
+Format Version == 2
+Units == METRIC
+Simulation ID == basin_HPC-2m_SWMM_____2016_8_12
+Time Series Output Format == GPKG
+
+
+NetCDF Time Series == NONE
+GPKG Time Series == .\basin_HPC-2m_SWMM_____2016_8_12_TS_2D.gpkg
+
+GPKG Time Series == .\basin_HPC-2m_SWMM_____2016_8_12_swmm_ts.gpkg
+

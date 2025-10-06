@@ -1,23 +1,22 @@
 import setuptools
 
-with open("README.md", "r") as fh:
-    long_description = fh.read()
+def get_long_description():
+    with open("README.md", "r") as fh:
+        return fh.read()
+
+def get_version():
+    with open('./pytuflow/__init__.py', 'r') as f:
+        return {x.split(' = ')[0].strip('\'" \n\t'): x.split(' = ')[1].strip('\'" \n\t') for x in f.read().split('\n') if len(x.split(' = ')) == 2}['__version__']
 
 setuptools.setup(
-    name="pytuflow",
-    version="0.0.17",
-    author="tuflowsupport",
-    author_email="support@tuflow.com",
-    description="Package for scripting TUFLOW time series results.",
-    long_description=long_description,
+    version=get_version(),
+    long_description=get_long_description(),
     long_description_content_type="text/markdown",
-    url="https://github.com/TUFLOW-Support/PyTuflow",
     packages=setuptools.find_packages(),
-    classifiers=[
-        "Programming Language :: Python :: 2.7",
-        "Programming Language :: Python :: 3",
-        "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
-        "Operating System :: OS Independent",
-    ],
-    install_requires=['numpy', 'netCDF4', 'python-dateutil'],
+    package_data={
+        'pytuflow._tmf.tmf.data': ['*.json'],
+        'pytuflow._fm_to_estry.data': ['*.json'],
+        'pytuflow._outputs.data': ['*.json'],
+    },
+    include_package_data=True,
 )

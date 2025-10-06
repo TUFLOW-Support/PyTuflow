@@ -1,0 +1,63 @@
+Format Version == 2
+Units == METRIC
+Simulation ID == EG14_001_unique_1d_times
+Time Series Output Format == CSV 
+
+GIS Plot Layer Points == .\gis\EG14_001_unique_1d_times_PLOT_P.shp
+GIS Plot Layer Lines == .\gis\EG14_001_unique_1d_times_PLOT_L.shp
+GIS Plot Layer Regions == .\gis\EG14_001_unique_1d_times_PLOT_R.shp
+GIS Plot Objects == .\gis\EG14_001_dup_2d_dtype_PLOT.csv
+
+NetCDF Time Series == NONE
+
+
+Number 1D Nodes == 53
+Number 1D Channels == 54
+
+1D Node Info == .\csv\EG14_001_unique_1d_times_1d_Node.csv
+1D Channel Info == .\csv\EG14_001_unique_1d_times_1d_Chan.csv
+
+1D Node Maximums == .\csv\EG14_001_unique_1d_times_1d_Nmx.csv
+1D Water Levels == .\csv\EG14_001_unique_1d_times_1d_H.csv
+1D Node Volumes == NONE
+1D Flow Integrals == NONE
+1D Energy Levels == NONE
+1D Mass Balance Errors == .\csv\EG14_001_unique_1d_times_1d_TSMB.csv
+1D Node Regime == .\csv\EG14_001_unique_1d_times_1d_NF.csv
+
+1D Channel Maximums == .\csv\EG14_001_unique_1d_times_1d_Cmx.csv
+1D Flows == .\csv\EG14_001_unique_1d_times_1d_Q.csv
+1D Velocities == .\csv\EG14_001_unique_1d_times_1d_V.csv
+1D Flow Areas == NONE
+1D Channel Losses == .\csv\EG14_001_unique_1d_times_1d_L.csv
+1D Channel Regime == .\csv\EG14_001_unique_1d_times_1d_CF.csv
+
+Number Reporting Location Points == 1
+Reporting Location Points Water Levels == .\csv\EG14_001_unique_1d_times_RLP_H.csv
+Reporting Location Points Maximums == .\csv\EG14_001_unique_1d_times_RLP_Hmx.csv
+
+Number Reporting Location Lines == 1
+Reporting Location Lines Flows == .\csv\EG14_001_unique_1d_times_RLL_Q.csv
+Reporting Location Lines Maximums == .\csv\EG14_001_unique_1d_times_RLL_Qmx.csv
+
+Number Reporting Location Regions == 1
+Reporting Location Regions Volumes == .\csv\EG14_001_unique_1d_times_RLR_Vol.csv
+Reporting Location Regions Maximums == .\csv\EG14_001_unique_1d_times_RLR_Volmx.csv
+
+2D Region Flow into Region [1] == .\csv\EG14_001_unique_1d_times_2d_FI.csv
+2D Region Flow out of Region [1] == .\csv\EG14_001_unique_1d_times_2d_FO.csv
+2D Region Volume [1] == .\csv\EG14_001_unique_1d_times_2d_VL.csv
+2D Region Average Water Level [1] == .\csv\EG14_001_unique_1d_times_2d_HA.csv
+2D Region Max Water Level [1] == .\csv\EG14_001_unique_1d_times_2d_HM.csv
+2D Point Water Level [1] == .\csv\EG14_001_unique_1d_times_2d_H.csv
+2D Point Depth [2] == .\csv\EG14_001_unique_1d_times_2d_D.csv
+2D Point u-Vel [1] == .\csv\EG14_001_unique_1d_times_2d_Vu.csv
+2D Point v-Vel [1] == .\csv\EG14_001_unique_1d_times_2d_Vv.csv
+2D Point X-Vel [1] == .\csv\EG14_001_unique_1d_times_2d_VX.csv
+2D Point Y-Vel [1] == .\csv\EG14_001_unique_1d_times_2d_VY.csv
+2D Point Velocity [1] == .\csv\EG14_001_unique_1d_times_2d_V.csv
+2D Point Flow Direction [1] == .\csv\EG14_001_unique_1d_times_2d_VA.csv
+2D Line Flow Area [1] == .\csv\EG14_001_unique_1d_times_2d_QA.csv
+2D Line Integral Flow [1] == .\csv\EG14_001_unique_1d_times_2d_QI.csv
+2D Line Flow [1] == .\csv\EG14_001_unique_1d_times_2d_Q.csv
+2D Line Flow [1] == .\csv\EG14_001_unique_1d_times_2d_Q_1.csv

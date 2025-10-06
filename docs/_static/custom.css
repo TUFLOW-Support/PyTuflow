@@ -1,0 +1,38 @@
+/* Light mode overrides */
+html[data-theme="light"] {
+  --pst-color-primary: #005581;    /* Main accent color */
+  --pst-color-secondary: #005581;  /* Secondary accents */
+  --pst-color-info: #005581;
+  --bs-emphasis-color: rgba(226, 1, 119, 1);
+  --pst-color-table-row-hover-bg: rgba(226, 1, 119, 0.6);
+}
+
+/* Dark mode overrides */
+html[data-theme="dark"] {
+  --pst-color-primary: #1ABDC9;
+  --pst-color-secondary: #1ABDC9;
+  --pst-color-info: #1ABDC9;
+  --bs-emphasis-color: rgba(226, 1, 119, 1);
+  --pst-color-table-row-hover-bg: rgba(226, 1, 119, 1);
+}
+
+html[data-theme="light"] :is(h1,h2,h3,h4,h5,h6,.caption,.caption-text) {
+    color: #005581;
+}
+
+html[data-theme="light"] .navbar-brand p {
+    color: #005581;
+}
+
+html[data-theme="light"] .admonition.note .admonition-title {
+  background-color: #1ABDC9
+}
+html[data-theme="dark"] .admonition.note .admonition-title {
+  background-color: #005581;
+  color: #ffffff;
+}
+
+.highlight .gr {
+    color: #cd5c5c;
+    font-weight: bold;
+}

@@ -2,7 +2,7 @@ import os
 import numpy
 import csv
 import sys
-from pytuflow.helper import getOSIndependentFilePath
+from .helper import getOSIndependentFilePath
 
 
 class LP():

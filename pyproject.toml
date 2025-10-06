@@ -1,0 +1,41 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pytuflow"
+dynamic = ["version"]
+dependencies = [
+    "numpy",
+    "pandas",
+    "packaging",
+    "dbfread",
+]
+requires-python = ">= 3.9"
+authors = [
+    {name = "Ellis Symons", email = "support@tuflow.com"}
+]
+description = "Official Python library for TUFLOW. A library for working with TUFLOW input and outputs with basic running capabilities."
+readme = "README.md"
+license-files = ["LICENSE.txt"]
+keywords = ["tuflow", "hydraulics", "hydraulic modelling", "hydraulic modeling", "flood", "flood modelling", "flood modeling", "flooding", "floodplain", "flood plain", "floodplain modelling", "floodplain modeling", "floodplain management"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Engineers",
+    "Topic :: Scientific/Engineering :: Hydraulics/Flooding",
+
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+
+[tool.setuptools.dynamic]
+version = {attr = "pytuflow.__version__"}
+
+[project.urls]
+Homepage = "https://github.com/TUFLOW-Support/PyTuflow"
+Documentation = "https://docs.tuflow.com/pytuflow/"
+Repository = "https://github.com/TUFLOW-Support/PyTuflow"
+Issues = "https://github.com/TUFLOW-Support/PyTuflow/issues"
+Changelog = "https://docs.tuflow.com/pytuflow/#changelog"

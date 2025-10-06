@@ -1,12 +1,13 @@
 import re
 import typing
+import warnings
 from dataclasses import dataclass, field
 from datetime import datetime
 
 import numpy as np
 
-from TUFLOW_results import ResData, ChanInfo, NodeInfo, Data1D
-from compatibility_routines import Path, Logging
+from .TUFLOW_results import ResData, ChanInfo, NodeInfo, Data1D
+from .compatibility_routines import Path, Logging
 
 try:
     from qgis.core import QgsVectorLayer
@@ -263,6 +264,12 @@ class ResData_GPKG(ResData):
     """ResData class for GPKG"""
 
     def __init__(self):
+        warnings.warn(
+            'ResData_GPKG is deprecated and will be removed in a future release. '
+            'Please use the GPKG1D class instead.',
+            DeprecationWarning,
+            stacklevel=2
+        )
         super().__init__()
         self.default_reference_time = datetime(1999, 12, 31, 14, 0, 0)
         self.has_reference_time = False
@@ -783,7 +790,7 @@ class ResData_GPKG(ResData):
             self.time_units = string.split(' ')[0]
 
         if not re.findall(r'\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}', string):
-            return datetime(2000, 1, 1)  # a default value
+            return datetime(1990, 1, 1)  # a default value
 
         return datetime.strptime(re.findall(r'\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}', string)[0], '%Y-%m-%d %H:%M:%S')
 

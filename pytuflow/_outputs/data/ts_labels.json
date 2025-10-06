@@ -1,0 +1,265 @@
+{
+  "name": "Time series labels",
+  "description": "A list of long labels written to the TPC file and a conversion to short labels and netcdf variable names.",
+  "1d_labels": {
+    "Water Levels": {
+      "short": "H",
+      "nc": "water_levels_1d",
+      "nc_short": "H"
+    },
+    "Node Volumes": {
+      "short": "Vol",
+      "nc": "node_storage_volume_1d",
+      "nc_short": "Vol"
+    },
+    "Flow Integrals": {
+      "short": "QI",
+      "nc": "integral_flow_1d",
+      "nc_short": "QI"
+    },
+    "Energy Levels": {
+      "short": "E",
+      "nc": "energy_levels_1d",
+      "nc_short": "E"
+    },
+    "Mass Balance Errors": {
+      "short": "MB",
+      "nc": "mass_balance_error_1d",
+      "nc_short": "MB"
+    },
+    "Node Regime": {
+      "short": "NF",
+      "nc": "node_flow_regime_1d",
+      "nc_short": "NF"
+    },
+    "Flows": {
+      "short": "Q",
+      "nc": "flow_1d",
+      "nc_short": "Q"
+    },
+    "Velocities": {
+      "short": "V",
+      "nc": "velocities_1d",
+      "nc_short": "V"
+    },
+    "Flow Areas": {
+      "short": "QA",
+      "nc": "NONE",
+      "nc_short": "NONE"
+    },
+    "Channel Losses": {
+      "short": "LC",
+      "nc": "losses_1d",
+      "nc_short": "LC"
+    },
+    "Channel Regime": {
+      "short": "CF",
+      "nc": "channel_flow_regime_1d",
+      "nc_short": "CF"
+    }
+  },
+  "rl_labels": {
+    "Water Levels": {
+      "short": "H#",
+      "nc": "water_levels_rl",
+      "nc_short": "H"
+    },
+     "Flows": {
+      "short": "Q",
+      "nc": "flows_rl",
+      "nc_short": "Q#"
+    },
+    "Volumes": {
+      "short": "RV",
+      "nc": "volumes_rl",
+      "nc_short": "Vol"
+    }
+  },
+  "po_labels": {
+    "Water Level": {
+      "short": "H",
+      "nc": "water_levels_2d",
+      "nc_short": "H"
+    },
+    "Depth": {
+      "short": "D",
+      "nc": "depths_2d",
+      "nc_short": "D"
+    },
+    "Gauge Level": {
+      "short": "G",
+      "nc": "gauge_levels_2d",
+      "nc_short": "G"
+    },
+    "Velocity": {
+      "short": "V",
+      "nc": "velocities_2d",
+      "nc_short": "V"
+    },
+    "Wind": {
+      "short": "W",
+      "nc": "NONE",
+      "nc_short": "NONE"
+    },
+    "u-Vel": {
+      "short": "Vu",
+      "nc": "u_velocities_2d",
+      "nc_short": "VU"
+    },
+    "v-Vel": {
+      "short": "Vv",
+      "nc": "v_velocities_2d",
+      "nc_short": "VV"
+    },
+    "X-Vel": {
+      "short": "VX",
+      "nc": "x_direction_velocities_2d",
+      "nc_short": "VX"
+    },
+    "Y-Vel": {
+      "short": "VY",
+      "nc": "y_direction_velocities_2d",
+      "nc_short": "VY"
+    },
+    "Flow Direction": {
+      "short": "VA",
+      "nc": "velocity_angle_2d",
+      "nc_short": "VA"
+    },
+    "X-Wind": {
+      "short": "WX",
+      "nc": "NONE",
+      "nc_short": "NONE"
+    },
+    "Y-Wind": {
+      "short": "WY",
+      "nc": "NONE",
+      "nc_short": "NONE"
+    },
+    "Flow": {
+      "short": "Q",
+      "nc": "flows_2d",
+      "nc_short": "Q"
+    },
+    "X-Flow": {
+      "short": "QX",
+      "nc": "x_direction_flows_2d",
+      "nc_short": "QX"
+    },
+    "Y-Flow": {
+      "short": "QY",
+      "nc": "y_direction_flows_2d",
+      "nc_short": "QY"
+    },
+    "Integral Flow": {
+      "short": "QI",
+      "nc": "integral_flows_2d",
+      "nc_short": "QI"
+    },
+    "Flow Area": {
+      "short": "QA",
+      "nc": "flow_areas_2d",
+      "nc_short": "QA"
+    },
+    "Structure Flow": {
+      "short": "QS",
+      "nc": "structure_flows_2d",
+      "nc_short": "QS"
+    },
+    "U/S Structure Water Level": {
+      "short": "HU",
+      "nc": "upstream_water_levels_2d",
+      "nc_short": "HU"
+    },
+    "D/S Structure Water Level": {
+      "short": "HD",
+      "nc": "downstream_water_levels_2d",
+      "nc_short": "HD"
+    },
+    "Flow into Region": {
+      "short": "FI",
+      "nc": "flows_into_region_2d",
+      "nc_short": "QIn"
+    },
+    "Flow out of Region": {
+      "short": "Qout",
+      "nc": "flows_out_of_region_2d",
+      "nc_short": "Qout"
+    },
+    "Volume": {
+      "short": "VL",
+      "nc": "volume_2d",
+      "nc_short": "Vol"
+    },
+    "Average Water Level": {
+      "short": "HA",
+      "nc": "average_water_levels_2d",
+      "nc_short": "HAvg"
+    },
+    "Max Water Level": {
+      "short": "HM",
+      "nc": "maximum_water_levels_2d",
+      "nc_short": "HMax"
+    },
+    "Sink/Source": {
+      "short": "SS",
+      "nc": "sink_source_2d",
+      "nc_short": "SS"
+    },
+    "UD<n>": {
+      "short": "UD<n>",
+      "nc": "NONE",
+      "nc_short": "NONE"
+    },
+    "Cumulative Infiltration [Layer <n>]": {
+      "short": "CI<n>",
+      "nc": "NONE",
+      "nc_short": "NONE"
+    },
+    "GW Level Layer <n>": {
+      "short": "GWh<n>",
+      "nc": "NONE",
+      "nc_short": "NONE"
+    },
+    "GW fraction capacity layer <n>": {
+      "short": "GWm<n>",
+      "nc": "NONE",
+      "nc_short": "NONE"
+    },
+    "GW u-unit flow layer <n>": {
+      "short": "GWqu<n>",
+      "nc": "NONE",
+      "nc_short": "NONE"
+    },
+    "GW v-unit flow layer <n>": {
+      "short": "GWqv<n>",
+      "nc": "NONE",
+      "nc_short": "NONE"
+    },
+    "GW unit flow layer <n>": {
+      "short": "GWq_<n>",
+      "nc": "NONE",
+      "nc_short": "NONE"
+    },
+    "GW unit flow angle layer <n>": {
+      "short": "GWqa<n>",
+      "nc": "NONE",
+      "nc_short": "NONE"
+    },
+    "GW depth layer <n>": {
+      "short": "GWd<n>",
+      "nc": "NONE",
+      "nc_short": "NONE"
+    },
+    "GW flow layer <n>": {
+      "short": "GWQ<n>",
+      "nc": "NONE",
+      "nc_short": "NONE"
+    },
+    "GW volume layer <n>": {
+      "short": "GWVol<n>",
+      "nc": "NONE",
+      "nc_short": "NONE"
+    }
+  }
+}
