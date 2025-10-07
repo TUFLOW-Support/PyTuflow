@@ -32,6 +32,11 @@ Check out the :doc:`usage` section for further information, including how to :re
 Changelog
 ---------
 
+1.0.1
+"""""
+
+- Fixed a bug that would incorrectly flag ``1d_nwk`` ``Q`` channel curve references (the reference to the pit database name) as files and then flag the file as missing.
+
 1.0.0
 """""
 
