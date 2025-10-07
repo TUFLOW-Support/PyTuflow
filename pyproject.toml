@@ -24,6 +24,7 @@ classifiers = [
     "Intended Audience :: Engineers",
     "Topic :: Scientific/Engineering :: Hydraulics/Flooding",
 
+    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",

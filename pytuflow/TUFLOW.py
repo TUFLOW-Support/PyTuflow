@@ -266,6 +266,8 @@ class ResData():
                     rtypes.append('A')
                 elif '1D Velocities' in rtype:
                     rtypes.append('V')
+                elif '1D Flow Integral' in rtype:
+                    rtypes.append('QI')
                 elif '1D Flow' in rtype:
                     rtypes.append('Q')
                 elif '1D CHANNEL FLOW REGIME' in rtype.upper():
@@ -291,6 +293,8 @@ class ResData():
             for rtype in self._res.Types:
                 if '1D Water Levels' in rtype:
                     rtypes.append('H')
+                if '1D Volume' in rtype:
+                    rtypes.append('Vol')
                 elif '1D Energy Levels' in rtype:
                     rtypes.append('E')
                 elif '1D MASS BALANCE ERROR' in rtype.upper():
@@ -455,7 +459,7 @@ class ResData():
             
         return 0
     
-    def timesteps(self, zeroTime=None, asDates=False):
+    def timesteps(self, zeroTime=None, asDates=False, domain=None):
         """
         Returns a list of the available timesteps.
         Assumes all results have the same x-axis.
@@ -475,13 +479,13 @@ class ResData():
                 assert self._format == '2016', "Date format only available in TUFLOW 2016 or later"
                 assert self._res.has_reference_time, "Results do not have reference time. Reference time can be set" \
                                                      "using setReferenceTime(DateTime)"
-                return self._res.dates()
+                return self._res.dates(domain=domain)
             else:
                 if zeroTime is not None:
                     assert self._format == '2016', "Date format only available in TUFLOW 2016 or later"
                     return self._res.timeSteps(zeroTime)
                 else:
-                    return self._res.timeSteps()
+                    return self._res.timeSteps(domain=domain)
         
         return []
 
@@ -532,7 +536,7 @@ class ResData():
                         return True, 'PO and RL outputs not supported in 2013 format', ([], [])
             else:
                 return True, 'Unrecognised domain type', ([], [])
-            x = self.timesteps()
+            x = self.timesteps(domain=domain)
             success, y, out = self._res.getTSData(element, resultType, domain)
             if success:
                 if len(y.shape) == 1:

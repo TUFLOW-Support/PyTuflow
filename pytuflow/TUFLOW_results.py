@@ -113,6 +113,8 @@ class Data1D():
         self.V = Timeseries()
         self.Q = Timeseries()
         self.A = Timeseries()
+        self.Vol = Timeseries()
+        self.QI = Timeseries()
         self.Node_Max = NodeMax()
         self.Chan_Max = ChanMax()
 
@@ -982,7 +984,27 @@ class ResData():
     def getTSData(self, id, res, dom):
         message = ''
         if (dom.upper() == "1D"):
-            if(res.upper() in ("H", "H_", "LEVEL","LEVELS")):
+            if res.upper() in ['VOL', 'VOLUME', 'VOLUMES']:
+                if self.Data_1D.Vol.loaded:
+                    try:
+                        ind = self.Data_1D.Vol.Header.index(id)
+                        data = self.Data_1D.Vol.Values[:, ind]
+                        self.times = self.Data_1D.Vol.Values[:, 1]
+                        return True, data, message
+                    except:
+                        message = 'Data not found for 1D H with ID: ' + id
+                        return False, [0.0], message
+            elif res.upper() in ['FLOW INTEGRAL', 'FLOW INTEGRALS', 'QI']:
+                if self.Data_1D.QI.loaded:
+                    try:
+                        ind = self.Data_1D.QI.Header.index(id)
+                        data = self.Data_1D.QI.Values[:, ind]
+                        self.times = self.Data_1D.QI.Values[:, 1]
+                        return True, data, message
+                    except:
+                        message = 'Data not found for 1D H with ID: ' + id
+                        return False, [0.0], message
+            elif(res.upper() in ("H", "H_", "LEVEL","LEVELS")):
                 if self.Data_1D.H.loaded:
                     try:
                         ind = self.Data_1D.H.Header.index(id)
@@ -2238,6 +2260,54 @@ class ResData():
                         self.Types.append('1D Water Levels')
                         if self.nTypes == 1:
                             self.times = self.Data_1D.H.Values[:, 1]
+            elif dat_type == '1D Node Volumes':
+                if self.resFileFormat == "CSV":
+                    if rdata != 'NONE':
+                        fullpath = getOSIndependentFilePath(self.fpath, rdata)
+                        error, message = self.Data_1D.Vol.load(fullpath, 'Vol', self.displayname)
+                        if error:
+                            return error, message
+                        self.nTypes = self.nTypes + 1
+                        self.Types.append('1D Volumes')
+                        if self.nTypes == 1:
+                            self.times = self.Data_1D.Vol.Values[:, 1]
+                elif self.resFileFormat == "NC":
+                    if self.netcdf_fpath:
+                        error, message = self.Data_1D.Vol.loadFromNetCDF(self.netcdf_fpath, "node_storage_volume_1d",
+                                                                         "node_names",
+                                                                         self.netCDFLib, self.ncopen, self.ncid,
+                                                                         self.ncdll,
+                                                                         self.ncDims, self.ncVars)
+                        if error:
+                            return error, message
+                        self.nTypes = self.nTypes + 1
+                        self.Types.append('1D Volumes')
+                        if self.Data_1D.Vol.loaded:
+                            self.times = self.Data_1D.Vol.Values[:, 1]
+            elif dat_type == '1D Flow Integrals':
+                if self.resFileFormat == "CSV":
+                    if rdata != 'NONE':
+                        fullpath = getOSIndependentFilePath(self.fpath, rdata)
+                        error, message = self.Data_1D.QI.load(fullpath, 'QI', self.displayname)
+                        if error:
+                            return error, message
+                        self.nTypes = self.nTypes + 1
+                        self.Types.append('1D Flow Integral')
+                        if self.nTypes == 1:
+                            self.times = self.Data_1D.QI.Values[:, 1]
+                elif self.resFileFormat == "NC":
+                    if self.netcdf_fpath:
+                        error, message = self.Data_1D.QI.loadFromNetCDF(self.netcdf_fpath, "integral_flow_1d",
+                                                                        "channel_names",
+                                                                        self.netCDFLib, self.ncopen, self.ncid,
+                                                                        self.ncdll,
+                                                                        self.ncDims, self.ncVars)
+                        if error:
+                            return error, message
+                        self.nTypes = self.nTypes + 1
+                        self.Types.append('1D Flow Integral')
+                        if self.Data_1D.QI.loaded:
+                            self.times = self.Data_1D.QI.Values[:, 1]
             elif dat_type == '1D Energy Levels':
                 if self.resFileFormat == "CSV":
                     if rdata != 'NONE':
@@ -3899,6 +3969,8 @@ class ResData():
                 types.append("VA")
             elif 'POINT VELOCITY' in type.upper():
                 types.append('Velocity')
+            elif 'VOLUME' in type.upper() and '1D' in type.upper():
+                types.append('Volume')
             elif '1D MASS BALANCE ERROR' in type.upper():
                 types.append('MB')
             elif '1D NODE FLOW REGIME' in type.upper():
@@ -3927,6 +3999,8 @@ class ResData():
             elif 'LINE FLOW AREA' in type.upper():
                 types.append('Flow Area')
             elif 'LINE INTEGRAL FLOW' in type.upper():
+                types.append('Flow Integral')
+            elif '1D FLOW INTEGRAL' in type.upper():
                 types.append('Flow Integral')
             elif 'US LEVELS' in type.upper():
                 types.append('US Levels')
@@ -4093,7 +4167,7 @@ class ResData():
         if self.has_reference_time:
             self._tmp_reference_time = zeroTime
 
-    def timeSteps(self, zeroTime=None):
+    def timeSteps(self, zeroTime=None, domain=None):
         """
         Returns a list of the available time steps. Assumes all time series results have the same timesteps.
         
@@ -4104,72 +4178,77 @@ class ResData():
             self.reloadTimesteps(self.reference_time)
         else:
             self.reloadTimesteps(zeroTime)
-        
-        if self.Data_1D.H.loaded:
-            return self.Data_1D.H.Values[:,1].tolist()
-        elif self.Data_1D.V.loaded:
-            return self.Data_1D.V.Values[:,1].tolist()
-        elif self.Data_1D.E.loaded:
-            return self.Data_1D.E.Values[:,1].tolist()
-        elif self.Data_1D.Q.loaded:
-            return self.Data_1D.Q.Values[:,1].tolist()
-        elif self.Data_1D.A.loaded:
-            return self.Data_1D.A.Values[:,1].tolist()
-        elif self.Data_2D.H.loaded:
-            return self.Data_2D.H.Values[:,1].tolist()
-        elif self.Data_2D.D.loaded:
-            return self.Data_2D.D.Values[:,1].tolist()
-        elif self.Data_2D.V.loaded:
-            return self.Data_2D.V.Values[:,1].tolist()
-        elif self.Data_2D.Q.loaded:
-            return self.Data_2D.Q.Values[:,1].tolist()
-        elif self.Data_2D.GL.loaded:
-            return self.Data_2D.GL.Values[:,1].tolist()
-        elif self.Data_2D.QA.loaded:
-            return self.Data_2D.QA.Values[:,1].tolist()
-        elif self.Data_2D.QI.loaded:
-            return self.Data_2D.QI.Values[:,1].tolist()
-        elif self.Data_2D.Vx.loaded:
-            return self.Data_2D.Vx.Values[:,1].tolist()
-        elif self.Data_2D.Vy.loaded:
-            return self.Data_2D.Vy.Values[:,1].tolist()
-        elif self.Data_2D.QS.loaded:
-            return self.Data_2D.QS.Values[:,1].tolist()
-        elif self.Data_2D.HUS.loaded:
-            return self.Data_2D.HUS.Values[:,1].tolist()
-        elif self.Data_2D.HDS.loaded:
-            return self.Data_2D.HDS.Values[:,1].tolist()
-        elif self.Data_2D.HAvg.loaded:
-            return self.Data_2D.HAvg.Values[:,1].tolist()
-        elif self.Data_2D.HMax.loaded:
-            return self.Data_2D.HMax.Values[:,1].tolist()
-        elif self.Data_2D.QIn.loaded:
-            return self.Data_2D.QIn.Values[:,1].tolist()
-        elif self.Data_2D.QOut.loaded:
-            return self.Data_2D.QOut.Values[:,1].tolist()
-        elif self.Data_2D.SS.loaded:
-            return self.Data_2D.SS.Values[:,1].tolist()
-        elif self.Data_2D.Vol.loaded:
-            return self.Data_2D.Vol.Values[:,1].tolist()
-        elif self.Data_RL.H_P.loaded:
-            return self.Data_RL.H_P.Values[:,1].tolist()
-        elif self.Data_RL.Q_L.loaded:
-            return self.Data_RL.Q_L.Values[:,1].tolist()
-        elif self.Data_RL.Vol_R.loaded:
-            return self.Data_RL.Vol_R.Values[:,1].tolist()
-        else:
-            return []
 
-    def dates(self):
+        if domain is None or domain.upper() == '1D':
+            if self.Data_1D.H.loaded:
+                return self.Data_1D.H.Values[:,1].tolist()
+            elif self.Data_1D.V.loaded:
+                return self.Data_1D.V.Values[:,1].tolist()
+            elif self.Data_1D.E.loaded:
+                return self.Data_1D.E.Values[:,1].tolist()
+            elif self.Data_1D.Q.loaded:
+                return self.Data_1D.Q.Values[:,1].tolist()
+            elif self.Data_1D.A.loaded:
+                return self.Data_1D.A.Values[:,1].tolist()
+
+        if domain is None or domain.upper() == '2D':
+            if self.Data_2D.H.loaded:
+                return self.Data_2D.H.Values[:,1].tolist()
+            elif self.Data_2D.D.loaded:
+                return self.Data_2D.D.Values[:,1].tolist()
+            elif self.Data_2D.V.loaded:
+                return self.Data_2D.V.Values[:,1].tolist()
+            elif self.Data_2D.Q.loaded:
+                return self.Data_2D.Q.Values[:,1].tolist()
+            elif self.Data_2D.GL.loaded:
+                return self.Data_2D.GL.Values[:,1].tolist()
+            elif self.Data_2D.QA.loaded:
+                return self.Data_2D.QA.Values[:,1].tolist()
+            elif self.Data_2D.QI.loaded:
+                return self.Data_2D.QI.Values[:,1].tolist()
+            elif self.Data_2D.Vx.loaded:
+                return self.Data_2D.Vx.Values[:,1].tolist()
+            elif self.Data_2D.Vy.loaded:
+                return self.Data_2D.Vy.Values[:,1].tolist()
+            elif self.Data_2D.QS.loaded:
+                return self.Data_2D.QS.Values[:,1].tolist()
+            elif self.Data_2D.HUS.loaded:
+                return self.Data_2D.HUS.Values[:,1].tolist()
+            elif self.Data_2D.HDS.loaded:
+                return self.Data_2D.HDS.Values[:,1].tolist()
+            elif self.Data_2D.HAvg.loaded:
+                return self.Data_2D.HAvg.Values[:,1].tolist()
+            elif self.Data_2D.HMax.loaded:
+                return self.Data_2D.HMax.Values[:,1].tolist()
+            elif self.Data_2D.QIn.loaded:
+                return self.Data_2D.QIn.Values[:,1].tolist()
+            elif self.Data_2D.QOut.loaded:
+                return self.Data_2D.QOut.Values[:,1].tolist()
+            elif self.Data_2D.SS.loaded:
+                return self.Data_2D.SS.Values[:,1].tolist()
+            elif self.Data_2D.Vol.loaded:
+                return self.Data_2D.Vol.Values[:,1].tolist()
+
+        if domain is None or domain.upper() == 'RL':
+            if self.Data_RL.H_P.loaded:
+                return self.Data_RL.H_P.Values[:,1].tolist()
+            elif self.Data_RL.Q_L.loaded:
+                return self.Data_RL.Q_L.Values[:,1].tolist()
+            elif self.Data_RL.Vol_R.loaded:
+                return self.Data_RL.Vol_R.Values[:,1].tolist()
+
+        return []
+
+    def dates(self, domain=None):
         """Returns timesteps as dates"""
 
         if not self.has_reference_time:
             return []
 
         if self._tmp_reference_time is None:
-            return [roundSeconds(self.reference_time + timedelta(hours=x), 2) for x in self.timeSteps()]
+            return [roundSeconds(self.reference_time + timedelta(hours=x), 2) for x in self.timeSteps(domain=domain)]
         else:
-            return [roundSeconds(self._tmp_reference_time + timedelta(hours=x), 2) for x in self.timeSteps()]
+            return [roundSeconds(self._tmp_reference_time + timedelta(hours=x), 2) for x in self.timeSteps(domain=domain)]
 
     def set_reference_time(self, reference_time):
         """Sets results reference time - old time will be overridden"""
