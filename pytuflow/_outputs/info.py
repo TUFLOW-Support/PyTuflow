@@ -311,7 +311,7 @@ class INFO(TimeSeries):
             filter_by = f'node/{filter_by}' if filter_by else 'node'
             dtypes = super().data_types(filter_by)
 
-            if not temporal:
+            if not temporal and '3d' not in filter_by and '2d' not in filter_by:
                 if static:
                     dtypes = [f'max {x}' for x in dtypes if x in self._maximum_data]
                 else:

@@ -36,6 +36,7 @@ Changelog
 """""
 
 - Fixed a bug that would incorrectly flag ``1d_nwk`` ``Q`` channel curve references (the reference to the pit database name) as files and then flag the file as missing.
+- Fixed a bug for 1D results where if the ``"section/3d"`` filter was passed into the ``data_types()`` or ``ids()`` methods, the return value would incorrectly return populated lists. The return is now an empty list since 1D results do not have any 3D results.
 
 1.0.0
 """""

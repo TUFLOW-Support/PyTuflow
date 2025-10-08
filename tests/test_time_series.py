@@ -500,6 +500,8 @@ class Test_TPC_2019(TestCase):
         res = TPC(p)
         dt3d = res.data_types('timeseries/3d')
         self.assertEqual(0, len(dt3d))
+        dt3d = res.data_types('section/3d')
+        self.assertEqual(0, len(dt3d))
 
     def test_data_types_timeseries(self):
         p = './tests/2020/EG15_001.tpc'
