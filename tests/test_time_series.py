@@ -980,6 +980,7 @@ class Test_GPKG2D(TestCase):
         p = './tests/tpc_gpkg/EG15_001_TS_2D.gpkg'
         res = GPKG2D(p)
         self.assertEqual(16, len(res.data_types()))
+        self.assertEqual(16, len(res.data_types('timeseries')))
         # self.assertEqual(4, len(res.data_types('line')))  # source results are wrong
 
     def test_ids(self):
@@ -1016,6 +1017,7 @@ class Test_GPKGRL(TestCase):
         p = './tests/tpc_gpkg/EG15_001_TS_RL.gpkg'
         res = GPKGRL(p)
         self.assertEqual(3, len(res.data_types()))
+        self.assertEqual(3, len(res.data_types('timeseries')))
         # self.assertEqual(4, len(res.data_types('line')))  # source results are wrong
 
     def test_ids(self):

@@ -269,7 +269,16 @@ class GPKG2D(GPKGBase, TimeSeries, ITimeSeries2D):
         >>> res.data_types('po_point')
         ['water level']
         """
+        def remove_filter_part(s: str, part: str) -> str:
+            return '/'.join([x for x in s.split('/') if x != part])
+
         self._load()
+        if filter_by and ('timeseries' in filter_by or 'temporal' in filter_by):
+            filter_by = remove_filter_part(filter_by, 'timeseries')
+            filter_by = remove_filter_part(filter_by, 'temporal')
+            if not filter_by:
+                filter_by = None
+
         return super().data_types(filter_by)
 
     def maximum(self, locations: str | list[str] | None, data_types: str | list[str] | None,
