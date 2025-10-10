@@ -59,8 +59,9 @@ class ITimeSeries2D(ABC):
 
         filter_by = [x.strip().lower() for x in filter_by.split('/')] if filter_by else []
         # replace channel with 1d/line and node with 1d/point
-        replace_alias(filter_by, 'channel', ['1d', 'line'])
-        replace_alias(filter_by, 'node', ['1d', 'point'])
+        if '3d' not in filter_by and '2d' not in filter_by:
+            replace_alias(filter_by, 'channel', ['1d', 'line'])
+            replace_alias(filter_by, 'node', ['1d', 'point'])
         return '/'.join(filter_by)
 
     def _time_series_extractor(self, data_types: list[str], custom_names: list[str], time_series_data: dict,
