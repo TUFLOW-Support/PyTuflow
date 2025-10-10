@@ -97,7 +97,7 @@ class FMTS(INFO):
     2.916667           45.778099
     3.000000           45.778137
 
-    Return th maximum :code:`water level` along a section between :code:`FC01.31` and :code:`FC01.25`:
+    Return the maximum :code:`water level` along a section between :code:`FC01.31` and :code:`FC01.25`:
 
     >>> res.section(['FC01.31', 'FC01.25'], 'max stage', 0)
         branch_id channel      node   offset   max stage
