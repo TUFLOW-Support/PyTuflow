@@ -35,7 +35,7 @@ Changelog
 1.0.2
 """""
 
-- Fixed a bug where a ``timeseries`` filter would return an empty list when using the ``data_types()`` or ``ids()`` methods on ``GPKG2D`` and ``GPKGRL`` classes.
+- Fixed a bug where a ``"timeseries"`` filter would return an empty list when using the ``data_types()`` or ``ids()`` methods on ``GPKG2D`` and ``GPKGRL`` classes.
 
 1.0.1
 """""
