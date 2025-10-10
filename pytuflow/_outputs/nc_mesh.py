@@ -135,7 +135,7 @@ class NCMesh(Mesh):
 
     @staticmethod
     def _looks_like_this(fpath: Path) -> bool:
-        if fpath.suffix != '.nc':
+        if fpath.suffix.lower() != '.nc':
             return False
         if has_nc:
             with Dataset(fpath, 'r') as nc:
