@@ -39,6 +39,7 @@ Changelog
 - Adds a timezone to ``NCGrid`` reference time.
 - Fixed a bug where outputs that had an uneven output times would result in the output time units being interpreted incorrectly e.g. 300 second timestep would be output as 300 hr timestep.
 - Fixed a bug when trying to load a TUFLOW cross-section database from a GPKG.
+- Fixed a bug for ``NCGrid`` where ``3d`` filters would cause a Python error.
 
 1.0.1
 """""

@@ -498,6 +498,8 @@ class TestNCGrid(unittest.TestCase):
         res = NCGrid(p)
         dtypes = res.data_types()
         self.assertEqual(8, len(dtypes))
+        dtypes = res.data_types('3d')
+        self.assertEqual(0, len(dtypes))
 
     def test_time_series(self):
         p = './tests/nc_grid/small_model_001.nc'

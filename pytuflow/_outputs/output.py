@@ -420,8 +420,10 @@ class Output(ABC):
         if filtered_something:
             if ctx_ and isinstance(ctx_[0], str):
                 df = df[df[column_name].str.lower().isin(ctx_)] if not exclude else df[~df[column_name].str.lower().isin(ctx_)]
-            else:
+            elif column_name in df.columns:
                 df = df[df[column_name].isin(ctx_)] if not exclude else df[~df[column_name].isin(ctx_)]
+            else:
+                df = pd.DataFrame(columns=df.columns)
 
         return df, filtered_something
 
