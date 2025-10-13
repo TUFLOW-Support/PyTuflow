@@ -92,7 +92,7 @@ class Output(ABC):
        """
         def generate_times(row):
             if isinstance(row['dt'], tuple):
-                return np.array(row['dt'])
+                return np.array(row['dt']) / 3600.
             else:
                 if np.isclose(row['start'], row['end'], rtol=0., atol=0.001).all():
                     return np.array([])

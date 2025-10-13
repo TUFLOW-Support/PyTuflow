@@ -36,6 +36,8 @@ Changelog
 """""
 
 - Fixed a bug where a ``"timeseries"`` filter would return an empty list when using the ``data_types()`` or ``ids()`` methods on ``GPKG2D`` and ``GPKGRL`` classes.
+- Adds a timezone to ``NCGrid`` reference time.
+- Fixed a bug where outputs that had an uneven output times would result in the output time units being interpreted incorrectly e.g. 300 second timestep would be output as 300 hr timestep.
 
 1.0.1
 """""
