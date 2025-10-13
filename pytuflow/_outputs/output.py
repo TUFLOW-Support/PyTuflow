@@ -384,13 +384,13 @@ class Output(ABC):
             return int(np.argwhere(isclose).flatten()[0])
 
         if method == 'previous':
-            prev = a < time
+            prev = a[a > 0]
             if prev.any():
-                return int(np.argwhere(prev).flatten()[-1])
+                return int(np.argwhere(prev).flatten()[0])
             else:
                 return 0
         elif method == 'next':
-            next_ = a > time
+            next_ = a[a < 0]
             if next_.any():
                 return int(np.argwhere(next_).flatten()[0])
             else:
