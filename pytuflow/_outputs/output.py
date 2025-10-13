@@ -15,7 +15,7 @@ from .._pytuflow_types import PathLike, TimeLike, PlotExtractionLocation
 with (Path(__file__).parent / 'data' / 'data_type_name_alternatives.json').open() as f:
     DATA_TYPE_NAME_ALTERNATIVES = json.load(f)
 
-DEFAULT_REFERENCE_TIME = datetime(1990, 1, 1)
+DEFAULT_REFERENCE_TIME = datetime(1990, 1, 1, tzinfo=timezone.utc)
 
 
 class Output(ABC):
@@ -320,7 +320,7 @@ class Output(ABC):
         pass
 
     @staticmethod
-    def _parse_time_units_string(string: str, regex: str, fmt: str) -> tuple[datetime, str]:
+    def _parse_time_units_string(string: str, regex: str, fmt: list[str] | str) -> tuple[datetime, str]:
         """Parses a string containing the time units and reference time
         e.g. hours since 1990-01-01 00:00:00
         Returns the reference time as a datetime object, the time units as a single character.
@@ -351,7 +351,16 @@ class Output(ABC):
             u = string
         time = re.findall(regex, string)
         if time:
-            return datetime.strptime(time[0], fmt), u
+            if isinstance(fmt, str):
+                fmt = [fmt]
+            for f in fmt:
+                try:
+                    dt = datetime.strptime(time[0], f)
+                    if dt.tzinfo is None:
+                        dt = dt.replace(tzinfo=timezone.utc)
+                    return dt, u
+                except ValueError:
+                    pass
         return DEFAULT_REFERENCE_TIME, u
 
     @staticmethod

@@ -255,7 +255,8 @@ class NCGrid(Grid):
         else:
             self.time_units = units.split(' ')[0]
 
-        return self._parse_time_units_string(units, r'\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}', '%Y-%m-%d %H:%M:%S')[0]
+        return self._parse_time_units_string(units, r'\d{4}-\d{2}-\d{2} \d{2}:\d{2}(?:\:\d{2})?',
+                                             ['%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M'])[0]
 
     def _load_info(self, nc: Dataset):
         d = {'data_type': [], 'type': [], 'is_max': [], 'is_min': [], 'static': [], 'start': [], 'end': [], 'dt': [],
