@@ -1598,6 +1598,8 @@ class Test_CrossSections(unittest.TestCase):
         res = CrossSections(p)
         dtypes = res.data_types()
         self.assertEqual(1, len(dtypes))
+        dtypes = res.data_types('section')
+        self.assertEqual(1, len(dtypes))
 
     def test_section(self):
         p = './tests/cross_sections/gis/1d_xs_EG14_001_L.shp'
