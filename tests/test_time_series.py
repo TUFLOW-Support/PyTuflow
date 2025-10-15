@@ -1,3 +1,4 @@
+import logging
 import os
 import unittest
 from contextlib import contextmanager
@@ -32,16 +33,24 @@ class CustomLoggingHandler(StreamHandler):
     @contextmanager
     def with_filter(self, msgs):
         """Use a context manager so that the previous handlers can be restored no matter how the test exits."""
-        self.msg_filters = msgs
+        self.msg_filters = msgs.copy()
         logger = pytuflow_logging.get_logger()
-        exist_hdlrs = logger.handlers
+        tmf_logger = logging.getLogger('tmf')
+        exist_hdlrs = logger.handlers.copy()
         for hdlr in exist_hdlrs:
             logger.removeHandler(hdlr)
+        tmf_handlers = tmf_logger.handlers.copy()
+        for hdlr in tmf_handlers:
+            tmf_logger.removeHandler(hdlr)
         logger.addHandler(self)
+        tmf_logger.addHandler(self)
         yield self
         logger.removeHandler(self)
+        tmf_logger.removeHandler(self)
         for hdlr in exist_hdlrs:
             logger.addHandler(hdlr)
+        for hdlr in tmf_handlers:
+            tmf_logger.addHandler(hdlr)
         self.msg_filters.clear()
         self.msg_count = 0
 
@@ -1620,3 +1629,18 @@ class Test_CrossSections(unittest.TestCase):
         xs = os.path.abspath(xs)
         df = res.section(xs, None)
         self.assertEqual((30, 2), df.shape)
+
+    def test_section_4(self):
+        expected_msgs = [
+            r'Cross-Section CSV file not found. Variable in "Source" attribute not resolved: tests\cross_sections\gis\..\csv\1d_xs_<<MODULE>>_C99.csv'
+        ]
+        with custom_log_handler.with_filter(expected_msgs) as custom_logger:
+            p = './tests/cross_sections/gis/1d_xs_EG14_002_L.shp'
+            res = CrossSections(p)
+            self.assertEqual(1, custom_logger.msg_count)
+        self.assertEqual('1d_xs_EG14_002_L', res.name)
+        self.assertEqual(55, res.cross_section_count)
+        with custom_log_handler.with_filter(expected_msgs) as custom_logger:
+            df = res.section('../csv/1d_xs_<<MODULE>>_C99.csv', 'xz')
+            self.assertTrue(df.empty)
+            self.assertEqual(1, custom_logger.msg_count)
