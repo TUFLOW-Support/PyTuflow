@@ -40,7 +40,7 @@ Changelog
 - Fixed a bug where outputs that had an uneven output times would result in the output time units being interpreted incorrectly e.g. 300 second timestep would be output as 300 hr timestep.
 - Fixed a bug when trying to load a TUFLOW cross-section database from a GPKG.
 - Fixed a bug for ``NCGrid`` where ``3d`` filters would cause a Python error.
-- CrossSection output class now handles file not found errors more gracefully, such that the output is still loaded even if a cross-section file is missing.
+- ``CrossSection`` output class now handles file not found errors more gracefully, such that the output is still loaded even if a cross-section file is missing.
 
 1.0.1
 """""
