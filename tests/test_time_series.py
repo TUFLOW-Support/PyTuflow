@@ -1632,7 +1632,7 @@ class Test_CrossSections(unittest.TestCase):
 
     def test_section_4(self):
         expected_msgs = [
-            r'Cross-Section CSV file not found. Variable in "Source" attribute not resolved: tests\cross_sections\gis\..\csv\1d_xs_<<MODULE>>_C99.csv'
+            r'Cross-Section CSV file not found. Variable in "Source" attribute not resolved: ..\csv\1d_xs_<<MODULE>>_C99.csv'
         ]
         with custom_log_handler.with_filter(expected_msgs) as custom_logger:
             p = './tests/cross_sections/gis/1d_xs_EG14_002_L.shp'
