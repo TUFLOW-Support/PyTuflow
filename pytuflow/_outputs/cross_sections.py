@@ -270,6 +270,7 @@ class CrossSections(TabularOutput):
         d = {'id': [], 'filename': [], 'source': [], 'filepath': [], 'type': [], 'uid': [], 'ind': []}
         df = pd.DataFrame(index=[x.source for x in self.cross_sections])
         for i, xs in enumerate(self.cross_sections):
+            name = xs.col1 if xs.col1 else Path(xs.source).stem
             if df.loc[[xs.source]].shape[0] == 1:
                 id_ = Path(xs.source).stem
             else:
@@ -279,6 +280,6 @@ class CrossSections(TabularOutput):
             d['source'].append(xs.source)
             d['filepath'].append(str((self.fpath.parent / xs.source).resolve()))
             d['type'].append(xs.type.lower())
-            d['uid'].append(f'{xs.source}:{id_}')
+            d['uid'].append(f'{xs.source}:{name}')
             d['ind'].append(i)
         self.objs = pd.DataFrame(d)
