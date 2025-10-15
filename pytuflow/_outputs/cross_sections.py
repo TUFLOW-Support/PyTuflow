@@ -220,10 +220,15 @@ class CrossSections(TabularOutput):
         27      43.05550  37.6766
         28      44.40290  37.7324
         """
+        def loc(x: str) -> str:
+            if '.csv:' in x.lower():
+                return x.split(':')[1]
+            return Path(x).stem
+
         if locations is not None:
             if not isinstance(locations, (list, tuple)):
                 locations = [locations]
-            locations = [Path(str(x)).stem for x in locations]
+            locations = [loc(x) for x in locations]
         df, locations, data_types = self._time_series_filter_by(locations, data_types)
         if df.empty:
             return pd.DataFrame()

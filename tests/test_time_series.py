@@ -1644,3 +1644,9 @@ class Test_CrossSections(unittest.TestCase):
             df = res.section('../csv/1d_xs_<<MODULE>>_C99.csv', 'xz')
             self.assertTrue(df.empty)
             self.assertEqual(1, custom_logger.msg_count)
+
+    def test_section_5(self):
+        p = './tests/cross_sections/gis/1d_xs_EG14_003_L.shp'
+        res = CrossSections(p)
+        df = res.section(r'..\csv\xsdb.csv:1d_xs_M14_C100', 'xz')
+        self.assertEqual((30, 2), df.shape)
