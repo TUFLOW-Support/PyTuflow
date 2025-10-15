@@ -45,7 +45,7 @@ class CrossSections(TabularOutput):
 
     DOMAIN_TYPES = {}
     GEOMETRY_TYPES = {}
-    ATTRIBUTE_TYPES = {'xz': ['xz'], 'hw': ['hw'], 'cs': ['cs'], 'bg': ['bg'], 'lc': ['lc']}
+    ATTRIBUTE_TYPES = {'xz': ['xz'], 'hw': ['hw'], 'cs': ['cs'], 'bg': ['bg'], 'lc': ['lc'], 'na': ['na']}
     ID_COLUMNS = ['id', 'uid', 'source', 'filename', 'filepath']
 
     def __init__(self, fpath: PathLike):
@@ -222,7 +222,17 @@ class CrossSections(TabularOutput):
         """
         def loc(x: str) -> str:
             if '.csv:' in x.lower():
-                return x.split(':')[1]
+                df_ = self.objs[self.objs['uid'].str.lower() == x.lower()][['id']]
+                if not df_.empty:
+                    return df_.iloc[0,0]
+            elif '.csv' in x.lower():
+                df_ = self.objs[self.objs['source'].str.lower() == Path(x).name.lower()][['id']]
+                if not df_.empty:
+                    return df_.iloc[0,0]
+            else:
+                df_ = self.objs[self.objs['id'].str.lower() == x.lower()][['id']]
+                if not df_.empty:
+                    return df_.iloc[0,0]
             return Path(x).stem
 
         if locations is not None:

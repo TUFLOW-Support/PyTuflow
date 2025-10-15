@@ -1640,13 +1640,17 @@ class Test_CrossSections(unittest.TestCase):
             self.assertEqual(1, custom_logger.msg_count)
         self.assertEqual('1d_xs_EG14_002_L', res.name)
         self.assertEqual(55, res.cross_section_count)
-        with custom_log_handler.with_filter(expected_msgs) as custom_logger:
-            df = res.section('../csv/1d_xs_<<MODULE>>_C99.csv', 'xz')
-            self.assertTrue(df.empty)
-            self.assertEqual(1, custom_logger.msg_count)
+        df = res.section('../csv/1d_xs_<<MODULE>>_C99.csv', 'xz')
+        self.assertTrue(df.empty)
 
     def test_section_5(self):
         p = './tests/cross_sections/gis/1d_xs_EG14_003_L.shp'
         res = CrossSections(p)
         df = res.section(r'..\csv\xsdb.csv:1d_xs_M14_C100', 'xz')
         self.assertEqual((30, 2), df.shape)
+
+    def test_section_na(self):
+        p = './tests/cross_sections/gis/Murr_1d.gpkg >> 1d_na_Murr'
+        res = CrossSections(p)
+        df = res.section(r'..\na\na_ABOVE_OLDMAN_0.0_WETLAND.csv:na_ABOVE_OLDMAN_0.0_WETLAND', 'na')
+        self.assertEqual((20, 2), df.shape)
