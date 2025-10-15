@@ -41,6 +41,7 @@ Changelog
 - Fixed a bug when trying to load a TUFLOW cross-section database from a GPKG.
 - Fixed a bug for ``NCGrid`` where ``3d`` filters would cause a Python error.
 - ``CrossSection`` output class now handles file not found errors more gracefully, such that the output is still loaded even if a cross-section file is missing.
+- Fixed a bug for ``CrossSection`` outputs where the cross sections were being reloaded each time the ``section()`` method was called.
 
 1.0.1
 """""

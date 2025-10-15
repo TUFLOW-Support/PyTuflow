@@ -259,12 +259,15 @@ class CrossSections(TabularOutput):
         raise NotImplementedError(f'{__class__.__name__} does not support vertical profile plotting.')
 
     def _load(self):
+        if self._loaded:
+            return
         self.name = self.fpath.stem
         with GISAttributes(self.fpath) as attrs:
             self.cross_sections = [TuflowCrossSection(self.fpath.parent, x) for x in attrs]
             _ = [x.load() for x in self.cross_sections]
         self.cross_section_count = len(self.cross_sections)
         self._load_objs()
+        self._loaded = True
 
     def _overview_dataframe(self) -> pd.DataFrame:
         df = self.objs.copy()
