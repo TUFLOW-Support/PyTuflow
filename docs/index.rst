@@ -43,6 +43,7 @@ Changelog
 - ``CrossSection`` output class now handles file not found errors more gracefully, such that the output is still loaded even if a cross-section file is missing.
 - Fixed a bug for ``CrossSection`` outputs where the cross sections were being reloaded each time the ``section()`` method was called.
 - Fixed a bug where ``na`` types for ``CrossSection`` outputs were not returning any results when using the ``section()`` method.
+- Fixed a bug for ESTRY GPKG Time Series outputs where the ``"pipes"`` data type was incorrectly outputting a pipe at each channel.
 
 1.0.1
 """""

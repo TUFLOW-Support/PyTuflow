@@ -586,7 +586,7 @@ class GPKG1D(GPKGBase, INFO):
         ret = cur.fetchall()
         if ret:
             self._channel_info = self._sqlite_return_to_df(ret, columns, type_map)
-            self._channel_info['flags'].apply(lambda x: x.split('[')[1].strip(']') if '[' in x else x)
+            self._channel_info['flags'] = self._channel_info['flags'].apply(lambda x: x.split('[')[1].strip(']') if '[' in x else x)
             if self._is_swmm:
                 self._channel_info['ispipe'] = (~np.isnan(self._channel_info['lbus_obvert']) & ~np.isnan(self._channel_info['lbds_obvert']))
                 self._channel_info['ispit'] = False
