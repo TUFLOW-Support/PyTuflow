@@ -18,4 +18,7 @@ from .nc_grid import NCGrid
 # expose some base classes for convenience
 from .map_output import MapOutput
 from .time_series import TimeSeries
+from .tabular_output import TabularOutput
+from .mesh import Mesh
+from .grid import Grid
 from .output import Output
