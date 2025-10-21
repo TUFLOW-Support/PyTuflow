@@ -1436,6 +1436,16 @@ class Test_BC_Tables(unittest.TestCase):
         rts = res.data_types('FC01')
         self.assertEqual(1, len(rts))
 
+    def test_data_types_3(self):
+        p = './tests/bc_tables/EG00_001_2d_bc_tables_check.csv'
+        res = BCTablesCheck(p)
+        dtypes = res.data_types('timeseries')
+        self.assertEqual(2, len(dtypes))
+        dtypes = res.data_types('section')
+        self.assertEqual(0, len(dtypes))
+        dtypes = res.data_types('timeseries/3d')
+        self.assertEqual(0, len(dtypes))
+
     def test_time_series(self):
         p = './tests/bc_tables/EG00_001_2d_bc_tables_check.csv'
         res = BCTablesCheck(p)

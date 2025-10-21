@@ -44,6 +44,7 @@ Changelog
 - Fixed a bug for ``CrossSection`` outputs where the cross sections were being reloaded each time the ``section()`` method was called.
 - Fixed a bug where ``na`` types for ``CrossSection`` outputs were not returning any results when using the ``section()`` method.
 - Fixed a bug for ESTRY GPKG Time Series outputs where the ``"pipes"`` data type was incorrectly outputting a pipe at each channel.
+- Fixed a bug with the ``BCTablesCheck`` output class where it would return an empty list if filter_by was set to ``"timeseries"``.
 
 1.0.1
 """""
