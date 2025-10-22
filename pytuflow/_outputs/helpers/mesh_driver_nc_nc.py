@@ -1,7 +1,11 @@
 import re
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Generator
+try:
+    from dateutil import parser
+except ImportError:
+    parser = 'parser'
 
 from .mesh_driver_nc import NCMeshDriver, has_nc, Dataset
 from .mesh_driver import DatasetGroup
@@ -60,11 +64,27 @@ class NCMeshDriverNC(NCMeshDriver):
         else:
             units = string.split(' ')[0]
 
+        rt_string = string.split('since')[-1].strip() if 'since' in string else string
+        if parser != 'parser':
+            try:
+                rt = parser.parse(rt_string)
+                if rt.tzinfo is None:
+                    rt = rt.replace(tzinfo=timezone.utc)
+                return True, units, rt
+            except parser.ParserError:
+                pass
+
+        rt = None
         if re.findall(r'\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}', string):
-            return True, units, datetime.strptime(re.findall(r'\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}', string)[0],
+            rt = datetime.strptime(re.findall(r'\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}', string)[0],
                                                   '%Y-%m-%d %H:%M:%S')
         elif re.findall(r'\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}', string):
-            return True, units, datetime.strptime(re.findall(r'\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}', string)[0],
+            rt = datetime.strptime(re.findall(r'\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}', string)[0],
                                                   '%Y-%m-%dT%H:%M:%S')
+
+        if rt is not None:
+            if rt.tzinfo is None:
+                rt = rt.replace(tzinfo=timezone.utc)
+            return True, units, rt
 
         return False, units, datetime(1990, 1, 1)  # a default value

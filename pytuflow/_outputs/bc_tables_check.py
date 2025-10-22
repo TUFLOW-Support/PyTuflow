@@ -291,7 +291,7 @@ class BCTablesCheck(TimeSeries):
         >>> bndry.ids('flow')
         ['FC01', 'FC04']
         """
-        if 'timeseries' in filter_by:
+        if filter_by and 'timeseries' in filter_by:
             filter_by = filter_by.replace('timeseries', '')
             if not filter_by:
                 filter_by = None
