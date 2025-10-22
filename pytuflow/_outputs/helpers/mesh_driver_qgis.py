@@ -91,6 +91,8 @@ class QgisMeshDriver(MeshDriver):
             if grp.isTemporal():
                 if grp.referenceTime().isValid():
                     self.reference_time = grp.referenceTime().toPyDateTime()
+                    if self.reference_time.tzinfo is None:
+                        self.reference_time = self.reference_time.replace(tzinfo=timezone.utc)
                     self.has_inherent_reference_time = True
                     break
 
