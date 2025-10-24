@@ -1333,6 +1333,14 @@ class Test_HydTables(unittest.TestCase):
         dtypes = res.data_types()
         self.assertEqual(14, len(dtypes))
 
+    def test_data_types_4(self):
+        p = './tests/hyd_tables/EG14_001_1d_ta_tables_check.csv'
+        res = HydTablesCheck(p)
+        dtypes = res.data_types('section')
+        self.assertEqual(14, len(dtypes))
+        dtypes = res.data_types('section/channel')
+        self.assertEqual(8, len(dtypes))
+
     def test_data_types_ctx(self):
         p = './tests/hyd_tables/EG14_001_1d_ta_tables_check.csv'
         res = HydTablesCheck(p)
