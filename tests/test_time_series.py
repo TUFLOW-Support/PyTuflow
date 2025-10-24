@@ -1370,6 +1370,12 @@ class Test_HydTables(unittest.TestCase):
         df = res.section('1d_xs_M14_C121', 'elev')
         self.assertEqual((30, 2), df.shape)
 
+    def test_section_3(self):
+        p = './tests/hyd_tables/EG14_001_1d_ta_tables_check.csv'
+        res = HydTablesCheck(p)
+        df = res.section('FC01.25', 'wetted perimeter')
+        self.assertEqual((39, 2), df.shape)
+
 
 class Test_BC_Tables(unittest.TestCase):
 
