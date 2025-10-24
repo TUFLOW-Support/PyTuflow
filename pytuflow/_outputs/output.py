@@ -258,7 +258,7 @@ class Output(ABC):
         dtype_filter = False
         id_filter = False
 
-        filter_by = [x.strip().lower() for x in filter_by.split('/')] if filter_by else []
+        filter_by = [x.strip().lower() for x in filter_by.split('/') if x] if filter_by else []
         df = self._overview_dataframe() if df is None else df
         if not filter_by:
             return df, {'domain': False, 'geometry': False, 'attribute': False, 'data_type': False, 'id': False}

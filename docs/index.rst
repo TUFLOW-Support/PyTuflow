@@ -47,6 +47,7 @@ Changelog
 - Fixed a bug for ESTRY GPKG Time Series outputs where the ``"pipes"`` data type was incorrectly outputting a pipe at each channel.
 - Fixed a bug with the ``BCTablesCheck`` output class where it would return an empty list if ``filter_by`` was set to ``"timeseries"``.
 - Fixed a bug with the ``HydTablesCheck`` output class where it would return an empty list if ``filter_by`` was set to ``"section"``.
+- Fixed a bug where if there was a trailing or leading "/" in the ``filter_by`` argument in the ``data_type()``, ``ids()``, and ``times()`` methods, then an empty return was almost guaranteed.
 
 1.0.1
 """""

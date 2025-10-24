@@ -268,6 +268,11 @@ class Test_TPC_2016(TestCase):
         res = TPC(p)
         self.assertEqual(22, len(res.data_types()))
 
+    def test_data_types_2(self):
+        p = './tests/2016/EG14_001.tpc'
+        res = TPC(p)
+        self.assertEqual(3, len(res.data_types('/node')))
+
     def test_data_types_static(self):
         p = './tests/2016/EG14_001.tpc'
         res = TPC(p)
