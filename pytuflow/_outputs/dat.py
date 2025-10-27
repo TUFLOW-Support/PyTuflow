@@ -181,10 +181,10 @@ class DAT(Mesh):
                 buf = f.read(header_length)
             vals = struct.unpack('i'*15 + 'c'*40, buf[:header_length])
             possible_combos = [
-                (3000, 100, 3, 110, 4, 120, 1, 250, 0, 130, 170, 36, 180, 25, 190),
-                (3000, 100, 3, 110, 4, 120, 1, 250, 0, 140, 170, 36, 180, 25, 190),
+                (3000, 100, 3, 110, 4, 120, 1, 250, 0, 130, 170),
+                (3000, 100, 3, 110, 4, 120, 1, 250, 0, 140, 170),
             ]
-            if tuple(vals[:15]) in possible_combos:
+            if tuple(vals[:11]) in possible_combos and vals[12] == 180 and vals[14] == 190:
                 return True
         except Exception:
             pass
