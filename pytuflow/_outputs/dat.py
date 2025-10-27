@@ -141,7 +141,6 @@ class DAT(Mesh):
                 self.fpath = self.fpath.parent / Path(self.fpath.stem).stem
         else:
             self.twodm = Path(twodm) if twodm else self._find_2dm(self.fpath)
-            self.fpath = self.twodm.parent / self.twodm.stem
 
         for dat in self._dats:
             if not self._looks_like_this(dat):
@@ -221,3 +220,7 @@ class DAT(Mesh):
         except Exception:
             pass
         return True
+
+    def _initial_load(self):
+        super()._initial_load()
+        self.name = self.twodm.stem

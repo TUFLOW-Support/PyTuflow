@@ -50,6 +50,7 @@ Changelog
 - Fixed a bug where if there was a trailing or leading "/" in the ``filter_by`` argument in the ``data_type()``, ``ids()``, and ``times()`` methods, then an empty return was almost guaranteed.
 - Fixed a bug in when asking for the ``"wetted perimeter"`` data type in the ``HydTablesCheck.section()`` output class would cause a python exception.
 - Added proper format checking for SMS ``.dat`` files.
+- Fixed a bug when loading a ``.dat`` file (not from the ``.sup``) where the file path attribute ``fpath`` was being being set incorrectly.
 
 1.0.1
 """""
