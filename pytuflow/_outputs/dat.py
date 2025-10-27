@@ -137,8 +137,6 @@ class DAT(Mesh):
                 self._dats = [self.fpath.parent / d for d in dats]
             else:
                 self._dats = [self.fpath.parent / dats]
-            if Path(self.fpath.stem).suffix.lower():
-                self.fpath = self.fpath.parent / Path(self.fpath.stem).stem
         else:
             self.twodm = Path(twodm) if twodm else self._find_2dm(self.fpath)
 
