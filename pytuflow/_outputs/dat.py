@@ -1,9 +1,11 @@
+import struct
 from collections.abc import Iterable
 from pathlib import Path
 
 from .helpers.super_file import SuperFile
 from .helpers.mesh_driver_qgis_dat import QgisDATMeshDriver
 from .mesh import Mesh
+from ..results import ResultTypeError
 from .._pytuflow_types import PathLike
 
 
@@ -125,7 +127,7 @@ class DAT(Mesh):
             raise ValueError('No files provided.')
 
         if len(self._dats) > 1 and [x for x in self._dats if x.suffix.lower() == '.sup']:
-            raise ValueError('Multiple files provided, but one of them is a SUP file. Only one SUP file is allowed.')
+            raise ValueError('Multiple files provided, but one of them is a SUP file. Only file is allowed if using a SUP file.')
 
         if self.fpath.suffix.lower() == '.sup':
             sup = SuperFile(self.fpath)
@@ -141,6 +143,12 @@ class DAT(Mesh):
             self.twodm = Path(twodm) if twodm else self._find_2dm(self.fpath)
             self.fpath = self.twodm.parent / self.twodm.stem
 
+        for dat in self._dats:
+            if not self._looks_like_this(dat):
+                raise ResultTypeError(f'File does not look like a DAT file: {dat}')
+            if self._looks_empty(dat):
+                raise EOFError(f'File is empty or incomplete: {dat}')
+
         self._driver = QgisDATMeshDriver(self.twodm, self._dats)
 
         self._initial_load()
@@ -153,3 +161,63 @@ class DAT(Mesh):
         if not p.exists():
             raise FileNotFoundError(f'2dm file does not exist: {p}')
         return p
+
+    @staticmethod
+    def _looks_like_this(*fpath: PathLike) -> bool:
+        """Check if the given file(s) look like this output type.
+
+        Parameters
+        ----------
+        fpath : PathLike
+            The path to the output file(s).
+
+        Returns
+        -------
+        bool
+            True if the file(s) look like this output type.
+        """
+        try:
+            header_length = 100
+            with Path(fpath[0]).open('rb') as f:
+                buf = f.read(header_length)
+            vals = struct.unpack('i'*15 + 'c'*40, buf[:header_length])
+            possible_combos = [
+                (3000, 100, 3, 110, 4, 120, 1, 250, 0, 130, 170, 36, 180, 25, 190),
+                (3000, 100, 3, 110, 4, 120, 1, 250, 0, 140, 170, 36, 180, 25, 190),
+            ]
+            if tuple(vals[:15]) in possible_combos:
+                return True
+        except Exception:
+            pass
+        return False
+
+    @staticmethod
+    def _looks_empty(*fpath: PathLike) -> bool:
+        """Check if the given file(s) look empty or incomplete.
+
+        Parameters)
+        ----------
+        fpath : PathLike
+            The path to the output file(s).
+
+        Returns
+        -------
+        bool
+            True if the file(s) look empty.
+        """
+        try:
+            # see if header is readable, doesn't do a really thorough check of completeness of data
+            header_length = 100  # can also be 140 i think
+            with Path(fpath[0]).open('rb') as f:
+                f.read(header_length)
+                buf = f.read(4)
+                if struct.unpack('i', buf[:4])[0] == 200:
+                    return False  # looks like at least one timestep has been written
+                else:  # could be header length is longer than expected
+                    f.read(36)  # a total of 40 more bytes added to the header
+                    buf = f.read(4)
+                    if struct.unpack('i', buf[:4])[0] == 200:
+                        return False  # looks like at least one timestep has been written
+        except Exception:
+            pass
+        return True
