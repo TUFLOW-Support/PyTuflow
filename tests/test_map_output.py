@@ -486,6 +486,20 @@ class TestDAT(unittest.TestCase):
             dtypes = res.data_types()
             self.assertEqual(['bed level', 'water level', 'max water level'], dtypes)
 
+    def test_time_series(self):
+        p = './tests/dat/small_model_002_h.dat'
+        with pyqgis():
+            res = DAT(p)
+            df = res.time_series((1.0, 1.0), 'water level')
+            self.assertEqual((13, 1), df.shape)
+
+    def test_section(self):
+        p = './tests/dat/small_model_002_h.dat'
+        with pyqgis():
+            res = DAT(p)
+            df = res.section([(1.5, 1.2), (2.5, 1.2)], 'water level', 1.0)
+            self.assertEqual((4, 2), df.shape)
+
 
 class TestNCGrid(unittest.TestCase):
 
