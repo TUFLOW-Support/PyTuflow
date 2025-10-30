@@ -9,6 +9,7 @@ from .fv_bc_tide import FVBCTide
 from .hyd_tables_check import HydTablesCheck
 from .bc_tables_check import BCTablesCheck
 from .cross_sections import CrossSections
+from .fm_dat import DATCrossSections
 from .xmdf import XMDF
 from .nc_mesh import NCMesh
 from .catch_json import CATCHJson

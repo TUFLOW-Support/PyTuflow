@@ -51,7 +51,7 @@ class CrossSections(TabularOutput):
     def __init__(self, fpath: PathLike):
         super().__init__(fpath)
 
-        self.reference_time = datetime(2000, 1, 1, tzinfo=timezone.utc)
+        self.reference_time = datetime(1990, 1, 1, tzinfo=timezone.utc)
         self.units = ''
         #: TuflowPath: The path to the source output file.
         self.fpath = TuflowPath(fpath)

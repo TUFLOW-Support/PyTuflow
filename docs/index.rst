@@ -32,6 +32,11 @@ Check out the :doc:`usage` section for further information, including how to :re
 Changelog
 ---------
 
+1.1
+"""
+
+- Added Flood Modeller DAT cross-section output class. This is essentially a wrapper around the ``FmCrossSectionDatabaseDriver`` class and allows users to interact with Flood Modeller DAT files in an easier way via the ``Output`` class methods - e.g. ``ids()``, ``data_types()``, ``section()``.
+
 1.0.2
 """""
 

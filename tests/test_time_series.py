@@ -19,6 +19,7 @@ from pytuflow._outputs.gpkg_rl import GPKGRL
 from pytuflow._outputs.fm_ts import FMTS
 from pytuflow._outputs.fv_bc_tide import FVBCTide
 from pytuflow._outputs.cross_sections import CrossSections
+from pytuflow._outputs.fm_dat import DATCrossSections
 from pytuflow import pytuflow_logging
 
 
@@ -1683,3 +1684,39 @@ class Test_CrossSections(unittest.TestCase):
         res = CrossSections(p)
         df = res.section(r'..\na\na_ABOVE_OLDMAN_0.0_WETLAND.csv:na_ABOVE_OLDMAN_0.0_WETLAND', 'na')
         self.assertEqual((20, 2), df.shape)
+
+
+class TestDatCrossSections(unittest.TestCase):
+
+    def test_load(self):
+        p = './tests/fm/zzn/FMT_M01_001.dat'
+        res = DATCrossSections(p)
+        self.assertEqual('FMT_M01_001', res.name)
+        self.assertEqual(51, res.cross_section_count)
+
+    def test_ids(self):
+        p = './tests/fm/zzn/FMT_M01_001.dat'
+        res = DATCrossSections(p)
+        ids = res.ids()
+        self.assertEqual(51, len(ids))
+
+    def test_data_types(self):
+        p = './tests/fm/zzn/FMT_M01_001.dat'
+        res = DATCrossSections(p)
+        dtypes = res.data_types()
+        self.assertEqual(['xz', 'manning n'], dtypes)
+
+        dtypes = res.data_types('FC01.08')
+        self.assertEqual(['xz', 'manning n'], dtypes)
+
+        dtypes = res.data_types('section')
+        self.assertEqual(['xz', 'manning n'], dtypes)
+
+        dtypes = res.data_types('timeseries')
+        self.assertEqual([], dtypes)
+
+    def test_section(self):
+        p = './tests/fm/zzn/FMT_M01_001.dat'
+        res = DATCrossSections(p)
+        df = res.section('FC01.08', 'xz')
+        self.assertEqual((21, 2), df.shape)

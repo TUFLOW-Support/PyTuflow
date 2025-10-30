@@ -78,6 +78,7 @@
     "vertex resistance factor": ["vert(?:ex)?(?:\\s|_|-)?res(?:istance)?(?:\\s|_|-)?factors?"],
     "k": ["k"],
     "rating curve": ["rating(?:\\s|_|-)?curves?", "rating(?:\\s|_|-)?tables?", "hq"],
-    "rainfall": ["rf", "rain(?:\\s|_|-)?falls?"]
+    "rainfall": ["rf", "rain(?:\\s|_|-)?falls?"],
+    "xz": ["xz", "xs", "section", "river"]
   }
 }
