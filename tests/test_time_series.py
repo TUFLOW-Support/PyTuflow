@@ -1700,6 +1700,9 @@ class TestDatCrossSections(unittest.TestCase):
         res = DATCrossSections(dat.fpath, driver=dat)
         self.assertEqual('FMT_M01_001', res.name)
         self.assertEqual(51, res.cross_section_count)
+        for xs in res.cross_sections:
+            has_easting_northing = 'easting' in xs.xs.columns and 'northing' in xs.xs.columns
+            self.assertTrue(has_easting_northing)
 
     def test_ids(self):
         p = './tests/fm/zzn/FMT_M01_001.dat'
