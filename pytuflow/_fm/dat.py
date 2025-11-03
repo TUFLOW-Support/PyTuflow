@@ -41,4 +41,4 @@ class FMDAT(DAT):
         return unit
 
     def cross_sections(self) -> list[Handler]:
-        return self.find_units('River')
+        return list(self.find_units('River'))
