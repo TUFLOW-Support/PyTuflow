@@ -1,3 +1,4 @@
+import typing
 from collections import OrderedDict
 from pathlib import Path
 
@@ -33,9 +34,11 @@ class FMDAT(DAT):
             self.df.set_index('ID', inplace=True)
         return self.df
 
-    def unit(self, id_: str, *args, **kwargs) -> Handler:
-        unit = super().unit(id_)
-        return unit[0] if isinstance(unit, list) else unit
+    def unit(self, id_: str, default: typing.Any = None, return_only_one: bool = False) -> Handler:
+        unit = super().unit(id_, default)
+        if return_only_one:
+            return unit[0] if isinstance(unit, list) else unit
+        return unit
 
     def cross_sections(self) -> list[Handler]:
         return self.find_units('River')

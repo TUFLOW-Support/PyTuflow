@@ -201,7 +201,7 @@ class DATCrossSections(TabularOutput):
         for idx, row in df.iterrows():
             uid = str(idx)
             name = row['name']
-            xs = self._driver.dat.unit(uid)
+            xs = self._driver.unit(uid, return_only_one=True)
             df = xs.df.loc[:,['x', 'y', 'n']]
             df.columns = ['x', 'z', 'manning n']
             cols = []
