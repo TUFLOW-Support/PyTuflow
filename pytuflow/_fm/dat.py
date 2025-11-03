@@ -28,6 +28,7 @@ class FMDAT(DAT):
                 d['Type'].append(xs.type)
                 xs.df = xs.xs
                 xs.name = xs.id
+                xs.sub_name = xs.sub_type
             self.df = pd.DataFrame(d)
             self.df.set_index('ID', inplace=True)
         return self.df
