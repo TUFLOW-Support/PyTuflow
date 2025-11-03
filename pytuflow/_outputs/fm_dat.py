@@ -5,9 +5,12 @@ from pathlib import Path
 import pandas as pd
 
 from .tabular_output import TabularOutput
-from .._tmf import FmCrossSection, FmCrossSectionDatabaseDriver
+from .._tmf import FmCrossSectionDatabaseDriver
 from .._pytuflow_types import PathLike, TimeLike, TuflowPath
 from ..results import ResultTypeError
+
+if typing.TYPE_CHECKING:
+    from .._fm import Handler
 
 
 class DATCrossSections(TabularOutput):
@@ -61,9 +64,9 @@ class DATCrossSections(TabularOutput):
         self._load()
 
     @property
-    def cross_sections(self) -> list[FmCrossSection]:
+    def cross_sections(self) -> list['Handler']:
         """list[FmCrossSection]: List of loaded cross-sections."""
-        return self._driver.dat.units(FmCrossSection)
+        return self._driver.cross_sections()
 
     @staticmethod
     def _looks_like_this(fpath: Path) -> bool:
@@ -239,7 +242,7 @@ class DATCrossSections(TabularOutput):
         df = pd.DataFrame(self.objs.loc[:, ['name', 'domain']].to_numpy(), index=self.objs.index, columns=['name', 'domain'])
         df['type'] = 'manning n'
         self.objs = pd.concat([self.objs, df], axis=0)
-        self.cross_section_count = self.objs.shape[0]
+        self.cross_section_count = self.objs.shape[0] // 2
         self._loaded = True
 
     def _overview_dataframe(self) -> pd.DataFrame:

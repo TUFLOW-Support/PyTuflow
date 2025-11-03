@@ -10,7 +10,7 @@ from .._pytuflow_types import PathLike, TimeLike
 from .helpers.fm_res_driver import FMResultDriver
 from .helpers.lp_1d_fm import LP1DFM
 from .._fm import GXY
-from .._fm import DAT
+from .._fm import FMDAT
 from ..util import pytuflow_logging
 from ..results import ResultTypeError
 
@@ -594,7 +594,7 @@ class FMTS(INFO):
 
         # Initialise DAT
         if self.dat_fpath is not None:
-            self._dat = DAT(self.dat_fpath)
+            self._dat = FMDAT(self.dat_fpath)
             self._support_section_plotting = True
 
         # Initialise GXY

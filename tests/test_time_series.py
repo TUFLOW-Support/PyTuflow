@@ -9,7 +9,7 @@ import pytest
 
 from pytuflow.results import ResultTypeError
 from pytuflow._outputs.bc_tables_check import BCTablesCheck
-from pytuflow._fm import GXY
+from pytuflow._fm import GXY, FMDAT
 from pytuflow._outputs.hyd_tables_check import HydTablesCheck
 from pytuflow._outputs.info import INFO
 from pytuflow._outputs.tpc import TPC
@@ -1691,6 +1691,13 @@ class TestDatCrossSections(unittest.TestCase):
     def test_load(self):
         p = './tests/fm/zzn/FMT_M01_001.dat'
         res = DATCrossSections(p)
+        self.assertEqual('FMT_M01_001', res.name)
+        self.assertEqual(51, res.cross_section_count)
+
+    def test_load_from_driver(self):
+        p = './tests/fm/zzn/FMT_M01_001.dat'
+        dat = FMDAT(p)
+        res = DATCrossSections(dat.fpath, driver=dat)
         self.assertEqual('FMT_M01_001', res.name)
         self.assertEqual(51, res.cross_section_count)
 
