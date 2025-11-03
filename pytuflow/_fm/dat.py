@@ -33,5 +33,9 @@ class FMDAT(DAT):
             self.df.set_index('ID', inplace=True)
         return self.df
 
+    def unit(self, id_: str, *args, **kwargs) -> Handler:
+        unit = super().unit(id_)
+        return unit[0] if isinstance(unit, list) else unit
+
     def cross_sections(self) -> list[Handler]:
         return self.find_units('River')
