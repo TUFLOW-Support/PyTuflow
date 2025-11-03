@@ -32,7 +32,7 @@ class DATCrossSections(TabularOutput):
     """
     DOMAIN_TYPES = {}
     GEOMETRY_TYPES = {}
-    ATTRIBUTE_TYPES = {'xz': ['xz']}
+    ATTRIBUTE_TYPES = {'xz': ['xz'], 'manning n': ['manning n']}
     ID_COLUMNS = ['name']
 
     def __init__(self, fpath: PathLike, driver: typing.Any = None):
@@ -236,6 +236,9 @@ class DATCrossSections(TabularOutput):
         self.objs.columns = self.objs.columns.str.lower()
         self.objs['domain'] = '1d'
         self.objs['type'] = 'xz'
+        df = pd.DataFrame(self.objs.loc[:, ['name', 'domain']].to_numpy(), index=self.objs.index, columns=['name', 'domain'])
+        df['type'] = 'manning n'
+        self.objs = pd.concat([self.objs, df], axis=0)
         self.cross_section_count = self.objs.shape[0]
         self._loaded = True
 
