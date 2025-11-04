@@ -9,6 +9,7 @@ import pandas as pd
 from .map_output import MapOutput, PointLocation, LineStringLocation
 from .._pytuflow_types import PathLike, TimeLike
 from .helpers.catch_providers import CATCHProvider
+from ..results import ResultTypeError
 
 
 class CATCHJson(MapOutput):
@@ -124,12 +125,24 @@ class CATCHJson(MapOutput):
         self._data = {}
         self._providers = OrderedDict()
         self._idx_provider = None
+
+        if not self._looks_like_this(Path(fpath)):
+            raise ResultTypeError(f'File does not look like an XMDF file: {fpath}')
+
         self._load_json(fpath)
         self._initial_load()
 
     @staticmethod
     def _looks_like_this(fpath: Path) -> bool:
-        return True
+        try:
+            with open(fpath, 'r') as f:
+                d = json.load(f, object_pairs_hook=OrderedDict)
+            for data_name in ['version', 'name', 'outputs', 'units', 'time units', 'output data']:
+                if data_name.lower() not in [x.lower() for x in d.keys()]:
+                    return False
+            return True
+        except Exception:
+            return False
 
     @staticmethod
     def _looks_empty(fpath: Path) -> bool:
