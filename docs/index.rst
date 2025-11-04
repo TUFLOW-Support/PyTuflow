@@ -52,6 +52,7 @@ Changelog
 - Added proper format checking for SMS ``.dat`` files.
 - Fixed a bug when loading a ``.dat`` file (not from the ``.sup``) where the file path attribute ``fpath`` was being being set incorrectly.
 - Fixed a time-series and section plotting for ``.dat`` files which was not working.
+- Added the missing format checker for the ``CATCHJson`` class.
 
 1.0.1
 """""
