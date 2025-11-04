@@ -121,7 +121,7 @@ class CATCHJson(MapOutput):
 
     def __init__(self, fpath: PathLike | str):
         super().__init__(fpath)
-        self._fpath = Path(fpath)
+        self.fpath = Path(fpath)
         self._data = {}
         self._providers = OrderedDict()
         self._idx_provider = None
@@ -618,7 +618,7 @@ class CATCHJson(MapOutput):
         index_result_name = self._data.get('index')
         for res_name in self._data.get('outputs', []):
             output = self._data.get('output data', {}).get(res_name, {})
-            provider = CATCHProvider.from_catch_json_output(self._fpath.parent, output)
+            provider = CATCHProvider.from_catch_json_output(self.fpath.parent, output)
             if res_name == index_result_name:
                 self._idx_provider = provider
             if provider.has_inherent_reference_time:
