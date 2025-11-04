@@ -58,6 +58,7 @@ Changelog
 - Fixed a bug when loading a ``.dat`` file (not from the ``.sup``) where the file path attribute ``fpath`` was being being set incorrectly.
 - Fixed a time-series and section plotting for ``.dat`` files which was not working.
 - Added the missing format checker for the ``CATCHJson`` class.
+- Added ``fpath`` property to ``CATCHJson`` class to be consistent with other output classes.
 
 1.0.1
 """""
