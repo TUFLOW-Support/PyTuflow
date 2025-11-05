@@ -2,7 +2,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Union, Iterable, Any, Dict
 # noinspection PyUnusedImports
-from ._tmf import TuflowPath, AppendDict
+from ._tmf import TuflowPath, AppendDict, CaseInsDict
 
 
 #: :class:`Path` | :code:`str`: Type hint for an object that represents a file path or directory.
