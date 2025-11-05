@@ -1,4 +1,5 @@
 import json
+from datetime import timezone
 from pathlib import Path
 from collections import OrderedDict
 from typing import Union
@@ -611,6 +612,7 @@ class CATCHJson(MapOutput):
         self.reference_time, _ = self._parse_time_units_string(self._data.get('time units', default_time_string),
                                                         r'\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}',
                                                         '%Y-%m-%d %H:%M:%S')
+        self.reference_time = self.reference_time.replace(tzinfo=timezone.utc)
         self.units = self._data.get('units', 'metric')
         self._outputs = self._data.get('output data', {})
         self._result_types = [self._get_standard_data_type_name(x) for x in self._data.get('result types')]

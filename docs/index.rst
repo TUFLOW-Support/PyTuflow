@@ -36,8 +36,8 @@ Changelog
 """""
 
 - Fixed a bug where a ``"timeseries"`` filter would return an empty list when using the ``data_types()`` or ``ids()`` methods on ``GPKG2D`` and ``GPKGRL`` classes.
-- Adds a timezone to ``NCGrid`` reference time.
-- Adds a timezone to ``NCMesh`` reference time.
+- Added a timezone to the ``NCGrid`` reference time.
+- Added a timezone to the ``NCMesh`` reference time.
 - Fixed a bug where outputs that had an uneven output times would result in the output time units being interpreted incorrectly e.g. 300 second timestep would be output as 300 hr timestep.
 - Fixed a bug when trying to load a TUFLOW cross-section database from a GPKG.
 - Fixed a bug for ``NCGrid`` where ``3d`` filters would cause a Python error.
@@ -54,6 +54,7 @@ Changelog
 - Fixed a time-series and section plotting for ``.dat`` files which was not working.
 - Added the missing format checker for the ``CATCHJson`` class.
 - Added ``fpath`` property to ``CATCHJson`` class to be consistent with other output classes.
+- Added a timzone to the ``CATCHJson`` reference time.
 
 1.0.1
 """""
