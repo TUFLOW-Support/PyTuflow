@@ -36,6 +36,7 @@ Changelog
 """
 
 - Added Flood Modeller DAT cross-section output class. This is essentially a wrapper around the ``FmCrossSectionDatabaseDriver`` class and allows users to interact with Flood Modeller DAT files in an easier way via the ``Output`` class methods - e.g. ``ids()``, ``data_types()``, ``section()``.
+- Significant speed up for loading TPC results from a model that contains a lot of channels (in the order of > 500). For example, a test was run on a model that contained approximately 5,000 pipes, and the load time went from 15 seconds to < 1 second.
 
 1.0.2
 """""

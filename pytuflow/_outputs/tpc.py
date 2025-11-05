@@ -849,9 +849,7 @@ class TPC(INFO, ITimeSeries2D):
         p = self._expand_property_path(prop)
         if p:
             try:
-                with p.open() as f:
-                    index_col = patterns.csv_line_split(f.readline())[1].strip('"')
-                df = pd.read_csv(p, index_col=index_col, na_values='**********')
+                df = pd.read_csv(p, index_col=1, na_values='**********')
                 df.index.name = 'id'
                 df.drop(df.columns[0], axis=1, inplace=True)
                 return df
