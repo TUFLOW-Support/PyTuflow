@@ -631,6 +631,10 @@ class CATCHJson(MapOutput):
 
         self._load_info()
 
+    def _load(self):
+        for provider in self._providers.values():
+            provider._load()
+
     def _load_info(self):
         self._info = pd.DataFrame(columns=['data_type', 'type', 'is_max', 'is_min', 'static', 'start', 'end', 'dt'])
         for provider in self._providers.values():
