@@ -315,10 +315,20 @@ class CATCHJson(MapOutput):
         3.000000       0.183721
         """
         df = pd.DataFrame()
+        if data_types:
+            if isinstance(data_types, str):
+                data_types = [data_types]
+            data_types = [self._get_standard_data_type_name(x) for x in data_types]
+        filter_by = '3d/timeseries' if averaging_method else 'timeseries'
         for provider in self._providers.values():
             if provider == self._idx_provider:
                 continue
-            df = provider.time_series(locations, data_types, time_fmt, averaging_method)
+            if provider != list(self._providers.values())[-1]:
+                intersection = np.intersect1d(data_types, provider.data_types(filter_by)) if data_types else True
+            else:
+                intersection = True
+            if intersection:
+                df = provider.time_series(locations, data_types, time_fmt, averaging_method)
             if not df.empty:
                 break
         return df
