@@ -283,7 +283,7 @@ class FVBCTideNCProvider:
             self.reference_time = datetime.strptime(rt[0], '%Y-%m-%d %H:%M:%S')
             tz = self._nc.variables[self._timevar].timezone
             if tz == 'UTC':
-                tz = self.reference_time.replace(tzinfo=timezone.utc)
+                tz = timezone.utc
             else:
                 try:
                     tz = timezone(timedelta(hours=float(tz)))
