@@ -56,6 +56,7 @@ Changelog
 - Added ``fpath`` property to ``CATCHJson`` class to be consistent with other output classes.
 - Added a timzone to the ``CATCHJson`` reference time.
 - Removed ``WARNING  Invalid data type:`` that was triggered incorrectly in ``CATCHJson`` if the data type was not in one of the result files but it was present in another.
+- Added timezone information to ``FVBCTide`` output class.
 
 1.0.1
 """""

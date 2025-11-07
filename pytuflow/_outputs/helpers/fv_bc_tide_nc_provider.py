@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 import re
 
@@ -36,7 +36,7 @@ class FVBCTideNCProvider:
         #: bool: Use local time.
         self.use_local_time = use_local_time
         #: datetime: Reference time.
-        self.reference_time = datetime(1990, 1, 1)
+        self.reference_time = datetime(1990, 1, 1, tzinfo=timezone.utc)
         #: str: Time units.
         self.units = 'd'
         #: str: Timezone.
@@ -280,7 +280,16 @@ class FVBCTideNCProvider:
         self._units = self._nc.variables[self._timevar].units
         rt = re.findall(r'\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}', self._units)
         if rt:
-            self.reference_time = datetime.strptime(rt[0], '%Y-%m-%d %H:%M:%S')  # keep timezone naive for now (TUFLOW Viewer assumes UTC)
+            self.reference_time = datetime.strptime(rt[0], '%Y-%m-%d %H:%M:%S')
+            tz = self._nc.variables[self._timevar].timezone
+            if tz == 'UTC':
+                tz = self.reference_time.replace(tzinfo=timezone.utc)
+            else:
+                try:
+                    tz = timezone(timedelta(hours=float(tz)))
+                except Exception:
+                    tz = timezone.utc
+            self.reference_time = self.reference_time.replace(tzinfo=tz)
         if 'day' in self._units:
             self.units = 'd'
         elif 'hour' in self._units:
