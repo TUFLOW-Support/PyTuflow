@@ -452,6 +452,7 @@ class FVBCTide(TimeSeries):
         self.provider = FVBCTideProvider(self.nc_fpath, self.node_string_gis_fpath, self.use_local_time)
         self.name = self.provider.name
         self.name_tz = self.provider.display_name
+        self.has_reference_time = self.provider.has_reference_time
         self.reference_time = self.provider.reference_time
         self.gis_layer_l_fpath = self.node_string_gis_fpath
         self._load_time_series()

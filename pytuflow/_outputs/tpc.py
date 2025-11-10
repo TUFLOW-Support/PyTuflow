@@ -581,7 +581,10 @@ class TPC(INFO, ITimeSeries2D):
             self._initial_gpkg_load()
             return
 
-        self.reference_time = self._tpc_reader.get_property('Reference Time', self.reference_time)
+        reference_time = self._tpc_reader.get_property('Reference Time')
+        if reference_time is not None:
+            self.reference_time = reference_time
+            self.has_reference_time = True
 
         # rl counts - up here since it's easy to get and useful when loading time series and maximum data
         self.rl_point_count = self._tpc_reader.get_property('Number Reporting Location Points', 0)
@@ -603,6 +606,7 @@ class TPC(INFO, ITimeSeries2D):
                 self.node_count += self._gpkgswmm.node_count
                 self.channel_count += self._gpkgswmm.channel_count
                 self.reference_time = self._gpkgswmm.reference_time
+                self.has_reference_time = self._gpkgswmm.has_reference_time
 
     def _load(self):
         if self._loaded:
@@ -742,23 +746,30 @@ class TPC(INFO, ITimeSeries2D):
                 self.node_count += self._gpkg1d.node_count
                 self.channel_count += self._gpkg1d.channel_count
                 self.reference_time = self._gpkg1d.reference_time if not reference_time_set else self.reference_time
+                reference_time_set = True
             elif str(value).lower().endswith('_swmm_ts.gpkg'):
                 self._gpkgswmm = GPKG1D(self._expand_property_path(prop, value=value))
                 self.node_count += self._gpkgswmm.node_count
                 self.channel_count += self._gpkgswmm.channel_count
                 self.reference_time = self._gpkgswmm.reference_time if not reference_time_set else self.reference_time
+                reference_time_set = True
             elif str(value).lower().endswith('_2d.gpkg'):
                 self._gpkg2d = GPKG2D(self._expand_property_path(prop, value=value))
                 self.po_point_count += self._gpkg2d.po_point_count
                 self.po_line_count += self._gpkg2d.po_line_count
                 self.po_poly_count += self._gpkg2d.po_poly_count
                 self.reference_time = self._gpkg2d.reference_time if not reference_time_set else self.reference_time
+                reference_time_set = True
             elif str(value).lower().endswith('_rl.gpkg'):
                 self._gpkgrl = GPKGRL(self._expand_property_path(prop, value=value))
                 self.rl_point_count += self._gpkgrl.rl_point_count
                 self.rl_line_count += self._gpkgrl.rl_line_count
                 self.rl_poly_count += self._gpkgrl.rl_poly_count
                 self.reference_time = self._gpkgrl.reference_time if not reference_time_set else self.reference_time
+                reference_time_set = True
+
+        if reference_time_set:
+            self.has_reference_time = True
 
     # noinspection PyProtectedMember
     def _load_time_series_gpkg(self):

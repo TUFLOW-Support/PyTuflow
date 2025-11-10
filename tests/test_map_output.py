@@ -26,6 +26,7 @@ class TestXMDF(unittest.TestCase):
         with pyqgis():
             res = XMDF(xmdf)
             self.assertEqual(res.name, 'run')
+            self.assertFalse(res.has_reference_time)
 
     def test_times(self):
         xmdf = './tests/xmdf/run.xmdf'
@@ -210,6 +211,7 @@ class TestNCMesh(unittest.TestCase):
         with pyqgis():
             res = NCMesh(nc)
             self.assertEqual('fv_res', res.name)
+            self.assertFalse(res.has_reference_time)
 
     def test_times(self):
         nc = './tests/nc_mesh/fv_res.nc'
@@ -292,6 +294,7 @@ class TestCATCHJson(unittest.TestCase):
         p = './tests/catch_json/res.tuflow.json'
         res = CATCHJson(p)
         self.assertEqual('res', res.name)
+        self.assertTrue(res.has_reference_time)
 
     def test_times(self):
         p = './tests/catch_json/res.tuflow.json'
@@ -456,6 +459,7 @@ class TestDAT(unittest.TestCase):
         with pyqgis():
             res = DAT(p)
             self.assertEqual('small_model_001', res.name)
+            self.assertFalse(res.has_reference_time)
 
     def test_load_2(self):
         p = ['./tests/dat/small_model_001_d.dat', './tests/dat/small_model_001_V.dat',
@@ -507,6 +511,7 @@ class TestNCGrid(unittest.TestCase):
         p = './tests/nc_grid/small_model_001.nc'
         res = NCGrid(p)
         self.assertEqual('small_model_001', res.name)
+        self.assertTrue(res.has_reference_time)
 
     def test_times(self):
         p = './tests/nc_grid/small_model_001.nc'

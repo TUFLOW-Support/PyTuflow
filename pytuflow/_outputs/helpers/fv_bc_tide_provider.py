@@ -55,6 +55,7 @@ class FVBCTideProvider:
         self.name = Path(self.nc.path).stem
         self.display_name = f'{self.name}[TZ:{self.nc.tz}]'
         self.reference_time = self.nc.reference_time
+        self.has_reference_time = self.nc.has_reference_time
         self.gis_name = self.gis.name
 
     def close(self) -> None:

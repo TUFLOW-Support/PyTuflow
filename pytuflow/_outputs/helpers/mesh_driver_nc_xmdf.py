@@ -26,5 +26,10 @@ class NCMeshDriverXmdf(NCMeshDriver):
                     for dtypename, dtype in grp.groups.items():
                         name = f'{dtypename}/{grpname}' if grpname.lower() in ['maximums', 'minimums'] else dtypename
                         type_ = 'vector' if 'vector' in dtype.Grouptype.lower() else 'scalar'
-                        times = dtype.variables['Times'][:].tolist()
-                        yield DatasetGroup(name, type_, times, 1)
+                        times = dtype.variables['Times'][:]
+                        if 'seconds' in dtype.TimeUnits.lower():
+                            times = times / 3600.
+                        if not self.has_inherent_reference_time and 'since' in dtype.TimeUnits.lower():
+                            self.reference_time = self.parse_reference_time(dtype.TimeUnits)
+                            self.has_inherent_reference_time = True
+                        yield DatasetGroup(name, type_, times.tolist(), 1)

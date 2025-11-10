@@ -71,6 +71,7 @@ class Test_Info_2013(unittest.TestCase):
         p = './tests/2013/M04_5m_001_1d.info'
         res = INFO(p)
         self.assertEqual('M04_5m_001', res.name)
+        self.assertFalse(res.has_reference_time)
 
     def test_not_info(self):
         p = './tests/2013/EG00_001_Scen_1+Scen_2.2dm.info'
@@ -185,6 +186,7 @@ class Test_TPC_2016(TestCase):
         p = './tests/2016/EG14_001.tpc'
         res = TPC(p)
         self.assertEqual('EG14_001', res.name)
+        self.assertFalse(res.has_reference_time)
 
     def test_not_tpc(self):
         p = './tests/2013/M04_5m_001_1d.info'
@@ -431,6 +433,7 @@ class Test_TPC_NC(TestCase):
         p = './tests/nc_ts/EG15_001.tpc'
         res = TPC(p)
         self.assertEqual('EG15_001', res.name)
+        self.assertFalse(res.has_reference_time)
 
     def test_times(self):
         msgs = ['TPC._load_time_series_nc(): No data found in NetCDF file for Flow Areas for domain 1D.']
@@ -502,6 +505,12 @@ class Test_TPC_2019(TestCase):
         p = './tests/2020/EG15_001.tpc'
         res = TPC(p)
         self.assertEqual('EG15_001', res.name)
+        self.assertFalse(res.has_reference_time)
+
+    def test_load_reference_time(self):
+        p = './tests/2020/EG07_1D2D_5m_001_CLA.tpc'
+        res = TPC(p)
+        self.assertTrue(res.has_reference_time)
 
     def test_load_po_same_name_diff_geom(self):
         p = './tests/tpc_same_name_diff_geom/EG02_010.tpc'
@@ -646,6 +655,7 @@ class Test_TPC_SWMM(TestCase):
         df = res.time_series('pipe1', 'flow')
         self.assertEqual((181, 1), df.shape)
 
+        self.assertTrue(res.has_reference_time)
 
 class Test_TPC_GPKG(TestCase):
 
@@ -653,6 +663,7 @@ class Test_TPC_GPKG(TestCase):
         p = './tests/tpc_gpkg/EG15_001.tpc'
         res = TPC(p)
         self.assertEqual('EG15_001', res.name)
+        self.assertTrue(res.has_reference_time)
 
     def test_times(self):
         p = './tests/tpc_gpkg/EG15_001.tpc'
@@ -757,6 +768,7 @@ class Test_TPC_Frankenmodel(TestCase):
         p = './tests/2021/frankenmodel.tpc'
         res = TPC(p)
         self.assertEqual('frankenmodel', res.name)
+        self.assertTrue(res.has_reference_time)
 
     def test_times(self):
         msgs = ['TPC._load_po_info(): Missing or invalid PLOT.csv. Using TPC to guess PO geometry.']
@@ -832,6 +844,7 @@ class Test_GPKG1D(TestCase):
         p = './tests/2023/M06_5m_003_SWMM_swmm_ts.gpkg'
         res = GPKG1D(p)
         self.assertEqual('M06_5m_003_SWMM', res.name)
+        self.assertTrue(res.has_reference_time)
 
     def test_load_2(self):
         p = './tests/2023/EG15_001_TS_1D.gpkg'
@@ -985,6 +998,7 @@ class Test_GPKG2D(TestCase):
         p = './tests/tpc_gpkg/EG15_001_TS_2D.gpkg'
         res = GPKG2D(p)
         self.assertEqual('EG15_001', res.name)
+        self.assertTrue(res.has_reference_time)
 
     def test_times(self):
         p = './tests/tpc_gpkg/EG15_001_TS_2D.gpkg'
@@ -1022,6 +1036,7 @@ class Test_GPKGRL(TestCase):
         p = './tests/tpc_gpkg/EG15_001_TS_RL.gpkg'
         res = GPKGRL(p)
         self.assertEqual('EG15_001', res.name)
+        self.assertTrue(res.has_reference_time)
 
     def test_times(self):
         p = './tests/tpc_gpkg/EG15_001_TS_RL.gpkg'
@@ -1208,6 +1223,7 @@ class Test_HydTables(unittest.TestCase):
         p = './tests/hyd_tables/EG14_001_1d_ta_tables_check.csv'
         res = HydTablesCheck(p)
         self.assertEqual(res.name, 'EG14_001')
+        self.assertFalse(res.has_reference_time)
 
     def test_load_2(self):  # all cross-sections are in one CSV file
         p = './tests/hyd_tables/EG14_CONCAT_001_1d_ta_tables_check.csv'
@@ -1384,6 +1400,7 @@ class Test_BC_Tables(unittest.TestCase):
         p = './tests/bc_tables/EG00_001_2d_bc_tables_check.csv'
         res = BCTablesCheck(p)
         self.assertEqual('EG00_001', res.name)
+        self.assertFalse(res.has_reference_time)
 
     def test_load_1d_bc_tables(self):
         p = './tests/bc_tables/EG14_001_1d_bc_tables_check.csv'
@@ -1508,6 +1525,7 @@ class Test_FVBCTide(unittest.TestCase):
         res = FVBCTide(nc, ns)
         self.assertEqual('Cudgen_Tide', res.name)
         self.assertEqual('Cudgen_Tide[TZ:UTC]', res.name_tz)
+        self.assertTrue(res.has_reference_time)
 
     def test_not_fv_bc_tide(self):
         p = './tests/hyd_tables/EG14_001_1d_ta_tables_check.csv'
@@ -1617,6 +1635,7 @@ class Test_CrossSections(unittest.TestCase):
         res = CrossSections(p)
         self.assertEqual('1d_xs_EG14_001_L', res.name)
         self.assertEqual(55, res.cross_section_count)
+        self.assertFalse(res.has_reference_time)
 
     def test_ids(self):
         p = './tests/cross_sections/gis/1d_xs_EG14_001_L.shp'
@@ -1693,6 +1712,7 @@ class TestDatCrossSections(unittest.TestCase):
         res = DATCrossSections(p)
         self.assertEqual('FMT_M01_001', res.name)
         self.assertEqual(51, res.cross_section_count)
+        self.assertFalse(res.has_reference_time)
 
     def test_load_from_driver(self):
         p = './tests/fm/zzn/FMT_M01_001.dat'

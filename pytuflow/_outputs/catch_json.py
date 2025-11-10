@@ -618,6 +618,8 @@ class CATCHJson(MapOutput):
 
     def _initial_load(self):
         self.name = self._data.get('name')
+        if 'since' in self._data.get('time units'):
+            self.has_reference_time = True
         default_time_string = 'hours since 1990-01-01 00:00:00'
         self.reference_time, _ = self._parse_time_units_string(self._data.get('time units', default_time_string),
                                                         r'\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}',

@@ -493,6 +493,7 @@ class GPKG1D(GPKGBase, INFO):
             if reference_time is not None:
                 self.reference_time = reference_time
                 self.reference_time = self.reference_time.replace(tzinfo=timezone.utc)
+                self.has_reference_time = True
 
             self.gis_layer_p_fpath = TuflowPath(self.fpath.parent) / f'{self.fpath.name} >> {self._gis_layer_p_name}'
             self.gis_layer_l_fpath = TuflowPath(self.fpath.parent) / f'{self.fpath.name} >> {self._gis_layer_l_name}'

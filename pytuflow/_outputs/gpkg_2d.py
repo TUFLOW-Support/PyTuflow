@@ -438,6 +438,7 @@ class GPKG2D(GPKGBase, TimeSeries, ITimeSeries2D):
             if reference_time is not None:
                 self.reference_time = reference_time
                 self.reference_time = self.reference_time.replace(tzinfo=timezone.utc)
+                self.has_reference_time = True
 
             if self._gis_layer_p_name:
                 cur.execute('SELECT COUNT(*) FROM Geom_P;')

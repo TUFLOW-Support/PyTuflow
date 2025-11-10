@@ -255,6 +255,9 @@ class NCGrid(Grid):
         else:
             self.time_units = units.split(' ')[0]
 
+        if 'since' in units.lower():
+            self.has_reference_time = True
+
         return self._parse_time_units_string(units, r'\d{4}-\d{2}-\d{2} \d{2}:\d{2}(?:\:\d{2})?',
                                              ['%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M'])[0]
 

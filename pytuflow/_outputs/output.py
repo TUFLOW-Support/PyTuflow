@@ -34,6 +34,8 @@ class Output(ABC):
 
         #: str: The result name
         self.name = ''
+        #: bool: Does the result have an inherent reference time. The :property:`reference_time` property will return a value regardless of whether the result actually has a explicit reference time.
+        self.has_reference_time = False
         #: datetime: The reference time for the output
         self.reference_time = datetime(1990, 1, 1, tzinfo=timezone.utc)
 
