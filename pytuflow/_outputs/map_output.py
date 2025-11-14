@@ -38,6 +38,9 @@ class MapOutput(Output, ABC):
         name1 = re.sub(r'\sMaximums$', '', name1, flags=re.IGNORECASE)
         name1 = re.sub(r'^hazard_', '', name1, flags=re.IGNORECASE)
         stnd_name = Output._get_standard_data_type_name(name1)
+        if re.findall(r'^vector', name, flags=re.IGNORECASE):
+            stnd_name = f'vector {stnd_name}'
+
         if not re.findall(r'(max|peak|min)', name, re.IGNORECASE):
             return stnd_name
 
