@@ -309,7 +309,7 @@ class Output(ABC):
             if name.lower() == key.lower():
                 return key
             for val in vals:
-                if re.match(fr'^(?:(?:t?max(?:imum)?|time[\s_-]+of[\s_-]+peak)(?:\s|_|-)?)?{val}(?:(?:\s|_|-)?t?max(?:imum)?)?$', name,
+                if re.match(fr'^(?:(?:t?(?:max|min)(?:imums?/?)?|time[\s_-]+of[\s_-]+peak)(?:\s|_|-)?)?{val}(?:(?:\s|_|-)?/?t?(?:max|min)(?:imums?)?)?$', name,
                             re.IGNORECASE):
                     if '\\d' in key:
                         n = re.findall(r'\d+', name)
