@@ -39,6 +39,10 @@ Changelog
 - Significant speed up for loading TPC results from a model that contains a lot of channels (in the order of > 500). For example, a test was run on a model that contained approximately 5,000 pipes, and the load time went from 15 seconds to < 1 second.
 - Added ``has_reference_time`` property to all output classes. This property holds whether the loaded output contains an explicit reference time. The ``reference_time`` property will always return a value and as a consequence cannot be used for this purpose.
 
+**Bug Fixes**
+
+- ``"water depth"`` data type is now correctly recognised as ``"depth"`` .
+
 1.0.2
 """""
 
