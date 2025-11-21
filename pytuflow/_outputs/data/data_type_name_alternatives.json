@@ -26,7 +26,7 @@
     "channel additional losses": ["additional lc", "channel(?:\\s|_|-)?additional(?:\\s|_|-)?loss(?:es)?", "additional(?:\\s|_|-)?loss(?:es)?"],
     "channel exit losses": ["exit lc", "channel(?:\\s|_|-)?exit(?:\\s|_|-)?loss(?:es)?", "exit(?:\\s|_|-)?loss(?:es)?"],
     "channel losses": ["lc", "channel(?:\\s|_|-)?loss(?:es)?", "loss(?:es)?"],
-    "depth": ["d", "depth", "dep"],
+    "depth": ["(?:water\\s)?d", "(?:water\\s)?depth", "(?:water\\s)?dep"],
     "gauge level": ["g[hl]?", "gauges?", "gauge(?:\\s|_|-)?levels?"],
     "wind": ["winds?", "w"],
     "froude": ["froude", "fr"],
