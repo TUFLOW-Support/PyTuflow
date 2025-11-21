@@ -137,10 +137,13 @@ class NCMesh(Mesh):
     def _looks_like_this(fpath: Path) -> bool:
         if fpath.suffix.lower() != '.nc':
             return False
-        if has_nc:
-            with Dataset(fpath, 'r') as nc:
-                if 'Type' in nc.ncattrs() and nc.getncattr('Type') == 'Cell-centred TUFLOWFV output':
-                    return True
+        try:
+            if has_nc:
+                with Dataset(fpath, 'r') as nc:
+                    if 'Type' in nc.ncattrs() and nc.getncattr('Type') == 'Cell-centred TUFLOWFV output':
+                        return True
+        except Exception:
+            return False
 
         return False
 
