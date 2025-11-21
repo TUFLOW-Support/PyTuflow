@@ -213,11 +213,17 @@ class QgisMeshDriver(MeshDriver):
         # loop through points and extract results
         data_ = []
         valid = False
+        line_vector = []
+        is_vector = False
         for i, (location, mesh_result) in enumerate(mesh_line.results_along_line()):
+            if mesh_result.DATA_TYPE == 'Vector':
+                is_vector = True
             if location.type == 'vertex' and (i == 0 or i == len(mesh_line.intersects.intersects)):  # ignore first and last points
                 continue
             order_switch = False
             for z, value in mesh_result.vertical_values(mesh_line.index, 'stepped'):
+                line_vector.append((location.intersect_vector_perp, location.intersect_vector))
+                line_vector.append((location.intersect_vector_perp, location.intersect_vector))
                 if order_switch:
                     data_.append((location.end_side, z, value))
                     data_.append((location.start_side, z, value))
@@ -249,6 +255,9 @@ class QgisMeshDriver(MeshDriver):
 
         if valid:
             df = pd.DataFrame(data_, columns=['x', 'y', data_type])
+            if is_vector:
+                line_vector = np.array(line_vector).reshape((-1, 4))
+                df[f'{data_type}_local'] = VectorMeshResult.convert_vector_to_local(df[data_type].to_numpy(), line_vector)
 
         return df
 

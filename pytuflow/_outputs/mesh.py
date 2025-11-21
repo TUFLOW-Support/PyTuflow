@@ -357,6 +357,9 @@ class Mesh(MapOutput):
         cells in the vertical plane, and should be treated as groups of 4 which denote the corners of a cell. The
         ``value`` represents the data value at that cell, which will be returned as a single number for scalar
         results and a tuple for vector results. Note, velocity will always be returned as vector (tuple) result.
+        Vector results will also return a fourth column which will be the vector results projected onto the direction
+        of the linestring. The direction of the line is the local Y-axis and the perpendicular
+        direction is the local X-axis.
 
         The resulting DataFrame will use multi-index columns since the data is not guaranteed to have the same
         index. The level 1 index will be the label, and the level 2 index will be the data type. The ``X,Y`` offsets
@@ -381,9 +384,9 @@ class Mesh(MapOutput):
         Get the velocity (scalar) curtain data for a given line string defined as in a shapefile:
 
         >>> mesh = ... # Assume mesh is a loaded Mesh result
-        >>> mesh.curtain('path/to/shapefile.shp', 'velocity', 1.5)
+        >>> mesh.curtain('path/to/shapefile.shp', 'salinity', 1.5)
                  Line_1
-                      x          y  velocity
+                      x          y  salinity
         0     53.431056  42.898541  0.009024
         1     57.991636  42.898541  0.009024
         2     57.991636  42.939461  0.009024

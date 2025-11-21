@@ -161,7 +161,7 @@ class TestXMDF(unittest.TestCase):
         with pyqgis():
             res = XMDF(xmdf)
             df = res.curtain(shp, 'vel', 0)
-            self.assertEqual((28, 3), df.shape)
+            self.assertEqual((28, 4), df.shape)
 
     def test_curtain_2(self):
         xmdf = './tests/xmdf/run.xmdf'
@@ -169,7 +169,7 @@ class TestXMDF(unittest.TestCase):
         with pyqgis():
             res = XMDF(xmdf)
             df = res.curtain(shp, 'vel', 0)
-            self.assertEqual((28, 6), df.shape)
+            self.assertEqual((28, 8), df.shape)
 
     def test_curtain_3(self):
         xmdf = './tests/xmdf/run.xmdf'
@@ -177,7 +177,7 @@ class TestXMDF(unittest.TestCase):
         with pyqgis():
             res = XMDF(xmdf)
             df = res.curtain(shp, ['vel', 'depth'], 0)
-            self.assertEqual((28, 4), df.shape)
+            self.assertEqual((28, 5), df.shape)
 
     def test_curtain_vector(self):
         xmdf = './tests/xmdf/run.xmdf'
@@ -185,7 +185,7 @@ class TestXMDF(unittest.TestCase):
         with pyqgis():
             res = XMDF(xmdf)
             df = res.curtain(shp, 'vector velocity', 0)
-            self.assertEqual((28, 3), df.shape)
+            self.assertEqual((28, 4), df.shape)
 
     def test_curtain_long(self):
         xmdf = './tests/xmdf/run.xmdf'
@@ -193,7 +193,7 @@ class TestXMDF(unittest.TestCase):
         with pyqgis():
             res = XMDF(xmdf)
             df = res.curtain(shp, 'vel', 0)
-            self.assertEqual((16, 3), df.shape)
+            self.assertEqual((16, 4), df.shape)
 
     def test_profile(self):
         xmdf = './tests/xmdf/run.xmdf'
@@ -270,7 +270,7 @@ class TestNCMesh(unittest.TestCase):
             res = NCMesh(nc)
             line = [(1.4, 4.5), (3.6, 4.2)]
             df = res.curtain(line, 'v', 0)
-            self.assertEqual((24, 3), df.shape)
+            self.assertEqual((24, 4), df.shape)
 
     def test_profile(self):
         nc = './tests/nc_mesh/fv_res.nc'
@@ -402,7 +402,7 @@ class TestCATCHJson(unittest.TestCase):
         with pyqgis():
             res = CATCHJson(p)
             df = res.curtain(line, 'velocity', 0.)
-            self.assertEqual((24, 3), df.shape)
+            self.assertEqual((24, 4), df.shape)
 
     def test_curtain_2(self):
         p = './tests/catch_json/res.tuflow.json'
@@ -410,7 +410,7 @@ class TestCATCHJson(unittest.TestCase):
         with pyqgis():
             res = CATCHJson(p)
             df = res.curtain(line, 'velocity', 0.)
-            self.assertEqual((40, 3), df.shape)
+            self.assertEqual((40, 4), df.shape)
 
     def test_curtain_3(self):
         p = './tests/catch_json/res.tuflow.json'
@@ -418,7 +418,7 @@ class TestCATCHJson(unittest.TestCase):
         with pyqgis():
             res = CATCHJson(p)
             df = res.curtain(line, 'velocity', 0.)
-            self.assertEqual((32, 3), df.shape)
+            self.assertEqual((32, 4), df.shape)
 
     def test_curtain_4(self):
         p = './tests/catch_json/res_shifted.tuflow.json'
@@ -426,7 +426,7 @@ class TestCATCHJson(unittest.TestCase):
         with pyqgis():
             res = CATCHJson(p)
             df = res.curtain(line, 'velocity', 0.)
-            self.assertEqual((24, 3), df.shape)
+            self.assertEqual((24, 4), df.shape)
 
     def test_curtain_5(self):
         p = './tests/catch_json/res_shifted.tuflow.json'
@@ -434,7 +434,7 @@ class TestCATCHJson(unittest.TestCase):
         with pyqgis():
             res = CATCHJson(p)
             df = res.curtain(line, 'velocity', 0.)
-            self.assertEqual((64, 3), df.shape)
+            self.assertEqual((64, 4), df.shape)
 
     def test_profile(self):
         p = './tests/catch_json/res.tuflow.json'

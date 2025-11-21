@@ -8,6 +8,7 @@ from .mesh_result import MeshResult
 
 
 class ScalarMeshResult(MeshResult):
+    DATA_TYPE = 'Scalar'
 
     # noinspection PyTypeHints
     def _value_from_weightings(self,

@@ -18,6 +18,7 @@ if TYPE_CHECKING:
 
 class MeshResult:
     """Class for helping extract data from a mesh layer."""
+    DATA_TYPE = ''
 
     def __init__(self,
                  lyr: 'QgsMeshLayer' = None,
