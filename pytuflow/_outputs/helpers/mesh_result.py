@@ -51,7 +51,7 @@ class MeshResult:
     def __eq__(self, other: Any) -> bool:
         """Check the layer and point are the same."""
         if isinstance(other, MeshResult):
-            return self.lyr == other.lyr and self.point is not None and self.point == other.point
+            return self.lyr == other.lyr and self.point is not None and self.point == other.point and self.DATA_TYPE == other.DATA_TYPE
         return False
 
     def _key(self, dataset_index: 'QgsMeshDatasetIndex', averaging_method: QgsMesh3dAveragingMethod) -> tuple[Any, ...]:
