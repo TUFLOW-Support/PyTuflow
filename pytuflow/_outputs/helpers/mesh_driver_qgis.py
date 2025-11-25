@@ -52,6 +52,7 @@ class QgisMeshDriver(MeshDriver):
         self._point_results = []
         self._linestrings = []
         self._line_results = []
+        self._painter = None
 
     def __repr__(self):
         return f'<{self.__class__.__name__} {self.mesh.stem}>'
@@ -125,6 +126,18 @@ class QgisMeshDriver(MeshDriver):
             raise ValueError(f'Dataset group not found for data type {data_type}')
 
         return igrp
+
+    def maximum(self, data_type: str) -> float:
+        idx = self.group_index_from_name(data_type)
+        if idx == -1:
+            raise ValueError(f'Data type {data_type} not found in mesh output {self.mesh.stem}')
+        return self.lyr.datasetGroupMetadata(QgsMeshDatasetIndex(idx)).maximum()
+
+    def minimum(self, data_type: str) -> float:
+        idx = self.group_index_from_name(data_type)
+        if idx == -1:
+            raise ValueError(f'Data type {data_type} not found in mesh output {self.mesh.stem}')
+        return self.lyr.datasetGroupMetadata(QgsMeshDatasetIndex(idx)).minimum()
 
     def time_series(self, name: str, point: Point, data_type: str, averaging_method: str | None = None) -> pd.DataFrame:
         from ..map_output import MapOutput  # import here to avoid circular import
