@@ -225,7 +225,14 @@ class MeshResult:
             yield y, x
 
     def _2d_elevations(self, dataset_index: 'QgsMeshDatasetIndex') -> Generator[float, None, None]:
-        yield self.result_from_name(dataset_index, ['water level', 'water surface elevation'])
+        incoming_name = self.dp.datasetGroupMetadata(dataset_index.group()).name().lower()
+        incoming_name = incoming_name.split('/', 1)[1] if len(incoming_name.split('/', 1)) == 2 else incoming_name
+        if incoming_name.startswith('max'):
+            yield self.result_from_name(dataset_index, ['water level/maximums', 'max water surface elevation', 'max h'])
+        elif incoming_name.startswith('min'):
+            yield self.result_from_name(dataset_index, ['water level/minimums', 'min water surface elevation', 'min h'])
+        else:
+            yield self.result_from_name(dataset_index, ['water level', 'water surface elevation', 'h'])
         yield self.bed_elevation()
 
     def _get_face(self, point: 'QgsPointXY') -> int:

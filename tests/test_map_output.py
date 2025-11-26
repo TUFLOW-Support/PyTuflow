@@ -195,6 +195,22 @@ class TestXMDF(unittest.TestCase):
             df = res.curtain(shp, 'vel', 0)
             self.assertEqual((16, 4), df.shape)
 
+    def test_curtain_maximums(self):
+        xmdf = './tests/xmdf/run.xmdf'
+        shp = './tests/xmdf/section_line.shp'
+        with pyqgis():
+            res = XMDF(xmdf)
+            df = res.curtain(shp, 'max vel', 0)
+            self.assertEqual((28, 4), df.shape)
+
+    def test_curtain_maximums_2(self):
+        xmdf = './tests/xmdf/run.xmdf'
+        shp = './tests/xmdf/section_line.shp'
+        with pyqgis():
+            res = XMDF(xmdf)
+            df = res.curtain(shp, 'max depth', 0)
+            self.assertEqual((28, 3), df.shape)
+
     def test_profile(self):
         xmdf = './tests/xmdf/run.xmdf'
         shp = './tests/xmdf/time_series_point.shp'
