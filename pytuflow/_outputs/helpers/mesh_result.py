@@ -255,7 +255,7 @@ class MeshResult:
         try:
             if not self.weightings:
                 self.weightings = calculate_barycentric_weightings(self.mesh, self.triangle, self.point)
-        except AssertionError:
+        except Exception:
             return np.nan
 
         value = 0

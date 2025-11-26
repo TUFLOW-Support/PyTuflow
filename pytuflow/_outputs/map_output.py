@@ -38,7 +38,7 @@ class MapOutput(Output, ABC):
         name1 = re.sub(r'\sMaximums$', '', name1, flags=re.IGNORECASE)
         name1 = re.sub(r'^hazard_', '', name1, flags=re.IGNORECASE)
         stnd_name = Output._get_standard_data_type_name(name1)
-        if re.findall(r'^vector', name, flags=re.IGNORECASE):
+        if re.findall(r'^(?:max\s)?vector', name, flags=re.IGNORECASE):
             stnd_name = f'vector {stnd_name}'
 
         if not re.findall(r'(max|peak|min)', name, re.IGNORECASE):
@@ -111,9 +111,9 @@ class MapOutput(Output, ABC):
         data_types = [data_types] if not isinstance(data_types, list) else data_types
 
         valid_dtypes = self.data_types(filter_by)
-        if filter_by != 'temporal':
-            valid_dtypes.extend(['max ' + x for x in self.data_types('max')])
-            valid_dtypes.extend(['min ' + x for x in self.data_types('min')])
+        # if filter_by != 'temporal':
+        #     valid_dtypes.extend(['max ' + x for x in self.data_types('max') if not x.startswith('max')])
+        #     valid_dtypes.extend(['min ' + x for x in self.data_types('min') if not x.startswith('min')])
         dtypes1 = []
         for dtype in data_types:
             stnd = self._get_standard_data_type_name(dtype)
