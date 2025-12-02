@@ -56,7 +56,7 @@ class Grid(MapOutput):
 
         >>> grid = ... # Assume grid is a loaded grid result instance
         >>> grid.time_series('/path/to/point.shp', 'water level')
-        time     water level/pnt1
+        time     pnt1/water level
         0.00000               NaN
         0.08333               NaN
         0.16670               NaN
@@ -80,7 +80,7 @@ class Grid(MapOutput):
                 for timeidx, time in enumerate(self.times(dtype, fmt=time_fmt)):
                     val = (time, self._value(n, m, timeidx, dtype))
                     vals.append(val)
-                df2 = pd.DataFrame(vals, columns=['time', f'{dtype}/{name}'])
+                df2 = pd.DataFrame(vals, columns=['time', f'{name}/{dtype}'])
                 df2.set_index('time', inplace=True)
                 df1 = pd.concat([df1, df2], axis=1) if not df1.empty else df2
             df = pd.concat([df, df1], axis=1) if not df.empty else df1
@@ -124,7 +124,7 @@ class Grid(MapOutput):
 
         >>> grid = ... # Assume grid is a loaded grid result instance
         >>> grid.section('/path/to/line.shp', 'water level', 0.5)
-               offset  water level/Line 1
+               offset  Line 1/water level
         0    0.000000           45.994362
         1    1.495967           45.994362
         2    1.495967           45.636654
@@ -152,7 +152,7 @@ class Grid(MapOutput):
                     d.append((inter.offsets[0], val))
                     d.append((inter.offsets[1], val))
 
-                df2 = pd.DataFrame(d, columns=['offset', f'{dtype}/{name}'])
+                df2 = pd.DataFrame(d, columns=['offset', f'{name}/{dtype}'])
                 df1 = pd.concat([df1, df2], axis=1) if not df1.empty else df2
 
             df = pd.concat([df, df1], axis=1) if not df.empty else df1

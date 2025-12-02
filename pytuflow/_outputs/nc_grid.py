@@ -67,7 +67,7 @@ class NCGrid(Grid):
     Get the water level time-series data for a given point defined in a shapefile:
 
     >>> nc.time_series('/path/to/point.shp', 'water level')
-    time     water level/pnt1
+    time     pnt1/water level
     0.00000               NaN
     0.08333               NaN
     0.16670               NaN
@@ -80,7 +80,7 @@ class NCGrid(Grid):
     Get a water level section from a line defined in a shapefile at time 0.5 hrs:
 
     >>> nc.section('/path/to/line.shp', 'water level', 0.5)
-           offset  water level/Line 1
+           offset  Line 1/water level
     0    0.000000           45.994362
     1    1.495967           45.994362
     2    1.495967           45.636654
