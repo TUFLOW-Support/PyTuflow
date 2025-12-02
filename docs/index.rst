@@ -39,6 +39,7 @@ Changelog
 - Significant speed up for loading TPC results from a model that contains a lot of channels (in the order of > 500). For example, a test was run on a model that contained approximately 5,000 pipes, and the load time went from 15 seconds to < 1 second.
 - Added ``has_reference_time`` property to all output classes. This property holds whether the loaded output contains an explicit reference time. The ``reference_time`` property will always return a value and as a consequence cannot be used for this purpose.
 - Curtain plots will now return a fourth column for vector results that contain the vector projected onto the direction of the input linestring.
+- ``direction_of_velocity`` and ``direction_of_unit_flow`` are now recognised as separate scalar datasets. Previously, these would assumed to be combined with the velocity and unit flow magnitude datasets respectively and then treated as a vector dataset. This change allows the datasets to be treated separately and the available datasets align more closely with what is in the NCGrid format. This also allows users to plot the direction datasets as scalar datasets.
 
 **Bug Fixes**
 
@@ -46,7 +47,7 @@ Changelog
 - Max data types now correctly return maximum water surface elevation for 2D results for the ``curtain()`` method.
 - Fixed a bug where ``"vector"`` was being removed from the data type ``"vector velocity"`` or ``"max vector velocity"`` when making calls to the plotting methods (``time_series()``, ``section()`` etc). Typically only matters for the ``curtain()`` method where the raw vector data can be used rather than the scalar values.
 - Changed the ``NCGrid`` return DataFrame column names to be consistent with other output classes. Previously the columns were ``dat_type/name`` and now it is ``name/data_type``.
-- ``magnitude_of_velocity`` and ``direction_of_velocity`` are now valid data types for ``NCGrid`` outputs.
+- ``magnitude_of_velocity`` and are recognised as ``velocity`` (affects ``NCGrid`` outputs).
 
 1.0.2
 """""

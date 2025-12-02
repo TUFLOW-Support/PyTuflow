@@ -539,7 +539,7 @@ class TestNCGrid(unittest.TestCase):
         p = './tests/nc_grid/small_model_001.nc'
         res = NCGrid(p)
         dtypes = res.data_types()
-        self.assertEqual(8, len(dtypes))
+        self.assertEqual(11, len(dtypes))
         dtypes = res.data_types('3d')
         self.assertEqual(0, len(dtypes))
 

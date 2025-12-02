@@ -268,8 +268,6 @@ class NCGrid(Grid):
             var = NCGridVar(nc, varname)
             if not var.valid:
                 continue
-            if var.is_vec_dir:  # skip direction variables, recording the magnitude in the info dataframe is enough
-                continue
             stnd = self._get_standard_data_type_name(var.name)
             self._stnd2var[stnd] = varname
             d['data_type'].append(stnd)

@@ -36,21 +36,7 @@ class NCGridVar:
         self.nrow = self.var.shape[i]
         self.is_max = varname.lower().startswith('maximum_')
         self.is_min = varname.lower().startswith('minimum_')
-        name = self.name
-        if self.is_max:
-            name = self.name.replace('maximum_', '')
-        if self.is_min:
-            name = self.name.replace('minimum_', '')
         self.type = 'scalar'
-        if (name.lower().startswith('magnitude_of_') and f'direction_of_{name[13:]}' in nc.variables) or \
-                (name.lower().startswith('direction_of_') and f'magnitude_of_{name[13:]}' in nc.variables):
-            self.type = 'vector'
-            self.name = name[13:]
-            if self.is_max:
-                self.name = f'maximum_{self.name}'
-            if self.is_min:
-                self.name = f'minimum_{self.name}'
-        self.is_vec_dir = self.type == 'vector' and name.startswith('direction_of_')
         if not self.static:
             self.times = nc.variables['time'][:]
 
