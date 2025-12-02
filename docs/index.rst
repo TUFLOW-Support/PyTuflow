@@ -46,6 +46,7 @@ Changelog
 - Max data types now correctly return maximum water surface elevation for 2D results for the ``curtain()`` method.
 - Fixed a bug where ``"vector"`` was being removed from the data type ``"vector velocity"`` or ``"max vector velocity"`` when making calls to the plotting methods (``time_series()``, ``section()`` etc). Typically only matters for the ``curtain()`` method where the raw vector data can be used rather than the scalar values.
 - Changed the ``NCGrid`` return DataFrame column names to be consistent with other output classes. Previously the columns were ``dat_type/name`` and now it is ``name/data_type``.
+- ``magnitude_of_velocity`` and ``direction_of_velocity`` are now valid data types for ``NCGrid`` outputs.
 
 1.0.2
 """""
