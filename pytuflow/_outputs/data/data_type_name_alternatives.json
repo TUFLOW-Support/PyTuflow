@@ -4,7 +4,8 @@
   "data_types": {
     "water level": ["h", "wl", "water(?:\\s|_|-)?levels?", "stage", "levels?", "water(?:\\s|_|-)?surf(?:ace)?(?:\\s|_|-)?elev(?:ations?)?"],
     "energy": ["e", "energy", "energy(?:\\s|_|-)?levels?"],
-    "velocity": ["(?:vector\\s)?v", "(?:vector\\s)?velocity", "(?:vector\\s)?velocities", "(?:vector\\s)?vel", "(?:direction|magnitude)(?:\\s|_|-)of(?:\\s|_|-)velocit(?:y|ies)", "velocit(?:y|ies)(?:\\s|_|-)?(?:direction|magnitude)"],
+    "velocity": ["(?:vector\\s)?v", "(?:vector\\s)?velocity", "(?:vector\\s)?velocities", "(?:vector\\s)?vel", "magnitude(?:\\s|_|-)of(?:\\s|_|-)velocit(?:y|ies)", "velocit(?:y|ies)(?:\\s|_|-)?magnitude"],
+    "velocity direction": ["direction(?:\\s|_|-)of(?:\\s|_|-)(?:velocit(?:y|ies)|v)", "(?:velocit(?:y|ies)|v)(?:\\s|_|-)?direction"],
     "flow": ["q", "flows?", "discharges?", "total(?:\\s|_|-)?flow"],
     "unit flow": ["unit(?:\\s|_|-)?flows?", "unit(?:\\s|_|-)?discharges?"],
     "total inflow": ["total(?:\\s|_|-)?inflows?"],
