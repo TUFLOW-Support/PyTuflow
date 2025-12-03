@@ -61,10 +61,16 @@ class QgisMeshDriver(MeshDriver):
         if not self.lyr:
             raise RuntimeError('Layer not loaded.')
 
-        for i in range(self.lyr.datasetGroupCount()):
+        dataset_group_count = self.lyr.datasetGroupCount()
+        i = -1
+        while dataset_group_count:
+            i += 1
             ind = QgsMeshDatasetIndex(i, 0)
             grp = self.lyr.datasetGroupMetadata(ind)
             name = grp.name()
+            if not name:
+                continue
+            dataset_group_count -= 1
             type_ = 'vector' if grp.isVector() else 'scalar'
             times = [self.lyr.datasetMetadata(QgsMeshDatasetIndex(ind.group(), i)).time() for i in range(self.lyr.datasetCount(ind))]
             vert_lyr_count = grp.maximumVerticalLevelsCount()
@@ -86,9 +92,16 @@ class QgisMeshDriver(MeshDriver):
         if not has_qgis:
             raise ImportError('QGIS python libraries are not installed or cannot be imported.')
 
-        for i in range(self.lyr.datasetGroupCount()):
+        target_dataset_count = self.lyr.datasetGroupCount()
+
+        i = -1
+        while target_dataset_count:
+            i += 1
             ind = QgsMeshDatasetIndex(i, 0)
             grp = self.lyr.datasetGroupMetadata(ind)
+            if not grp.name():
+                continue
+            target_dataset_count -= 1
             if grp.isTemporal():
                 if grp.referenceTime().isValid():
                     self.reference_time = grp.referenceTime().toPyDateTime()
