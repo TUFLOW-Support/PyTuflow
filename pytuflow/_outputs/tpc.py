@@ -896,6 +896,22 @@ class TPC(INFO, ITimeSeries2D):
                 logger.warning('TPC._load_po_info(): Missing or invalid PLOT.csv. Using TPC to guess PO geometry.')
                 plot_objs = self._geom_from_tpc()  # derive geometry from tpc rather than the gis/[...]_PLOT.csv
 
+        df = self._tpc_reader._df[self._tpc_reader._df.iloc[:,0].str.startswith('2D')]
+        def geom_from_tpc_line(dtype: str) -> str | None:
+            for _, row in df.iterrows():
+                if row.iloc[0].startswith('2D Point'):
+                    geom = 'P'
+                elif row.iloc[0].startswith('2D Line'):
+                    geom = 'L'
+                elif row.iloc[0].startswith('2D Region'):
+                    geom = 'R'
+                else:
+                    return None
+                dt = re.sub(r'^2D (Point|Line|Region)', '', row.iloc[0]).split('[', 1)[0].strip()
+                if self._get_standard_data_type_name(dt) == dtype:
+                    return geom
+            return None
+
         def is_valid_plot_row(dtype: str, data_types: str) -> bool:
             # types can correspond to different geometries
             # (valid type, types that could cause incorrect return)
@@ -922,6 +938,13 @@ class TPC(INFO, ITimeSeries2D):
                     for idx, row in filtered_rows.iterrows():
                         data_types = row['data_types'] if row.size > 1 else []
                         geom = row['geom']
+                        if geom == 'R':
+                            try:
+                                # unfortunately there is a bug in Quadtree prior to 2026.0.0 where all PO outputs have
+                                # 'R' geometry type in the PLOT.csv, we need to correct for this here
+                                geom = geom_from_tpc_line(dtype)
+                            except Exception:
+                                pass
                         if filtered_rows.size < 4 or is_valid_plot_row(dtype, data_types):
                             po_info['id'].append(col)
                             po_info['data_type'].append(dtype)
