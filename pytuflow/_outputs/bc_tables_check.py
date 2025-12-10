@@ -291,10 +291,11 @@ class BCTablesCheck(TimeSeries):
         >>> bndry.ids('flow')
         ['FC01', 'FC04']
         """
-        if filter_by and 'timeseries' in filter_by:
-            filter_by = filter_by.replace('timeseries', '')
-            if not filter_by:
-                filter_by = None
+        for filt in ['timeseries', 'point', 'line', 'polygon']:
+            if filter_by and filt in filter_by:
+                filter_by = filter_by.replace(filt, '')
+                if not filter_by:
+                    filter_by = None
         df, _ = self._filter(filter_by)
         if bndry_type:
             return df.type.unique().tolist()

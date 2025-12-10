@@ -68,6 +68,10 @@ class MapOutput(Output, ABC):
         filter_by = [x.strip().lower() for x in filter_by.split('/')] if filter_by else []
         while 'section' in filter_by:
             filter_by.remove('section')
+        while 'curtain' in filter_by:
+            filter_by.remove('curtain')
+        while 'profile' in filter_by:
+            filter_by.remove('profile')
         while 'line' in filter_by:
             filter_by.remove('line')
         while 'point' in filter_by:
