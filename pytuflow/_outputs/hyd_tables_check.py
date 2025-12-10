@@ -214,10 +214,11 @@ class HydTablesCheck(TabularOutput):
         ['depth', 'storage width', 'flow width', 'area', 'wetted perimeter',
         'radius', 'vertex resistance factor', 'k ']
         """
-        if filter_by is not None and 'section' in filter_by:
-            filter_by = filter_by.replace('section', '')
-            if not filter_by:
-                filter_by = None
+        for filt in ['section', 'line']:
+            if filter_by is not None and filt in filter_by:
+                filter_by = filter_by.replace(filt, '')
+                if not filter_by:
+                    filter_by = None
         df, _ = self._filter(filter_by)
         return df.data_type.unique().tolist()
 

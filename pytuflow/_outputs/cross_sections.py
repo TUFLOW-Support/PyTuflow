@@ -173,10 +173,12 @@ class CrossSections(TabularOutput):
         >>> xs.data_types('/path/to/1d_CrossSection.csv')
         ['xz']
         """
-        if filter_by is not None and 'section' in filter_by:
-            filter_by = filter_by.replace('section', '').strip('/')
-            if not filter_by:
-                filter_by = None
+        for filt in ['section', 'line', 'static', 'na', 'point', 'static']:
+            if filter_by is not None and filt in filter_by:
+                filter_by = filter_by.replace(filt, '').strip('/')
+                if not filter_by:
+                    filter_by = None
+        filter_by = filter_by.strip('/') if filter_by is not None else None
         df, _ = self._filter(filter_by)
         return df['type'].unique().tolist()
 

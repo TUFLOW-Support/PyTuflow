@@ -143,7 +143,12 @@ class DATCrossSections(TabularOutput):
         >>> xs.data_types()
         ['xz', 'manning n']
         """
-        if filter_by is not None and filter_by != 'section':
+        for filt in ['section', 'line', 'static']:
+            if filter_by is not None and filt in filter_by:
+                filter_by = filter_by.replace(filt, '').strip('/')
+                if not filter_by:
+                    return ['xz', 'manning n']
+        if filter_by is not None:
             filter_by = [x.lower() for x in filter_by.split('/') if x.strip()]
             for id_ in filter_by:
                 # check if the filter is an ID
