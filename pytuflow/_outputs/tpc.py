@@ -942,7 +942,9 @@ class TPC(INFO, ITimeSeries2D):
                             try:
                                 # unfortunately there is a bug in Quadtree prior to 2026.0.0 where all PO outputs have
                                 # 'R' geometry type in the PLOT.csv, we need to correct for this here
-                                geom = geom_from_tpc_line(dtype)
+                                geom = geom_from_tpc_line(dtype.replace('max ').replace('min ', ''))
+                                if geom is None:
+                                    geom = 'R'
                             except Exception:
                                 pass
                         if filtered_rows.size < 4 or is_valid_plot_row(dtype, data_types):
