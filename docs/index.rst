@@ -72,9 +72,11 @@ Changelog
 - Fixed a time-series and section plotting for ``.dat`` files which was not working.
 - Added the missing format checker for the ``CATCHJson`` class.
 - Added ``fpath`` property to ``CATCHJson`` class to be consistent with other output classes.
-- Added a timzone to the ``CATCHJson`` reference time.
+- Added a timezone to the ``CATCHJson`` reference time.
 - Removed ``WARNING  Invalid data type:`` that was triggered incorrectly in ``CATCHJson`` if the data type was not in one of the result files but it was present in another.
 - Added timezone information to ``FVBCTide`` output class.
+- Fixed a bug where ``UK Hazard Formula ==`` commands were seen as files and were then flagged as having missing files.
+- Fixed a bug where ``MI Projection == Coord ...`` commands were seen as files and were then flagged as having missing files.
 
 1.0.1
 """""
