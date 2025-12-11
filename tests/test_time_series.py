@@ -973,6 +973,12 @@ class Test_GPKG1D(TestCase):
         df = res.section('pipe1', ['bed level', 'pipes', 'pits'], 1)
         self.assertEqual((10, 7), df.shape)
 
+    def test_section_multiple_pipes_with_pits(self):
+        p = './tests/2023/EG15_001_TS_1D.gpkg'
+        res = GPKG1D(p)
+        df = res.section(['pipe10', 'pipe11'], ['pits'], 1)
+        self.assertEqual((4, 5), df.shape)
+
     def test_maximums_2(self):
         p = './tests/2023/M06_5m_003_SWMM_swmm_ts.gpkg'
         res = GPKG1D(p)
