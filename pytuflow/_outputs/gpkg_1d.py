@@ -666,7 +666,7 @@ class GPKG1D(GPKGBase, INFO):
             df['pit_'] = np.nan
             nd = dfconn.iloc[-1, dfconn.columns.get_loc('ds_node')]
             if nd in self._channel_info.index and self._channel_info.loc[nd, 'ispit']:
-                df.iloc[-1, dfconn.columns.get_loc('pit_')] = self._channel_info.loc[nd, 'lbus_obvert']
+                df.iloc[-1, df.columns.get_loc('pit_')] = self._channel_info.loc[nd, 'lbus_obvert']
 
         df1 = self._lp.melt_2_columns(df, ['pit', 'pit_'], 'pits')
         return df1['pits'].to_numpy()

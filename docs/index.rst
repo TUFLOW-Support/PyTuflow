@@ -59,6 +59,7 @@ Changelog
 - Added timezone information to ``FVBCTide`` output class.
 - Fixed a bug where ``UK Hazard Formula ==`` commands were seen as files and were then flagged as having missing files.
 - Fixed a bug where ``MI Projection == Coord ...`` commands were seen as files and were then flagged as having missing files.
+- Fixed a bug with ``GPKG1D.section()`` method when connecting two pipes and the ``"pits"`` data type was requested.
 
 1.0.1
 """""
