@@ -35,7 +35,7 @@ Changelog
 1.0.2
 """""
 
-Release Date: 16 Dec 2025
+Release date: 16 Dec 2025
 
 - Fixed a bug where a ``"timeseries"`` filter would return an empty list when using the :meth:`data_types()<pytuflow.GPKG2D.data_types>` or :meth:`ids()<pytuflow.GPKG2D.ids>` methods on :class:`GPKG2D<pytuflow.GPKG2D>` and :class:`GPKGRL<pytuflow.GPKGRL>` classes.
 - Added a timezone to the :class:`NCGrid<pytuflow.NCGrid>` reference time.
@@ -66,7 +66,7 @@ Release Date: 16 Dec 2025
 1.0.1
 """""
 
-Release Date: 10 Oct 2025
+Release date: 10 Oct 2025
 
 - Fixed a bug that would incorrectly flag ``1d_nwk`` ``Q`` channel curve references (the reference to the pit database name) as files and then flag the file as missing.
 - Fixed a bug for 1D results where if the ``"section/3d"`` filter was passed into the :meth:`data_types()<pytuflow.TPC.data_types>` or :meth:`ids()<pytuflow.TPC.ids>` methods, the return value would incorrectly return populated lists. The return is now an empty list since 1D results do not have any 3D results.
@@ -74,7 +74,7 @@ Release Date: 10 Oct 2025
 1.0.0
 """""
 
-Release Date: 6 Oct 2025
+Release date: 6 Oct 2025
 
 First full release of PyTUFLOW.
 
