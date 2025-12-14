@@ -8,14 +8,18 @@ from qgis.core import QgsApplication
 from pytuflow import XMDF, NCMesh, CATCHJson, DAT, NCGrid
 
 
+global qapp
+
+
 @contextmanager
 def pyqgis():
-    app = QgsApplication.instance()
-    if not app:
-        app = QgsApplication([], False)
-        app.initQgis()
+    global qapp
+    qapp = QgsApplication.instance()
+    if not qapp:
+        qapp = QgsApplication([], False)
+        qapp.initQgis()
 
-    yield app
+    yield qapp
 
     # let QGIS be destroyed when the process ends, exitQgis() causes a crash if the providers are initialised again
 
