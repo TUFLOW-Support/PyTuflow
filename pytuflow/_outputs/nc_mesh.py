@@ -131,6 +131,8 @@ class NCMesh(Mesh):
         super().__init__(fpath)
         self._driver = QgisNcMeshDriver(self.fpath)
         self._soft_load_driver = NCMeshDriverNC(self.fpath)
+        if self._soft_load_driver.valid:
+            self._driver.spherical = self._soft_load_driver.spherical
         self._initial_load()
 
     @staticmethod

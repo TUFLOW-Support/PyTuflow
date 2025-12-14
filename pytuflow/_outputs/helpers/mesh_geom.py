@@ -209,7 +209,6 @@ class Intersect:
         da = QgsDistanceArea()
         if self.spherical or QgsProject.instance().crs().isGeographic():
             da.setEllipsoid('WGS84')
-            da.setEllipsoidalMode(True)
         self.dist = da.measureLength(geom_)
         if i_vert_after > 1:
             g_to_p1 = QgsGeometry.fromPolylineXY([QgsPointXY(geom.vertexAt(i)) for i in range(i_vert_after)])

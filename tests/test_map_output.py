@@ -2,6 +2,7 @@ import unittest
 from contextlib import contextmanager
 from datetime import datetime
 
+import numpy as np
 from qgis.core import QgsApplication
 
 from pytuflow import XMDF, NCMesh, CATCHJson, DAT, NCGrid
@@ -284,6 +285,9 @@ class TestNCMesh(unittest.TestCase):
         nc = './tests/nc_mesh/EST001_3D_002.nc'
         with pyqgis():
             res = NCMesh(nc)
+            line = [(159.07617177, -31.36419353), (159.07704259, -31.36703514), (159.07855506, -31.36937259)]
+            df = res.section(line, 'salinity', 186961)
+            self.assertTrue(np.isclose(df.iloc[:,0].max(), 622.208, atol=0.001))
 
     def test_curtain(self):
         nc = './tests/nc_mesh/fv_res.nc'
