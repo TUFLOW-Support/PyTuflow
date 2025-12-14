@@ -428,7 +428,6 @@ class MeshIntersects:
                 da = QgsDistanceArea()
                 if self.spherical or QgsProject.instance().crs().isGeographic():
                     da.setEllipsoid('WGS84')
-                    da.setEllipsoidalMode(True)
                 dist1 = da.measureLine(inter1.point(), mid_point_)
                 # dist1 = QgsGeometry.fromPointXY(inter1.point()).distance(QgsGeometry.fromPointXY(mid_point_))
                 dist1 += inter1.dist
