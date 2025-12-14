@@ -5,7 +5,7 @@ import numpy as np
 # noinspection PyUnresolvedReferences
 from qgis.core import (QgsPolygon, QgsLineString, QgsPoint, QgsPointXY, QgsGeometry, QgsMeshLayer, QgsProject,
                        QgsCoordinateReferenceSystem, QgsRectangle, QgsVectorLayer, QgsFeature,
-                       QgsGeometryUtils, QgsMeshDatasetGroupMetadata)
+                       QgsGeometryUtils, QgsMeshDatasetGroupMetadata, QgsDistanceArea)
 
 if TYPE_CHECKING:
     # noinspection PyUnresolvedReferences
@@ -135,6 +135,7 @@ class Intersect:
             v1: int | None,
             v2: int | None,
             face: 'Face | None',
+            spherical: bool,
             segment_start: bool = False):
         self.p1 = QgsPointXY(p1)
         self.p2 = QgsPointXY(p2)
@@ -146,6 +147,7 @@ class Intersect:
         self.pline1 = QgsGeometry.fromPolylineXY([self.p1, self.p2])
         self.pline2 = QgsGeometry.fromPolylineXY([self.p3, self.p4])
         self.dist = None
+        self.spherical = spherical
         self.segment_start = segment_start
         self._point = None
         if self.p1 == self.p2 == self.p3 == self.p4:
@@ -204,9 +206,14 @@ class Intersect:
             return
         p1 = QgsPointXY(PolyLine(linestring)[i_vert_after-1])
         geom_ = QgsGeometry.fromPolylineXY([p1, self.point()])
-        self.dist = geom_.length()
+        da = QgsDistanceArea()
+        if self.spherical or QgsProject.instance().crs().isGeographic():
+            da.setEllipsoid('WGS84')
+            da.setEllipsoidalMode(True)
+        self.dist = da.measureLength(geom_)
         if i_vert_after > 1:
-            self.dist += geom.distanceToVertex(i_vert_after-1)
+            g_to_p1 = QgsGeometry.fromPolylineXY([QgsPointXY(geom.vertexAt(i)) for i in range(i_vert_after)])
+            self.dist += da.measureLength(g_to_p1)
 
     def intersect_vector(self) -> np.ndarray:
         """Returns the normalized intersecting line segment vector as a numpy array."""
@@ -309,12 +316,12 @@ class Face:
             return self.face == other.face
         return False
 
-    def intersect(self, p1: QgsPoint, p2: QgsPoint) -> Generator[Intersect, None, None]:
+    def intersect(self, p1: QgsPoint, p2: QgsPoint, spherical: bool) -> Generator[Intersect, None, None]:
         """Yields intersect objects for each intersection between the mesh and the line segment p1-p2."""
         for v1, v2 in self:
             p3 = self.mesh.vertex(v1)
             p4 = self.mesh.vertex(v2)
-            intersect = Intersect(p1, p2, p3, p4, v1, v2, self)
+            intersect = Intersect(p1, p2, p3, p4, v1, v2, self, spherical)
             if intersect:
                 intersect.point()
                 yield intersect
@@ -358,10 +365,11 @@ class IntersectResult:
 class MeshIntersects:
     """Class to hold mesh intersect information and to help process it (calculate chainages etc.)."""
 
-    def __init__(self, mesh, si, linestring: 'QgsLineString'):
+    def __init__(self, mesh, si, linestring: 'QgsLineString', spherical: bool):
         self.mesh = mesh
         self.si = si
         self.linestring = linestring
+        self.spherical = spherical
         self.intersects = []
         self.faces = []
         self._sorted = False
@@ -418,7 +426,12 @@ class MeshIntersects:
         for inter1, inter2 in PolyLine(self.intersects):  # loop through segments between intersections
             mid_point_ = mid_point(inter1.point(), inter2.point())
             if type_ == 'vertex':
-                dist1 = QgsGeometry.fromPointXY(inter1.point()).distance(QgsGeometry.fromPointXY(mid_point_))
+                da = QgsDistanceArea()
+                if self.spherical or QgsProject.instance().crs().isGeographic():
+                    da.setEllipsoid('WGS84')
+                    da.setEllipsoidalMode(True)
+                dist1 = da.measureLine(inter1.point(), mid_point_)
+                # dist1 = QgsGeometry.fromPointXY(inter1.point()).distance(QgsGeometry.fromPointXY(mid_point_))
                 dist1 += inter1.dist
                 dist2 = dist1
             else:
@@ -495,26 +508,26 @@ class MeshIntersects:
         return lyr
 
 
-def mesh_intersects(mesh: 'QgsMesh',  si: 'QgsMeshSpatialIndex', linestring: 'QgsLineString'):
+def mesh_intersects(mesh: 'QgsMesh',  si: 'QgsMeshSpatialIndex', linestring: 'QgsLineString', spherical: bool):
     """
     Function to find mesh intersections for a given polyline and QgsMesh.
 
     The returned class will contain a list of mesh faces and mesh side intersection points (QgsPointXY).
     Methods can be called on the class to return distances, faces, and mid-points between intersection points.
     """
-    intersects = MeshIntersects(mesh, si, linestring)
+    intersects = MeshIntersects(mesh, si, linestring, spherical)
     p2 = None
     for p1, p2 in intersects.iter_polyline():  # loop through polyline segments
         faces = si.intersects(QgsRectangle(QgsPointXY(p1), QgsPointXY(p2)))  # spatial grab of all faces in the bbox
         for face in Faces(faces, mesh, si):  # loop through each face and check for intersection with the segment
-            for intersect in face.intersect(p1, p2):
+            for intersect in face.intersect(p1, p2, spherical):
                 intersects.add(intersect)
         # add first segment point
-        intersects.add(Intersect(p1, p2, p1, p1, None, None, None, segment_start=True))
+        intersects.add(Intersect(p1, p2, p1, p1, None, None, None, spherical, segment_start=True))
 
     # add last linestring point
     if p2:
-        intersects.add(Intersect(p1, p2, p2, p2, None, None, None))
+        intersects.add(Intersect(p1, p2, p2, p2, None, None, None, spherical))
 
     return intersects
 

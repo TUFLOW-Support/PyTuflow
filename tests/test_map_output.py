@@ -280,6 +280,11 @@ class TestNCMesh(unittest.TestCase):
             df = res.section(line, 'v', 0, averaging_method='sigma&0.1&0.9')
             self.assertEqual((6, 2), df.shape)
 
+    def test_section_long_lat(self):
+        nc = './tests/nc_mesh/EST001_3D_002.nc'
+        with pyqgis():
+            res = NCMesh(nc)
+
     def test_curtain(self):
         nc = './tests/nc_mesh/fv_res.nc'
         with pyqgis():

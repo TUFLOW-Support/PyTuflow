@@ -183,7 +183,7 @@ class QgisMeshDriver(MeshDriver):
         # noinspection DuplicatedCode
         df = pd.DataFrame()
 
-        mesh_line = MeshLine(self, linestring, data_type, time, return_magnitude=True)
+        mesh_line = MeshLine(self, linestring, data_type, time, self.spherical, return_magnitude=True)
 
         # initialise start/end locations - for TUFLOW CATCH where results need to be stamped onto each other
         self.start_end_locs.clear()
@@ -228,7 +228,7 @@ class QgisMeshDriver(MeshDriver):
     def curtain(self, linestring: list[Point], data_type: str, time: TimeLike) -> pd.DataFrame:
         # noinspection DuplicatedCode
         df = pd.DataFrame()
-        mesh_line = MeshLine(self, linestring, data_type, time, vel_to_vec_vel=True)
+        mesh_line = MeshLine(self, linestring, data_type, time, self.spherical, vel_to_vec_vel=True)
 
         # initialise start/end locations - for TUFLOW CATCH where results need to be stamped onto each other
         self.start_end_locs.clear()
@@ -330,12 +330,13 @@ class MeshLine:
     the mesh result class.
     """
 
-    def __init__(self, driver: QgisMeshDriver, linestring: list[Point], data_type: str, time: TimeLike,
+    def __init__(self, driver: QgisMeshDriver, linestring: list[Point], data_type: str, time: TimeLike, spherical: bool,
                  return_magnitude: bool = False, **kwargs):
         self.driver = driver  # parent class
         self.linestring = QgsLineString([QgsPointXY(*pnt) for pnt in linestring])
         self.data_type = data_type
         self.time = time
+        self.spherical = spherical
         self.return_magnitude = return_magnitude
 
         self.driver.init_spatial_index()
@@ -358,7 +359,7 @@ class MeshLine:
         if linestring in self.driver._linestrings:
             self.intersects = self.driver._line_results[self.driver._linestrings.index(linestring)]
         else:
-            self.intersects = mesh_intersects(self.qgsmesh, self.si, linestring)
+            self.intersects = mesh_intersects(self.qgsmesh, self.si, linestring, self.spherical)
             self.driver._linestrings.append(linestring)
             self.driver._line_results.append(self.intersects)
 

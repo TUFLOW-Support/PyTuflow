@@ -18,6 +18,7 @@ class NCMeshDriverNC(NCMeshDriver):
         if self.valid:
             with Dataset(self.mesh) as nc:
                 self.has_inherent_reference_time, self.units, self.reference_time = self.parse_reference_time(nc['ResTime'].units)
+                self.spherical = hasattr(nc, 'spherical') and nc.spherical.lower() == 'true'
 
     def data_groups(self) -> Generator[DatasetGroup, None, None]:
         if not has_nc:
