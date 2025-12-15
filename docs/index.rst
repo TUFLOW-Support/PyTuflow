@@ -83,6 +83,7 @@ Release date: 16 Dec 2025
 - Fixed a bug where ``UK Hazard Formula ==`` commands were seen as files and were then flagged as having missing files.
 - Fixed a bug where ``MI Projection == Coord ...`` commands were seen as files and were then flagged as having missing files.
 - Fixed a bug with :meth:`GPKG1D.section()<pytuflow.GPKG1D.section>` method when connecting two pipes and the ``"pits"`` data type was requested for ESTRY GPKG 1D outputs.
+- Fixed generic Python warnings that were being triggered in various places in the code, in particular warning regarding ``return`` statements in ``finally`` blocks.
 
 1.0.1
 """""
