@@ -1,3 +1,12 @@
+from pathlib import Path
+
+try:
+    from netCDF4 import Dataset
+    has_nc = True
+except ImportError:
+    Dataset = 'Dataset'
+    has_nc = False
+
 from .helpers.mesh_driver_qgis_nc import QgisNcMeshDriver
 from .helpers.mesh_driver_nc_nc import NCMeshDriverNC
 from .mesh import Mesh
@@ -123,3 +132,15 @@ class NCMesh(Mesh):
         self._driver = QgisNcMeshDriver(self.fpath)
         self._soft_load_driver = NCMeshDriverNC(self.fpath)
         self._initial_load()
+
+    @staticmethod
+    def _looks_like_this(fpath: Path) -> bool:
+        if fpath.suffix.lower() != '.nc':
+            return False
+        if has_nc:
+            with Dataset(fpath, 'r') as nc:
+                if 'Type' in nc.ncattrs() and nc.getncattr('Type') == 'Cell-centred TUFLOWFV output':
+                    return True
+
+        return False
+

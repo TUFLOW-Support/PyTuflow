@@ -14,6 +14,7 @@ class HydTablesChannelProvider:
         self.finished = False
         #: dict: The database of channels
         self.database = {}
+        self._stnd_col_names = []
 
     def read_next(self, fo: TextIO):
         """Read the next channel from the open file object. Check the :code:`finished` attribute to see if the provider
@@ -60,8 +61,11 @@ class HydTablesChannelProvider:
         channel_id : str
             The channel ID.
         """
+        from ..output import Output
         df = pd.read_csv(fo)
-        df.columns = df.columns.str.lower()
+        if not self._stnd_col_names:
+            self._stnd_col_names = [Output._get_standard_data_type_name(x) for x in df.columns]
+        df.columns = self._stnd_col_names
         df.drop(df.columns[df.columns.str.contains('unnamed')], axis=1, inplace=True)
         if df.message.dtype == np.float64:
             df.message = df.message.astype(str)

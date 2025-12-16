@@ -45,7 +45,7 @@ class CrossSections(TabularOutput):
 
     DOMAIN_TYPES = {}
     GEOMETRY_TYPES = {}
-    ATTRIBUTE_TYPES = {'xz': ['xz'], 'hw': ['hw'], 'cs': ['cs'], 'bg': ['bg'], 'lc': ['lc']}
+    ATTRIBUTE_TYPES = {'xz': ['xz'], 'hw': ['hw'], 'cs': ['cs'], 'bg': ['bg'], 'lc': ['lc'], 'na': ['na']}
     ID_COLUMNS = ['id', 'uid', 'source', 'filename', 'filepath']
 
     def __init__(self, fpath: PathLike):
@@ -173,6 +173,10 @@ class CrossSections(TabularOutput):
         >>> xs.data_types('/path/to/1d_CrossSection.csv')
         ['xz']
         """
+        if filter_by is not None and 'section' in filter_by:
+            filter_by = filter_by.replace('section', '').strip('/')
+            if not filter_by:
+                filter_by = None
         df, _ = self._filter(filter_by)
         return df['type'].unique().tolist()
 
@@ -216,10 +220,25 @@ class CrossSections(TabularOutput):
         27      43.05550  37.6766
         28      44.40290  37.7324
         """
+        def loc(x: str) -> str:
+            if '.csv:' in x.lower():
+                df_ = self.objs[self.objs['uid'].str.lower() == x.lower()][['id']]
+                if not df_.empty:
+                    return df_.iloc[0,0]
+            elif '.csv' in x.lower():
+                df_ = self.objs[self.objs['source'].str.lower() == Path(x).name.lower()][['id']]
+                if not df_.empty:
+                    return df_.iloc[0,0]
+            else:
+                df_ = self.objs[self.objs['id'].str.lower() == x.lower()][['id']]
+                if not df_.empty:
+                    return df_.iloc[0,0]
+            return Path(x).stem
+
         if locations is not None:
             if not isinstance(locations, (list, tuple)):
                 locations = [locations]
-            locations = [Path(str(x)).stem for x in locations]
+            locations = [loc(x) for x in locations]
         df, locations, data_types = self._time_series_filter_by(locations, data_types)
         if df.empty:
             return pd.DataFrame()
@@ -250,12 +269,15 @@ class CrossSections(TabularOutput):
         raise NotImplementedError(f'{__class__.__name__} does not support vertical profile plotting.')
 
     def _load(self):
+        if self._loaded:
+            return
         self.name = self.fpath.stem
         with GISAttributes(self.fpath) as attrs:
             self.cross_sections = [TuflowCrossSection(self.fpath.parent, x) for x in attrs]
             _ = [x.load() for x in self.cross_sections]
         self.cross_section_count = len(self.cross_sections)
         self._load_objs()
+        self._loaded = True
 
     def _overview_dataframe(self) -> pd.DataFrame:
         df = self.objs.copy()
@@ -266,6 +288,7 @@ class CrossSections(TabularOutput):
         d = {'id': [], 'filename': [], 'source': [], 'filepath': [], 'type': [], 'uid': [], 'ind': []}
         df = pd.DataFrame(index=[x.source for x in self.cross_sections])
         for i, xs in enumerate(self.cross_sections):
+            name = xs.col1 if xs.col1 else Path(xs.source).stem
             if df.loc[[xs.source]].shape[0] == 1:
                 id_ = Path(xs.source).stem
             else:
@@ -275,6 +298,6 @@ class CrossSections(TabularOutput):
             d['source'].append(xs.source)
             d['filepath'].append(str((self.fpath.parent / xs.source).resolve()))
             d['type'].append(xs.type.lower())
-            d['uid'].append(f'{xs.source}:{id_}')
+            d['uid'].append(f'{xs.source}:{name}')
             d['ind'].append(i)
         self.objs = pd.DataFrame(d)

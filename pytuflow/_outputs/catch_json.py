@@ -1,4 +1,5 @@
 import json
+from datetime import timezone
 from pathlib import Path
 from collections import OrderedDict
 from typing import Union
@@ -9,6 +10,7 @@ import pandas as pd
 from .map_output import MapOutput, PointLocation, LineStringLocation
 from .._pytuflow_types import PathLike, TimeLike
 from .helpers.catch_providers import CATCHProvider
+from ..results import ResultTypeError
 
 
 class CATCHJson(MapOutput):
@@ -120,16 +122,28 @@ class CATCHJson(MapOutput):
 
     def __init__(self, fpath: PathLike | str):
         super().__init__(fpath)
-        self._fpath = Path(fpath)
+        self.fpath = Path(fpath)
         self._data = {}
         self._providers = OrderedDict()
         self._idx_provider = None
+
+        if not self._looks_like_this(Path(fpath)):
+            raise ResultTypeError(f'File does not look like an XMDF file: {fpath}')
+
         self._load_json(fpath)
         self._initial_load()
 
     @staticmethod
     def _looks_like_this(fpath: Path) -> bool:
-        return True
+        try:
+            with open(fpath, 'r') as f:
+                d = json.load(f, object_pairs_hook=OrderedDict)
+            for data_name in ['version', 'name', 'outputs', 'units', 'time units', 'output data']:
+                if data_name.lower() not in [x.lower() for x in d.keys()]:
+                    return False
+            return True
+        except Exception:
+            return False
 
     @staticmethod
     def _looks_empty(fpath: Path) -> bool:
@@ -301,10 +315,20 @@ class CATCHJson(MapOutput):
         3.000000       0.183721
         """
         df = pd.DataFrame()
+        if data_types:
+            if isinstance(data_types, str):
+                data_types = [data_types]
+            data_types = [self._get_standard_data_type_name(x) for x in data_types]
+        filter_by = '3d/timeseries' if averaging_method else 'timeseries'
         for provider in self._providers.values():
             if provider == self._idx_provider:
                 continue
-            df = provider.time_series(locations, data_types, time_fmt, averaging_method)
+            if provider != list(self._providers.values())[-1]:
+                intersection = np.intersect1d(data_types, provider.data_types(filter_by)) if data_types else True
+            else:
+                intersection = True
+            if intersection:
+                df = provider.time_series(locations, data_types, time_fmt, averaging_method)
             if not df.empty:
                 break
         return df
@@ -598,6 +622,7 @@ class CATCHJson(MapOutput):
         self.reference_time, _ = self._parse_time_units_string(self._data.get('time units', default_time_string),
                                                         r'\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}',
                                                         '%Y-%m-%d %H:%M:%S')
+        self.reference_time = self.reference_time.replace(tzinfo=timezone.utc)
         self.units = self._data.get('units', 'metric')
         self._outputs = self._data.get('output data', {})
         self._result_types = [self._get_standard_data_type_name(x) for x in self._data.get('result types')]
@@ -605,7 +630,7 @@ class CATCHJson(MapOutput):
         index_result_name = self._data.get('index')
         for res_name in self._data.get('outputs', []):
             output = self._data.get('output data', {}).get(res_name, {})
-            provider = CATCHProvider.from_catch_json_output(self._fpath.parent, output)
+            provider = CATCHProvider.from_catch_json_output(self.fpath.parent, output)
             if res_name == index_result_name:
                 self._idx_provider = provider
             if provider.has_inherent_reference_time:

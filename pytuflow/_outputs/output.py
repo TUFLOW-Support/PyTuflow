@@ -15,7 +15,7 @@ from .._pytuflow_types import PathLike, TimeLike, PlotExtractionLocation
 with (Path(__file__).parent / 'data' / 'data_type_name_alternatives.json').open() as f:
     DATA_TYPE_NAME_ALTERNATIVES = json.load(f)
 
-DEFAULT_REFERENCE_TIME = datetime(1990, 1, 1)
+DEFAULT_REFERENCE_TIME = datetime(1990, 1, 1, tzinfo=timezone.utc)
 
 
 class Output(ABC):
@@ -29,7 +29,7 @@ class Output(ABC):
     @abstractmethod
     def __init__(self, *fpath: PathLike, **kwargs) -> None:
         super().__init__()
-        self._fpath = fpath
+        self.fpath = fpath
         self._loaded = False
 
         #: str: The result name
@@ -92,7 +92,7 @@ class Output(ABC):
        """
         def generate_times(row):
             if isinstance(row['dt'], tuple):
-                return np.array(row['dt'])
+                return np.array(row['dt']) / 3600.
             else:
                 if np.isclose(row['start'], row['end'], rtol=0., atol=0.001).all():
                     return np.array([])
@@ -258,7 +258,7 @@ class Output(ABC):
         dtype_filter = False
         id_filter = False
 
-        filter_by = [x.strip().lower() for x in filter_by.split('/')] if filter_by else []
+        filter_by = [x.strip().lower() for x in filter_by.split('/') if x] if filter_by else []
         df = self._overview_dataframe() if df is None else df
         if not filter_by:
             return df, {'domain': False, 'geometry': False, 'attribute': False, 'data_type': False, 'id': False}
@@ -320,7 +320,7 @@ class Output(ABC):
         pass
 
     @staticmethod
-    def _parse_time_units_string(string: str, regex: str, fmt: str) -> tuple[datetime, str]:
+    def _parse_time_units_string(string: str, regex: str, fmt: list[str] | str) -> tuple[datetime, str]:
         """Parses a string containing the time units and reference time
         e.g. hours since 1990-01-01 00:00:00
         Returns the reference time as a datetime object, the time units as a single character.
@@ -351,7 +351,16 @@ class Output(ABC):
             u = string
         time = re.findall(regex, string)
         if time:
-            return datetime.strptime(time[0], fmt), u
+            if isinstance(fmt, str):
+                fmt = [fmt]
+            for f in fmt:
+                try:
+                    dt = datetime.strptime(time[0], f)
+                    if dt.tzinfo is None:
+                        dt = dt.replace(tzinfo=timezone.utc)
+                    return dt, u
+                except ValueError:
+                    pass
         return DEFAULT_REFERENCE_TIME, u
 
     @staticmethod
@@ -375,13 +384,13 @@ class Output(ABC):
             return int(np.argwhere(isclose).flatten()[0])
 
         if method == 'previous':
-            prev = a < time
+            prev = a[a > 0]
             if prev.any():
-                return int(np.argwhere(prev).flatten()[-1])
+                return int(np.argwhere(prev).flatten()[0])
             else:
                 return 0
         elif method == 'next':
-            next_ = a > time
+            next_ = a[a < 0]
             if next_.any():
                 return int(np.argwhere(next_).flatten()[0])
             else:
@@ -411,8 +420,10 @@ class Output(ABC):
         if filtered_something:
             if ctx_ and isinstance(ctx_[0], str):
                 df = df[df[column_name].str.lower().isin(ctx_)] if not exclude else df[~df[column_name].str.lower().isin(ctx_)]
-            else:
+            elif column_name in df.columns:
                 df = df[df[column_name].isin(ctx_)] if not exclude else df[~df[column_name].isin(ctx_)]
+            else:
+                df = pd.DataFrame(columns=df.columns)
 
         return df, filtered_something
 

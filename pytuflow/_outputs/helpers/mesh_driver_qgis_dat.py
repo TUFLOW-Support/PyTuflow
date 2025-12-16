@@ -5,7 +5,7 @@ from .mesh_driver import DatasetGroup
 from .mesh_driver_qgis import QgisMeshDriver
 
 try:
-    from qgis.core import QgsMeshLayer, QgsApplication
+    from qgis.core import QgsMeshLayer, QgsApplication, QgsMeshDatasetIndex
     has_qgis = True
 except ImportError:
     has_qgis = False
@@ -42,6 +42,24 @@ class QgisDATMeshDriver(QgisMeshDriver):
             if data_type_group.times.tolist() in [[99999.], [-99999.]]:
                 data_type_group.times = [0.]
             yield data_type_group
+
+    def group_index_from_name(self, data_type: str, **kwargs) -> int:
+        # DAT datagroups can be in the form of 'h model_name' - so need to strip model name before comparing
+        from ..map_output import MapOutput  # import here to avoid circular import
+        igrp = -1
+        for i in range(self.lyr.datasetGroupCount()):
+            ind = QgsMeshDatasetIndex(i, 0)
+            ds_name = self.lyr.datasetGroupMetadata(ind).name()
+            ds_name = ds_name.replace(self.name, '').strip()
+            stnd_name = MapOutput._get_standard_data_type_name(ds_name)
+            if stnd_name == data_type:
+                igrp = i
+                break
+
+        if igrp == -1:
+            raise ValueError(f'Dataset group not found for data type {data_type}')
+
+        return igrp
 
     @staticmethod
     def special_times(data_type_group: DatasetGroup) -> Generator[DatasetGroup, None, None]:

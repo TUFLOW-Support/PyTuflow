@@ -137,6 +137,14 @@ class NCGrid(Grid):
                 if nc_var.valid:
                     yield nc_var
 
+    @staticmethod
+    def is_tuflow_output(fpath: PathLike) -> bool:
+        """no-doc
+        Returns True if the netCDF file is a TUFLOW output file.
+        """
+        with Dataset(fpath, 'r') as nc:
+            return 'source' in nc.ncattrs() and nc.getncattr('source').startswith('TUFLOW Build:')
+
     def times(self, filter_by: str = None, fmt: str = 'relative') -> list[TimeLike]:
         """Returns a list of times for the given filter.
 
@@ -247,7 +255,8 @@ class NCGrid(Grid):
         else:
             self.time_units = units.split(' ')[0]
 
-        return self._parse_time_units_string(units, r'\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}', '%Y-%m-%d %H:%M:%S')[0]
+        return self._parse_time_units_string(units, r'\d{4}-\d{2}-\d{2} \d{2}:\d{2}(?:\:\d{2})?',
+                                             ['%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M'])[0]
 
     def _load_info(self, nc: Dataset):
         d = {'data_type': [], 'type': [], 'is_max': [], 'is_min': [], 'static': [], 'start': [], 'end': [], 'dt': [],

@@ -694,7 +694,7 @@ class ResData_GPKG(ResData):
             Logging.warning(e)
         finally:
             self._timesteps = timesteps
-            return self._timesteps
+        return self._timesteps
 
     def lineResultTypesLP(self) -> typing.List[str]:
         types = []
@@ -778,8 +778,8 @@ class ResData_GPKG(ResData):
                     types.append(row[1])
         except Exception as e:
             Logging.warning(e)
-        finally:
-            return types
+
+        return types
 
     def parse_reference_time(self, string: str) -> datetime:
         if 'hour' in string:
@@ -805,8 +805,8 @@ class ResData_GPKG(ResData):
             self.has_reference_time = True
         except Exception as e:
             pass
-        finally:
-            return reference_time
+
+        return reference_time
 
     def create_key(self, id_: str, res: str):
         return '{0}_{1}'.format(id_, res)

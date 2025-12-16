@@ -1,3 +1,4 @@
+import logging
 import os
 import unittest
 from contextlib import contextmanager
@@ -32,16 +33,24 @@ class CustomLoggingHandler(StreamHandler):
     @contextmanager
     def with_filter(self, msgs):
         """Use a context manager so that the previous handlers can be restored no matter how the test exits."""
-        self.msg_filters = msgs
+        self.msg_filters = msgs.copy()
         logger = pytuflow_logging.get_logger()
-        exist_hdlrs = logger.handlers
+        tmf_logger = logging.getLogger('tmf')
+        exist_hdlrs = logger.handlers.copy()
         for hdlr in exist_hdlrs:
             logger.removeHandler(hdlr)
+        tmf_handlers = tmf_logger.handlers.copy()
+        for hdlr in tmf_handlers:
+            tmf_logger.removeHandler(hdlr)
         logger.addHandler(self)
+        tmf_logger.addHandler(self)
         yield self
         logger.removeHandler(self)
+        tmf_logger.removeHandler(self)
         for hdlr in exist_hdlrs:
             logger.addHandler(hdlr)
+        for hdlr in tmf_handlers:
+            tmf_logger.addHandler(hdlr)
         self.msg_filters.clear()
         self.msg_count = 0
 
@@ -258,6 +267,11 @@ class Test_TPC_2016(TestCase):
         p = './tests/2016/EG14_001.tpc'
         res = TPC(p)
         self.assertEqual(22, len(res.data_types()))
+
+    def test_data_types_2(self):
+        p = './tests/2016/EG14_001.tpc'
+        res = TPC(p)
+        self.assertEqual(3, len(res.data_types('/node')))
 
     def test_data_types_static(self):
         p = './tests/2016/EG14_001.tpc'
@@ -945,6 +959,12 @@ class Test_GPKG1D(TestCase):
         df = res.section('pipe1', ['bed level', 'pipes', 'pits'], 1)
         self.assertEqual((10, 7), df.shape)
 
+    def test_section_multiple_pipes_with_pits(self):
+        p = './tests/2023/EG15_001_TS_1D.gpkg'
+        res = GPKG1D(p)
+        df = res.section(['pipe10', 'pipe11'], ['pits'], 1)
+        self.assertEqual((4, 5), df.shape)
+
     def test_maximums_2(self):
         p = './tests/2023/M06_5m_003_SWMM_swmm_ts.gpkg'
         res = GPKG1D(p)
@@ -980,6 +1000,7 @@ class Test_GPKG2D(TestCase):
         p = './tests/tpc_gpkg/EG15_001_TS_2D.gpkg'
         res = GPKG2D(p)
         self.assertEqual(16, len(res.data_types()))
+        self.assertEqual(16, len(res.data_types('timeseries')))
         # self.assertEqual(4, len(res.data_types('line')))  # source results are wrong
 
     def test_ids(self):
@@ -1016,6 +1037,7 @@ class Test_GPKGRL(TestCase):
         p = './tests/tpc_gpkg/EG15_001_TS_RL.gpkg'
         res = GPKGRL(p)
         self.assertEqual(3, len(res.data_types()))
+        self.assertEqual(3, len(res.data_types('timeseries')))
         # self.assertEqual(4, len(res.data_types('line')))  # source results are wrong
 
     def test_ids(self):
@@ -1322,6 +1344,14 @@ class Test_HydTables(unittest.TestCase):
         dtypes = res.data_types()
         self.assertEqual(14, len(dtypes))
 
+    def test_data_types_4(self):
+        p = './tests/hyd_tables/EG14_001_1d_ta_tables_check.csv'
+        res = HydTablesCheck(p)
+        dtypes = res.data_types('section')
+        self.assertEqual(14, len(dtypes))
+        dtypes = res.data_types('section/channel')
+        self.assertEqual(8, len(dtypes))
+
     def test_data_types_ctx(self):
         p = './tests/hyd_tables/EG14_001_1d_ta_tables_check.csv'
         res = HydTablesCheck(p)
@@ -1345,6 +1375,12 @@ class Test_HydTables(unittest.TestCase):
         res = HydTablesCheck(p)
         df = res.section('1d_xs_M14_C121', 'elev')
         self.assertEqual((30, 2), df.shape)
+
+    def test_section_3(self):
+        p = './tests/hyd_tables/EG14_001_1d_ta_tables_check.csv'
+        res = HydTablesCheck(p)
+        df = res.section('FC01.25', 'wetted perimeter')
+        self.assertEqual((39, 2), df.shape)
 
 
 class Test_BC_Tables(unittest.TestCase):
@@ -1424,6 +1460,16 @@ class Test_BC_Tables(unittest.TestCase):
         res = BCTablesCheck(p)
         rts = res.data_types('FC01')
         self.assertEqual(1, len(rts))
+
+    def test_data_types_3(self):
+        p = './tests/bc_tables/EG00_001_2d_bc_tables_check.csv'
+        res = BCTablesCheck(p)
+        dtypes = res.data_types('timeseries')
+        self.assertEqual(2, len(dtypes))
+        dtypes = res.data_types('section')
+        self.assertEqual(0, len(dtypes))
+        dtypes = res.data_types('timeseries/3d')
+        self.assertEqual(0, len(dtypes))
 
     def test_time_series(self):
         p = './tests/bc_tables/EG00_001_2d_bc_tables_check.csv'
@@ -1596,6 +1642,8 @@ class Test_CrossSections(unittest.TestCase):
         res = CrossSections(p)
         dtypes = res.data_types()
         self.assertEqual(1, len(dtypes))
+        dtypes = res.data_types('section')
+        self.assertEqual(1, len(dtypes))
 
     def test_section(self):
         p = './tests/cross_sections/gis/1d_xs_EG14_001_L.shp'
@@ -1616,3 +1664,28 @@ class Test_CrossSections(unittest.TestCase):
         xs = os.path.abspath(xs)
         df = res.section(xs, None)
         self.assertEqual((30, 2), df.shape)
+
+    def test_section_4(self):
+        expected_msgs = [
+            r'Cross-Section CSV file not found. Variable in "Source" attribute not resolved: ../csv/1d_xs_<<MODULE>>_C99.csv'
+        ]
+        with custom_log_handler.with_filter(expected_msgs) as custom_logger:
+            p = './tests/cross_sections/gis/1d_xs_EG14_002_L.shp'
+            res = CrossSections(p)
+            self.assertEqual(1, custom_logger.msg_count)
+        self.assertEqual('1d_xs_EG14_002_L', res.name)
+        self.assertEqual(55, res.cross_section_count)
+        df = res.section('../csv/1d_xs_<<MODULE>>_C99.csv', 'xz')
+        self.assertTrue(df.empty)
+
+    def test_section_5(self):
+        p = './tests/cross_sections/gis/1d_xs_EG14_003_L.shp'
+        res = CrossSections(p)
+        df = res.section(r'..\csv\xsdb.csv:1d_xs_M14_C100', 'xz')
+        self.assertEqual((30, 2), df.shape)
+
+    def test_section_na(self):
+        p = './tests/cross_sections/gis/Murr_1d.gpkg >> 1d_na_Murr'
+        res = CrossSections(p)
+        df = res.section(r'..\na\na_ABOVE_OLDMAN_0.0_WETLAND.csv:na_ABOVE_OLDMAN_0.0_WETLAND', 'na')
+        self.assertEqual((20, 2), df.shape)

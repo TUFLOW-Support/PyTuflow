@@ -479,6 +479,27 @@ class TestDAT(unittest.TestCase):
             dtypes = res.data_types()
             self.assertEqual(8, len(dtypes))
 
+    def test_newer_format(self):
+        p = './tests/dat/small_model_002_h.dat'  # model name is now 80 characters long rather than 40
+        with pyqgis():
+            res = DAT(p)
+            dtypes = res.data_types()
+            self.assertEqual(['bed level', 'water level', 'max water level'], dtypes)
+
+    def test_time_series(self):
+        p = './tests/dat/small_model_002_h.dat'
+        with pyqgis():
+            res = DAT(p)
+            df = res.time_series((1.0, 1.0), 'water level')
+            self.assertEqual((13, 1), df.shape)
+
+    def test_section(self):
+        p = './tests/dat/small_model_002_h.dat'
+        with pyqgis():
+            res = DAT(p)
+            df = res.section([(1.5, 1.2), (2.5, 1.2)], 'water level', 1.0)
+            self.assertEqual((4, 2), df.shape)
+
 
 class TestNCGrid(unittest.TestCase):
 
@@ -498,6 +519,8 @@ class TestNCGrid(unittest.TestCase):
         res = NCGrid(p)
         dtypes = res.data_types()
         self.assertEqual(8, len(dtypes))
+        dtypes = res.data_types('3d')
+        self.assertEqual(0, len(dtypes))
 
     def test_time_series(self):
         p = './tests/nc_grid/small_model_001.nc'
@@ -512,6 +535,8 @@ class TestNCGrid(unittest.TestCase):
         res = NCGrid(p)
         df = res.section(line, 'h', 0)
         self.assertEqual((6, 2), df.shape)
+        df = res.section(line, ['water level', 'max water level'], 0.5)
+        self.assertEqual((6, 4), df.shape)
 
     def test_section_vert(self):
         p = './tests/nc_grid/small_model_001.nc'
