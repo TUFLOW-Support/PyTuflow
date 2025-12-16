@@ -53,7 +53,7 @@ Release date: 16 Dec 2025
 - Fixed a bug in when asking for the ``"wetted perimeter"`` data type in the :meth:`HydTablesCheck.section()<pytuflow.HydTablesCheck.section>` output class would cause a python exception.
 - Added proper format checking for SMS :class:`DAT<pytuflow.DAT>` files.
 - Fixed a bug when loading a :class:`DAT<pytuflow.DAT>` file (not from the ``.sup``) where the file path attribute :attr:`fpath<pytuflow.DAT.fpath>` was being being set incorrectly.
-- Fixed a time-series and section plotting for :class:`DAT<pytuflow.DAT>` files which was not working.
+- Fixed time-series and section plotting for :class:`DAT<pytuflow.DAT>` files which was not working.
 - Added the missing format checker for the :class:`CATCHJson<pytuflow.CATCHJson>` class.
 - Added :attr:`fpath<pytuflow.CATCHJson.fpath>` property to :class:`CATCHJson<pytuflow.CATCHJson>` class to be consistent with other output classes.
 - Added a timezone to the :class:`CATCHJson<pytuflow.CATCHJson>` :attr:`reference_time<pytuflow.CATCHJson.reference_time>`.
