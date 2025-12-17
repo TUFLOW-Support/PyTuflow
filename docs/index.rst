@@ -32,6 +32,13 @@ Check out the :doc:`usage` section for further information, including how to :re
 Changelog
 ---------
 
+1.0.3
+"""""
+
+Release date: 17 Dec 2025
+
+- Fixed a bug when reading a TCF file and the command ``Write Check Files == `` was used and the file path did not have a trailing slash. Previously, this could cause a Python error.
+
 1.0.2
 """""
 
