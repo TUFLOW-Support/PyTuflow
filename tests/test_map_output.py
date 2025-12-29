@@ -620,6 +620,7 @@ class TestMeshRegression(unittest.TestCase):
         p = './tests/xmdf/EG00_001.xmdf'
         point = './tests/xmdf/xmdf_point.shp'
         line = './tests/xmdf/xmdf_line.shp'
+        line_outside_mesh = './tests/xmdf/xmdf_line_outside_mesh.shp'
         comp = './tests/regression_test_comparisons/test_qgis_vertex_mesh'
         with pyqgis():
             res = XMDF(p)
@@ -633,6 +634,12 @@ class TestMeshRegression(unittest.TestCase):
             # section
             a = res.section(line, 'water level', 1.).reset_index().to_numpy()
             b = load_comparison_data(f'{comp}_section.data').reshape(a.shape)
+            is_close = np.isclose(a, b, equal_nan=True)
+            self.assertTrue(is_close.all())
+
+            # section lines that start/end outside the mesh
+            a = res.section(line_outside_mesh, 'water level', 1.).reset_index().to_numpy()
+            b = load_comparison_data(f'{comp}_section_outside_mesh.data').reshape(a.shape)
             is_close = np.isclose(a, b, equal_nan=True)
             self.assertTrue(is_close.all())
 
@@ -652,6 +659,12 @@ class TestMeshRegression(unittest.TestCase):
             a = res.curtain(line, 'velocity', 1.).reset_index().to_numpy()
             a = np.column_stack((a[...,:3], np.vstack(a[...,3]), np.vstack(a[...,4]))).astype('f8')
             b = load_comparison_data(f'{comp}_curtain_vec.data').reshape(a.shape)
+            is_close = np.isclose(a, b, equal_nan=True)
+            self.assertTrue(is_close.all())
+
+            # curtain outside mesh
+            a = res.curtain(line_outside_mesh, 'z0', 1.).reset_index().to_numpy()
+            b = load_comparison_data(f'{comp}_curtain_outside_mesh.data').reshape(a.shape)
             is_close = np.isclose(a, b, equal_nan=True)
             self.assertTrue(is_close.all())
 
