@@ -1,0 +1,16 @@
+from pathlib import Path
+
+from . import PyMesh, Py2dm, PyXMDFDataExtractor
+from .mesh3d import Mesh3DMixin, GLTFMixin, AlembicMixin
+
+
+class PyXMDF(PyMesh, Mesh3DMixin, GLTFMixin, AlembicMixin):
+
+    def __init__(self, fpath: Path | str, twodm: Path | str = None, engine: str = None):
+        super().__init__()
+        self.fpath = Path(fpath)
+        if not twodm:
+            twodm = self.fpath.with_suffix('.2dm')
+        self.geom = Py2dm(twodm)
+        self.extractor = PyXMDFDataExtractor(fpath, engine)
+        self.name = twodm.stem

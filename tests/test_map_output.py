@@ -13,7 +13,7 @@ global qapp
 
 @contextmanager
 def pyqgis():
-    global qapp
+    global qapp  # global qapp since it can sometimes be cleaned up
     qapp = QgsApplication.instance()
     if not qapp:
         qapp = QgsApplication([], False)

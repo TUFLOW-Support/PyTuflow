@@ -1,12 +1,15 @@
 from pathlib import Path
 
 from .helpers.mesh_driver_qgis_xmdf import QgisXmdfMeshDriver, has_qgis
+from .helpers.mesh_driver import MeshDriver
 from .helpers.mesh_driver_nc import has_nc
 from .helpers.mesh_driver_nc_xmdf import NCMeshDriverXmdf
 from .helpers.super_file import SuperFile
 from .mesh import Mesh
 from .._pytuflow_types import PathLike
 from ..results import ResultTypeError
+
+from .pymesh import PyXMDF
 
 
 class XMDF(Mesh):
@@ -139,8 +142,12 @@ class XMDF(Mesh):
 
         super().__init__(self.twodm)
         self.fpath = Path(fpath)
-        self._driver = QgisXmdfMeshDriver(self.twodm, self.fpath)
-        self._soft_load_driver = NCMeshDriverXmdf(self.twodm, self.fpath)
+        if PyXMDF.available():
+            self._driver = PyXMDF(self.fpath, self.twodm)
+            self._soft_load_driver = MeshDriver(self.twodm)  # invalid soft load driver, the PyXMDF will soft load
+        else:
+            self._driver = QgisXmdfMeshDriver(self.twodm, self.fpath)
+            self._soft_load_driver = NCMeshDriverXmdf(self.twodm, self.fpath)
         self._initial_load()
 
     @staticmethod
