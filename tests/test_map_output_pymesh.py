@@ -27,3 +27,40 @@ class TestPyMeshRegression(unittest.TestCase):
         b = load_comparison_data(f'{comp}_time_series.data').reshape(a.shape)
         is_close = np.isclose(a, b, equal_nan=True)
         self.assertTrue(is_close.all())
+
+        # section
+        a = res.section(line, 'water level', 1.).reset_index().to_numpy()
+        b = load_comparison_data(f'{comp}_section.data').reshape(a.shape)
+        is_close = np.isclose(a, b, equal_nan=True)
+        self.assertTrue(is_close.all())
+
+        # section lines that start/end outside the mesh
+        a = res.section(line_outside_mesh, 'water level', 1.).reset_index().to_numpy()
+        b = load_comparison_data(f'{comp}_section_outside_mesh.data').reshape(a.shape)
+        is_close = np.isclose(a, b, equal_nan=True)
+        self.assertTrue(is_close.all())
+
+        # profile
+        a = res.profile(point, 'velocity', 1.).reset_index().to_numpy()
+        b = load_comparison_data(f'{comp}_profile.data').reshape(a.shape)
+        is_close = np.isclose(a, b, equal_nan=True)
+        self.assertTrue(is_close.all())
+
+        # curtain scalar
+        a = res.curtain(line, 'z0', 1.).reset_index().to_numpy()
+        b = load_comparison_data(f'{comp}_curtain.data').reshape(a.shape)
+        is_close = np.isclose(a, b, equal_nan=True)
+        self.assertTrue(is_close.all())
+
+        # curtain vector
+        a = res.curtain(line, 'velocity', 1.).reset_index().to_numpy()
+        a = np.column_stack((a[..., :3], np.vstack(a[..., 3]), np.vstack(a[..., 4]))).astype('f8')
+        b = load_comparison_data(f'{comp}_curtain_vec.data').reshape(a.shape)
+        is_close = np.isclose(a, b, equal_nan=True)
+        self.assertTrue(is_close.all())
+
+        # curtain outside mesh
+        a = res.curtain(line_outside_mesh, 'z0', 1.).reset_index().to_numpy()
+        b = load_comparison_data(f'{comp}_curtain_outside_mesh.data').reshape(a.shape)
+        is_close = np.isclose(a, b, equal_nan=True)
+        self.assertTrue(is_close.all())
