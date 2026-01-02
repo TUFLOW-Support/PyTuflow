@@ -432,7 +432,7 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
 
         # get data
         if self.on_vertex(data_type):
-            data = self.profile_from_vertex_data(p, data_type, time_index)
+            data = self.profile_from_vertex_data(point, data_type, time_index)
         else:
             data = self.profile_from_cell_data(p, data_type, time_index)
 

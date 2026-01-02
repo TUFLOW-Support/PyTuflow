@@ -2,7 +2,7 @@ import typing
 
 import numpy as np
 
-from . import barycentric_coord
+from . import barycentric_coord, PointLike
 
 if typing.TYPE_CHECKING:
     from . import PyMesh
@@ -23,16 +23,16 @@ class VertexDataMixin:
             if not wd_flag:
                 return np.nan
 
-        vert_ids = sorted(self.geom.triangle_vertices(tri))
+        vert_ids, inverse = np.unique(self.geom.triangle_vertices(tri), return_inverse=True)
 
         # calculate interpolation weights
         uvw = self.geom.barycentric_factors(point, tri, scope='local')
 
         if data_type.lower() == 'bed elevation':
-            pos = self.geom.vertex_position(vert_ids)
+            pos = self.geom.vertex_position(vert_ids)[inverse]
             a = pos[:, 2].reshape((1, 3))
         else:
-            a = self.extractor.data(data_type, (time_index, vert_ids))
+            a = self.extractor.data(data_type, (time_index, vert_ids))[inverse]
 
         if self.is_vector(data_type):
             data_x = (a[..., 0] * uvw).sum(axis=1)
@@ -144,7 +144,7 @@ class VertexDataMixin:
             axis=2 if vector else 1
         )
 
-    def profile_from_vertex_data(self: 'PyMesh', point: np.ndarray, data_type: str, time_index: int) -> np.ndarray:
+    def profile_from_vertex_data(self: 'PyMesh', point: PointLike, data_type: str, time_index: int) -> np.ndarray:
         """Extract data along a vertical profile at a given point from mesh vertices."""
         # results on vertices or 2d results
         zdtype, hdtype = self._2d_to_3d_data_types(data_type)
@@ -156,7 +156,7 @@ class VertexDataMixin:
         value = self.data_point(point, data_type, time_index=time_index)
         if self.is_vector(data_type):
             return np.array([[[z, value[0], value[1]]], [[h, value[0], value[1]]]])
-        return np.array([[z, value], [h, value]])
+        return np.array([[h, value], [z, value]])
 
     def curtain_from_vertex_data(
             self: 'Mesh',
