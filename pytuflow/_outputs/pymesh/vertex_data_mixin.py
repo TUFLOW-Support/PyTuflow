@@ -110,7 +110,8 @@ class VertexDataMixin:
         # vertex points for interpolation
         pos = self.geom.vertex_position(uvert, scope='local')[..., :2]
         if outside:
-            pos = np.append([[np.nan, np.nan]], pos, axis=0)  # re-add outside points as nan
+            pos[0, ...] = np.array([np.nan, np.nan])  # re-add outside points as nan
+            # pos = np.append([[np.nan, np.nan]], pos, axis=0)  # re-add outside points as nan
         pos = pos[inverse].reshape((-1, 6))
 
         # interpolate
