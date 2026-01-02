@@ -490,26 +490,20 @@ class PyMeshGeometry(PointMixin, LineStringMixin):
 
         cell_ids = np.append(cell_ids, cell_ids[-1])
         offsets = np.linalg.norm(points - p1[:2], axis=1).astype(dtype)
-        mid_offsets = np.append(dtype(0), offsets + np.append(np.diff(offsets) / 2., dtype(0)))
 
         if p1_outside:
             cell_ids = np.append([-1], cell_ids)
             points = np.append(p1[:2].reshape((-1, 2)), points, axis=0)
             offsets = np.append(dtype(0), offsets)
+        mid_offsets = np.append(dtype(0), offsets + np.append(np.diff(offsets) / 2., dtype(0)))
         if p2_outside:
             cell_ids = np.append(cell_ids, [-1])
             points = np.append(points, p2[:2].reshape((-1, 2)), axis=0)
             offsets = np.append(offsets, length)
-            mid_offsets[-1] = length
+            mid_offsets = np.append(mid_offsets, length)
+            mid_offsets[-2] = (mid_offsets[-1] + mid_offsets[-2]) / 2.
 
-        mid_cell_ids = None
-        if not p1_outside:
-            mid_cell_ids = np.append(cell_ids[0], cell_ids)
-        if p2_outside:
-            mid_cell_ids = cell_ids[:-1] if mid_cell_ids is None else mid_cell_ids[:-1]
-            mid_cell_ids[-1] = -1
-        if mid_cell_ids is None:
-            mid_cell_ids = np.array(cell_ids)
+        mid_cell_ids = np.append(cell_ids[0], cell_ids)
 
         p0 = p1[:2].reshape((1, 2))
         dir_ = (p2 - p1)[:2].astype(dtype).reshape((1, 2)) / length
