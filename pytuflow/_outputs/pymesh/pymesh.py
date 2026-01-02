@@ -41,7 +41,7 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
 
     @staticmethod
     def available() -> bool:
-        return not isinstance(pv, str) and (H5Engine.available() or NCEngine.available())
+        return '.stubs' not in pv.__name__ and (H5Engine.available() or NCEngine.available())
 
     def load(self):
         self.geom.load()
