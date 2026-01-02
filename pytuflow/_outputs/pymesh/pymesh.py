@@ -1,10 +1,10 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
 import numpy as np
 import pandas as pd
 
 from . import (LineStringMixin, LineStringLike, PointMixin, PointLike, VertexDataMixin, CellDataMixin, Cache,
-               PyMeshGeometry, PyDataExtractor, NCEngine, H5Engine)
+               PyMeshGeometry, PyDataExtractor, NCEngine, H5Engine, SoftLoadMixin)
 
 try:
     import shapely
@@ -19,13 +19,17 @@ except ImportError:
     from .stubs import pyvista as pv
 
 
-class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin):
+class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLoadMixin):
+    DRIVER_SOURCE = 'python'
 
     def __init__(self, *args, **kwargs):
+        self._init_soft_load()
         self.cache = Cache()
         self.name = ''
         self.geom: PyMeshGeometry = PyMeshGeometry('')
         self.extractor: PyDataExtractor = PyDataExtractor()
+        self.has_inherent_reference_time = False
+        self.reference_time = datetime(1970, 1, 1, tzinfo=timezone.utc)
 
         self._cached_data_types = {}
 
@@ -39,7 +43,7 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin):
     def available() -> bool:
         return not isinstance(pv, str) and (H5Engine.available() or NCEngine.available())
 
-    def load_mesh(self):
+    def load(self):
         self.geom.load()
 
     def translate_data_type(self, data_type: str) -> tuple[str, ...]:
@@ -94,7 +98,7 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin):
         """
         return ['Bed Elevation'] + self.extractor.data_types() if self.geom.has_z else self.extractor.data_types()
 
-    def reference_time(self, data_type: str) -> datetime:
+    def reference_time_(self, data_type: str) -> datetime:
         """Returns the reference time for the given data type. Will return None if the dataset does
         not have a reference time.
 

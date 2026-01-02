@@ -12,3 +12,5 @@ class TestPyMeshRegression(unittest.TestCase):
         line_outside_mesh = './tests/xmdf/xmdf_line_outside_mesh.shp'
         comp = './tests/regression_test_comparisons/test_qgis_vertex_mesh'
         res = XMDF(p)
+        df = res.time_series(point, 'h')
+        print()

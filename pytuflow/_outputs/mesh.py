@@ -205,7 +205,12 @@ class Mesh(MapOutput):
         data_types = self._figure_out_data_types(data_types, 'temporal')
         for name, pnt in pnts.items():
             for dtype in data_types:
-                df1 = self._driver.time_series(name, pnt, dtype, averaging_method)
+                if self._driver.DRIVER_SOURCE == 'python':
+                    a = self._driver.time_series(pnt, dtype, averaging_method)
+                    df1 = pd.DataFrame(a[:,1], index=a[:,0], columns=[name])
+                    df1.index.name = 'time'
+                else:
+                    df1 = self._driver.time_series(name, pnt, dtype, averaging_method)
                 if df1.empty:
                     continue
                 if not df.empty:
@@ -332,7 +337,12 @@ class Mesh(MapOutput):
         for name, line in lines.items():
             df1 = pd.DataFrame()
             for dtype in data_types:
-                df2 = self._driver.section(line, dtype, time, averaging_method)
+                if self._driver.DRIVER_SOURCE == 'python':
+                    a = self._driver.section(line, dtype, time, averaging_method)
+                    df2 = pd.DataFrame(a[:,1], index=a[:,0], columns=[dtype])
+                    df2.index.name = 'offset'
+                else:
+                    df2 = self._driver.section(line, dtype, time, averaging_method)
                 if df2.empty:
                     continue
                 df1 = pd.concat([df1, df2], axis=1) if not df1.empty else df2
@@ -406,7 +416,11 @@ class Mesh(MapOutput):
         for name, line in lines.items():
             df1 = pd.DataFrame()
             for dtype in data_types:
-                df2 = self._driver.curtain(line, dtype, time)
+                if self._driver.DRIVER_SOURCE == 'python':
+                    a = self._driver.curtain(line, dtype, time)
+                    df2 = pd.DataFrame(a, columns=['x', 'y', dtype])
+                else:
+                    df2 = self._driver.curtain(line, dtype, time)
                 if df2.empty:
                     continue
                 df1 = pd.concat([df1, df2[dtype]], axis=1) if not df1.empty else df2
@@ -468,7 +482,22 @@ class Mesh(MapOutput):
         for name, pnt in pnts.items():
             df1 = pd.DataFrame()
             for dtype in data_types:
-                df2 = self._driver.profile(pnt, dtype, time, interpolation)
+                if self._driver.DRIVER_SOURCE == 'python':
+                    a = self._driver.profile(pnt, dtype, time)
+                    df2 = pd.DataFrame(a[:,1], index=a[:,0], columns=[dtype])
+                    df2.index.name = 'elevation'
+                    if interpolation.lower() == 'linear' and df.shape[0] > 2:
+                        df2.sort_index(inplace=True)
+                        df3 = pd.DataFrame()
+                        df3['elevation'] = df2.iloc[:, 0].dropna().unique().tolist()
+                        df3[dtype] = np.interp(
+                            df1['elevation'],
+                            df.index,
+                            df[dtype],
+                        )
+                        df2 = df3
+                else:
+                    df2 = self._driver.profile(pnt, dtype, time, interpolation)
                 if df2.empty:
                     continue
                 df1 = pd.concat([df1, df2], axis=1) if not df1.empty else df2

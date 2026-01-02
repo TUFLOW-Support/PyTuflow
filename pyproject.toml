@@ -10,8 +10,6 @@ dependencies = [
     "pandas",
     "packaging",
     "dbfread",
-    "pyvista>=0.46.4",
-    "pyproj>=3.6.1",
 ]
 requires-python = ">= 3.9"
 authors = [

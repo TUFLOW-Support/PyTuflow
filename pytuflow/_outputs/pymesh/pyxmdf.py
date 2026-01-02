@@ -14,3 +14,10 @@ class PyXMDF(PyMesh, Mesh3DMixin, GLTFMixin, AlembicMixin):
         self.geom = Py2dm(twodm)
         self.extractor = PyXMDFDataExtractor(fpath, engine)
         self.name = twodm.stem
+        for dtype in self.data_types():
+            if dtype.lower() != 'bed elevation':
+                ref_time = self.reference_time_(dtype)
+                if ref_time is not None:
+                    self.has_inherent_reference_time = True
+                    self.reference_time = ref_time
+                break

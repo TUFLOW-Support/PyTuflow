@@ -40,6 +40,7 @@ logger = pytuflow_logging.get_logger()
 
 
 class QgisMeshDriver(MeshDriver):
+    DRIVER_SOURCE = 'qgis'
 
     def __init__(self, mesh: Path):
         super().__init__(mesh)
