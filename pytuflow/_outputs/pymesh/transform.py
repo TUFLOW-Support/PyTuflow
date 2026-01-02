@@ -35,7 +35,7 @@ class Transform2D:
 
     def __init__(self, translate: typing.Iterable[float] = (), rotate: float = 0, scale: typing.Iterable[float] = (),
                  pivot: typing.Iterable[float] = (), order: str = 'SRT', proj_transformer: typing.Callable = None,
-                 proj_transformer_inverse: typing.Callable = None):
+                 proj_transformer_inverse: typing.Callable = None, dtype = np.float64):
         self.pivot = pivot if pivot else [0., 0.]
         self.translate_param = translate if (isinstance(translate, np.ndarray) and translate.size) or (not isinstance(translate, np.ndarray) and translate) else [0., 0.]
         self.rotate_param = rotate
@@ -46,6 +46,7 @@ class Transform2D:
         self._was_shapely = False
         self._was_single_point = False
         self.order = order
+        self.dtype = dtype
 
     def inverse(self) -> 'Transform2D':
         """Returns the inverse transformation.
@@ -66,7 +67,8 @@ class Transform2D:
             pivot=self.pivot,
             order=self.order[::-1],
             proj_transformer=self.proj_transformer_inverse,
-            proj_transformer_inverse=self.proj_transformer
+            proj_transformer_inverse=self.proj_transformer,
+            dtype=self.dtype
         )
 
     def transform(self, points: typing.Iterable[float], order: str = '', dtype = None) -> np.ndarray:
@@ -129,7 +131,7 @@ class Transform2D:
             [0., 1., self.translate_param[1]],
             [0., 0., 1.]
         ])
-        points1 = np.array(points)
+        points1 = np.array(points).astype(self.dtype)
         if len(points.shape) > 1:
             points1[:,:2] = self._matrix_operation(trans, points[:,:2])
         else:
@@ -165,7 +167,7 @@ class Transform2D:
             [np.cos(np.radians(self.rotate_param)), -np.sin(np.radians(self.rotate_param))],
             [np.sin(np.radians(self.rotate_param)), np.cos(np.radians(self.rotate_param))]
         ])
-        points1 = np.array(points)
+        points1 = np.array(points).astype(self.dtype)
         if len(points.shape) > 1:
             points1[:, :2] = self._matrix_operation(rot, points[:, :2])
         else:
@@ -201,7 +203,7 @@ class Transform2D:
             [self.scale_param[0], 0],
             [0, self.scale_param[1]]
         ])
-        points1 = np.array(points)
+        points1 = np.array(points).astype(self.dtype)
         if len(points.shape) > 1:
             points1[:, :2] = self._matrix_operation(scale, points[:, :2])
         else:
@@ -225,7 +227,7 @@ class Transform2D:
             return points
         if points.ndim == 1:
             points = points.reshape(-1, 2)
-        return self.proj_transformer(points)
+        return self.proj_transformer(points.astype(self.dtype))
 
     @staticmethod
     def _matrix_operation(trans: np.ndarray, points: np.ndarray) -> pd.DataFrame:
