@@ -815,6 +815,14 @@ class TestMeshRegression(unittest.TestCase):
             is_close = np.isclose(a, b, equal_nan=True)
             self.assertTrue(is_close.all())
 
+            # profile linear interpolation
+            a = res.profile(point, 'salinity', 186969, 'linear').reset_index().to_numpy()
+            # with open(f'{comp}_profile_linear.data', 'wb') as f:
+            #     f.write(a.tobytes())
+            b = load_comparison_data(f'{comp}_profile_linear.data').reshape(a.shape)
+            is_close = np.isclose(a, b, equal_nan=True)
+            self.assertTrue(is_close.all())
+
             # curtain
             a = res.curtain(line, 'salinity', 186969).reset_index().to_numpy()
             # with open(f'{comp}_curtain.data', 'wb') as f:
