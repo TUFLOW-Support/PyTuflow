@@ -53,8 +53,8 @@ class VertexDataMixin:
         uvw = self.geom.barycentric_factors(point, tri, scope='local')
 
         # calculate the values
-        vert_ids = sorted(self.geom.triangle_vertices(tri))
-        a = self.extractor.data(data_type, (slice(None), vert_ids))
+        vert_ids, inverse = np.unique(self.geom.triangle_vertices(tri), return_inverse=True)
+        a = self.extractor.data(data_type, (slice(None), vert_ids))[:,inverse]
         vector = self.is_vector(data_type)
         if vector:
             data_x = (a[..., 0] * uvw).sum(axis=1)
