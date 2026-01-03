@@ -60,7 +60,7 @@ class TestPyMeshRegression(unittest.TestCase):
         self.assertTrue(is_close.all())
 
         # curtain outside mesh
-        # a = res.curtain(line_outside_mesh, 'z0', 1.).reset_index().to_numpy()
-        # b = load_comparison_data(f'{comp}_curtain_outside_mesh.data').reshape(a.shape)
-        # is_close = np.isclose(a, b, equal_nan=True)
-        # self.assertTrue(is_close.all())
+        a = res.curtain(line_outside_mesh, 'z0', 1.).reset_index().to_numpy()
+        b = load_comparison_data(f'{comp}_curtain_outside_mesh.data').reshape(a.shape)
+        is_close = np.isclose(a, b, equal_nan=True)
+        self.assertTrue(is_close.all())

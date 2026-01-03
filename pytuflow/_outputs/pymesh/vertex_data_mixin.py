@@ -173,16 +173,24 @@ class VertexDataMixin:
         ah = self.section(linestring, hdtype, time)
         val = self.section(linestring, data_type, time)
 
+        starts_dry = np.isnan(ah[0, 1])  # first point of line is dry/inactive/outside mesh
+
+        active = ~np.isnan(ah[:,1])
+        active_mask = np.array([[i, i, i, i] for i in range(0, points.shape[0] - 1)]).flatten()
+        if starts_dry:
+            active_mask = np.clip(active_mask + 1, None, points.shape[0] - 1)
+        active_idx = active[active_mask]
+
         x = points[:, 0]
         y = np.column_stack((ah[:, 1], az[:, 1])).flatten()
 
         proj_vector = np.array([])
         if self.is_vector(data_type):
-            proj_vector = self._project_vector(val[..., 1:], dir_).reshape(-1, 1, 2)
+            proj_vector = self._project_vector(val[..., 1:], dir_[active]).reshape(-1, 1, 2)
 
-        x_idx = np.array([[i, i + 1, i + 1, i] for i in range(0, points.shape[0] - 1)]).flatten()
-        y_idx = np.array([[i, i, i + 1, i + 1] for i in range(2, points.shape[0] * 2, 2)]).flatten()
-        val_idx = np.array([[i, i, i, i] for i in range(1, points.shape[0])]).flatten()
+        x_idx = np.array([[i, i + 1, i + 1, i] for i in range(0, points.shape[0] - 1)]).flatten()[active_idx]
+        y_idx = np.array([[i, i, i + 1, i + 1] for i in range(2, points.shape[0] * 2, 2)]).flatten()[active_idx]
+        val_idx = np.array([[i, i, i, i] for i in range(1, points.shape[0])]).flatten()[active_idx]
 
         if self.is_vector(data_type):
             curtain = np.concatenate(
