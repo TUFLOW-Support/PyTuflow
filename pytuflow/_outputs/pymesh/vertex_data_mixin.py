@@ -39,7 +39,7 @@ class VertexDataMixin:
             data_y = (a[..., 1] * uvw).sum(axis=1)
             data_point = (float(data_x[0]), float(data_y[0]))
         else:
-            data_point = float((a * uvw).sum(axis=1))
+            data_point = float((a * uvw).sum(axis=1)[0])
 
         return data_point
 
@@ -173,21 +173,16 @@ class VertexDataMixin:
         ah = self.section(linestring, hdtype, time)
         val = self.section(linestring, data_type, time)
 
-        keep = np.flatnonzero(np.diff(cell_ids, append=cell_ids.shape[0] - 1) != 0)
-        az = az[keep]
-        ah = ah[keep]
-        val = val[keep]
-
         x = points[:, 0]
-        y = np.concatenate((az[:, 1], ah[:, 1]))
+        y = np.column_stack((ah[:, 1], az[:, 1])).flatten()
 
         proj_vector = np.array([])
         if self.is_vector(data_type):
-            proj_vector = self._project_vector(val[..., 1:], dir_[keep]).reshape(-1, 1, 2)
+            proj_vector = self._project_vector(val[..., 1:], dir_).reshape(-1, 1, 2)
 
         x_idx = np.array([[i, i + 1, i + 1, i] for i in range(0, points.shape[0] - 1)]).flatten()
-        y_idx = np.array([[i, i, i + 1, i + 1] for i in range(0, points.shape[0] - 1)]).flatten()
-        val_idx = np.array([[i, i, i, i] for i in range(0, points.shape[0] - 1)]).flatten()
+        y_idx = np.array([[i, i, i + 1, i + 1] for i in range(2, points.shape[0] * 2, 2)]).flatten()
+        val_idx = np.array([[i, i, i, i] for i in range(1, points.shape[0])]).flatten()
 
         if self.is_vector(data_type):
             curtain = np.concatenate(

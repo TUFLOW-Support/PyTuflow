@@ -477,6 +477,12 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
         if self.cache.contains('curtain', data_type, time_index, self._linestring_as_wkt(line)):
             return self.cache.get('curtain', data_type, time_index, self._linestring_as_wkt(line))
 
+        if data_type.lower() == 'velocity' and not self.is_vector(data_type):
+            test = f'vector {data_type}'
+            test_a = {x.lower(): x for x in self.data_types()}
+            if test in test_a:
+                data_type = test_a[test]
+
         # check cache for line intersections, otherwise calculate
         if self.cache.contains('mesh_line', self._linestring_as_wkt(line)):
             cell_ids, acell, dir_, mid_cell_ids, amid, dir_mid = self.cache.get('mesh_line', self._linestring_as_wkt(line))

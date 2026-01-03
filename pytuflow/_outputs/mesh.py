@@ -418,7 +418,13 @@ class Mesh(MapOutput):
             for dtype in data_types:
                 if self._driver.DRIVER_SOURCE == 'python':
                     a = self._driver.curtain(line, dtype, time)
-                    df2 = pd.DataFrame(a, columns=['x', 'y', dtype])
+                    if a.shape[1] == 3:
+                        df2 = pd.DataFrame(a, columns=['x', 'y', dtype])
+                    else:
+                        a = a.reshape(-1, 6)
+                        df2 = pd.DataFrame(a[:,:2], columns=['x', 'y'])
+                        df2[dtype] = list(map(tuple, a[:,2:4].tolist()))
+                        df2[f'{dtype}_local'] = list(map(tuple, a[:,4:].tolist()))
                 else:
                     df2 = self._driver.curtain(line, dtype, time)
                 if df2.empty:
