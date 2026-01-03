@@ -631,9 +631,25 @@ class TestMeshRegression(unittest.TestCase):
             is_close = np.isclose(a, b, equal_nan=True)
             self.assertTrue(is_close.all())
 
+            # time series vector
+            a = res.time_series(point, 'vector velocity').reset_index().to_numpy()
+            # with open(f'{comp}_time_series_vec.data', 'wb') as f:
+            #     f.write(a.tobytes())
+            b = load_comparison_data(f'{comp}_time_series_vec.data').reshape(a.shape)
+            is_close = np.isclose(a, b, equal_nan=True)
+            self.assertTrue(is_close.all())
+
             # section
             a = res.section(line, 'water level', 1.).reset_index().to_numpy()
             b = load_comparison_data(f'{comp}_section.data').reshape(a.shape)
+            is_close = np.isclose(a, b, equal_nan=True)
+            self.assertTrue(is_close.all())
+
+            # section vector
+            a = res.section(line, 'vector velocity', 1.).reset_index().to_numpy()
+            # with open(f'{comp}_section_vec.data', 'wb') as f:
+            #     f.write(a.tobytes())
+            b = load_comparison_data(f'{comp}_section_vec.data').reshape(a.shape)
             is_close = np.isclose(a, b, equal_nan=True)
             self.assertTrue(is_close.all())
 
@@ -646,6 +662,14 @@ class TestMeshRegression(unittest.TestCase):
             # profile
             a = res.profile(point, 'velocity', 1.).reset_index().to_numpy()
             b = load_comparison_data(f'{comp}_profile.data').reshape(a.shape)
+            is_close = np.isclose(a, b, equal_nan=True)
+            self.assertTrue(is_close.all())
+
+            # profile vector
+            a = res.profile(point, 'vector velocity', 1.).reset_index().to_numpy()
+            # with open(f'{comp}_profile_vec.data', 'wb') as f:
+            #     f.write(a.tobytes())
+            b = load_comparison_data(f'{comp}_profile_vec.data').reshape(a.shape)
             is_close = np.isclose(a, b, equal_nan=True)
             self.assertTrue(is_close.all())
 
