@@ -35,11 +35,16 @@ class VertexDataMixin:
             a = self.extractor.data(data_type, (time_index, vert_ids))[inverse]
 
         if self.is_vector(data_type):
-            data_x = (a[..., 0] * uvw).sum(axis=1)
-            data_y = (a[..., 1] * uvw).sum(axis=1)
-            data_point = (float(data_x[0]), float(data_y[0]))
-        else:
-            data_point = float((a * uvw).sum(axis=1)[0])
+            mag = np.linalg.norm(a, axis=1).reshape(-1, 3)
+            mag = np.where(mag == 0, 1e-10, mag)  # avoid division by zero
+            norm = (a / mag[:, :, np.newaxis]).reshape(a.shape)
+            vec = np.array([(norm[..., 0] * uvw).sum(axis=1), (norm[..., 1] * uvw).sum(axis=1)])
+            mag1 = np.linalg.norm(vec)
+            mag1 = np.where(mag1 == 0, 1e-10, mag1)  # avoid division by zero
+            vec = vec / mag1 * (mag * uvw).sum(axis=1)
+            return tuple(vec.flatten().tolist())
+
+        data_point = float((a * uvw).sum(axis=1)[0])
 
         return data_point
 
@@ -55,11 +60,18 @@ class VertexDataMixin:
         # calculate the values
         vert_ids, inverse = np.unique(self.geom.triangle_vertices(tri), return_inverse=True)
         a = self.extractor.data(data_type, (slice(None), vert_ids))[:,inverse]
+
         vector = self.is_vector(data_type)
         if vector:
-            data_x = (a[..., 0] * uvw).sum(axis=1)
-            data_y = (a[..., 1] * uvw).sum(axis=1)
-            data = np.concatenate((data_x.reshape((-1, 1, 1)), data_y.reshape((-1, 1, 1))), axis=2)
+            mag = np.linalg.norm(a, axis=2).reshape(-1, 3)
+            mag = np.where(mag == 0, 1e-10, mag)  # avoid division by zero
+            norm = (a / mag[:, :, np.newaxis]).reshape(a.shape)
+            data_x = (norm[..., 0] * uvw).sum(axis=1)
+            data_y = (norm[..., 1] * uvw).sum(axis=1)
+            vec = np.concatenate((data_x.reshape((-1, 1, 1)), data_y.reshape((-1, 1, 1))), axis=2)
+            mag1 = np.linalg.norm(vec, axis=2)
+            mag1 = np.where(mag1 == 0, 1e-10, mag1)  # avoid division by zero
+            data = vec / mag1[:,:,np.newaxis] * (mag * uvw).sum(axis=1).reshape(-1, 1, 1)
         else:
             data = (a * uvw).sum(axis=1)
 
@@ -111,15 +123,21 @@ class VertexDataMixin:
         pos = self.geom.vertex_position(uvert, scope='local')[..., :2]
         if outside:
             pos[0, ...] = np.array([np.nan, np.nan])  # re-add outside points as nan
-            # pos = np.append([[np.nan, np.nan]], pos, axis=0)  # re-add outside points as nan
+
         pos = pos[inverse].reshape((-1, 6))
 
         # interpolate
         uvw = np.column_stack(barycentric_coord(points[:, 1:], pos[:, 0:2], pos[:, 2:4], pos[:, 4:6]))
         if vector:
-            vecx = (data[..., 0] * uvw).sum(axis=1)
-            vecy = (data[..., 1] * uvw).sum(axis=1)
-            values = np.concatenate((vecx.reshape(-1, 1, 1), vecy.reshape(-1, 1, 1)), axis=2)
+            mag = np.linalg.norm(data, axis=2).reshape(-1, 3)
+            mag = np.where(mag == 0, 1e-10, mag)  # avoid division by zero
+            norm = (data / mag[:, :, np.newaxis]).reshape(data.shape)
+            data_x = (norm[..., 0] * uvw).sum(axis=1)
+            data_y = (norm[..., 1] * uvw).sum(axis=1)
+            vec = np.concatenate((data_x.reshape((-1, 1, 1)), data_y.reshape((-1, 1, 1))), axis=2)
+            mag1 = np.linalg.norm(vec, axis=2)
+            mag1 = np.where(mag1 == 0, 1e-10, mag1)  # avoid division by zero
+            values = vec / mag1[:, :, np.newaxis] * (mag * uvw).sum(axis=1).reshape(-1, 1, 1)
         else:
             values = (data * uvw).sum(axis=1)
 
@@ -139,12 +157,12 @@ class VertexDataMixin:
         values[~active] = np.nan
 
         return np.append(
-            points[:, 0].reshape((-1, 1, 1) if vector else (-1, 1)),
-            values.reshape(-1, 1) if len(values.shape) == 1 else values,
-            axis=2 if vector else 1
+            points[:, 0].reshape((-1, 1, 1) if values.ndim > 2 else (-1, 1)),
+            values.reshape(-1, 1) if values.ndim == 1 else values,
+            axis=2 if values.ndim > 2 else 1
         )
 
-    def profile_from_vertex_data(self: 'PyMesh', point: PointLike, data_type: str, time_index: int) -> np.ndarray:
+    def profile_from_vertex_data(self: 'PyMesh', point: PointLike, data_type: str, time_index: int, return_type: str = 'scalar') -> np.ndarray:
         """Extract data along a vertical profile at a given point from mesh vertices."""
         # results on vertices or 2d results
         zdtype, hdtype = self._2d_to_3d_data_types(data_type)
@@ -154,8 +172,9 @@ class VertexDataMixin:
             return np.array([[z, np.nan], [z, np.nan]])
 
         value = self.data_point(point, data_type, time_index=time_index)
+
         if self.is_vector(data_type):
-            return np.array([[[z, value[0], value[1]]], [[h, value[0], value[1]]]])
+            return np.array([[[h, value[0], value[1]]], [[z, value[0], value[1]]]])
         return np.array([[h, value], [z, value]])
 
     def curtain_from_vertex_data(
