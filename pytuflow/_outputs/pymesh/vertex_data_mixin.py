@@ -55,6 +55,7 @@ class VertexDataMixin:
         # calculate the values
         vert_ids, inverse = np.unique(self.geom.triangle_vertices(tri), return_inverse=True)
         a = self.extractor.data(data_type, (slice(None), vert_ids))[:,inverse]
+
         vector = self.is_vector(data_type)
         if vector:
             data_x = (a[..., 0] * uvw).sum(axis=1)
@@ -111,7 +112,7 @@ class VertexDataMixin:
         pos = self.geom.vertex_position(uvert, scope='local')[..., :2]
         if outside:
             pos[0, ...] = np.array([np.nan, np.nan])  # re-add outside points as nan
-            # pos = np.append([[np.nan, np.nan]], pos, axis=0)  # re-add outside points as nan
+
         pos = pos[inverse].reshape((-1, 6))
 
         # interpolate
@@ -139,12 +140,12 @@ class VertexDataMixin:
         values[~active] = np.nan
 
         return np.append(
-            points[:, 0].reshape((-1, 1, 1) if vector else (-1, 1)),
-            values.reshape(-1, 1) if len(values.shape) == 1 else values,
-            axis=2 if vector else 1
+            points[:, 0].reshape((-1, 1, 1) if values.ndim > 2 else (-1, 1)),
+            values.reshape(-1, 1) if values.ndim == 1 else values,
+            axis=2 if values.ndim > 2 else 1
         )
 
-    def profile_from_vertex_data(self: 'PyMesh', point: PointLike, data_type: str, time_index: int) -> np.ndarray:
+    def profile_from_vertex_data(self: 'PyMesh', point: PointLike, data_type: str, time_index: int, return_type: str = 'scalar') -> np.ndarray:
         """Extract data along a vertical profile at a given point from mesh vertices."""
         # results on vertices or 2d results
         zdtype, hdtype = self._2d_to_3d_data_types(data_type)
@@ -154,8 +155,9 @@ class VertexDataMixin:
             return np.array([[z, np.nan], [z, np.nan]])
 
         value = self.data_point(point, data_type, time_index=time_index)
+
         if self.is_vector(data_type):
-            return np.array([[[z, value[0], value[1]]], [[h, value[0], value[1]]]])
+            return np.array([[[h, value[0], value[1]]], [[z, value[0], value[1]]]])
         return np.array([[h, value], [z, value]])
 
     def curtain_from_vertex_data(
