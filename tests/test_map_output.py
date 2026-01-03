@@ -96,6 +96,14 @@ class TestXMDF(unittest.TestCase):
             df = res.time_series(shp, 'vel')
             self.assertEqual((7, 2), df.shape)
 
+    def test_time_series_vec(self):
+        xmdf = './tests/xmdf/run.xmdf'
+        shp = './tests/xmdf/time_series_multi_point.shp'
+        with pyqgis():
+            res = XMDF(xmdf)
+            df = res.time_series(shp, 'vector velocity')
+            self.assertEqual((7, 2), df.shape)
+
     def test_section(self):
         xmdf = './tests/xmdf/run.xmdf'
         shp = './tests/xmdf/section_line.shp'
@@ -150,6 +158,14 @@ class TestXMDF(unittest.TestCase):
             res = XMDF(xmdf)
             line = [(0.5, 0.5), (1.5, 1.5)]
             df = res.section(line, 'max h', 0)
+            self.assertEqual((7, 2), df.shape)
+
+    def test_section_vec(self):
+        xmdf = './tests/xmdf/run.xmdf'
+        with pyqgis():
+            res = XMDF(xmdf)
+            line = [(0.5, 0.5), (1.5, 1.5)]
+            df = res.section(line, 'vector velocity', 0)
             self.assertEqual((7, 2), df.shape)
 
     def test_section_long(self):
@@ -222,6 +238,14 @@ class TestXMDF(unittest.TestCase):
         with pyqgis():
             res = XMDF(xmdf)
             df = res.profile(shp, 'vel', 0)
+            self.assertEqual((2, 2), df.shape)
+
+    def test_profile_vec(self):
+        xmdf = './tests/xmdf/run.xmdf'
+        shp = './tests/xmdf/time_series_point.shp'
+        with pyqgis():
+            res = XMDF(xmdf)
+            df = res.profile(shp, 'vector velocity', 0)
             self.assertEqual((2, 2), df.shape)
 
 
