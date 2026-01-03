@@ -10,7 +10,12 @@ if typing.TYPE_CHECKING:
 
 class VertexDataMixin:
 
-    def data_point_from_vertex_data(self: 'PyMesh', point: np.ndarray, data_type: str, time_index: int):
+    def data_point_from_vertex_data(self: 'PyMesh',
+                                    point: np.ndarray,
+                                    data_type: str,
+                                    time_index: int,
+                                    return_type: str
+                                    ) -> float | tuple[float, float]:
         """Returns the interpolated data value from mesh vertices at the given point."""
         tri = self.geom.find_containing_triangle(point, 'local')
         if tri == -1:
@@ -34,16 +39,23 @@ class VertexDataMixin:
         else:
             a = self.extractor.data(data_type, (time_index, vert_ids))[inverse]
 
-        if self.is_vector(data_type):
+        if self.is_vector(data_type) and return_type == 'vector':
             data_x = (a[..., 0] * uvw).sum(axis=1)
             data_y = (a[..., 1] * uvw).sum(axis=1)
             data_point = (float(data_x[0]), float(data_y[0]))
+        elif self.is_vector(data_type):
+            mag = np.linalg.norm(a, axis=1).reshape(-1, 3)
+            data_point = float((mag * uvw).sum(axis=1)[0])
         else:
             data_point = float((a * uvw).sum(axis=1)[0])
 
         return data_point
 
-    def time_series_from_vertex_data(self: 'PyMesh', point: np.ndarray, data_type: str) -> np.ndarray:
+    def time_series_from_vertex_data(self: 'PyMesh',
+                                     point: np.ndarray,
+                                     data_type: str,
+                                     return_type: str,
+                                     ) -> np.ndarray:
         """Timeseries call to get data from vertices at a given point."""
         tri = self.geom.find_containing_triangle(point, 'local')
         if tri == -1:
@@ -57,10 +69,13 @@ class VertexDataMixin:
         a = self.extractor.data(data_type, (slice(None), vert_ids))[:,inverse]
 
         vector = self.is_vector(data_type)
-        if vector:
+        if vector and return_type == 'vector':
             data_x = (a[..., 0] * uvw).sum(axis=1)
             data_y = (a[..., 1] * uvw).sum(axis=1)
             data = np.concatenate((data_x.reshape((-1, 1, 1)), data_y.reshape((-1, 1, 1))), axis=2)
+        elif vector:
+            mag = np.linalg.norm(a, axis=2)
+            data = (mag * uvw).sum(axis=1).reshape(-1, 1)
         else:
             data = (a * uvw).sum(axis=1)
 
@@ -76,7 +91,8 @@ class VertexDataMixin:
             cell_ids: np.ndarray,
             points: np.ndarray,
             data_type: str,
-            time_index: int
+            time_index: int,
+            return_type: str,
     ) -> np.ndarray:
         """Extract data along a section defined by a linestring from mesh vertices."""
         # results on vertices - use mid-points
@@ -117,10 +133,13 @@ class VertexDataMixin:
 
         # interpolate
         uvw = np.column_stack(barycentric_coord(points[:, 1:], pos[:, 0:2], pos[:, 2:4], pos[:, 4:6]))
-        if vector:
+        if vector and return_type == 'vector':
             vecx = (data[..., 0] * uvw).sum(axis=1)
             vecy = (data[..., 1] * uvw).sum(axis=1)
             values = np.concatenate((vecx.reshape(-1, 1, 1), vecy.reshape(-1, 1, 1)), axis=2)
+        elif vector:
+            mag = np.linalg.norm(data, axis=2)
+            values = (mag * uvw).sum(axis=1).reshape(-1, 1)
         else:
             values = (data * uvw).sum(axis=1)
 
@@ -145,7 +164,12 @@ class VertexDataMixin:
             axis=2 if values.ndim > 2 else 1
         )
 
-    def profile_from_vertex_data(self: 'PyMesh', point: PointLike, data_type: str, time_index: int, return_type: str = 'scalar') -> np.ndarray:
+    def profile_from_vertex_data(self: 'PyMesh',
+                                 point: PointLike,
+                                 data_type: str,
+                                 time_index: int,
+                                 return_type: str
+                                 ) -> np.ndarray:
         """Extract data along a vertical profile at a given point from mesh vertices."""
         # results on vertices or 2d results
         zdtype, hdtype = self._2d_to_3d_data_types(data_type)
@@ -154,9 +178,9 @@ class VertexDataMixin:
         if np.isnan(h):
             return np.array([[z, np.nan], [z, np.nan]])
 
-        value = self.data_point(point, data_type, time_index=time_index)
+        value = self.data_point(point, data_type, time_index=time_index, return_type=return_type)
 
-        if self.is_vector(data_type):
+        if self.is_vector(data_type) and return_type == 'vector':
             return np.array([[[h, value[0], value[1]]], [[z, value[0], value[1]]]])
         return np.array([[h, value], [z, value]])
 
@@ -173,7 +197,7 @@ class VertexDataMixin:
         zdtype, hdtype = self._2d_to_3d_data_types(data_type)
         az = self.section(linestring, zdtype, time)
         ah = self.section(linestring, hdtype, time)
-        val = self.section(linestring, data_type, time)
+        val = self.section(linestring, data_type, time, return_type='vector')
 
         starts_dry = np.isnan(ah[0, 1])  # first point of line is dry/inactive/outside mesh
 

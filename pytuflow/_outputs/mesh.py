@@ -495,7 +495,7 @@ class Mesh(MapOutput):
             df1 = pd.DataFrame()
             for dtype in data_types:
                 if self._driver.DRIVER_SOURCE == 'python':
-                    a = self._driver.profile(pnt, dtype, time, return_type='vector')
+                    a = self._driver.profile(pnt, dtype, time)
                     a = a.reshape(a.shape[0], -1)
                     if a.shape[1] > 2:
                         a = np.append(a[:, [0]], np.linalg.norm(a[:, 1:], axis=1).reshape(-1, 1), axis=1)

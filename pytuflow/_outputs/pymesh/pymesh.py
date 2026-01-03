@@ -238,7 +238,8 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
                    point: PointLike,
                    data_type: str, time: float = 0.,
                    time_index: int = -1,
-                   depth_averaging: str = 'sigma&0&1'
+                   depth_averaging: str = 'sigma&0&1',
+                   return_type: str = 'scalar',
                    ) -> float | tuple[float, float] | np.ndarray:
         """Extract the data at given point for the specified data type and time.
 
@@ -263,6 +264,11 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
             - `height`
             - `elevation`
             - `sigma` (default)
+        return_type : str, options
+            The return type of the data for vector results (has no effect on scalar results). Options are:
+
+            - `scalar` (default): returns the scalar value or magnitude of vector values.
+            - `vector`: returns the vector components as a tuple of floats.
 
         Returns
         -------
@@ -274,6 +280,10 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
         p = self.geom.trans.transform(self._coerce_into_point(point))
         wkt = self._point_as_wkt(point)
 
+        vector = self.on_vertex(data_type)
+        if not vector:
+            return_type = 'scalar'
+
         # time index
         if self.is_static(data_type):
             time_index = -1
@@ -281,21 +291,26 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
             time_index = time_index if time_index >= 0 else self._find_time_index(data_type, time)
 
         # check cache
-        if self.cache.contains('data_point', data_type, wkt, time_index, depth_averaging):
-            return self.cache.get('data_point', data_type, wkt, time_index, depth_averaging)
+        if self.cache.contains('data_point', data_type, wkt, time_index, return_type, depth_averaging):
+            return self.cache.get('data_point', data_type, wkt, time_index, return_type, depth_averaging)
 
         # get value
         if self.on_vertex(data_type):
-            data_point = self.data_point_from_vertex_data(p, data_type, time_index)
+            data_point = self.data_point_from_vertex_data(p, data_type, time_index, return_type)
         else:
             data_point = self.data_point_from_cell_data(p, data_type, time_index, depth_averaging)
 
         # save cache
-        self.cache.set(data_point, 'data_point', data_type, wkt, time_index, depth_averaging)
+        self.cache.set(data_point, 'data_point', data_type, wkt, time_index, return_type, depth_averaging)
 
         return data_point
 
-    def time_series(self, point: PointLike, data_type: str, depth_averaging: str = 'sigma&0&1') -> np.ndarray:
+    def time_series(self,
+                    point: PointLike,
+                    data_type: str,
+                    depth_averaging: str = 'sigma&0&1',
+                    return_type: str = 'scalar',
+                    ) -> np.ndarray:
         """"Returns time series information for the given point and data type.
 
         The returned array will be ``(N,2)`` for scalar data types and ``(N,1,3)`` for vector data types, where N
@@ -308,6 +323,20 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
             The point to extract the time series for.
         data_type : str
             The result type to extract the time series for.
+        depth_averaging : str, optional
+            The depth averaging method to use when extracting 3D data. Options are:
+
+            - `singlelevel`
+            - `multilevel`
+            - `depth`
+            - `height`
+            - `elevation`
+            - `sigma` (default)
+        return_type : str, options
+            The return type of the data for vector results (has no effect on scalar results). Options are:
+
+            - `scalar` (default): returns the scalar value or magnitude of vector values.
+            - `vector`: returns the vector components as a tuple of floats.
 
         Returns
         -------
@@ -321,13 +350,17 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
         p = self.geom.trans.transform(self._coerce_into_point(point))
         wkt = self._point_as_wkt(point)
 
+        vector = self.on_vertex(data_type)
+        if not vector:
+            return_type = 'scalar'
+
         # check cache
-        if self.cache.contains('time_series', data_type, wkt):
-            return self.cache.get('time_series', data_type, wkt)
+        if self.cache.contains('time_series', data_type, return_type, wkt):
+            return self.cache.get('time_series', data_type, return_type, wkt)
 
         # get data
         if self.on_vertex(data_type):
-            data = self.time_series_from_vertex_data(p, data_type)
+            data = self.time_series_from_vertex_data(p, data_type, return_type=return_type)
         else:
             data = self.time_series_from_cell_data(p, data_type, depth_averaging)
 
@@ -338,12 +371,18 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
         )
 
         # save cache
-        self.cache.set(time_series, 'time_series', data_type, wkt)
+        self.cache.set(time_series, 'time_series', data_type, return_type, wkt)
 
         return time_series
 
 
-    def section(self, line: LineStringLike, data_type: str, time: float, depth_averaging: str = 'sigma&0&1') -> np.ndarray:
+    def section(self,
+                line: LineStringLike,
+                data_type: str,
+                time: float,
+                depth_averaging: str = 'sigma&0&1',
+                return_type: str = 'scalar',
+                ) -> np.ndarray:
         """Returns section information for the given line and data type at the specified time.
 
         The returned array will be ``(N,2)`` for scalar data types and ``(N,1,3)`` for vector data types, where N
@@ -359,6 +398,20 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
         time : float
             The time to extract the data for. The time must match a timestep that exists within the
             dataset i.e. the routine will not look for the closest time, it will look for the time exactly.
+        depth_averaging : str, optional
+            The depth averaging method to use when extracting 3D data. Options are:
+
+            - `singlelevel`
+            - `multilevel`
+            - `depth`
+            - `height`
+            - `elevation`
+            - `sigma` (default)
+        return_type : str, options
+            The return type of the data for vector results (has no effect on scalar results). Options are:
+
+            - `scalar` (default): returns the scalar value or magnitude of vector values.
+            - `vector`: returns the vector components as a tuple of floats.
 
         Returns
         -------
@@ -371,9 +424,13 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
         # time index
         time_index = self._find_time_index(data_type, time)
 
+        vector = self.on_vertex(data_type)
+        if not vector:
+            return_type = 'scalar'
+
         # check cache for results
-        if self.cache.contains('section', data_type, time_index, self._linestring_as_wkt(line)):
-            return self.cache.get('section', data_type, time_index, self._linestring_as_wkt(line))
+        if self.cache.contains('section', data_type, time_index, return_type, self._linestring_as_wkt(line)):
+            return self.cache.get('section', data_type, time_index, return_type, self._linestring_as_wkt(line))
 
         # check cache for line intersections, otherwise calculate
         if self.cache.contains('mesh_line', self._linestring_as_wkt(line)):
@@ -388,12 +445,12 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
 
         # get data
         if self.on_vertex(data_type):
-            section = self.section_from_vertex_data(mid_cell_ids, amid, data_type, time_index)
+            section = self.section_from_vertex_data(mid_cell_ids, amid, data_type, time_index, return_type)
         else:
             section = self.section_from_cell_data(cell_ids, acell, data_type, time_index, depth_averaging)
 
         # save cache
-        self.cache.set(section, 'section', data_type, time_index, self._linestring_as_wkt(line))
+        self.cache.set(section, 'section', data_type, time_index, return_type, self._linestring_as_wkt(line))
 
         return section
 
@@ -414,6 +471,11 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
             The time to extract the data for. The time must match a timestep that exists within the
             dataset i.e. the routine will not look for the closest time, it will look for
             the time exactly.
+        return_type : str, options
+            The return type of the data for vector results (has no effect on scalar results). Options are:
+
+            - `scalar` (default): returns the scalar value or magnitude of vector values.
+            - `vector`: returns the vector components as a tuple of floats.
 
         Returns
         -------
@@ -426,18 +488,22 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
         # time index
         time_index = self._find_time_index(data_type, time)
 
+        vector = self.on_vertex(data_type)
+        if not vector:
+            return_type = 'scalar'
+
         # check cache
-        if self.cache.contains('profile', data_type, time_index, self._point_as_wkt(p)):
-            return self.cache.get('profile', data_type, time_index, self._point_as_wkt(p))
+        if self.cache.contains('profile', data_type, time_index, return_type, self._point_as_wkt(p)):
+            return self.cache.get('profile', data_type, time_index, return_type, self._point_as_wkt(p))
 
         # get data
         if self.on_vertex(data_type):
-            data = self.profile_from_vertex_data(point, data_type, time_index)
+            data = self.profile_from_vertex_data(point, data_type, time_index, return_type)
         else:
             data = self.profile_from_cell_data(p, data_type, time_index)
 
         # save cache
-        self.cache.set(data, 'profile', data_type, time_index, self._point_as_wkt(p))
+        self.cache.set(data, 'profile', data_type, time_index, return_type, self._point_as_wkt(p))
 
         return data
 
