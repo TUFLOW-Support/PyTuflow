@@ -332,9 +332,9 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
             data = self.time_series_from_cell_data(p, data_type, depth_averaging)
 
         time_series = np.append(
-            self.times(data_type).reshape((-1, 1, 1) if self.is_vector(data_type) else (-1, 1)),
-            data.reshape(-1, 1) if len(data.shape) == 1 else data,
-            axis=2 if self.is_vector(data_type) else 1
+            self.times(data_type).reshape((-1, 1, 1) if data.ndim > 2 else (-1, 1)),
+            data.reshape(-1, 1) if data.ndim == 1 else data,
+            axis=2 if data.ndim > 2 else 1
         )
 
         # save cache
@@ -397,7 +397,7 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
 
         return section
 
-    def profile(self, point: PointLike, data_type: str, time: float) -> np.ndarray:
+    def profile(self, point: PointLike, data_type: str, time: float, return_type: str = 'scalar') -> np.ndarray:
         """Returns the vertical profile at the given point for the specified data type and time.
 
         The returned array will be ``(N,2)`` for scalar results and ``(N,1,3)`` for vector results, where N is the number
