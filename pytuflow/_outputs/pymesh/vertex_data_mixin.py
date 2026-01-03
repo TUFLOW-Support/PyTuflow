@@ -35,16 +35,11 @@ class VertexDataMixin:
             a = self.extractor.data(data_type, (time_index, vert_ids))[inverse]
 
         if self.is_vector(data_type):
-            mag = np.linalg.norm(a, axis=1).reshape(-1, 3)
-            mag = np.where(mag == 0, 1e-10, mag)  # avoid division by zero
-            norm = (a / mag[:, :, np.newaxis]).reshape(a.shape)
-            vec = np.array([(norm[..., 0] * uvw).sum(axis=1), (norm[..., 1] * uvw).sum(axis=1)])
-            mag1 = np.linalg.norm(vec)
-            mag1 = np.where(mag1 == 0, 1e-10, mag1)  # avoid division by zero
-            vec = vec / mag1 * (mag * uvw).sum(axis=1)
-            return tuple(vec.flatten().tolist())
-
-        data_point = float((a * uvw).sum(axis=1)[0])
+            data_x = (a[..., 0] * uvw).sum(axis=1)
+            data_y = (a[..., 1] * uvw).sum(axis=1)
+            data_point = (float(data_x[0]), float(data_y[0]))
+        else:
+            data_point = float((a * uvw).sum(axis=1)[0])
 
         return data_point
 
@@ -63,15 +58,9 @@ class VertexDataMixin:
 
         vector = self.is_vector(data_type)
         if vector:
-            mag = np.linalg.norm(a, axis=2).reshape(-1, 3)
-            mag = np.where(mag == 0, 1e-10, mag)  # avoid division by zero
-            norm = (a / mag[:, :, np.newaxis]).reshape(a.shape)
-            data_x = (norm[..., 0] * uvw).sum(axis=1)
-            data_y = (norm[..., 1] * uvw).sum(axis=1)
-            vec = np.concatenate((data_x.reshape((-1, 1, 1)), data_y.reshape((-1, 1, 1))), axis=2)
-            mag1 = np.linalg.norm(vec, axis=2)
-            mag1 = np.where(mag1 == 0, 1e-10, mag1)  # avoid division by zero
-            data = vec / mag1[:,:,np.newaxis] * (mag * uvw).sum(axis=1).reshape(-1, 1, 1)
+            data_x = (a[..., 0] * uvw).sum(axis=1)
+            data_y = (a[..., 1] * uvw).sum(axis=1)
+            data = np.concatenate((data_x.reshape((-1, 1, 1)), data_y.reshape((-1, 1, 1))), axis=2)
         else:
             data = (a * uvw).sum(axis=1)
 
@@ -129,15 +118,9 @@ class VertexDataMixin:
         # interpolate
         uvw = np.column_stack(barycentric_coord(points[:, 1:], pos[:, 0:2], pos[:, 2:4], pos[:, 4:6]))
         if vector:
-            mag = np.linalg.norm(data, axis=2).reshape(-1, 3)
-            mag = np.where(mag == 0, 1e-10, mag)  # avoid division by zero
-            norm = (data / mag[:, :, np.newaxis]).reshape(data.shape)
-            data_x = (norm[..., 0] * uvw).sum(axis=1)
-            data_y = (norm[..., 1] * uvw).sum(axis=1)
-            vec = np.concatenate((data_x.reshape((-1, 1, 1)), data_y.reshape((-1, 1, 1))), axis=2)
-            mag1 = np.linalg.norm(vec, axis=2)
-            mag1 = np.where(mag1 == 0, 1e-10, mag1)  # avoid division by zero
-            values = vec / mag1[:, :, np.newaxis] * (mag * uvw).sum(axis=1).reshape(-1, 1, 1)
+            vecx = (data[..., 0] * uvw).sum(axis=1)
+            vecy = (data[..., 1] * uvw).sum(axis=1)
+            values = np.concatenate((vecx.reshape(-1, 1, 1), vecy.reshape(-1, 1, 1)), axis=2)
         else:
             values = (data * uvw).sum(axis=1)
 
