@@ -32,11 +32,19 @@ def multi_level(levels: list[int] | np.ndarray, zlevels: np.ndarray, values: np.
         diff = np.flip(diff, axis=1)
         values = np.flip(values, axis=1)
 
-    # build mask for row slices
-    cols = np.arange(Z - 1)
+    valid = ~np.isnan(values)
+    first_idx = np.argmax(valid, axis=1)
+    has_valid = valid.any(axis=1)
+    range_ = np.arange(Z - 1)
+    cols = np.full(values.shape, -1)
+    cols[has_valid] = np.where(
+        range_ >= first_idx[has_valid, None],
+        range_ - first_idx[has_valid, None],
+        -1
+    )
 
     # row-slice mask
-    slice_mask = (cols[None, :] >= idx1[:, None]) & (cols[None, :] <= idx2[:, None])
+    slice_mask = (cols >= idx1[:, None]) & (cols <= idx2[:, None])
 
     weights = diff * slice_mask
     numerator = (weights * np.nan_to_num(values, nan=0.)).sum(axis=1)
