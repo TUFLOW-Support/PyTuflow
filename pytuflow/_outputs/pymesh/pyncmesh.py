@@ -22,9 +22,10 @@ class PyNCMesh(PyMesh):
                 break
 
     def translate_data_type(self, data_type: str) -> tuple[str, ...]:
-        if data_type.lower() == 'v':
+        data_type = super().translate_data_type(data_type)
+        if len(data_type) == 1 and data_type[0].lower() == 'v':
             return 'V_x', 'V_y'
-        return super().translate_data_type(data_type)
+        return data_type
 
     def on_vertex(self, data_type: str) -> bool:
         if data_type.lower() == 'bed elevation':

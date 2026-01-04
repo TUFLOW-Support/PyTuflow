@@ -27,9 +27,9 @@ class PyNCMeshDataExtractor(PyDataExtractor):
     ]
 
     def __init__(self, fpath: str | Path, engine: str = None):
-        if (H5Engine.available() and engine is None) or engine.lower() == 'h5py':
+        if (H5Engine.available() and engine is None) or (engine and engine.lower() == 'h5py'):
             self.engine = H5Engine(fpath)
-        elif (NCEngine.available() and engine is None) or engine.lower() == 'netcdf4':
+        elif (NCEngine.available() and engine is None) or (engine and engine.lower() == 'netcdf4'):
             self.engine = NCEngine(fpath)
         else:
             raise ImportError('Unable to find a library for reading NCMesh files. Require NetCDF4 of h5py.')

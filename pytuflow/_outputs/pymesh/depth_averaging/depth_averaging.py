@@ -201,7 +201,7 @@ def elevation(elev: list[float], zlevels: np.ndarray, values: np.ndarray) -> np.
         r = rows[start_valid]
         c = idx1[start_valid]
         # thickness of upper partial layer
-        diff[r, c] = e_top[start_valid] - layer_bottom[r, c]
+        diff[r, c] = np.minimum(e_top[start_valid] - layer_bottom[r, c], diff[r, c])
 
     # For lower boundary: only rows with a valid include and idx2 >= 0
     end_valid = (idx2 >= 0) & valid_domain

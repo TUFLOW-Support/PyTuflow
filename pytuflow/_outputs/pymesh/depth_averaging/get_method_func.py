@@ -6,6 +6,8 @@ from .depth_averaging import single_level, multi_level, depth, elevation, sigma
 
 
 def get_method_func(uri: str) -> typing.Callable:
+    if uri is None:
+        uri = 'sigma&0.0&1.0'
     if '?' in uri:
         method, uri = uri.split('?')
         dir_, uri = uri.split('&', 1)

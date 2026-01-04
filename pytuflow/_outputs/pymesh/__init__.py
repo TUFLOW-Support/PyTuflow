@@ -2,6 +2,7 @@ from .geom import PointMixin, LineStringMixin, PointLike, LineStringLike
 from .barycentric import barycentric_coord
 from .data_cache import Cache
 from .transform import Transform2D
+from .proj_transformer import proj_transformer
 from .bbox import Bbox2D
 
 from . import depth_averaging

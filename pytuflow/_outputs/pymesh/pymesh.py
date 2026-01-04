@@ -63,6 +63,10 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
         tuple[str, ...]
             The translated data type(s). Returned as a tuple since vectors may require multiple data types.
         """
+        from ..map_output import MapOutput
+        dtype = MapOutput._get_standard_data_type_name(data_type)
+        dtype = [x for x in self.data_types() if MapOutput._get_standard_data_type_name(x) == dtype]
+        data_type = dtype[0] if dtype else data_type
         if not self._cached_data_types:
             self._cached_data_types = {x.lower(): x for x in self.data_types()}
         data_type = self._cached_data_types.get(data_type.lower(), data_type)
@@ -354,9 +358,11 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
         if not vector:
             return_type = 'scalar'
 
+        depth_averaging = depth_averaging if self.is_3d(data_type) else None
+
         # check cache
-        if self.cache.contains('time_series', data_type, return_type, wkt):
-            return self.cache.get('time_series', data_type, return_type, wkt)
+        if self.cache.contains('time_series', data_type, return_type, depth_averaging, wkt):
+            return self.cache.get('time_series', data_type, return_type, depth_averaging, wkt)
 
         # get data
         if self.on_vertex(data_type):
@@ -371,7 +377,7 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
         )
 
         # save cache
-        self.cache.set(time_series, 'time_series', data_type, return_type, wkt)
+        self.cache.set(time_series, 'time_series', data_type, return_type, depth_averaging, wkt)
 
         return time_series
 
@@ -423,24 +429,27 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
 
         # time index
         time_index = self._find_time_index(data_type, time)
+        wkt = self._linestring_as_wkt(line)
 
         vector = self.on_vertex(data_type)
         if not vector:
             return_type = 'scalar'
 
+        depth_averaging = depth_averaging if self.is_3d(data_type) else None
+
         # check cache for results
-        if self.cache.contains('section', data_type, time_index, return_type, self._linestring_as_wkt(line)):
-            return self.cache.get('section', data_type, time_index, return_type, self._linestring_as_wkt(line))
+        if self.cache.contains('section', data_type, time_index, return_type, depth_averaging, wkt):
+            return self.cache.get('section', data_type, time_index, return_type, depth_averaging, wkt)
 
         # check cache for line intersections, otherwise calculate
-        if self.cache.contains('mesh_line', self._linestring_as_wkt(line)):
-            cell_ids, acell, _, mid_cell_ids, amid, _ = self.cache.get('mesh_line', self._linestring_as_wkt(line))
+        if self.cache.contains('mesh_line', wkt):
+            cell_ids, acell, _, mid_cell_ids, amid, _ = self.cache.get('mesh_line', wkt)
         else:
             cell_ids, acell, dir_, mid_cell_ids, amid, dir_mid = self.geom.mesh_line(line)
             self.cache.set(
                 (cell_ids, acell, dir_, mid_cell_ids, amid, dir_mid),
                 'mesh_line',
-                self._linestring_as_wkt(line)
+                wkt
             )
 
         # get data
@@ -450,7 +459,7 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
             section = self.section_from_cell_data(cell_ids, acell, data_type, time_index, depth_averaging)
 
         # save cache
-        self.cache.set(section, 'section', data_type, time_index, return_type, self._linestring_as_wkt(line))
+        self.cache.set(section, 'section', data_type, time_index, return_type, depth_averaging, wkt)
 
         return section
 

@@ -12,6 +12,8 @@ from .helpers.mesh_driver_nc_nc import NCMeshDriverNC
 from .mesh import Mesh
 from .._pytuflow_types import PathLike
 
+from .pymesh import PyNCMesh
+
 
 class NCMesh(Mesh):
     """Class for handling TUFLOW FV style output files.
@@ -129,10 +131,14 @@ class NCMesh(Mesh):
 
     def __init__(self, fpath: PathLike):
         super().__init__(fpath)
-        self._driver = QgisNcMeshDriver(self.fpath)
-        self._soft_load_driver = NCMeshDriverNC(self.fpath)
-        if self._soft_load_driver.valid:
-            self._driver.spherical = self._soft_load_driver.spherical
+        if PyNCMesh.available():
+            self._driver = PyNCMesh(self.fpath)
+            self._soft_load_driver = self._driver
+        else:
+            self._driver = QgisNcMeshDriver(self.fpath)
+            self._soft_load_driver = NCMeshDriverNC(self.fpath)
+            if self._soft_load_driver.valid:
+                self._driver.spherical = self._soft_load_driver.spherical
         self._initial_load()
 
     @staticmethod
