@@ -720,7 +720,7 @@ class TestMeshRegression(unittest.TestCase):
         p = './tests/nc_mesh/EST000_3D_001.nc'
         point = './tests/nc_mesh/ncmesh_point_longlat.shp'
         line = './tests/nc_mesh/ncmesh_line_longlat.shp'
-        line_outside_mesh = './tests/xmdf/xmdf_line_outside_mesh.shp'
+        line_outside_mesh = './tests/nc_mesh/ncmesh_line_longlat_outside_mesh.shp'
         comp = './tests/regression_test_comparisons/test_qgis_cell_mesh_latlong'
         with pyqgis():
             res = NCMesh(p)
@@ -855,6 +855,14 @@ class TestMeshRegression(unittest.TestCase):
             is_close = np.isclose(a, b, equal_nan=True)
             self.assertTrue(is_close.all())
 
+            # section outside mesh
+            a = res.section(line_outside_mesh, 'salinity', 186969).reset_index().to_numpy()
+            # with open(f'{comp}_section_outside_mesh.data', 'wb') as f:
+            #     f.write(a.tobytes())
+            b = load_comparison_data(f'{comp}_section_outside_mesh.data').reshape(a.shape)
+            is_close = np.isclose(a, b, equal_nan=True)
+            self.assertTrue(is_close.all())
+
             # profile
             a = res.profile(point, 'salinity', 186969).reset_index().to_numpy()
             # with open(f'{comp}_profile.data', 'wb') as f:
@@ -885,14 +893,6 @@ class TestMeshRegression(unittest.TestCase):
             # with open(f'{comp}_curtain_vec.data', 'wb') as f:
             #     f.write(a.tobytes())
             b = load_comparison_data(f'{comp}_curtain_vec.data').reshape(a.shape)
-            is_close = np.isclose(a, b, equal_nan=True)
-            self.assertTrue(is_close.all())
-
-            # section outside mesh
-            a = res.section(line_outside_mesh, 'salinity', 186969).reset_index().to_numpy()
-            # with open(f'{comp}_section_outside_mesh.data', 'wb') as f:
-            #     f.write(a.tobytes())
-            b = load_comparison_data(f'{comp}_section_outside_mesh.data').reshape(a.shape)
             is_close = np.isclose(a, b, equal_nan=True)
             self.assertTrue(is_close.all())
 

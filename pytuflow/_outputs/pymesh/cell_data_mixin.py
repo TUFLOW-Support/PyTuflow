@@ -149,7 +149,10 @@ class CellDataMixin:
         data[~wd, ...] = np.nan
         data = data[inverse]
 
-        data = np.repeat(data[:-1,...], 2, axis=0)
+        if cell_ids[-1] == -1:
+            data = np.append(np.repeat(data[:-2,...], 2, axis=0), [np.nan, np.nan], axis=0)
+        else:
+            data = np.repeat(data[:-1,...], 2, axis=0)
         offset = np.repeat(points[:,[0]], 2, axis=0)[1:-1,...]
 
         return np.append(
