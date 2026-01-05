@@ -68,7 +68,7 @@ class GPKGRL(GPKG2D):
     """
 
     DOMAIN_TYPES = {'rl': ['rl', '0d']}
-    GEOMETRY_TYPES = {'point': ['point'], 'line': ['line'], 'polygon': ['polygon', 'region']}
+    GEOMETRY_TYPES = {'point': ['point'], 'line': ['line'], 'polygon': ['polygon', 'region', 'poly']}
     ATTRIBUTE_TYPES = {}
     ID_COLUMNS = ['id']
 

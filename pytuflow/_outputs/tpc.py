@@ -90,7 +90,7 @@ class TPC(INFO, ITimeSeries2D):
     """
 
     DOMAIN_TYPES = {'1d': ['1d'], '2d': ['2d', 'po'], 'rl': ['rl', '0d']}
-    GEOMETRY_TYPES = {'point': ['point'], 'line': ['line'], 'polygon': ['polygon', 'region']}
+    GEOMETRY_TYPES = {'point': ['point'], 'line': ['line'], 'polygon': ['polygon', 'region', 'poly']}
     ATTRIBUTE_TYPES = {}
     ID_COLUMNS = ['id']
 
