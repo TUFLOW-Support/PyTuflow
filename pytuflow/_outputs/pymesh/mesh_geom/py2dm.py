@@ -90,7 +90,7 @@ class Py2dm(PyMeshGeometry, GeometryLazyLoadMixin, VTKGeometryMixin):
         return nds.to_numpy('f8')
 
     @staticmethod
-    def load_cells(df: pd.DataFrame) -> tuple[np.ndarray, np.ndarray]:
+    def load_cells(df: pd.DataFrame) -> pd.DataFrame:
         """Loads the cells/primitives from the raw 2dm dataframe.
 
         Parameters
@@ -100,27 +100,17 @@ class Py2dm(PyMeshGeometry, GeometryLazyLoadMixin, VTKGeometryMixin):
 
         Returns
         -------
-        tuple[np.ndarray, np.ndarray]
-            The quads and triangles cell arrays.
+        pd.DataFrame
         """
         fortran_indexing = df[df['A'] == 'ND']['B'].min() == 1
-
-        quads = df[df['A'] == 'E4Q'][['B', 'C', 'D', 'E', 'F']].rename(
-            columns={'B': 'ind', 'C': 'n1', 'D': 'n2', 'E': 'n3', 'F': 'n4'})
-        if not quads.empty:
-            quads[['ind', 'n1', 'n2', 'n3', 'n4']] = quads[['ind', 'n1', 'n2', 'n3', 'n4']].astype(int)
-            if fortran_indexing:
-                quads[['ind', 'n1', 'n2', 'n3', 'n4']] = quads[['ind', 'n1', 'n2', 'n3', 'n4']] - 1
-            quads.set_index('ind', inplace=True)
-
-        tris = df[df['A'] == 'E3T'][['B', 'C', 'D', 'E', 'F']].rename(
-            columns={'B': 'ind', 'C': 'n1', 'D': 'n2', 'E': 'n3'})
-        tris[['ind', 'n1', 'n2', 'n3']] = tris[['ind', 'n1', 'n2', 'n3']].astype(int)
-        if fortran_indexing:
-            tris[['ind', 'n1', 'n2', 'n3']] = tris[['ind', 'n1', 'n2', 'n3']] - 1
-            tris = tris.set_index('ind').drop(columns=['F'])
-
-        return quads.reset_index().to_numpy(dtype='i8'), tris.reset_index().to_numpy(dtype='i8')
+        cells = df[df['A'].isin(['E4Q', 'E3T'])][['A', 'B', 'C', 'D', 'E', 'F']].rename(
+            columns={'A': 'shape', 'B': 'ind', 'C': 'n1', 'D': 'n2', 'E': 'n3', 'F': 'n4'}
+        )
+        tri = cells['shape'] == 'E3T'
+        cells.loc[tri, 'n4'] = -1
+        cells = cells.drop(columns=['shape'])
+        cells = cells.astype('i8') - 1 if fortran_indexing else cells.astype('i8')
+        return cells.set_index('ind')
 
     def tuflow_grid_bbox(self, output_cell_size: float) -> Bbox2D:
         # only supports TUFLOW Classic/HPC and only if "Grid Output Origin == Origin" (which is not the default)
@@ -161,25 +151,17 @@ class Py2dm(PyMeshGeometry, GeometryLazyLoadMixin, VTKGeometryMixin):
     def _load(self):
         """Loads and processes the 2dm file: loads nodes, quads, triangles, and converts to local coordinates."""
         df = self.read_2dm_file(self.fpath)
+
         self._vertices = self.load_nodes(df)
-        quads, tris = self.load_cells(df)
+        self._cells_df = self.load_cells(df)
 
-        df_quads = pd.DataFrame(quads, columns=['cell_id', 'n1', 'n2', 'n3', 'n4'])
-        df_quads.insert(0, 'nnode', 4)
-
-        df_tris = pd.DataFrame(tris, columns=['cell_id', 'n1', 'n2', 'n3'])
-        df_tris['n4'] = -1
-        df_tris.insert(0, 'nnode', 3)
-
-        self._cells_df = (
-            pd.concat([df_quads, df_tris])
-            .set_index('cell_id')
-            .sort_index()
-        )
-
+        self._cells_df.insert(0, 'nnode', 4)
+        self._cells_df.loc[self._cells_df['n4'] == -1, 'nnode'] = 3
         self._cells = self._flatten_cells(self._cells_df)
 
-        self._triangles, self._cell2triangle = self.create_triangles(quads, tris)  # everything as a triangle
+        quads = self._cells_df.loc[self._cells_df['n4'] != -1, ['n1', 'n2', 'n3', 'n4']].reset_index().to_numpy()
+        tris = self._cells_df.loc[self._cells_df['n4'] == -1, ['n1', 'n2', 'n3']].reset_index().to_numpy()
+        self._triangles, self._cell2triangle = self.create_triangles(quads, tris)
 
         self._global_bbox.update_extents(self._vertices)
         self._trans = Transform2D(translate=(-self._global_bbox.x.min, -self._global_bbox.y.min))

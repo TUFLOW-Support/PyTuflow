@@ -60,8 +60,8 @@ class PyNCMeshGeometry(PyMeshGeometry, GeometryLazyLoadMixin, VTKGeometryMixin):
             self._cells_df.loc[self._cells_df['n4'] == -1, 'nnode'] = 3
             self._cells = self._flatten_cells(self._cells_df)
 
-            quads = self._cells_df.loc[self._cells_df['n4'] != -1, ['nnode', 'n1', 'n2', 'n3', 'n4']].to_numpy()
-            tris = self._cells_df.loc[self._cells_df['n4'] == -1, ['nnode', 'n1', 'n2', 'n3']].to_numpy()
+            quads = self._cells_df.loc[self._cells_df['n4'] != -1, ['n1', 'n2', 'n3', 'n4']].reset_index().to_numpy()
+            tris = self._cells_df.loc[self._cells_df['n4'] == -1, ['n1', 'n2', 'n3']].reset_index().to_numpy()
             self._triangles, self._cell2triangle = self.create_triangles(quads, tris)
 
             self._global_bbox.update_extents(self._vertices)
