@@ -225,9 +225,16 @@ class Transform2D:
         """
         if not self.proj_transformer:
             return points
+        is_point = False
         if points.ndim == 1:
-            points = points.reshape(-1, 2)
-        return self.proj_transformer(points.astype(self.dtype))
+            is_point = True
+            # pyproj throws a numpy warning with points currently so turn into line temporarily
+            # - remove later if fixed in pyproj
+            points = np.repeat(points.reshape(-1, 2), 2, axis=0)
+        ret = self.proj_transformer(points.astype(self.dtype))
+        if is_point:
+            return ret[0]
+        return ret
 
     @staticmethod
     def _matrix_operation(trans: np.ndarray, points: np.ndarray) -> pd.DataFrame:
