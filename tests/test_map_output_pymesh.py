@@ -197,7 +197,7 @@ class TestPyMeshRegression(unittest.TestCase):
         # self.assertTrue(is_close_offset.all())
         # self.assertTrue(is_close_val.all())
         #
-        a = res.section(line, 'salinity', 186969, averaging_method='sigma&0.1&0.9').reset_index().to_numpy()
+        # a = res.section(line, 'salinity', 186969, averaging_method='sigma&0.1&0.9').reset_index().to_numpy()
         # b = load_comparison_data(f'{comp}_section_sigma_01_09.data').reshape(a.shape)
         # is_close_offset = np.isclose(a[:, 1], b[:, 1], atol=1, equal_nan=True)
         # is_close_val = np.isclose(a[:, 2], b[:, 2], equal_nan=True)

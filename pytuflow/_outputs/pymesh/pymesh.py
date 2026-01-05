@@ -32,6 +32,7 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
         self.reference_time = datetime(1970, 1, 1, tzinfo=timezone.utc)
 
         self._cached_data_types = {}
+        self._data_types = []
 
     def __repr__(self) -> str:
         return f'<{self.__class__.__name__} {self.name}>'
@@ -100,7 +101,9 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
         list[str]
             A list of available data types in the mesh object.
         """
-        return ['Bed Elevation'] + self.extractor.data_types() if self.geom.has_z else self.extractor.data_types()
+        if not self._data_types:
+            self._data_types = ['Bed Elevation'] + self.extractor.data_types() if self.geom.has_z else self.extractor.data_types()
+        return self._data_types
 
     def reference_time_(self, data_type: str) -> datetime:
         """Returns the reference time for the given data type. Will return None if the dataset does
@@ -284,7 +287,7 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
         p = self.geom.trans.transform(self._coerce_into_point(point))
         wkt = self._point_as_wkt(point)
 
-        vector = self.on_vertex(data_type)
+        vector = self.is_vector(data_type)
         if not vector:
             return_type = 'scalar'
 
@@ -354,7 +357,7 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
         p = self.geom.trans.transform(self._coerce_into_point(point))
         wkt = self._point_as_wkt(point)
 
-        vector = self.on_vertex(data_type)
+        vector = self.is_vector(data_type)
         if not vector:
             return_type = 'scalar'
 
@@ -424,44 +427,45 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
         np.ndarray
             An array containing the extracted section data.
         """
-        # coerce line
-        line = self._coerce_into_line(line)
+        with self.extractor.open():
+            # coerce line
+            line = self._coerce_into_line(line)
 
-        # time index
-        time_index = self._find_time_index(data_type, time)
-        wkt = self._linestring_as_wkt(line)
+            # time index
+            time_index = self._find_time_index(data_type, time)
+            wkt = self._linestring_as_wkt(line)
 
-        vector = self.on_vertex(data_type)
-        if not vector:
-            return_type = 'scalar'
+            vector = self.is_vector(data_type)
+            if not vector:
+                return_type = 'scalar'
 
-        depth_averaging = depth_averaging if self.is_3d(data_type) else None
+            depth_averaging = depth_averaging if self.is_3d(data_type) else None
 
-        # check cache for results
-        if self.cache.contains('section', data_type, time_index, return_type, depth_averaging, wkt):
-            return self.cache.get('section', data_type, time_index, return_type, depth_averaging, wkt)
+            # check cache for results
+            if self.cache.contains('section', data_type, time_index, return_type, depth_averaging, wkt):
+                return self.cache.get('section', data_type, time_index, return_type, depth_averaging, wkt)
 
-        # check cache for line intersections, otherwise calculate
-        if self.cache.contains('mesh_line', wkt):
-            cell_ids, acell, _, mid_cell_ids, amid, _ = self.cache.get('mesh_line', wkt)
-        else:
-            cell_ids, acell, dir_, mid_cell_ids, amid, dir_mid = self.geom.mesh_line(line)
-            self.cache.set(
-                (cell_ids, acell, dir_, mid_cell_ids, amid, dir_mid),
-                'mesh_line',
-                wkt
-            )
+            # check cache for line intersections, otherwise calculate
+            if self.cache.contains('mesh_line', wkt):
+                cell_ids, acell, _, mid_cell_ids, amid, _ = self.cache.get('mesh_line', wkt)
+            else:
+                cell_ids, acell, dir_, mid_cell_ids, amid, dir_mid = self.geom.mesh_line(line)
+                self.cache.set(
+                    (cell_ids, acell, dir_, mid_cell_ids, amid, dir_mid),
+                    'mesh_line',
+                    wkt
+                )
 
-        # get data
-        if self.on_vertex(data_type):
-            section = self.section_from_vertex_data(mid_cell_ids, amid, data_type, time_index, return_type)
-        else:
-            section = self.section_from_cell_data(cell_ids, acell, data_type, time_index, depth_averaging)
+            # get data
+            if self.on_vertex(data_type):
+                section = self.section_from_vertex_data(mid_cell_ids, amid, data_type, time_index, return_type)
+            else:
+                section = self.section_from_cell_data(cell_ids, acell, data_type, time_index, depth_averaging)
 
-        # save cache
-        self.cache.set(section, 'section', data_type, time_index, return_type, depth_averaging, wkt)
+            # save cache
+            self.cache.set(section, 'section', data_type, time_index, return_type, depth_averaging, wkt)
 
-        return section
+            return section
 
     def profile(self, point: PointLike, data_type: str, time: float, return_type: str = 'scalar') -> np.ndarray:
         """Returns the vertical profile at the given point for the specified data type and time.
@@ -497,7 +501,7 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
         # time index
         time_index = self._find_time_index(data_type, time)
 
-        vector = self.on_vertex(data_type)
+        vector = self.is_vector(data_type)
         if not vector:
             return_type = 'scalar'
 

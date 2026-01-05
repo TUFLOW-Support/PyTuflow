@@ -1,4 +1,5 @@
 from datetime import datetime
+import contextlib
 
 import numpy as np
 
@@ -7,6 +8,11 @@ class PyDataExtractor:
     """Base class for extracting data from the mesh format."""
     SliceType = int | slice | list[int]
     MultiSliceType = tuple[SliceType, SliceType]
+
+    @contextlib.contextmanager
+    def open(self):
+        """Context manager for opening and closing the data extractor."""
+        pass
 
     def times(self, data_type: str) -> np.ndarray:
         """Return all times for a given data type.

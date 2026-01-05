@@ -38,6 +38,7 @@ class H5Engine(DatasetEngine):
             yield self
         finally:
             self.close()
+            self.hnd = None
 
     def close(self):
         if self.hnd is not None:
@@ -63,6 +64,9 @@ class H5Engine(DatasetEngine):
                         return ret[0]
                     return ret
                 return tuple(prop.tolist())
+            elif isinstance(prop, bytes):
+                return prop.decode('utf-8')
+            return prop
 
     def iterate(self, data_path: str = '') -> typing.Generator[str, None, None]:
         with self.open():

@@ -13,13 +13,14 @@ class PyNCMesh(PyMesh):
         self.geom = PyNCMeshGeometry(fpath)
         self.extractor: PyNCMeshDataExtractor = PyNCMeshDataExtractor(fpath, engine)
         self.name = self.fpath.stem
-        for dtype in self.data_types():
-            if dtype.lower() != 'bed elevation':
-                ref_time = self.reference_time_(dtype)
-                if ref_time is not None:
-                    self.has_inherent_reference_time = True
-                    self.reference_time = ref_time
-                break
+        with self.extractor.open():
+            for dtype in self.data_types():
+                if dtype.lower() != 'bed elevation':
+                    ref_time = self.reference_time_(dtype)
+                    if ref_time is not None:
+                        self.has_inherent_reference_time = True
+                        self.reference_time = ref_time
+                    break
 
     def translate_data_type(self, data_type: str) -> tuple[str, ...]:
         data_type = super().translate_data_type(data_type)

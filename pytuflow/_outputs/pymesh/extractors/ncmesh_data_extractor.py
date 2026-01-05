@@ -1,3 +1,5 @@
+import contextlib
+import typing
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -33,6 +35,12 @@ class PyNCMeshDataExtractor(PyDataExtractor):
             self.engine = NCEngine(fpath)
         else:
             raise ImportError('Unable to find a library for reading NCMesh files. Require NetCDF4 of h5py.')
+
+    @contextlib.contextmanager
+    def open(self) -> typing.Generator['PyNCMeshDataExtractor', None, None]:
+        """Context manager for opening and closing the data extractor."""
+        with self.engine.open():
+            yield self
 
     def times(self, data_type: str) -> np.ndarray:
         if self.is_static(data_type):
