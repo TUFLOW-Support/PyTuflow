@@ -1,3 +1,5 @@
+import contextlib
+import typing
 from datetime import datetime
 from pathlib import Path
 
@@ -18,6 +20,12 @@ class PyXMDFDataExtractor(PyDataExtractor):
         else:
             raise ImportError('Unable to find a library for reading XMDF files. Require NetCDF4 of h5py.')
         self.dataset_name = self.engine.get_name()
+
+    @contextlib.contextmanager
+    def open(self) -> typing.Generator['PyXMDFDataExtractor', None, None]:
+        """Context manager for opening and closing the data extractor."""
+        with self.engine.open():
+            yield self
 
     def times(self, data_type: str) -> np.ndarray:
         path = self._create_path(data_type, 'Times')

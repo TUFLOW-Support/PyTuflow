@@ -2,6 +2,9 @@ import typing
 
 import numpy as np
 import pandas as pd
+from packaging.version import Version
+
+NUMPY_VERSION = Version(np.__version__)
 
 try:
     import shapely
@@ -249,11 +252,10 @@ class Transform2D:
             p = p[:, :2]
         elif dim == 2 and len(p.shape) == 1 and p.size > 2:
             p = p[:2]
-        p = np.matvec(trans, p)
-        # columns = points.columns[:2].tolist()
-        # if dim > 2:
-        #     columns.append('z')
-        # df = pd.DataFrame(p, columns=columns)
+        if NUMPY_VERSION >= Version('2.2.0'):
+            p = np.matvec(trans, p)
+        else:
+            p = p @ trans.T
         if len(p.shape) > 1:
             return p[:,:2]
         return p[:2]

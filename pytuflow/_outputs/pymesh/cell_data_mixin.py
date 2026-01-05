@@ -251,10 +251,6 @@ class CellDataMixin:
             start = offsets_z[orig_idx]
             inverse_z[pos_z:pos_z + nl] = np.arange(start, start + nl)
             pos_z += nl
-        # else:
-        #     idx = cells
-        #     inverse3d = inverse
-        #     inverse_z = inverse
 
         data = None
         for dtype in data_type:
@@ -263,11 +259,14 @@ class CellDataMixin:
 
         nlevels = nlevels[inverse]
 
+        # if cell_ids[-1] == -1:
+        #     data = np.append(np.repeat(data[:-2,...], 2, axis=0), [np.nan, np.nan], axis=0)
+        # else:
+        #     data = np.repeat(data[:-1,...], 2, axis=0)
+
         # offsets
-        if self.is_3d(data_type[0]):
-            ch = np.repeat((np.repeat(points[:, 0], 2)[1:-1]).reshape(-1, 2)[wd[:-1]], nlevels, axis=0)
-        else:
-            ch = np.repeat((np.repeat(points[:, 0], 2)[1:-1]).reshape(-1, 2)[wd[:-1]], 1, axis=0)
+        repeat = nlevels if self.is_3d(data_type[0]) else 1
+        ch = np.repeat((np.repeat(points[wd, 0], 2)[1:-1]).reshape(-1, 2), repeat, axis=0)
         offsets = np.concatenate((ch, ch[:, ::-1]), axis=1).reshape((-1,))
 
         # elevations

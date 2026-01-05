@@ -112,7 +112,7 @@ class VertexDataMixin:
         # if -1 exists, it will always be first since the unique routine sorts
         outside = uvert[0] == -1
         if outside:
-            uvert[0] = uvert[1]  # temp change (and avoid copying array) to avoid issues when extracting data
+            uvert = uvert[1:]
 
         # extract data and then remap back to original verts
         vector = self.is_vector(data_type)
@@ -121,13 +121,13 @@ class VertexDataMixin:
         else:
             data = self.extractor.data(data_type, (time_index, uvert))
         if outside:
-            data[0] = np.nan
+            data = np.append([np.nan], data)
         data = data[inverse].reshape((-1, 3, 2) if vector else (-1, 3))
 
         # vertex points for interpolation
         pos = self.geom.vertex_position(uvert, scope='local')[..., :2]
         if outside:
-            pos[0, ...] = np.array([np.nan, np.nan])  # re-add outside points as nan
+            pos = np.append([[np.nan, np.nan]], pos, axis=0)  # re-add outside points as nan
 
         pos = pos[inverse].reshape((-1, 6))
 
@@ -148,13 +148,13 @@ class VertexDataMixin:
         # if -1 exists, it will always be first since the unique routine sorts
         outside = cells[0] == -1
         if outside:
-            cells[0] = cells[1]
+            cells = cells[1:]
         if data_type.lower() == 'bed elevation':
             active = np.full(len(cells), True, dtype=bool)
         else:
             active = self.extractor.wd_flag(data_type, (time_index, cells)).astype(bool)
         if outside:
-            active[0] = False
+            active = np.append([False], active)
         active = active[inverse]
         values[~active] = np.nan
 
