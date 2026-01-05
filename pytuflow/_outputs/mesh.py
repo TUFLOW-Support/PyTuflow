@@ -501,18 +501,18 @@ class Mesh(MapOutput):
                         a = np.append(a[:, [0]], np.linalg.norm(a[:, 1:], axis=1).reshape(-1, 1), axis=1)
                     df2 = pd.DataFrame(a[:,1], index=a[:,0], columns=[dtype])
                     df2.index.name = 'elevation'
-                    if interpolation.lower() == 'linear' and df.shape[0] > 2:
-                        df2.sort_index(inplace=True)
-                        df3 = pd.DataFrame()
-                        df3['elevation'] = df2.iloc[:, 0].dropna().unique().tolist()
-                        df3[dtype] = np.interp(
-                            df1['elevation'],
-                            df.index,
-                            df[dtype],
-                        )
-                        df2 = df3
                 else:
                     df2 = self._driver.profile(pnt, dtype, time, interpolation)
+                if interpolation.lower() == 'linear' and df2.shape[0] > 2:
+                    df2 = df2.sort_index()
+                    df3 = pd.DataFrame()
+                    df3['elevation'] = df2.index.dropna().unique().tolist()
+                    df3[dtype] = np.interp(
+                        df3['elevation'],
+                        df2.index,
+                        df2[dtype],
+                    )
+                    df2 = df3.set_index('elevation').sort_index(ascending=False)
                 if df2.empty:
                     continue
                 df1 = pd.concat([df1, df2], axis=1) if not df1.empty else df2

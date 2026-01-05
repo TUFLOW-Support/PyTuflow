@@ -317,7 +317,7 @@ class QgisMeshDriver(MeshDriver):
 
         data_ = []
         valid = False
-        for z, value in res.vertical_values(index, interpolation):
+        for z, value in res.vertical_values(index, 'stepped'):
             if isinstance(value, tuple):
                 value = np.sqrt(value[0] ** 2 + value[1] ** 2)
             data_.append((value, z))
