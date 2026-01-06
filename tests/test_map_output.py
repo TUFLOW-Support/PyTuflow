@@ -683,6 +683,14 @@ class TestMeshRegression(unittest.TestCase):
             is_close = np.isclose(a, b, equal_nan=True)
             self.assertTrue(is_close.all())
 
+            # section lines that start/end outside the mesh - vector
+            a = res.section(line_outside_mesh, 'vector velocity', 1.).reset_index().to_numpy()
+            # with open(f'{comp}_section_outside_mesh_vec.data', 'wb') as f:
+            #     f.write(a.tobytes())
+            b = load_comparison_data(f'{comp}_section_outside_mesh_vec.data').reshape(a.shape)
+            is_close = np.isclose(a, b, equal_nan=True)
+            self.assertTrue(is_close.all())
+
             # profile
             a = res.profile(point, 'velocity', 1.).reset_index().to_numpy()
             b = load_comparison_data(f'{comp}_profile.data').reshape(a.shape)
@@ -876,6 +884,14 @@ class TestMeshRegression(unittest.TestCase):
             # with open(f'{comp}_section_outside_mesh.data', 'wb') as f:
             #     f.write(a.tobytes())
             b = load_comparison_data(f'{comp}_section_outside_mesh.data').reshape(a.shape)
+            is_close = np.isclose(a, b, equal_nan=True)
+            self.assertTrue(is_close.all())
+
+            # section outside mesh vector
+            a = res.section(line_outside_mesh, 'velocity', 186969).reset_index().to_numpy()
+            # with open(f'{comp}_section_outside_mesh_vec.data', 'wb') as f:
+            #     f.write(a.tobytes())
+            b = load_comparison_data(f'{comp}_section_outside_mesh_vec.data').reshape(a.shape)
             is_close = np.isclose(a, b, equal_nan=True)
             self.assertTrue(is_close.all())
 

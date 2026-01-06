@@ -30,6 +30,7 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
         self.extractor: PyDataExtractor = PyDataExtractor()
         self.has_inherent_reference_time = False
         self.reference_time = datetime(1970, 1, 1, tzinfo=timezone.utc)
+        self.start_end_locs = []  # used by CATCHJson to stitch sections together
 
         self._cached_data_types = {}
         self._data_types = []
@@ -462,6 +463,9 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
             else:
                 section = self.section_from_cell_data(cell_ids, acell, data_type, time_index, depth_averaging)
 
+            # start and end locations
+            self._get_start_end_locations(cell_ids, acell)
+
             # save cache
             self.cache.set(section, 'section', data_type, time_index, return_type, depth_averaging, wkt)
 
@@ -635,3 +639,41 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
         proj_x = np.sum(values.reshape(-1, 2) * x_axis[:, :2], axis=1)
         proj_y = np.sum(values.reshape(-1, 2) * y_axis[:, :2], axis=1)
         return np.column_stack((proj_x, proj_y))
+
+    def _get_start_end_locations(self, cell_ids: np.ndarray, acell: np.ndarray):
+        """Record the start and end locations of the section within the mesh.
+        That is each location where the line enters and exits the mesh.
+
+        (used for stitching sections together for CATCHJson output)
+        """
+        self.start_end_locs.clear()
+        outside = np.flatnonzero(cell_ids == -1)
+
+        if outside.size == cell_ids.size:  # all outside
+            return
+
+        if outside.size == 0:  # all inside
+            self.start_end_locs.append((acell[0,0], acell[-1,0]))
+            return
+
+        def find_end(splits):
+            if len(splits) == 0:
+                return acell[-1,0]
+            for s in splits:
+                if s.size == 1:
+                    return acell[s[0]-1, 0]
+                elif s.size > 1:
+                    return acell[s[0],0]
+            return acell[-1, 0]
+
+        splits = np.split(np.arange(cell_ids.size), outside)
+        start, end = [], []
+        for i, split in enumerate(splits):
+            if split.size > 1:
+                start.append(acell[split[1],0])
+                if i + 1 < len(splits):
+                    end.append(find_end(splits[i+1:]))
+                else:
+                    end.append(find_end([]))
+
+        self.start_end_locs = list(zip(start, end))
