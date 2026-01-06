@@ -31,17 +31,18 @@ class CellDataMixin:
 
         # get the data - velocity collects 2 values V_x and V_y
         # will collect float or tuple[float] for 2D results, and np.ndarray for 3D results
-        cell_idx = self.cell_index(cell_id, data_type[0])[0]
+        is_3d = self.is_3d(data_type[0])
+        cell_idx = self.cell_index(cell_id, data_type[0])[0] if is_3d else cell_id
         nlevels = self.zlevel_count(cell_id)[0]
         values = []
         for dtype in data_type:
-            if self.is_3d(dtype):
+            if is_3d:
                 a = self.extractor.data(dtype, (time_index, slice(cell_idx, cell_idx + nlevels)))
             else:
                 a = self.extractor.data(dtype, (time_index, cell_idx))
             values.append(a)
 
-        if self.is_3d(data_type[0]):
+        if is_3d:
             values_avg = []
             for val in values:
                 zlevels = self.zlevels(time_index, nlevels, cell_id, cell_idx)
@@ -68,19 +69,21 @@ class CellDataMixin:
         data_type = self.translate_data_type(data_type)
 
         # get the data - velocity collects 2 values V_x and V_y
-        cell_idx = self.cell_index(cell_id, data_type[0])[0]
+        is_3d = self.is_3d(data_type[0])
+        cell_idx = self.cell_index(cell_id, data_type[0])[0] if is_3d else cell_id
         nlevels = self.zlevel_count(cell_id)[0]
         values = []
         for dtype in data_type:
-            if self.is_3d(dtype):
+            if is_3d:
                 a = self.extractor.data(dtype, (slice(None), slice(cell_idx, cell_idx + nlevels)))
             else:
+                cell_idx = cell_id
                 a = self.extractor.data(dtype, (slice(None), cell_idx))
             values.append(a)
 
         wd = self.extractor.wd_flag(data_type[0], (slice(None), cell_id)).flatten().astype(bool)
 
-        if self.is_3d(data_type[0]):
+        if is_3d:
             zlevels = self.zlevels(slice(None), nlevels, cell_id, cell_idx)
             values_avg = []
             for val in values:
@@ -109,8 +112,9 @@ class CellDataMixin:
         outside = cells[0] == -1
         if outside:
             cells = cells[1:]
+        is_3d = self.is_3d(data_type[0])
         cell_idx = self.cell_index(cells, data_type[0])
-        if self.is_3d(data_type[0]):
+        if is_3d:
             nlevels = self.zlevel_count(cells)
             max_nlevels = nlevels.max()
             idx = [icell + ilevel for icell, nlevel in np.column_stack((cell_idx, nlevels)) for ilevel in range(nlevel)]
@@ -121,7 +125,7 @@ class CellDataMixin:
         values = []
         for dtype in data_type:
             a = self.extractor.data(dtype, (time_index, idx))
-            if self.is_3d(dtype):
+            if is_3d:
                 zlevels = self.zlevels(time_index, nlevels, cells, cell_idx)
                 a_padded = np.full((cell_idx.shape[0], max_nlevels), np.nan)
                 b_padded = np.full((cell_idx.shape[0], max_nlevels + 1), np.nan)

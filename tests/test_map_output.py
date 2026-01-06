@@ -733,6 +733,14 @@ class TestMeshRegression(unittest.TestCase):
             is_close = np.isclose(a, b, equal_nan=True)
             self.assertTrue(is_close.all())
 
+            # time series level
+            a = res.time_series(point, 'h').reset_index().to_numpy()
+            # with open(f'{comp}_time_series_h.data', 'wb') as f:
+            #     f.write(a.tobytes())
+            b = load_comparison_data(f'{comp}_time_series_h.data').reshape(a.shape)
+            is_close = np.isclose(a, b, equal_nan=True)
+            self.assertTrue(is_close.all())
+
             # time series with depth averaging
             a = res.time_series(point, 'salinity', averaging_method='singlelevel?dir=top&4').reset_index().to_numpy()
             # with open(f'{comp}_time_series_single_top_4.data', 'wb') as f:
@@ -795,6 +803,14 @@ class TestMeshRegression(unittest.TestCase):
             # with open(f'{comp}_section.data', 'wb') as f:
             #     f.write(a.tobytes())
             b = load_comparison_data(f'{comp}_section.data').reshape(a.shape)
+            is_close = np.isclose(a, b, equal_nan=True)
+            self.assertTrue(is_close.all())
+
+            # section level
+            a = res.section(line, 'h', 186969).reset_index().to_numpy()
+            # with open(f'{comp}_section_h.data', 'wb') as f:
+            #     f.write(a.tobytes())
+            b = load_comparison_data(f'{comp}_section_h.data').reshape(a.shape)
             is_close = np.isclose(a, b, equal_nan=True)
             self.assertTrue(is_close.all())
 

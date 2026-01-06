@@ -2,13 +2,160 @@ import unittest
 
 import numpy as np
 
-from pytuflow import XMDF, NCMesh
+from pytuflow import XMDF, NCMesh, CATCHJson
 
 
 def load_comparison_data(path):
     with open(path, 'rb') as f:
         buf = f.read()
     return np.frombuffer(buf)
+
+
+class TestCATCHJson(unittest.TestCase):
+
+    def test_load(self):
+        p = './tests/catch_json/res.tuflow.json'
+        res = CATCHJson(p)
+        self.assertEqual('res', res.name)
+        self.assertTrue(res.has_reference_time)
+
+    def test_times(self):
+        p = './tests/catch_json/res.tuflow.json'
+        res = CATCHJson(p)
+        times = res.times()
+        self.assertEqual(7, len(times))
+
+    def test_data_types(self):
+        p = './tests/catch_json/res.tuflow.json'
+        res = CATCHJson(p)
+        dtypes = res.data_types()
+        self.assertEqual(10, len(dtypes))
+
+    def test_time_series(self):
+        p = './tests/catch_json/res.tuflow.json'
+        point = (1.5, 4.5)
+        res = CATCHJson(p)
+        df = res.time_series(point, 'water level')
+        self.assertEqual((7, 1), df.shape)
+
+    def test_time_series_2(self):
+        p = './tests/catch_json/res.tuflow.json'
+        point = (1.5, 4.5)
+        res = CATCHJson(p)
+        df = res.time_series(point, 'water level', time_fmt='absolute')
+        self.assertEqual((7, 1), df.shape)
+
+    def test_section(self):
+        p = './tests/catch_json/res.tuflow.json'
+        line = './tests/catch_json/section_line.shp'
+        res = CATCHJson(p)
+        df = res.section(line, 'water level', 0.)
+        self.assertEqual((9, 2), df.shape)
+
+    def test_section_2(self):
+        p = './tests/catch_json/res.tuflow.json'
+        line = './tests/catch_json/section_line.shp'
+        res = CATCHJson(p)
+        df = res.section(line, ['water level', 'velocity'], 0.)
+        self.assertEqual((9, 3), df.shape)
+
+    def test_section_3(self):
+        p = './tests/catch_json/res_reversed.tuflow.json'
+        line = './tests/catch_json/section_line.shp'
+        res = CATCHJson(p)
+        df = res.section(line, ['water level'], 0.)
+        self.assertEqual((9, 2), df.shape)
+
+    def test_section_4(self):
+        p = './tests/catch_json/res.tuflow.json'
+        line = './tests/catch_json/section_line_reversed.shp'
+        res = CATCHJson(p)
+        df = res.section(line, ['water level'], 0.)
+        self.assertEqual((9, 2), df.shape)
+
+    def test_section_5(self):
+        p = './tests/catch_json/res_reversed.tuflow.json'
+        line = './tests/catch_json/section_line_reversed.shp'
+        res = CATCHJson(p)
+        df = res.section(line, ['water level'], 0.)
+        self.assertEqual((9, 2), df.shape)
+
+    def test_section_6(self):
+        p = './tests/catch_json/res.tuflow.json'
+        line = './tests/catch_json/section_line_hook.shp'
+        res = CATCHJson(p)
+        df = res.section(line, ['water level'], 0.)
+        self.assertEqual((12, 2), df.shape)
+
+    def test_section_7(self):
+        p = './tests/catch_json/res.tuflow.json'
+        line = './tests/catch_json/section_line_hook_reversed.shp'
+        res = CATCHJson(p)
+        df = res.section(line, ['water level'], 0.)
+        self.assertEqual((8, 2), df.shape)
+
+    def test_section_8(self):
+        p = './tests/catch_json/res_shifted.tuflow.json'
+        line = './tests/xmdf/section_line_long.shp'
+        res = CATCHJson(p)
+        df = res.section(line, ['water level'], 0.)
+        self.assertEqual((9, 2), df.shape)
+
+    def test_section_9(self):
+        p = './tests/catch_json/res_shifted.tuflow.json'
+        line = './tests/catch_json/section_line_ugly.shp'
+        res = CATCHJson(p)
+        df = res.section(line, ['water level'], 0.)
+        self.assertEqual((16, 2), df.shape)
+
+    def test_curtain(self):
+        p = './tests/catch_json/res.tuflow.json'
+        line = './tests/catch_json/section_line.shp'
+        res = CATCHJson(p)
+        df = res.curtain(line, 'velocity', 0.)
+        self.assertEqual((24, 4), df.shape)
+
+    def test_curtain_2(self):
+        p = './tests/catch_json/res.tuflow.json'
+        line = './tests/catch_json/section_line_hook.shp'
+        res = CATCHJson(p)
+        df = res.curtain(line, 'velocity', 0.)
+        self.assertEqual((40, 4), df.shape)
+
+    def test_curtain_3(self):
+        p = './tests/catch_json/res.tuflow.json'
+        line = './tests/catch_json/section_line_hook_reversed.shp'
+        res = CATCHJson(p)
+        df = res.curtain(line, 'velocity', 0.)
+        self.assertEqual((32, 4), df.shape)
+
+    def test_curtain_4(self):
+        p = './tests/catch_json/res_shifted.tuflow.json'
+        line = './tests/xmdf/section_line_long.shp'
+        res = CATCHJson(p)
+        df = res.curtain(line, 'velocity', 0.)
+        self.assertEqual((24, 4), df.shape)
+
+    def test_curtain_5(self):
+        p = './tests/catch_json/res_shifted.tuflow.json'
+        line = './tests/catch_json/section_line_ugly.shp'
+        res = CATCHJson(p)
+        df = res.curtain(line, 'velocity', 0.)
+        self.assertEqual((64, 4), df.shape)
+
+    def test_profile(self):
+        p = './tests/catch_json/res.tuflow.json'
+        point = (1.5, 4.5)
+        res = CATCHJson(p)
+        df = res.profile(point, 'v', 0)
+        self.assertEqual((4, 2), df.shape)
+
+    def test_profile_2(self):
+        p = './tests/catch_json/res.tuflow.json'
+        shp = './tests/xmdf/time_series_point.shp'
+        res = CATCHJson(p)
+        df = res.profile(shp, 'v', 0)
+        self.assertEqual((2, 2), df.shape)
 
 
 class TestPyMeshRegression(unittest.TestCase):
@@ -98,6 +245,12 @@ class TestPyMeshRegression(unittest.TestCase):
         is_close = np.isclose(a, b, equal_nan=True)
         self.assertTrue(is_close.all())
 
+        # time series level
+        a = res.time_series(point, 'h').reset_index().to_numpy()
+        b = load_comparison_data(f'{comp}_time_series_h.data').reshape(a.shape)
+        is_close = np.isclose(a, b, equal_nan=True)
+        self.assertTrue(is_close.all())
+
         # time series with depth averaging
         a = res.time_series(point, 'salinity', averaging_method='singlelevel?dir=top&4').reset_index().to_numpy()
         b = load_comparison_data(f'{comp}_time_series_single_top_4.data').reshape(a.shape)
@@ -144,6 +297,14 @@ class TestPyMeshRegression(unittest.TestCase):
         b = load_comparison_data(f'{comp}_section.data').reshape(a.shape)
         is_close_offset = np.isclose(a[:,1], b[:,1], atol=1, equal_nan=True)
         is_close_val = np.isclose(a[:,2], b[:,2], equal_nan=True)
+        self.assertTrue(is_close_offset.all())
+        self.assertTrue(is_close_val.all())
+
+        # section level
+        a = res.section(line, 'h', 186969).reset_index().to_numpy()
+        b = load_comparison_data(f'{comp}_section_h.data').reshape(a.shape)
+        is_close_offset = np.isclose(a[:, 1], b[:, 1], atol=1, equal_nan=True)
+        is_close_val = np.isclose(a[:, 2], b[:, 2], equal_nan=True)
         self.assertTrue(is_close_offset.all())
         self.assertTrue(is_close_val.all())
 
