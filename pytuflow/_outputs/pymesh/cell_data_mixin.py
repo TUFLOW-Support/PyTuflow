@@ -219,9 +219,10 @@ class CellDataMixin:
         if outside:
             wd = np.append([False], wd)
         wd = wd[inverse]
+        wd = (wd.astype(int)[:-1] + wd.astype(int)[1:]) == 2
+        cell_ids = np.repeat(cell_ids, 2)[1:-1].reshape(-1, 2)[:, 0]
+        dir_ = np.repeat(dir_, 2, axis=0)[1:-1].reshape(-1, 4)[:,:2]
         cells, inverse = np.unique(cell_ids[wd], return_inverse=True)
-        if inverse.size > 1 and inverse[-1] == inverse[-2]:
-            inverse = inverse[:-1]
 
         cell_idx = self.cell_index(cells, data_type[0])
 
@@ -268,7 +269,7 @@ class CellDataMixin:
 
         # offsets
         repeat = nlevels if self.is_3d(data_type[0]) else 1
-        ch = np.repeat((np.repeat(points[wd, 0], 2)[1:-1]).reshape(-1, 2), repeat, axis=0)
+        ch = np.repeat((np.repeat(points[:, 0], 2)[1:-1]).reshape(-1, 2)[wd], repeat, axis=0)
         offsets = np.concatenate((ch, ch[:, ::-1]), axis=1).reshape((-1,))
 
         # elevations
@@ -286,11 +287,7 @@ class CellDataMixin:
         # data
         data = data[inverse3d] if self.is_3d(data_type[0]) else data[inverse]
         if self.is_vector(data_type[0]):
-            if nlevels.size < dir_.size:
-                dir_ = dir_[wd][:-1]
-            else:
-                dir_ = dir_[wd]
-            dir_ = np.repeat(dir_, nlevels, axis=0)
+            dir_ = np.repeat(dir_[wd], nlevels, axis=0)
             vec = self._project_vector(data, dir_)
         data = np.repeat(data, 4, axis=0)
         if self.is_vector(data_type[0]):
