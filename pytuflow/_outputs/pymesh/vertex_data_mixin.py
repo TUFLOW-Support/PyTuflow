@@ -203,9 +203,6 @@ class VertexDataMixin:
         ah = ah[1:-1]
         val = val[1:-1]
         dir_ = dir_[1:-1]
-        if cell_ids[-1] == -1:
-            cell_ids[-2] = -1
-        cell_ids = cell_ids[:-1]
         active = ~np.isnan(ah[:,1])
 
         ch = np.repeat(points[:, 0], 2)[1:-1].reshape(-1, 2)[active].flatten()
