@@ -392,6 +392,7 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
                 time: float,
                 depth_averaging: str = 'sigma&0&1',
                 return_type: str = 'scalar',
+                get_start_end_locs: bool = True,
                 ) -> np.ndarray:
         """Returns section information for the given line and data type at the specified time.
 
@@ -422,6 +423,10 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
 
             - `scalar` (default): returns the scalar value or magnitude of vector values.
             - `vector`: returns the vector components as a tuple of floats.
+        get_start_end_locs : bool, optional
+            Whether to record the start and end locations of the section within the mesh. The curtain plot
+            for vertex data uses the section method and will independently record the start and end locations,
+            so this allows it to be turned off for that use case.
 
         Returns
         -------
@@ -464,7 +469,8 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
                 section = self.section_from_cell_data(cell_ids, acell, data_type, time_index, depth_averaging)
 
             # start and end locations
-            self._get_start_end_locations(cell_ids, acell)
+            if get_start_end_locs:
+                self._get_start_end_locations(cell_ids, acell)
 
             # save cache
             self.cache.set(section, 'section', data_type, time_index, return_type, depth_averaging, wkt)
@@ -579,9 +585,12 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
 
         # get data
         if self.on_vertex(data_type):
-            curtain = self.curtain_from_vertex_data(line, mid_cell_ids, acell, dir_mid, data_type, time)
+            curtain = self.curtain_from_vertex_data(line, cell_ids, acell, dir_mid, data_type, time)
         else:
             curtain = self.curtain_from_cell_data(cell_ids, acell, dir_, data_type, time_index)
+
+        # start and end locations
+        self._get_start_end_locations(cell_ids, acell)
 
         self.cache.set(curtain, 'curtain', data_type, time_index, self._linestring_as_wkt(line))
         return curtain
@@ -647,33 +656,38 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
         (used for stitching sections together for CATCHJson output)
         """
         self.start_end_locs.clear()
-        outside = np.flatnonzero(cell_ids == -1)
 
-        if outside.size == cell_ids.size:  # all outside
-            return
+        inside = cell_ids != -1
+        if not inside.any():
+            return  # fully outside
 
-        if outside.size == 0:  # all inside
-            self.start_end_locs.append((acell[0,0], acell[-1,0]))
-            return
+        s = acell[:, 0]
 
-        def find_end(splits):
-            if len(splits) == 0:
-                return acell[-1,0]
-            for s in splits:
-                if s.size == 1:
-                    return acell[s[0]-1, 0]
-                elif s.size > 1:
-                    return acell[s[0],0]
-            return acell[-1, 0]
+        # Find transitions
+        inside_int = inside.astype(int)
+        diff = np.diff(inside_int)
 
-        splits = np.split(np.arange(cell_ids.size), outside)
-        start, end = [], []
-        for i, split in enumerate(splits):
-            if split.size > 1:
-                start.append(acell[split[1],0])
-                if i + 1 < len(splits):
-                    end.append(find_end(splits[i+1:]))
-                else:
-                    end.append(find_end([]))
+        # False -> True : entry
+        entry_idxs = np.where(diff == 1)[0] + 1
 
-        self.start_end_locs = list(zip(start, end))
+        # True -> False : exit
+        exit_idxs = np.where(diff == -1)[0]
+
+        starts = []
+        ends = []
+
+        # Line starts inside
+        if inside[0]:
+            starts.append(s[0])
+
+        # Normal entries
+        starts.extend(s[i] for i in entry_idxs)
+
+        # Normal exits
+        ends.extend(s[i] for i in exit_idxs)
+
+        # Line ends inside
+        if inside[-1]:
+            ends.append(s[-1])
+
+        self.start_end_locs = list(zip(starts, ends))

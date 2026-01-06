@@ -1,6 +1,7 @@
 import unittest
 
 import numpy as np
+import pandas as pd
 
 from pytuflow import XMDF, NCMesh, CATCHJson
 
@@ -223,7 +224,7 @@ class TestPyMeshRegression(unittest.TestCase):
         is_close = np.isclose(a, b, equal_nan=True)
         self.assertTrue(is_close.all())
 
-        # curtain vector - current wrong in pytuflow qgis implementation
+        # curtain vector
         a = res.curtain(line, 'velocity', 1.).reset_index().to_numpy()
         a = np.column_stack((a[..., :3], np.vstack(a[..., 3]), np.vstack(a[..., 4]))).astype('f8')
         b = load_comparison_data(f'{comp}_curtain_vec.data').reshape(a.shape)
@@ -234,6 +235,44 @@ class TestPyMeshRegression(unittest.TestCase):
         a = res.curtain(line_outside_mesh, 'z0', 1.).reset_index().to_numpy()
         b = load_comparison_data(f'{comp}_curtain_outside_mesh.data').reshape(a.shape)
         is_close = np.isclose(a, b, equal_nan=True)
+        self.assertTrue(is_close.all())
+
+        # curtain outside mesh vector
+        a = res.curtain(line_outside_mesh, 'velocity', 1.).reset_index().to_numpy()
+        df = pd.DataFrame(a)
+        df1 = df.loc[:, :3].copy()
+
+        m = df.loc[:, 3].astype(str) != 'nan'
+        df1[3] = np.nan
+        df1[4] = np.nan
+        df1[5] = np.nan
+        df1[6] = np.nan
+        df1.loc[m, [3, 4]] = np.vstack(df.loc[m, 3])
+        df1.loc[m, [5, 6]] = np.vstack(df.loc[m, 4])
+        df1[7] = a[:, 5]
+        df1[8] = a[:, 6]
+
+        m = df.loc[:, 7].astype(str) != 'nan'
+        df1[9] = np.nan
+        df1[10] = np.nan
+        df1[11] = np.nan
+        df1[12] = np.nan
+        df1.loc[m, [9, 10]] = np.vstack(df.loc[m, 7])
+        df1.loc[m, [11, 12]] = np.vstack(df.loc[m, 8])
+        df1[13] = a[:, 9]
+        df1[14] = a[:, 10]
+
+        m = df.loc[:, 11].astype(str) != 'nan'
+        df1[15] = np.nan
+        df1[16] = np.nan
+        df1[17] = np.nan
+        df1[18] = np.nan
+        df1.loc[m, [15, 16]] = np.vstack(df.loc[m, 11])
+        df1.loc[m, [17, 18]] = np.vstack(df.loc[m, 12])
+
+        a = df1.astype(float).to_numpy()
+        b = load_comparison_data(f'{comp}_curtain_outside_mesh_vec.data').reshape(a.shape)
+        is_close = np.isclose(a, b, equal_nan=True, atol=0.0001)
         self.assertTrue(is_close.all())
 
     def test_qgis_cell_mesh_latlong(self):

@@ -429,10 +429,14 @@ class PyMeshGeometry(PointMixin, LineStringMixin):
         amid = np.array([])
         dir_ = np.array([])
         dir_mid = np.array([])
+        cum_offset = 0.
         for i in range(1, line.shape[0]):
             seg = line[i-1:i+1,:2]
             d  = (seg[1] - seg[0]) / np.linalg.norm(seg[1] - seg[0])
             c1, a1, c2, a2 = self._mesh_line_segment(seg, locator)
+            if c1.size == 0:
+                cum_offset += np.linalg.norm(seg[1] - seg[0])
+                continue
             if cell_ids.size == 0:
                 cell_ids = c1
                 acell = a1
@@ -443,12 +447,13 @@ class PyMeshGeometry(PointMixin, LineStringMixin):
             else:
                 cell_ids = np.append(cell_ids[:-1], c1)
                 mid_cell_ids = np.append(mid_cell_ids[:-1], c2[1:])
-                a1[:,0] += acell[-1,0]
-                a2[:,0] += acell[-1,0]
+                a1[:,0] += cum_offset
+                a2[:,0] += cum_offset
                 acell = np.append(acell[:-1,...], a1, axis=0)
                 amid = np.append(amid[:-1,...], a2[1:,...], axis=0)
                 dir_ = np.append(dir_[:-1,...], np.full((c1.shape[0], 2), d), axis=0)
                 dir_mid = np.append(dir_mid[:-1,...], np.full((c2.shape[0] - 1, 2), d), axis=0)
+            cum_offset = acell[-1,0]
 
         return cell_ids, acell, dir_, mid_cell_ids, amid, dir_mid
 
@@ -465,6 +470,9 @@ class PyMeshGeometry(PointMixin, LineStringMixin):
         p2 = np.append(line[1], dtype(0))
         tol = 1e-6
         locator.IntersectWithLine(p1, p2, tol, points, cell_ids)
+
+        if not points.GetNumberOfPoints():
+            return np.array([]), np.array([]), np.array([]), np.array([])
 
         points = np.array([points.GetPoint(i) for i in range(points.GetNumberOfPoints())], dtype=dtype)[:, :2]
         cell_ids = np.array([cell_ids.GetId(i) for i in range(cell_ids.GetNumberOfIds())])

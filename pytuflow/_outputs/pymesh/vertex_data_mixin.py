@@ -121,7 +121,7 @@ class VertexDataMixin:
         else:
             data = self.extractor.data(data_type, (time_index, uvert))
         if outside:
-            data = np.append([np.nan], data)
+            data = np.append([[np.nan, np.nan]] if vector else [np.nan], data, axis=0).reshape((-1, 2) if vector else (-1,))
         data = data[inverse].reshape((-1, 3, 2) if vector else (-1, 3))
 
         # vertex points for interpolation
@@ -195,39 +195,38 @@ class VertexDataMixin:
     ) -> np.ndarray:
         """Extract data along a curtain defined by a linestring from mesh vertices."""
         zdtype, hdtype = self._2d_to_3d_data_types(data_type)
-        az = self.section(linestring, zdtype, time)
-        ah = self.section(linestring, hdtype, time)
-        val = self.section(linestring, data_type, time, return_type='vector')
+        az = self.section(linestring, zdtype, time, get_start_end_locs=False)
+        ah = self.section(linestring, hdtype, time, get_start_end_locs=False)
+        val = self.section(linestring, data_type, time, return_type='vector', get_start_end_locs=False)
 
-        starts_dry = np.isnan(ah[0, 1])  # first point of line is dry/inactive/outside mesh
-
+        az = az[1:-1]
+        ah = ah[1:-1]
+        val = val[1:-1]
+        dir_ = dir_[1:-1]
+        if cell_ids[-1] == -1:
+            cell_ids[-2] = -1
+        cell_ids = cell_ids[:-1]
         active = ~np.isnan(ah[:,1])
-        active_mask = np.array([[i, i, i, i] for i in range(0, points.shape[0] - 1)]).flatten()
-        if starts_dry:
-            active_mask = np.clip(active_mask + 1, None, points.shape[0] - 1)
-        active_idx = active[active_mask]
 
-        x = points[:, 0]
-        y = np.column_stack((ah[:, 1], az[:, 1])).flatten()
+        ch = np.repeat(points[:, 0], 2)[1:-1].reshape(-1, 2)[active].flatten()
+        ch = ch[np.array([[i, i+1, i+1, i] for i in range(0, ch.shape[0], 2)]).flatten()]
+
+        y = np.column_stack((ah[:, 1], az[:, 1]))[active].flatten()
+        y = y[np.array([[i, i, i+1, i+1] for i in range(0, y.shape[0], 2)]).flatten()]
+
+        z = np.repeat(val[...,1:].reshape(val.shape[0], -1)[active], 4, axis=0).reshape(val[active].shape[0] * 4, -1)
 
         proj_vector = np.array([])
         if self.is_vector(data_type):
-            proj_vector = self._project_vector(val[..., 1:], dir_[active]).reshape(-1, 1, 2)
-
-        x_idx = np.array([[i, i + 1, i + 1, i] for i in range(0, points.shape[0] - 1)]).flatten()[active_idx]
-        y_idx = np.array([[i, i, i + 1, i + 1] for i in range(2, points.shape[0] * 2, 2)]).flatten()[active_idx]
-        val_idx = np.array([[i, i, i, i] for i in range(1, points.shape[0])]).flatten()[active_idx]
+            proj_vector = self._project_vector(val[..., 1:], dir_).reshape(-1, 1, 2)
+            proj_vector = np.repeat(proj_vector.reshape(proj_vector.shape[0], -1)[active], 4, axis=0).reshape(-1, 2)
 
         if self.is_vector(data_type):
             curtain = np.concatenate(
-                (x[x_idx].reshape(-1, 1, 1), y[y_idx].reshape(-1, 1, 1), val[val_idx, 0, 1:].reshape(-1, 1, 2),
-                 proj_vector[val_idx]),
+                (ch.reshape(-1, 1, 1), y.reshape(-1, 1, 1), z.reshape(-1, 1, 2), proj_vector.reshape(-1, 1, 2)),
                 axis=2
             )
         else:
-            curtain = np.concatenate(
-                (x[x_idx].reshape(-1, 1), y[y_idx].reshape(-1, 1), val[val_idx, 1].reshape(-1, 1)),
-                axis=1
-            )
+            curtain = np.column_stack((ch, y, z))
 
         return curtain

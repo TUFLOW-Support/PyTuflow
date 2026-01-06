@@ -266,11 +266,6 @@ class CellDataMixin:
 
         nlevels = nlevels[inverse]
 
-        # if cell_ids[-1] == -1:
-        #     data = np.append(np.repeat(data[:-2,...], 2, axis=0), [np.nan, np.nan], axis=0)
-        # else:
-        #     data = np.repeat(data[:-1,...], 2, axis=0)
-
         # offsets
         repeat = nlevels if self.is_3d(data_type[0]) else 1
         ch = np.repeat((np.repeat(points[wd, 0], 2)[1:-1]).reshape(-1, 2), repeat, axis=0)
@@ -292,9 +287,10 @@ class CellDataMixin:
         data = data[inverse3d] if self.is_3d(data_type[0]) else data[inverse]
         if self.is_vector(data_type[0]):
             if nlevels.size < dir_.size:
-                dir_ = dir_[:-1]
-                wd = wd[:-1]
-            dir_ = np.repeat(dir_[wd], nlevels, axis=0)
+                dir_ = dir_[wd][:-1]
+            else:
+                dir_ = dir_[wd]
+            dir_ = np.repeat(dir_, nlevels, axis=0)
             vec = self._project_vector(data, dir_)
         data = np.repeat(data, 4, axis=0)
         if self.is_vector(data_type[0]):
