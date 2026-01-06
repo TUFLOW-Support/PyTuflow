@@ -64,7 +64,7 @@ class CellDataMixin:
     ) -> np.ndarray:
         cell_id = self.geom.find_containing_cell(point, scope='local')
         if cell_id == -1:
-            raise ValueError('Point falls outside mesh.')
+            return np.array([])
 
         data_type = self.translate_data_type(data_type)
 
@@ -171,7 +171,7 @@ class CellDataMixin:
     def profile_from_cell_data(self: 'PyMesh', point: np.ndarray, data_type: str, time_index: int) -> np.ndarray:
         cell_id = self.geom.find_containing_cell(point, scope='local')
         if cell_id == -1:
-            raise ValueError('Point falls outside mesh.')
+            return np.array([])
 
         data_type = self.translate_data_type(data_type)
 
@@ -199,7 +199,7 @@ class CellDataMixin:
 
         return np.column_stack(
             (np.array(zlevels).flatten(), np.repeat(values, 2, axis=0))
-        ).reshape((-1, 2) if len(values[1] == 1) else (-1, 1, 2))
+        ).reshape((-1, 2) if len(values[1]) == 1 else (-1, 1, 3))
 
     def curtain_from_cell_data(
             self: 'PyMesh',

@@ -207,11 +207,14 @@ class Mesh(MapOutput):
             for dtype in data_types:
                 if self._driver.DRIVER_SOURCE == 'python':
                     a = self._driver.time_series(pnt, dtype, averaging_method)
-                    a = a.reshape(a.shape[0], -1)
-                    if a.shape[1] > 2:
-                        a = np.append(a[:,[0]], np.linalg.norm(a[:,1:], axis=1).reshape(-1, 1), axis=1)
-                    df1 = pd.DataFrame(a[:,1], index=a[:,0], columns=[name])
-                    df1.index.name = 'time'
+                    if a.size:
+                        a = a.reshape(a.shape[0], -1)
+                        if a.shape[1] > 2:
+                            a = np.append(a[:,[0]], np.linalg.norm(a[:,1:], axis=1).reshape(-1, 1), axis=1)
+                        df1 = pd.DataFrame(a[:,1], index=a[:,0], columns=[name])
+                        df1.index.name = 'time'
+                    else:
+                        df1 = pd.DataFrame()
                 else:
                     df1 = self._driver.time_series(name, pnt, dtype, averaging_method)
                 if df1.empty:
@@ -496,11 +499,14 @@ class Mesh(MapOutput):
             for dtype in data_types:
                 if self._driver.DRIVER_SOURCE == 'python':
                     a = self._driver.profile(pnt, dtype, time)
-                    a = a.reshape(a.shape[0], -1)
-                    if a.shape[1] > 2:
-                        a = np.append(a[:, [0]], np.linalg.norm(a[:, 1:], axis=1).reshape(-1, 1), axis=1)
-                    df2 = pd.DataFrame(a[:,1], index=a[:,0], columns=[dtype])
-                    df2.index.name = 'elevation'
+                    if a.size:
+                        a = a.reshape(a.shape[0], -1)
+                        if a.shape[1] > 2:
+                            a = np.append(a[:, [0]], np.linalg.norm(a[:, 1:], axis=1).reshape(-1, 1), axis=1)
+                        df2 = pd.DataFrame(a[:,1], index=a[:,0], columns=[dtype])
+                        df2.index.name = 'elevation'
+                    else:
+                        df2 = pd.DataFrame()
                 else:
                     df2 = self._driver.profile(pnt, dtype, time, interpolation)
                 if interpolation.lower() == 'linear' and df2.shape[0] > 2:
