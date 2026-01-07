@@ -12,6 +12,16 @@ def load_comparison_data(path):
     return np.frombuffer(buf)
 
 
+class TestXMDF(unittest.TestCase):
+
+    def test_section_7(self):
+        xmdf = './tests/xmdf/run.xmdf'
+        res = XMDF(xmdf)
+        line = [(0.5, 0.5), (1.5, 1.5)]
+        df = res.section(line, 'max h', 0)
+        self.assertEqual((4, 2), df.shape)
+
+
 class TestCATCHJson(unittest.TestCase):
 
     def test_load(self):

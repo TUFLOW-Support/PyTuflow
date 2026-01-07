@@ -17,6 +17,7 @@ class VertexDataMixin:
                                     return_type: str
                                     ) -> float | tuple[float, float]:
         """Returns the interpolated data value from mesh vertices at the given point."""
+        data_type = self.translate_data_type(data_type)[0]
         tri = self.geom.find_containing_triangle(point, 'local')
         if tri == -1:
             return np.nan
@@ -57,6 +58,7 @@ class VertexDataMixin:
                                      return_type: str,
                                      ) -> np.ndarray:
         """Timeseries call to get data from vertices at a given point."""
+        data_type = self.translate_data_type(data_type)[0]
         tri = self.geom.find_containing_triangle(point, 'local')
         if tri == -1:
             return np.array([])
@@ -97,6 +99,7 @@ class VertexDataMixin:
         """Extract data along a section defined by a linestring from mesh vertices."""
         # results on vertices - use mid-points
         # get vertices of triangle that mid-point falls within
+        data_type = self.translate_data_type(data_type)[0]
         verts = np.empty((len(cell_ids), 3), dtype='i8')
         for i, (cell_id, mid) in enumerate(zip(cell_ids, points)):
             if cell_id == -1:
