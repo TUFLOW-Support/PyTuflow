@@ -374,6 +374,9 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
         else:
             data = self.time_series_from_cell_data(p, data_type, depth_averaging)
 
+        if data.size == 0:
+            return np.array([])
+
         time_series = np.append(
             self.times(data_type).reshape((-1, 1, 1) if data.ndim > 2 else (-1, 1)),
             data.reshape(-1, 1) if data.ndim == 1 else data,

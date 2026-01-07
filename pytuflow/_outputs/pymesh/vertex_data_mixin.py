@@ -19,7 +19,7 @@ class VertexDataMixin:
         """Returns the interpolated data value from mesh vertices at the given point."""
         tri = self.geom.find_containing_triangle(point, 'local')
         if tri == -1:
-            raise ValueError('Point falls outside mesh.')
+            return np.nan
 
         cell_id = self.geom.triangle_cell(tri)
 
@@ -59,7 +59,7 @@ class VertexDataMixin:
         """Timeseries call to get data from vertices at a given point."""
         tri = self.geom.find_containing_triangle(point, 'local')
         if tri == -1:
-            raise ValueError('Point falls outside mesh.')
+            return np.array([])
 
         # calculate interpolation weights
         uvw = self.geom.barycentric_factors(point, tri, scope='local')

@@ -159,6 +159,23 @@ class TestCATCHJson(unittest.TestCase):
         self.assertEqual((2, 2), df.shape)
 
 
+class TestQuadtree(unittest.TestCase):
+
+    def test_simple_line_1(self):
+        p = './tests/quadtree/EG13_001.xmdf'
+        line = './tests/quadtree/simple_line_1.shp'
+        res = XMDF(p)
+        df = res.section(line, 'water level', 1.)
+        self.assertEqual((4, 2), df.shape)
+
+    def test_simple_line_2(self):
+        p = './tests/quadtree/EG13_001.xmdf'
+        line = './tests/quadtree/simple_line_2.shp'
+        res = XMDF(p)
+        df = res.section(line, 'water level', 1.)
+        self.assertEqual((4, 2), df.shape)
+
+
 class TestPyMeshRegression(unittest.TestCase):
 
     def test_pymesh_vertex_mesh(self):
@@ -275,7 +292,7 @@ class TestPyMeshRegression(unittest.TestCase):
         is_close = np.isclose(a, b, equal_nan=True, atol=0.0001)
         self.assertTrue(is_close.all())
 
-    def test_qgis_cell_mesh_latlong(self):
+    def test_pymesh_cell_mesh_latlong(self):
         p = './tests/nc_mesh/EST000_3D_001.nc'
         point = './tests/nc_mesh/ncmesh_point_longlat.shp'
         line = './tests/nc_mesh/ncmesh_line_longlat.shp'
@@ -488,3 +505,40 @@ class TestPyMeshRegression(unittest.TestCase):
         self.assertTrue(is_close_val2.all())
         self.assertTrue(is_close_offset3.all())
         self.assertTrue(is_close_val3.all())
+
+    def test_pymesh_quadtree(self):
+        p = './tests/quadtree/EG13_001.xmdf'
+        point = './tests/quadtree/qdt_point.shp'
+        line = './tests/quadtree/qdt_line.shp'
+        point_outside = './tests/quadtree/qdt_point_outside.shp'
+        comp = './tests/regression_test_comparisons/test_qgis_quadtree'
+
+        res = XMDF(p)
+
+        # # time series
+        # a = res.time_series(point, 'water level').reset_index().to_numpy()
+        # b = load_comparison_data(f'{comp}_time_series.data').reshape(a.shape)
+        # is_close = np.isclose(a, b, equal_nan=True)
+        # self.assertTrue(is_close.all())
+        #
+        # # point outside mesh
+        # a = res.time_series(point_outside, 'water level').reset_index().to_numpy()
+        # self.assertTrue(a.size == 0)
+
+        # section
+        a = res.section(line, 'water level', 1.).reset_index().to_numpy()
+        b = load_comparison_data(f'{comp}_section.data').reshape(a.shape)
+        is_close = np.isclose(a, b, equal_nan=True)
+        self.assertTrue(is_close.all())
+
+        # profile
+        a = res.profile(point, 'velocity', 1.).reset_index().to_numpy()
+        b = load_comparison_data(f'{comp}_profile.data').reshape(a.shape)
+        is_close = np.isclose(a, b, equal_nan=True)
+        self.assertTrue(is_close.all())
+
+        # curtain
+        a = res.curtain(line, 'z0', 1.).reset_index().to_numpy()
+        b = load_comparison_data(f'{comp}_curtain.data').reshape(a.shape)
+        is_close = np.isclose(a, b, equal_nan=True)
+        self.assertTrue(is_close.all())
