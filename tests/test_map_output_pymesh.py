@@ -15,9 +15,16 @@ def load_comparison_data(path):
 class TestXMDF(unittest.TestCase):
 
     def test_section_7(self):
+        # this tests when a line intersects a node/vertex exactly
         xmdf = './tests/xmdf/run.xmdf'
         res = XMDF(xmdf)
         line = [(0.5, 0.5), (1.5, 1.5)]
+        df = res.section(line, 'max h', 0)
+        self.assertEqual((4, 2), df.shape)
+        self.assertTrue(df[np.isnan(df.iloc[:, 1])].empty)
+
+        # test opposite direction
+        line = [(1.5, 1.5), (0.5, 0.5)]
         df = res.section(line, 'max h', 0)
         self.assertEqual((4, 2), df.shape)
         self.assertTrue(df[np.isnan(df.iloc[:, 1])].empty)
