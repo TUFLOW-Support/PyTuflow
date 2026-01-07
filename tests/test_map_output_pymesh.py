@@ -38,6 +38,43 @@ class TestDAT(unittest.TestCase):
         self.assertEqual('small_model_001', res.name)
         self.assertFalse(res.has_reference_time)
 
+    def test_load_2(self):
+        p = ['./tests/dat/small_model_001_d.dat', './tests/dat/small_model_001_V.dat',
+             './tests/dat/small_model_001_h.dat', './tests/dat/small_model_001_q.dat',
+             './tests/dat/small_model_001_Times.dat']
+        res = DAT(p)
+        self.assertEqual('small_model_001', res.name)
+
+    def test_times(self):
+        p = './tests/dat/small_model_001.ALL.sup'
+        res = DAT(p)
+        times = res.times()
+        self.assertEqual(13, len(times))
+
+    def test_data_types(self):
+        p = './tests/dat/small_model_001.ALL.sup'
+        res = DAT(p)
+        dtypes = res.data_types()
+        self.assertEqual(8, len(dtypes))
+
+    def test_newer_format(self):
+        p = './tests/dat/small_model_002_h.dat'  # model name is now 80 characters long rather than 40
+        res = DAT(p)
+        dtypes = res.data_types()
+        self.assertEqual(sorted(['bed level', 'water level', 'max water level']), sorted(dtypes))
+
+    def test_time_series(self):
+        p = './tests/dat/small_model_002_h.dat'
+        res = DAT(p)
+        df = res.time_series((1.0, 1.0), 'water level')
+        self.assertEqual((13, 1), df.shape)
+
+    def test_section(self):
+        p = './tests/dat/small_model_002_h.dat'
+        res = DAT(p)
+        df = res.section([(1.5, 1.2), (2.5, 1.2)], 'water level', 1.0)
+        self.assertEqual((4, 2), df.shape)
+
 
 class TestCATCHJson(unittest.TestCase):
 
