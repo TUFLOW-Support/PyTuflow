@@ -1008,8 +1008,8 @@ class TestMeshRegression(unittest.TestCase):
 
             # section
             a = res.section(line, 'water level', 1.).reset_index().to_numpy()
-            # with open(f'{comp}_section.data', 'wb') as f:
-            #     f.write(a.tobytes())
+            with open(f'{comp}_section.data', 'wb') as f:
+                f.write(a.tobytes())
             b = load_comparison_data(f'{comp}_section.data').reshape(a.shape)
             is_close = np.isclose(a, b, equal_nan=True)
             self.assertTrue(is_close.all())
@@ -1024,8 +1024,8 @@ class TestMeshRegression(unittest.TestCase):
 
             # curtain
             a = res.curtain(line, 'z0', 1.).reset_index().to_numpy()
-            # with open(f'{comp}_curtain.data', 'wb') as f:
-            #     f.write(a.tobytes())
+            with open(f'{comp}_curtain.data', 'wb') as f:
+                f.write(a.tobytes())
             b = load_comparison_data(f'{comp}_curtain.data').reshape(a.shape)
             is_close = np.isclose(a, b, equal_nan=True)
             self.assertTrue(is_close.all())

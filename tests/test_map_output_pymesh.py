@@ -515,15 +515,15 @@ class TestPyMeshRegression(unittest.TestCase):
 
         res = XMDF(p)
 
-        # # time series
-        # a = res.time_series(point, 'water level').reset_index().to_numpy()
-        # b = load_comparison_data(f'{comp}_time_series.data').reshape(a.shape)
-        # is_close = np.isclose(a, b, equal_nan=True)
-        # self.assertTrue(is_close.all())
-        #
-        # # point outside mesh
-        # a = res.time_series(point_outside, 'water level').reset_index().to_numpy()
-        # self.assertTrue(a.size == 0)
+        # time series
+        a = res.time_series(point, 'water level').reset_index().to_numpy()
+        b = load_comparison_data(f'{comp}_time_series.data').reshape(a.shape)
+        is_close = np.isclose(a, b, equal_nan=True)
+        self.assertTrue(is_close.all())
+
+        # point outside mesh
+        a = res.time_series(point_outside, 'water level').reset_index().to_numpy()
+        self.assertTrue(a.size == 0)
 
         # section
         a = res.section(line, 'water level', 1.).reset_index().to_numpy()
