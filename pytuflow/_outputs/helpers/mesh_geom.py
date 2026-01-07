@@ -171,7 +171,10 @@ class Intersect:
         if isinstance(other, Intersect):
             if self.v1 is None or self.v2 is None or other.v1 is None or other.v2 is None:
                 return False
-            return sorted([self.v1, self.v2]) == sorted([other.v1, other.v2]) and self.point() == other.point()
+            if sorted([self.v1, self.v2]) == sorted([other.v1, other.v2]) and self.point() == other.point():
+                return True
+            elif not self.spherical and sorted([self.v1, self.v2]) != sorted([other.v1, other.v2]) and self.point().compare(other.point(), 0.0001):  # quadtree
+                return True
         return False
 
     def __gt__(self, other):

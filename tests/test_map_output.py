@@ -159,7 +159,7 @@ class TestXMDF(unittest.TestCase):
             res = XMDF(xmdf)
             line = [(0.5, 0.5), (1.5, 1.5)]
             df = res.section(line, 'max h', 0)
-            self.assertEqual((7, 2), df.shape)
+            self.assertEqual((4, 2), df.shape)
 
     def test_section_vec(self):
         xmdf = './tests/xmdf/run.xmdf'
@@ -167,7 +167,7 @@ class TestXMDF(unittest.TestCase):
             res = XMDF(xmdf)
             line = [(0.5, 0.5), (1.5, 1.5)]
             df = res.section(line, 'vector velocity', 0)
-            self.assertEqual((7, 2), df.shape)
+            self.assertEqual((4, 2), df.shape)
 
     def test_section_long(self):
         xmdf = './tests/xmdf/run.xmdf'
@@ -176,6 +176,14 @@ class TestXMDF(unittest.TestCase):
             res = XMDF(xmdf)
             df = res.section(shp, 'max h', 0)
             self.assertEqual((8, 2), df.shape)
+
+    def test_section_quadtree(self):
+        xmdf = './tests/quadtree/EG13_001.xmdf'
+        shp = './tests/quadtree/simple_line_3.shp'
+        with pyqgis():
+            res = XMDF(xmdf)
+            df = res.section(shp, 'h', 1.)
+            self.assertEqual((6, 2), df.shape)
 
     def test_curtain(self):
         xmdf = './tests/xmdf/run.xmdf'
