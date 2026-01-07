@@ -90,7 +90,7 @@ class TPC(INFO, ITimeSeries2D):
     """
 
     DOMAIN_TYPES = {'1d': ['1d'], '2d': ['2d', 'po'], 'rl': ['rl', '0d']}
-    GEOMETRY_TYPES = {'point': ['point'], 'line': ['line'], 'polygon': ['polygon', 'region']}
+    GEOMETRY_TYPES = {'point': ['point'], 'line': ['line'], 'polygon': ['polygon', 'region', 'poly']}
     ATTRIBUTE_TYPES = {}
     ID_COLUMNS = ['id']
 
@@ -942,7 +942,7 @@ class TPC(INFO, ITimeSeries2D):
                             try:
                                 # unfortunately there is a bug in Quadtree prior to 2026.0.0 where all PO outputs have
                                 # 'R' geometry type in the PLOT.csv, we need to correct for this here
-                                geom = geom_from_tpc_line(dtype.replace('max ').replace('min ', ''))
+                                geom = geom_from_tpc_line(dtype.replace('max ', '').replace('min ', ''))
                                 if geom is None:
                                     geom = 'R'
                             except Exception:
