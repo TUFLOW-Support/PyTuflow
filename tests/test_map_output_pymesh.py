@@ -20,6 +20,7 @@ class TestXMDF(unittest.TestCase):
         line = [(0.5, 0.5), (1.5, 1.5)]
         df = res.section(line, 'max h', 0)
         self.assertEqual((4, 2), df.shape)
+        self.assertTrue(df[np.isnan(df.iloc[:, 1])].empty)
 
 
 class TestCATCHJson(unittest.TestCase):

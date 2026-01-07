@@ -479,6 +479,30 @@ class PyMeshGeometry(PointMixin, LineStringMixin):
         points = np.array([points.GetPoint(i) for i in range(points.GetNumberOfPoints())], dtype=dtype)[:, :2]
         cell_ids = np.array([cell_ids.GetId(i) for i in range(cell_ids.GetNumberOfIds())])
 
+        # unique points with tolerance
+        k = 4
+        eps = np.finfo(dtype).eps
+        atol = rtol = k * eps
+        unique = [points[0]]
+        idx = [0]
+        nudged = []
+        for i, p in enumerate(points[1:]):
+            if not np.all(np.isclose(p, unique[-1], atol=atol, rtol=rtol)):
+                unique.append(p)
+                idx.append(i + 1)
+            elif idx[-1] not in nudged:
+                # nudge point in direction of line to find the correct cell
+                j = idx[-1]
+                nudged.append(j)
+                dir_ = ((p2 - p1) / np.linalg.norm(p2 - p1))[:2]
+                p = p + dir_ * tol * k
+                id_ = locator.FindCell(np.append(p, [0.]).tolist())
+                if id_ != -1:
+                    cell_ids[j] = id_
+
+        points = np.array(unique, dtype=dtype)
+        cell_ids = cell_ids[idx]
+
         # test if p1 or p2 are outside the mesh
         p1_outside = locator.FindCell(p1) == -1
         p2_outside = locator.FindCell(p2) == -1
