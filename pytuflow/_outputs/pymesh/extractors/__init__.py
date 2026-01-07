@@ -1,3 +1,4 @@
 from .data_extractor import PyDataExtractor
 from .ncmesh_data_extractor import PyNCMeshDataExtractor
 from .xmdf_data_extractor import PyXMDFDataExtractor
+from .dat_data_extractor import PyDATDataExtractor

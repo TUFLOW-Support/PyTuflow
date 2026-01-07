@@ -8,6 +8,8 @@ from .mesh import Mesh
 from ..results import ResultTypeError
 from .._pytuflow_types import PathLike
 
+from .pymesh import PyDAT
+
 
 class DAT(Mesh):
     """Class for handling DAT mesh file.
@@ -146,7 +148,11 @@ class DAT(Mesh):
             if self._looks_empty(dat):
                 raise EOFError(f'File is empty or incomplete: {dat}')
 
-        self._driver = QgisDATMeshDriver(self.twodm, self._dats)
+        if PyDAT.available():
+            self._driver = PyDAT(self._dats, self.twodm)
+            self._soft_load_driver = self._driver
+        else:
+            self._driver = QgisDATMeshDriver(self.twodm, self._dats)
 
         self._initial_load()
 

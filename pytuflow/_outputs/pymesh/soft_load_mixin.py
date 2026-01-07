@@ -17,6 +17,8 @@ class SoftLoadMixin:
                     yield DatasetGroup(dtype, 'scalar', [0.], 1)
                     continue
                 times = self.times(dtype).tolist()
+                if not times:
+                    times = [0.]
                 type_ = 'vector' if self.is_vector(dtype) else 'scalar'
                 if type_ == 'vector' and dtype.lower().endswith('_y'):
                     continue

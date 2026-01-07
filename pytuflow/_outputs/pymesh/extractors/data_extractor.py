@@ -12,7 +12,7 @@ class PyDataExtractor:
     @contextlib.contextmanager
     def open(self):
         """Context manager for opening and closing the data extractor."""
-        pass
+        yield self
 
     def times(self, data_type: str) -> np.ndarray:
         """Return all times for a given data type.

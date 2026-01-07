@@ -3,7 +3,7 @@ import unittest
 import numpy as np
 import pandas as pd
 
-from pytuflow import XMDF, NCMesh, CATCHJson
+from pytuflow import XMDF, NCMesh, CATCHJson, DAT
 
 
 def load_comparison_data(path):
@@ -28,6 +28,15 @@ class TestXMDF(unittest.TestCase):
         df = res.section(line, 'max h', 0)
         self.assertEqual((4, 2), df.shape)
         self.assertTrue(df[np.isnan(df.iloc[:, 1])].empty)
+
+
+class TestDAT(unittest.TestCase):
+
+    def test_load(self):
+        p = './tests/dat/small_model_001.ALL.sup'
+        res = DAT(p)
+        self.assertEqual('small_model_001', res.name)
+        self.assertFalse(res.has_reference_time)
 
 
 class TestCATCHJson(unittest.TestCase):

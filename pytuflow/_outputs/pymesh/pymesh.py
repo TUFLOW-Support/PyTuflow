@@ -125,7 +125,7 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
     def maximum(self, data_type: str) -> float:
         """Returns the maximum value for the specified result type. The full path the result type must be specified,
         for example, "depth" will return the maximum for the temporal depth results. If searching for the absolute
-        maximum (the maximum value in the maximum output surface) then "maximums/depth" must be used (if applicable).
+        maximum (the maximum value in the maximum output surface) then "depth/maximums" must be used (if applicable).
 
         Parameters
         ----------
