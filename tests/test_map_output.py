@@ -773,6 +773,30 @@ class TestMeshRegression(unittest.TestCase):
             is_close = np.isclose(a, b, equal_nan=True)
             self.assertTrue(is_close.all())
 
+    def test_qgis_dat_mesh(self):
+        p = './tests/dat/EG00_001.ALL.sup'
+        point = './tests/xmdf/xmdf_point.shp'
+        line = './tests/xmdf/xmdf_line.shp'
+        comp = './tests/regression_test_comparisons/test_qgis_dat_mesh'
+        with pyqgis():
+            res = DAT(p)
+
+            # time series
+            a = res.time_series(point, 'water level').reset_index().to_numpy()
+            # with open(f'{comp}_time_series.data', 'wb') as f:
+            #     f.write(a.tobytes())
+            b = load_comparison_data(f'{comp}_time_series.data').reshape(a.shape)
+            is_close = np.isclose(a, b, equal_nan=True)
+            self.assertTrue(is_close.all())
+
+            # section
+            a = res.section(line, 'water level', 1.).reset_index().to_numpy()
+            # with open(f'{comp}_section.data', 'wb') as f:
+            #     f.write(a.tobytes())
+            b = load_comparison_data(f'{comp}_section.data').reshape(a.shape)
+            is_close = np.isclose(a, b, equal_nan=True)
+            self.assertTrue(is_close.all())
+
     def test_qgis_cell_mesh_latlong(self):
         p = './tests/nc_mesh/EST000_3D_001.nc'
         point = './tests/nc_mesh/ncmesh_point_longlat.shp'
