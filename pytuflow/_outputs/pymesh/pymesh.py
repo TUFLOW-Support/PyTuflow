@@ -139,6 +139,10 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
         """
         if self.cache.contains('maximum', data_type):
             return self.cache.get('maximum', data_type)
+        if data_type.lower() == 'bed elevation':
+            mx = float(np.max(self.geom.vertices[:, 2]))
+            self.cache.set('maximum', data_type, mx)
+            return mx
         mx = self.extractor.maximum(self.translate_data_type(data_type)[0])
         self.cache.set('maximum', data_type, mx)
         return mx
@@ -160,6 +164,10 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
         """
         if self.cache.contains('minimum', data_type):
             return self.cache.get('minimum', data_type)
+        if data_type.lower() == 'bed elevation':
+            mx = float(np.min(self.geom.vertices[:, 2]))
+            self.cache.set('maximum', data_type, mx)
+            return mx
         mn = self.extractor.minimum(self.translate_data_type(data_type)[0])
         self.cache.set('minimum', data_type[0], mn)
         return mn
