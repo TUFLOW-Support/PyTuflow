@@ -47,6 +47,8 @@ class PyMeshGeometry(PointMixin, LineStringMixin):
         self.spherical = False
         #: vtk.vtkCellLocator: the cell locator for fast spatial searches
         self.locator = vtk.vtkStaticCellLocator()
+        #: np.dtype: the data type used for coordinates
+        self.dtype = np.float32
 
     def load(self):
         pass
@@ -422,8 +424,7 @@ class PyMeshGeometry(PointMixin, LineStringMixin):
             5. ``Nx3`` - ``[offset, x, y]`` - Mid-points between intersections + start and end points.
             6. ``Nx2`` - ``[dir-x, dir-y]`` - Direction vectors for each mid-segment between intersections.
         """
-        dtype = np.float32
-        line = self.trans.transform(self._coerce_into_line(line)).astype(dtype)
+        line = self.trans.transform(self._coerce_into_line(line)).astype(self.dtype)
 
         cell_ids = np.array([])
         mid_cell_ids = np.array([])
@@ -454,20 +455,16 @@ class PyMeshGeometry(PointMixin, LineStringMixin):
 
         return cell_ids, acell, dir_, mid_cell_ids, amid, dir_mid
 
-    def _mesh_line_segment(self,
-                           line: np.ndarray,
-                           ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    def _mesh_line_segment(self, line: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """The workhorse for the above routine. Calculates per line segment information."""
-        dtype = np.float32
-
         points = vtk.vtkPoints()
         cell_ids = vtk.vtkIdList()
-        p1 = np.append(line[0], dtype(0))
-        p2 = np.append(line[1], dtype(0))
+        p1 = np.append(line[0], self.dtype(0))
+        p2 = np.append(line[1], self.dtype(0))
         tol = 1e-6
         self.locator.IntersectWithLine(p1, p2, tol, points, cell_ids)
 
-        length = np.linalg.norm(p2 - p1).astype(dtype)
+        length = np.linalg.norm(p2 - p1).astype(self.dtype)
         if not points.GetNumberOfPoints():
             mid_point = (p1 + p2) / 2.
             return (
@@ -477,12 +474,12 @@ class PyMeshGeometry(PointMixin, LineStringMixin):
                 np.array([[0., p1[0], p1[1]], [length / 2, mid_point[0], mid_point[1]], [length, p2[0], p2[1]]])
             )
 
-        points = np.array([points.GetPoint(i) for i in range(points.GetNumberOfPoints())], dtype=dtype)[:, :2]
+        points = np.array([points.GetPoint(i) for i in range(points.GetNumberOfPoints())], dtype=self.dtype)[:, :2]
         cell_ids = np.array([cell_ids.GetId(i) for i in range(cell_ids.GetNumberOfIds())])
 
         # unique points with tolerance
         k = 4
-        eps = np.finfo(dtype).eps
+        eps = np.finfo(self.dtype).eps
         atol = rtol = k * eps
         unique = [points[0]]
         idx = [0]
@@ -501,7 +498,7 @@ class PyMeshGeometry(PointMixin, LineStringMixin):
                 if id_ != -1:
                     cell_ids[j] = id_
 
-        points = np.array(unique, dtype=dtype)
+        points = np.array(unique, dtype=self.dtype)
         cell_ids = cell_ids[idx]
 
         # test if p1 or p2 are outside the mesh
@@ -523,13 +520,13 @@ class PyMeshGeometry(PointMixin, LineStringMixin):
             points = np.append(points, p2[:2].reshape((-1, 2)), axis=0)
 
         cell_ids = np.append(cell_ids, cell_ids[-1])
-        offsets = np.linalg.norm(points - p1[:2], axis=1).astype(dtype)
+        offsets = np.linalg.norm(points - p1[:2], axis=1).astype(self.dtype)
 
         if p1_outside:
             cell_ids = np.append([-1], cell_ids)
             points = np.append(p1[:2].reshape((-1, 2)), points, axis=0)
-            offsets = np.append(dtype(0), offsets)
-        mid_offsets = np.append(dtype(0), offsets + np.append(np.diff(offsets) / 2., dtype(0)))
+            offsets = np.append(self.dtype(0), offsets)
+        mid_offsets = np.append(self.dtype(0), offsets + np.append(np.diff(offsets) / 2., self.dtype(0)))
         if p2_outside:
             cell_ids = np.append(cell_ids, [-1])
             points = np.append(points, p2[:2].reshape((-1, 2)), axis=0)
@@ -540,7 +537,7 @@ class PyMeshGeometry(PointMixin, LineStringMixin):
         mid_cell_ids = np.append(cell_ids[0], cell_ids)
 
         p0 = p1[:2].reshape((1, 2))
-        dir_ = (p2 - p1)[:2].astype(dtype).reshape((1, 2)) / length
+        dir_ = (p2 - p1)[:2].astype(self.dtype).reshape((1, 2)) / length
         mid_points = p0 + dir_ * mid_offsets.reshape((-1, 1))
 
         return (

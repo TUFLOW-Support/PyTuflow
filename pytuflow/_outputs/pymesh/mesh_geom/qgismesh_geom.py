@@ -133,3 +133,6 @@ class QgisMeshGeometry(PyMeshGeometry, PointMixinQgis):
         b2 = sign(pt, v2, v3) < 0.0
         b3 = sign(pt, v3, v1) < 0.0
         return (b1 == b2) and (b2 == b3)
+
+    def _mesh_line_segment(self, line: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+        pass
