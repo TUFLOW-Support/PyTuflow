@@ -4,9 +4,11 @@ from pathlib import Path
 import numpy as np
 
 try:
-    from qgis.core import QgsApplication, QgsMesh, QgsMeshLayer, QgsMeshSpatialIndex, QgsPointXY
+    from qgis.core import (QgsApplication, QgsMesh, QgsMeshLayer, QgsMeshSpatialIndex, QgsPoint,
+                           QgsPointXY, QgsGeometry)
 except ImportError:
-    from ..stubs.qgis.core import QgsApplication, QgsMesh, QgsMeshLayer, QgsMeshSpatialIndex, QgsPointXY
+    from ..stubs.qgis.core import (QgsApplication, QgsMesh, QgsMeshLayer, QgsMeshSpatialIndex, QgsPoint,
+                                   QgsPointXY, QgsGeometry)
 
 from . import PyMeshGeometry
 from .. import barycentric_coord, Bbox2D, Transform2D, PointMixin, PointLike, LineStringMixin, LineStringLike
@@ -15,8 +17,14 @@ from .. import barycentric_coord, Bbox2D, Transform2D, PointMixin, PointLike, Li
 class PointMixinQgis(PointMixin):
 
     @staticmethod
+    def _coerce_into_point(value: PointLike) -> np.ndarray:
+        if isinstance(value, (QgsPoint, QgsPointXY)):
+            return np.array([value.x(), value.y()])
+        return PointMixin._coerce_into_point(value)
+
+    @staticmethod
     def _coerce_into_qgs_point(value: PointLike) -> QgsPointXY:
-        p = PointMixin._coerce_into_point(value)
+        p = PointMixinQgis._coerce_into_point(value)
         return QgsPointXY(*p.tolist()[:2])
 
 
@@ -47,16 +55,22 @@ class QgisMeshGeometry(PyMeshGeometry, PointMixinQgis):
             self._si = QgsMeshSpatialIndex(self._mesh)
             self._loaded = True
 
+    def cell_vertices(self, cell_id: int) -> list[int]:
+        return list(self._mesh.face(cell_id))
+
     def vertex_position(self, vertex_id: int | typing.Iterable[int], *args, **kwargs) -> np.ndarray:
+        if isinstance(vertex_id, (list, tuple)):
+            vertex_id = np.array(vertex_id).flatten().tolist()
         if isinstance(vertex_id, int):
             vertex_id = [vertex_id]
         if isinstance(vertex_id, np.ndarray):
-            vertex_id = vertex_id.tolist()
-        a = np.full((len(vertex_id), 2), -1, dtype=int)
+            vertex_id = vertex_id.flatten().tolist()
+        a = np.full((len(vertex_id), 3), -1, dtype=int)
         for i, vid in enumerate(vertex_id):
             v = self._mesh.vertex(vid)
             a[i, 0] = v.x()
             a[i, 1] = v.y()
+            a[i, 2] = 0.
         return a
 
     def triangle_vertices(self, triangle_id: int) -> np.ndarray:
@@ -74,7 +88,7 @@ class QgisMeshGeometry(PyMeshGeometry, PointMixinQgis):
         p_ = self._coerce_into_point(point)  # numpy array
         cell_ids = self._si.nearestNeighbor(p, 2)
         for cell_id in cell_ids:
-            vert_ids = self._mesh.face(cell_id)
+            vert_ids = np.array(self.cell_vertices(cell_id))
             if len(vert_ids) == 3:
                 if self.point_in_triangle(p_, *self.vertex_position(vert_ids).tolist()):
                     if cell_id not in self._cell2triangle:
@@ -85,8 +99,8 @@ class QgisMeshGeometry(PyMeshGeometry, PointMixinQgis):
                 if cell_id not in self._cell2triangle:
                     self._cell2triangle[cell_id] = [self._tri_count, self._tri_count + 1]
                     self._tri_count += 2
-                for tri_idx in [(0, 1, 2), (2, 3, 0)]:
-                    if self.point_in_triangle(p_, *self.vertex_position(p_[tri_idx]).tolist()):
+                for tri_idx in [[0, 1, 2], [2, 3, 0]]:
+                    if self.point_in_triangle(p_, *self.vertex_position(vert_ids[tri_idx]).tolist()):
                         return cell_id
         return -1
 
@@ -136,4 +150,37 @@ class QgisMeshGeometry(PyMeshGeometry, PointMixinQgis):
 
     def _mesh_intersects(self, p1: np.ndarray, p2: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         """Returns points and cell_ids where the line segment intersects the mesh. Last point is not returned."""
-        pass
+        tol = 1e-6
+        interval = 1
+        geom = QgsGeometry.fromPolylineXY([QgsPointXY(*p1.tolist()[:2]), QgsPointXY(*p2.tolist()[:2])])
+        dense = geom.densifyByDistance(interval)
+        ret_points = [p1[:2]]
+        ret_cell_ids = [self.find_containing_cell(p1)]
+        last_cell_id = ret_cell_ids[-1]
+        for i, p_start in enumerate(dense.vertices()):
+            try:
+                p_end = dense.vertexAt(i + 1)
+            except Exception:
+                break
+            points = {}
+            cell_ids = self._si.intersects(QgsGeometry.fromPolylineXY([QgsPointXY(p_start), QgsPointXY(p_end)]).boundingBox())
+            for cell_id in cell_ids:
+                intersects = self.cell_edge_intersections(cell_id, self._coerce_into_point(p_start), self._coerce_into_point(p_end))
+                for p in intersects:
+                    vec = np.array([p[0] - p_start.x(), p[1] - p_start.y()])
+                    offset = np.linalg.norm(vec)
+                    if offset == 0:
+                        continue
+                    dir_ = vec / offset
+                    nudge = p + dir_ * tol
+                    cell_id = self.find_containing_cell(nudge)
+                    if cell_id not in points and cell_id != last_cell_id:
+                        points[cell_id] = (offset, self._coerce_into_point(p)[:2])
+            if points:
+                sorted_points = sorted(points.items(), key=lambda x: x[1][0])
+                for cell_id, (offset, p) in sorted_points:
+                    ret_points.append(p)
+                    ret_cell_ids.append(cell_id)
+                    last_cell_id = cell_id
+
+        return np.array(ret_points).reshape(-1, 2), np.array(ret_cell_ids)

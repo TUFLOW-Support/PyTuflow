@@ -18,3 +18,11 @@ class QgsMeshSpatialIndex:
 
 class QgsPointXY:
     pass
+
+
+class QgsPoint:
+    pass
+
+
+class QgsGeometry:
+    pass
