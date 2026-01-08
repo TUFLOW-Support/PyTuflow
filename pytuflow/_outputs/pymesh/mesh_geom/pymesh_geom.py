@@ -457,15 +457,13 @@ class PyMeshGeometry(PointMixin, LineStringMixin):
 
     def _mesh_line_segment(self, line: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """The workhorse for the above routine. Calculates per line segment information."""
-        points = vtk.vtkPoints()
-        cell_ids = vtk.vtkIdList()
         p1 = np.append(line[0], self.dtype(0))
         p2 = np.append(line[1], self.dtype(0))
         tol = 1e-6
-        self.locator.IntersectWithLine(p1, p2, tol, points, cell_ids)
+        points, cell_ids = self._mesh_intersects(p1, p2)
 
         length = np.linalg.norm(p2 - p1).astype(self.dtype)
-        if not points.GetNumberOfPoints():
+        if cell_ids.size == 0:
             mid_point = (p1 + p2) / 2.
             return (
                 np.array([-1, -1]),
@@ -473,9 +471,6 @@ class PyMeshGeometry(PointMixin, LineStringMixin):
                 np.array([-1, -1, -1]),
                 np.array([[0., p1[0], p1[1]], [length / 2, mid_point[0], mid_point[1]], [length, p2[0], p2[1]]])
             )
-
-        points = np.array([points.GetPoint(i) for i in range(points.GetNumberOfPoints())], dtype=self.dtype)[:, :2]
-        cell_ids = np.array([cell_ids.GetId(i) for i in range(cell_ids.GetNumberOfIds())])
 
         # unique points with tolerance
         k = 4
@@ -494,7 +489,7 @@ class PyMeshGeometry(PointMixin, LineStringMixin):
                 nudged.append(j)
                 dir_ = ((p2 - p1) / np.linalg.norm(p2 - p1))[:2]
                 p = p + dir_ * tol * k
-                id_ = self.locator.FindCell(np.append(p, [0.]).tolist())
+                id_ = self.find_containing_cell(p, scope='local')
                 if id_ != -1:
                     cell_ids[j] = id_
 
@@ -502,8 +497,8 @@ class PyMeshGeometry(PointMixin, LineStringMixin):
         cell_ids = cell_ids[idx]
 
         # test if p1 or p2 are outside the mesh
-        p1_outside = self.locator.FindCell(p1) == -1
-        p2_outside = self.locator.FindCell(p2) == -1
+        p1_outside = self.find_containing_cell(p1, scope='local') == -1
+        p2_outside = self.find_containing_cell(p2, scope='local') == -1
 
         # if p2 is outside the mesh append the last intersection point, else append p2
         if p2_outside:
@@ -544,6 +539,19 @@ class PyMeshGeometry(PointMixin, LineStringMixin):
             cell_ids, np.append(offsets.reshape((-1, 1)), points, axis=1),
             mid_cell_ids, np.append(mid_offsets.reshape((-1, 1)), mid_points, axis=1)
         )
+
+    def _mesh_intersects(self, p1: np.ndarray, p2: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+        """Checks if a line segment intersects the mesh."""
+        points = vtk.vtkPoints()
+        cell_ids = vtk.vtkIdList()
+        tol = 1e-6
+        self.locator.IntersectWithLine(p1, p2, tol, points, cell_ids)
+        if points.GetNumberOfPoints() > 0:
+            points = np.array([points.GetPoint(i) for i in range(points.GetNumberOfPoints())], dtype=self.dtype)[:, :2]
+            cell_ids = np.array([cell_ids.GetId(i) for i in range(cell_ids.GetNumberOfIds())])
+        else:
+            points, cell_ids = np.array([]), np.array([])
+        return points, cell_ids
 
     def _build_locator(self, mesh: pv.PolyData) -> vtk.vtkStaticCellLocator:
         locator = vtk.vtkStaticCellLocator()

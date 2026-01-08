@@ -134,5 +134,6 @@ class QgisMeshGeometry(PyMeshGeometry, PointMixinQgis):
         b3 = sign(pt, v3, v1) < 0.0
         return (b1 == b2) and (b2 == b3)
 
-    def _mesh_line_segment(self, line: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    def _mesh_intersects(self, p1: np.ndarray, p2: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+        """Returns points and cell_ids where the line segment intersects the mesh. Last point is not returned."""
         pass

@@ -85,6 +85,7 @@ class PyNCMeshGeometry(PyMeshGeometry, GeometryLazyLoadMixin, VTKGeometryMixin):
                 np.append(self._vertices_local[:, :2], np.zeros((self._vertices.shape[0], 1)), axis=1),
                 self._cells
             )
+            self._locator = self._build_locator(self._mesh)
             self._loaded = True
 
     @staticmethod
