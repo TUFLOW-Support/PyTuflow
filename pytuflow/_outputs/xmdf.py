@@ -142,12 +142,13 @@ class XMDF(Mesh):
 
         super().__init__(self.twodm)
         self.fpath = Path(fpath)
-        if PyXMDF.available():
-            self._driver = PyXMDF(self.fpath, self.twodm)
-            self._soft_load_driver = self._driver
-        else:
-            self._driver = QgisXmdfMeshDriver(self.twodm, self.fpath)
-            self._soft_load_driver = NCMeshDriverXmdf(self.twodm, self.fpath)
+        self._driver = PyXMDF(self.fpath, self.twodm)
+        # if PyXMDF.available():
+        #     self._driver = PyXMDF(self.fpath, self.twodm)
+        #     self._soft_load_driver = self._driver
+        # else:
+        #     self._driver = QgisXmdfMeshDriver(self.twodm, self.fpath)
+        #     self._soft_load_driver = NCMeshDriverXmdf(self.twodm, self.fpath)
         self._initial_load()
 
     @staticmethod

@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 
 from . import (LineStringMixin, LineStringLike, PointMixin, PointLike, VertexDataMixin, CellDataMixin, Cache,
-               PyMeshGeometry, PyDataExtractor, NCEngine, H5Engine, SoftLoadMixin)
+               PyMeshGeometry, PyDataExtractor, NCEngine, H5Engine, SoftLoadMixin, QgisMeshGeometry)
 
 try:
     import shapely
@@ -18,6 +18,11 @@ try:
 except ImportError:
     from .stubs import pyvista as pv
 
+try:
+    from qgis.core import QgsApplication
+except ImportError:
+    from .stubs.qgis.core import QgsApplication
+
 
 class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLoadMixin):
     DRIVER_SOURCE = 'python'
@@ -26,7 +31,7 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
         self._init_soft_load()
         self.cache = Cache()
         self.name = ''
-        self.geom: PyMeshGeometry = PyMeshGeometry('')
+        self.geom: PyMeshGeometry | QgisMeshGeometry = PyMeshGeometry('')
         self.extractor: PyDataExtractor = PyDataExtractor()
         self.has_inherent_reference_time = False
         self.reference_time = datetime(1970, 1, 1, tzinfo=timezone.utc)
@@ -44,6 +49,18 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
     @staticmethod
     def available() -> bool:
         return '.stubs' not in pv.__name__ and (H5Engine.available() or NCEngine.available())
+
+    @staticmethod
+    def qgis_available() -> bool:
+        return '.stubs' not in QgsApplication.__name__
+
+    @staticmethod
+    def pv_available() -> bool:
+        return '.stubs' not in pv.__name__
+
+    @staticmethod
+    def external_engine_available() -> bool:
+        return H5Engine.available() or NCEngine.available()
 
     def load(self):
         self.geom.load()
