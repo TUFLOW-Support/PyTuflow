@@ -1,6 +1,10 @@
 import numpy as np
 import pandas as pd
 try:
+    import vtk
+except ImportError:
+    from ..stubs import vtk
+try:
     import pyvista as pv
 except ImportError:
     from ..stubs import pyvista as pv
@@ -23,6 +27,7 @@ class GeometryLazyLoadMixin:
         self._local_bbox = Bbox2D()
         self._trans = None
         self._spherical = False
+        self._locator = None
         self._loaded = False
 
     @property
@@ -101,6 +106,16 @@ class GeometryLazyLoadMixin:
     @mesh.setter
     def mesh(self, mesh: pv.PolyData):
         self._mesh = mesh
+
+    @property
+    def locator(self):
+        if not self._loaded:
+            self._load()
+        return self._locator
+
+    @locator.setter
+    def locator(self, val: vtk.vtkStaticCellLocator):
+        self._locator = val
 
     @property
     def global_bbox(self) -> Bbox2D:

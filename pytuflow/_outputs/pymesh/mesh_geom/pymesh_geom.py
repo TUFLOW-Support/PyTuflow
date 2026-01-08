@@ -7,6 +7,10 @@ try:
     import vtk
 except ImportError:
     from ..stubs import vtk
+try:
+    import pyvista as pv
+except ImportError:
+    from ..stubs import pyvista as pv
 
 from .. import barycentric_coord, Bbox2D, Transform2D, PointMixin, PointLike, LineStringMixin, LineStringLike
 
@@ -41,6 +45,8 @@ class PyMeshGeometry(PointMixin, LineStringMixin):
         self.has_z = False
         #: bool: whether the mesh is in spherical coordinates
         self.spherical = False
+        #: vtk.vtkCellLocator: the cell locator for fast spatial searches
+        self.locator = vtk.vtkStaticCellLocator()
 
     def load(self):
         pass
@@ -283,7 +289,7 @@ class PyMeshGeometry(PointMixin, LineStringMixin):
             p = self.trans.transform(p)
         if p.size < 3:
             p = np.append(p, 0.0)
-        return self.mesh.find_containing_cell(p)
+        return self.locator.FindCell(p.tolist())
 
     def find_containing_triangle(self, point: PointLike, scope: str = 'global', cell_id: int = -1) -> int:
         """Find the triangle that contains the given point.
@@ -419,10 +425,6 @@ class PyMeshGeometry(PointMixin, LineStringMixin):
         dtype = np.float32
         line = self.trans.transform(self._coerce_into_line(line)).astype(dtype)
 
-        locator = vtk.vtkStaticCellLocator()
-        locator.SetDataSet(self.mesh)
-        locator.BuildLocator()
-
         cell_ids = np.array([])
         mid_cell_ids = np.array([])
         acell = np.array([])
@@ -432,7 +434,7 @@ class PyMeshGeometry(PointMixin, LineStringMixin):
         for i in range(1, line.shape[0]):
             seg = line[i-1:i+1,:2]
             d  = (seg[1] - seg[0]) / np.linalg.norm(seg[1] - seg[0])
-            c1, a1, c2, a2 = self._mesh_line_segment(seg, locator)
+            c1, a1, c2, a2 = self._mesh_line_segment(seg)
             if cell_ids.size == 0:
                 cell_ids = c1
                 acell = a1
@@ -454,7 +456,6 @@ class PyMeshGeometry(PointMixin, LineStringMixin):
 
     def _mesh_line_segment(self,
                            line: np.ndarray,
-                           locator: vtk.vtkStaticCellLocator
                            ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """The workhorse for the above routine. Calculates per line segment information."""
         dtype = np.float32
@@ -464,7 +465,7 @@ class PyMeshGeometry(PointMixin, LineStringMixin):
         p1 = np.append(line[0], dtype(0))
         p2 = np.append(line[1], dtype(0))
         tol = 1e-6
-        locator.IntersectWithLine(p1, p2, tol, points, cell_ids)
+        self.locator.IntersectWithLine(p1, p2, tol, points, cell_ids)
 
         length = np.linalg.norm(p2 - p1).astype(dtype)
         if not points.GetNumberOfPoints():
@@ -496,7 +497,7 @@ class PyMeshGeometry(PointMixin, LineStringMixin):
                 nudged.append(j)
                 dir_ = ((p2 - p1) / np.linalg.norm(p2 - p1))[:2]
                 p = p + dir_ * tol * k
-                id_ = locator.FindCell(np.append(p, [0.]).tolist())
+                id_ = self.locator.FindCell(np.append(p, [0.]).tolist())
                 if id_ != -1:
                     cell_ids[j] = id_
 
@@ -504,8 +505,8 @@ class PyMeshGeometry(PointMixin, LineStringMixin):
         cell_ids = cell_ids[idx]
 
         # test if p1 or p2 are outside the mesh
-        p1_outside = locator.FindCell(p1) == -1
-        p2_outside = locator.FindCell(p2) == -1
+        p1_outside = self.locator.FindCell(p1) == -1
+        p2_outside = self.locator.FindCell(p2) == -1
 
         # if p2 is outside the mesh append the last intersection point, else append p2
         if p2_outside:
@@ -546,3 +547,9 @@ class PyMeshGeometry(PointMixin, LineStringMixin):
             cell_ids, np.append(offsets.reshape((-1, 1)), points, axis=1),
             mid_cell_ids, np.append(mid_offsets.reshape((-1, 1)), mid_points, axis=1)
         )
+
+    def _build_locator(self, mesh: pv.PolyData) -> vtk.vtkStaticCellLocator:
+        locator = vtk.vtkStaticCellLocator()
+        locator.SetDataSet(mesh)
+        locator.BuildLocator()
+        return locator
