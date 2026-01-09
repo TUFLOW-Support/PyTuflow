@@ -48,7 +48,7 @@ class PyMeshGeometry(PointMixin, LineStringMixin):
         #: vtk.vtkCellLocator: the cell locator for fast spatial searches
         self.locator = vtk.vtkStaticCellLocator()
         #: np.dtype: the data type used for coordinates
-        self.dtype = np.float32
+        self.dtype = np.float64
 
     def load(self):
         pass
@@ -191,7 +191,7 @@ class PyMeshGeometry(PointMixin, LineStringMixin):
         self.mesh.GetPointCells(vertex_id, cell_ids)
         return [cell_ids.GetId(i) for i in range(cell_ids.GetNumberOfIds())]
 
-    def vertex_position(self, vertex_id: int | typing.Iterable[int], scope: str = 'global') -> np.ndarray:
+    def vertex_position(self, vertex_id: int | typing.Iterable[int], scope: str = 'global', *args, **kwargs) -> np.ndarray:
         """Returns the x,y position of the vertex ID(s).
 
         Parameters
@@ -525,7 +525,7 @@ class PyMeshGeometry(PointMixin, LineStringMixin):
             last_point = points[-1]
             intersections = self.cell_edge_intersections(last_cell, p1, p2, scope='local')
             for pt in intersections:
-                if not np.isclose(last_point, pt).all():
+                if not np.isclose(last_point, pt, atol=atol, rtol=rtol).all():
                     points = np.append(points, pt.reshape((-1, 2)), axis=0)
                     break
             else:

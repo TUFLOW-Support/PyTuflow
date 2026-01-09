@@ -155,8 +155,8 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
             The maximum value for the specified result type.
         """
         if self.cache.contains('maximum', data_type):
-            return self.cache.get('maximum', data_type)
-        if data_type.lower() == 'bed elevation':
+            return self.cache.get[('maximum', data_type)]
+        if data_type.lower() in ['bed elevation', 'bed level']:
             mx = float(np.max(self.geom.vertices[:, 2]))
             self.cache.set('maximum', data_type, mx)
             return mx
@@ -181,7 +181,7 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
         """
         if self.cache.contains('minimum', data_type):
             return self.cache.get('minimum', data_type)
-        if data_type.lower() == 'bed elevation':
+        if data_type.lower() in ['bed elevation', 'bed level']:
             mx = float(np.min(self.geom.vertices[:, 2]))
             self.cache.set('maximum', data_type, mx)
             return mx
@@ -202,7 +202,7 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
         bool
             ``True`` if the data type is a vector result, ``False`` otherwise.
         """
-        return data_type.lower() != 'bed elevation' and self.extractor.is_vector(self.translate_data_type(data_type)[0])
+        return data_type.lower() not in ['bed elevation', 'bed level'] and self.extractor.is_vector(self.translate_data_type(data_type)[0])
 
     def is_static(self, data_type: str) -> bool:
         """Returns whether the specified data type is a static result.
@@ -217,7 +217,7 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
         bool
             ``True`` if the data type is a static result, ``False`` otherwise.
         """
-        return data_type.lower() == 'bed elevation' or self.extractor.is_static(self.translate_data_type(data_type)[0])
+        return data_type.lower() in ['bed elevation', 'bed level'] or self.extractor.is_static(self.translate_data_type(data_type)[0])
 
     def on_vertex(self, data_type: str) -> bool:
         """Returns whether the specified data type is stored on mesh vertices.
@@ -594,8 +594,13 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
         if self.cache.contains('curtain', data_type, time_index, self._linestring_as_wkt(line)):
             return self.cache.get('curtain', data_type, time_index, self._linestring_as_wkt(line))
 
-        if data_type.lower() == 'velocity' and not self.is_vector(data_type):
-            test = f'vector {data_type}'
+        if data_type.lower() in ['velocity', 'max velocity', 'min velocity'] and not self.is_vector(data_type):
+            if data_type.lower() == 'velocity':
+                test = f'vector {data_type}'
+            elif data_type.lower() == 'max velocity':
+                test = 'vector velocity/maximums'
+            else:
+                test = 'vector velocity/minimums'
             test_a = {x.lower(): x for x in self.data_types()}
             if test in test_a:
                 data_type = test_a[test]
@@ -624,7 +629,7 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
         return curtain
 
     def _find_time_index(self, data_type: str, time: float) -> int:
-        if data_type.lower() == 'bed elevation':
+        if data_type.lower() in ['bed elevation', 'bed level']:
             return 0
         times = self.times(data_type)
         if len(times) == 1:  # assume static

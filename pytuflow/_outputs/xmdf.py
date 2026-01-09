@@ -143,6 +143,7 @@ class XMDF(Mesh):
         super().__init__(self.twodm)
         self.fpath = Path(fpath)
         self._driver = PyXMDF(self.fpath, self.twodm)
+        self._soft_load_driver = self._driver
         # if PyXMDF.available():
         #     self._driver = PyXMDF(self.fpath, self.twodm)
         #     self._soft_load_driver = self._driver

@@ -26,3 +26,7 @@ class QgsPoint:
 
 class QgsGeometry:
     pass
+
+
+class QgsMeshDatasetIndex:
+    pass

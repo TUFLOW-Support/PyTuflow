@@ -5,10 +5,10 @@ import numpy as np
 
 try:
     from qgis.core import (QgsApplication, QgsMesh, QgsMeshLayer, QgsMeshSpatialIndex, QgsPoint,
-                           QgsPointXY, QgsGeometry)
+                           QgsPointXY, QgsGeometry, QgsMeshDatasetIndex)
 except ImportError:
     from ..stubs.qgis.core import (QgsApplication, QgsMesh, QgsMeshLayer, QgsMeshSpatialIndex, QgsPoint,
-                                   QgsPointXY, QgsGeometry)
+                                   QgsPointXY, QgsGeometry, QgsMeshDatasetIndex)
 
 from . import PyMeshGeometry
 from .. import barycentric_coord, Bbox2D, Transform2D, PointMixin, PointLike, LineStringMixin, LineStringLike
@@ -44,6 +44,8 @@ class QgisMeshGeometry(PyMeshGeometry, PointMixinQgis):
         self._triangle2cell = {}
         self._triangles = {}
         self._tri_count = 0
+        self._ibed = 0
+        self.dtype = np.float64
 
     def load(self):
         if not QgsApplication.instance():
@@ -53,24 +55,31 @@ class QgisMeshGeometry(PyMeshGeometry, PointMixinQgis):
             dp = self._lyr.dataProvider()
             dp.populateMesh(self._mesh)
             self._si = QgsMeshSpatialIndex(self._mesh)
+            for i in range(self._lyr.dataProvider().datasetGroupCount()):
+                if self._lyr.dataProvider().datasetGroupMetadata(i).name().lower() == 'bed elevation':
+                    self._ibed = i
+                    break
             self._loaded = True
 
     def cell_vertices(self, cell_id: int) -> list[int]:
         return list(self._mesh.face(cell_id))
 
-    def vertex_position(self, vertex_id: int | typing.Iterable[int], *args, **kwargs) -> np.ndarray:
+    def vertex_position(self, vertex_id: int | typing.Iterable[int], get_z: bool = True, *args, **kwargs) -> np.ndarray:
         if isinstance(vertex_id, (list, tuple)):
             vertex_id = np.array(vertex_id).flatten().tolist()
         if isinstance(vertex_id, int):
             vertex_id = [vertex_id]
         if isinstance(vertex_id, np.ndarray):
             vertex_id = vertex_id.flatten().tolist()
-        a = np.full((len(vertex_id), 3), -1, dtype=int)
+        a = np.full((len(vertex_id), 3), -1, dtype=np.float64)
         for i, vid in enumerate(vertex_id):
             v = self._mesh.vertex(vid)
             a[i, 0] = v.x()
             a[i, 1] = v.y()
-            a[i, 2] = 0.
+            if get_z:
+                a[i, 2] = self._lyr.dataProvider().datasetValue(QgsMeshDatasetIndex(self._ibed, 0), vid).scalar()
+            else:
+                a[i, 2] = 0.
         return a
 
     def triangle_vertices(self, triangle_id: int) -> np.ndarray:
@@ -90,7 +99,7 @@ class QgisMeshGeometry(PyMeshGeometry, PointMixinQgis):
         for cell_id in cell_ids:
             vert_ids = np.array(self.cell_vertices(cell_id))
             if len(vert_ids) == 3:
-                if self.point_in_triangle(p_, *self.vertex_position(vert_ids).tolist()):
+                if self.point_in_triangle(p_, *self.vertex_position(vert_ids, get_z=False).tolist()):
                     if cell_id not in self._cell2triangle:
                         self._cell2triangle[cell_id] = [self._tri_count]
                         self._tri_count += 1
@@ -100,7 +109,7 @@ class QgisMeshGeometry(PyMeshGeometry, PointMixinQgis):
                     self._cell2triangle[cell_id] = [self._tri_count, self._tri_count + 1]
                     self._tri_count += 2
                 for tri_idx in [[0, 1, 2], [2, 3, 0]]:
-                    if self.point_in_triangle(p_, *self.vertex_position(vert_ids[tri_idx]).tolist()):
+                    if self.point_in_triangle(p_, *self.vertex_position(vert_ids[tri_idx], get_z=False).tolist()):
                         return cell_id
         return -1
 
@@ -111,7 +120,7 @@ class QgisMeshGeometry(PyMeshGeometry, PointMixinQgis):
         for cell_id in cell_ids:
             vert_ids = np.array(self._mesh.face(cell_id))
             if len(vert_ids) == 3:
-                if self.point_in_triangle(p_, *self.vertex_position(vert_ids).tolist()):
+                if self.point_in_triangle(p_, *self.vertex_position(vert_ids, get_z=False).tolist()):
                     if cell_id in self._cell2triangle:
                         tri_id = self._cell2triangle[cell_id][0]
                     else:
@@ -134,7 +143,7 @@ class QgisMeshGeometry(PyMeshGeometry, PointMixinQgis):
                         self._triangles[tri_id] = vert_ids[tri_idx].tolist()
                     if tri_id not in self._triangle2cell:
                         self._triangle2cell[tri_id] = cell_id
-                    if self.point_in_triangle(p_, *self.vertex_position(vert_ids[tri_idx]).tolist()):
+                    if self.point_in_triangle(p_, *self.vertex_position(vert_ids[tri_idx], get_z=False).tolist()):
                         return tri_id
         return -1
 
@@ -154,12 +163,17 @@ class QgisMeshGeometry(PyMeshGeometry, PointMixinQgis):
         interval = 1
         geom = QgsGeometry.fromPolylineXY([QgsPointXY(*p1.tolist()[:2]), QgsPointXY(*p2.tolist()[:2])])
         dense = geom.densifyByDistance(interval)
-        ret_points = [p1[:2]]
-        ret_cell_ids = [self.find_containing_cell(p1)]
-        last_cell_id = ret_cell_ids[-1]
+        first_cell = self.find_containing_cell(p1)
+        ret_points, ret_cell_ids = [], []
+        if first_cell != -1:
+            ret_points = [p1[:2]]
+            ret_cell_ids = [first_cell]
+        last_cell_id = first_cell
         for i, p_start in enumerate(dense.vertices()):
             try:
                 p_end = dense.vertexAt(i + 1)
+                if p_end.isEmpty():
+                    break
             except Exception:
                 break
             points = {}
@@ -174,7 +188,7 @@ class QgisMeshGeometry(PyMeshGeometry, PointMixinQgis):
                     dir_ = vec / offset
                     nudge = p + dir_ * tol
                     cell_id = self.find_containing_cell(nudge)
-                    if cell_id not in points and cell_id != last_cell_id:
+                    if cell_id != -1 and cell_id not in points and cell_id != last_cell_id:
                         points[cell_id] = (offset, self._coerce_into_point(p)[:2])
             if points:
                 sorted_points = sorted(points.items(), key=lambda x: x[1][0])

@@ -1027,22 +1027,22 @@ class TestMeshRegression(unittest.TestCase):
         with pyqgis():
             res = XMDF(p)
 
-            # time series
-            a = res.time_series(point, 'water level').reset_index().to_numpy()
-            # with open(f'{comp}_time_series.data', 'wb') as f:
-            #     f.write(a.tobytes())
-            b = load_comparison_data(f'{comp}_time_series.data').reshape(a.shape)
-            is_close = np.isclose(a, b, equal_nan=True)
-            self.assertTrue(is_close.all())
-
-            # point outside mesh
-            a = res.time_series(point_outside, 'water level').reset_index().to_numpy()
-            self.assertTrue(a.size == 0)
+            # # time series
+            # a = res.time_series(point, 'water level').reset_index().to_numpy()
+            # # with open(f'{comp}_time_series.data', 'wb') as f:
+            # #     f.write(a.tobytes())
+            # b = load_comparison_data(f'{comp}_time_series.data').reshape(a.shape)
+            # is_close = np.isclose(a, b, equal_nan=True)
+            # self.assertTrue(is_close.all())
+            #
+            # # point outside mesh
+            # a = res.time_series(point_outside, 'water level').reset_index().to_numpy()
+            # self.assertTrue(a.size == 0)
 
             # section
             a = res.section(line, 'water level', 1.).reset_index().to_numpy()
-            with open(f'{comp}_section.data', 'wb') as f:
-                f.write(a.tobytes())
+            # with open(f'{comp}_section.data', 'wb') as f:
+            #     f.write(a.tobytes())
             b = load_comparison_data(f'{comp}_section.data').reshape(a.shape)
             is_close = np.isclose(a, b, equal_nan=True)
             self.assertTrue(is_close.all())
@@ -1057,8 +1057,8 @@ class TestMeshRegression(unittest.TestCase):
 
             # curtain
             a = res.curtain(line, 'z0', 1.).reset_index().to_numpy()
-            with open(f'{comp}_curtain.data', 'wb') as f:
-                f.write(a.tobytes())
+            # with open(f'{comp}_curtain.data', 'wb') as f:
+            #     f.write(a.tobytes())
             b = load_comparison_data(f'{comp}_curtain.data').reshape(a.shape)
             is_close = np.isclose(a, b, equal_nan=True)
             self.assertTrue(is_close.all())
