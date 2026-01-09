@@ -167,8 +167,8 @@ class Py2dm(PyMeshGeometry, GeometryLazyLoadMixin, VTKGeometryMixin):
         self._trans = Transform2D(translate=(-self._global_bbox.x.min, -self._global_bbox.y.min))
         self._local_bbox = self._global_bbox.transform(self._trans)
         self._vertices_local = np.append(
-            self._trans.translate(self._vertices[:, 0:2]).astype('f4'),
-            self._vertices[:,[2]].astype('f4'),
+            self._trans.translate(self._vertices[:, 0:2]).astype(self.dtype),
+            self._vertices[:,[2]].astype(self.dtype),
             axis=1
         )
         self._mesh = pv.PolyData(

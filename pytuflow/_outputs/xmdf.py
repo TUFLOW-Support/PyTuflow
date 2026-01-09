@@ -28,6 +28,20 @@ class XMDF(Mesh):
     twodm : PathLike, optional
         Path to the 2dm file. If not provided, the class will attempt to find the 2dm file with the same name as the
         XMDF file. If an XMDF SUP file is provided in the first argument, the 2dm argument is not used.
+    driver: str, optional
+       The driver to use for reading the XMDF file. Options are:
+
+       - ``"v1.0"``: Use PyTUFLOW v1.0 XMDF reader (legacy). This uses old QGIS geometry and extraction methods.
+         This option is exclusive and can't be used with other options.
+       - ``"v1.1"``: Use PyTUFLOW v1.1 XMDF reader (default). Uses ``vtk`` geometry if available, otherwise uses
+         ``QGIS`` geometry. In order of preference, uses ``h5py``, ``netcdf4``, or ``QGIS`` engine for extracting data.
+         This option is exclusive and can't be used with other options.
+       - ``"qgis [geometry] | [engine]"``: Use QGIS libraries for geometry (``"qgis geometry"``) and/or use QGIS libraries
+          for extracting data (``"qgis engine"``). Both can be passed together as ``"qgis geometry engine"``. This option
+          can be used in conjunctionwith other extracting data options e.g. ``"qgis geometry netcdf4"``. The QGIS engine
+          must be used with QGIS geometry.
+       - ``"netcdf4"``: Use NetCDF4 library for extracting data. Exclusive with other extraction options.
+       - ``"h5py"``: Use h5py library for extracting data. Exclusive with other extraction options.
 
     Examples
     --------
@@ -121,7 +135,7 @@ class XMDF(Mesh):
     17  73.063420  42.849014       42.834780   81.926818  42.708500       42.452022
     """
 
-    def __init__(self, fpath: PathLike, twodm: PathLike = None):
+    def __init__(self, fpath: PathLike, twodm: PathLike = None, driver: str = 'v1.1'):
         if not has_nc and not has_qgis:
             raise ImportError('XMDF requires QGIS python libraries or some data can be accessed with netCDF4.')
 
@@ -142,14 +156,28 @@ class XMDF(Mesh):
 
         super().__init__(self.twodm)
         self.fpath = Path(fpath)
-        self._driver = PyXMDF(self.fpath, self.twodm)
-        self._soft_load_driver = self._driver
-        # if PyXMDF.available():
-        #     self._driver = PyXMDF(self.fpath, self.twodm)
-        #     self._soft_load_driver = self._driver
-        # else:
-        #     self._driver = QgisXmdfMeshDriver(self.twodm, self.fpath)
-        #     self._soft_load_driver = NCMeshDriverXmdf(self.twodm, self.fpath)
+
+        if driver.lower() == 'v1.0':
+            geom_driver = 'qgis'
+            engine = 'qgis'
+        elif driver.lower() == 'v1.1':  # PyXMDF will choose best available
+            geom_driver = None
+            engine = None
+        else:
+            geom_driver = 'qgis' if 'qgis geometry' in driver.lower() else None
+            engine = 'qgis' if 'qgis engine' in driver.lower() or 'qgis geometry engine' in driver.lower() else None
+            if 'h5py' in driver.lower():
+                engine = 'h5py'
+            elif 'netcdf4' in driver.lower():
+                engine = 'netcdf4'
+
+        if driver.lower() == 'v1.0':
+            self._driver = QgisXmdfMeshDriver(self.twodm, self.fpath)
+            self._soft_load_driver = NCMeshDriverXmdf(self.twodm, self.fpath)
+        else:
+            self._driver = PyXMDF(self.fpath, self.twodm, geom_driver, engine)
+            self._soft_load_driver = self._driver
+
         self._initial_load()
 
     @staticmethod

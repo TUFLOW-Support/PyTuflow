@@ -668,11 +668,14 @@ class CATCHJson(MapOutput):
 
         # the dataframe can have duplicate "offset" values, we only want the offsets "inside" the start/end locs
         # check for duplicate "offset" values at the start
+        k = 4
+        eps = np.finfo(np.float32).eps
+        atol = rtol = k * eps
         inds = np.where(mask2)
         i = 0
         if inds[0].size > 1:
             i, j = inds[0][:2]
-            if np.isclose(df2.iloc[i, 0], df2.iloc[j, 0]):
+            if np.isclose(df2.iloc[i, 0], df2.iloc[j, 0], atol=atol, rtol=rtol):
                 mask2[i] = False
                 i += 1
         # check for duplicate "offset" values at the end
@@ -680,7 +683,7 @@ class CATCHJson(MapOutput):
         if inds[0].size:
             i += inds[0][0] - 1
             j = i - 1
-            if np.isclose(df2.iloc[i, 0], df2.iloc[j, 0]):
+            if np.isclose(df2.iloc[i, 0], df2.iloc[j, 0], atol=atol, rtol=rtol):
                 mask2[i] = False
         df2_ = df2[mask2]  # the dataframe with the desired section to be inserted
 
@@ -690,9 +693,9 @@ class CATCHJson(MapOutput):
         inds = np.where(~mask)
         i = inds[0][0] if inds[0].size else df1.shape[0]
         if i > 2:
-            if np.isclose(df1.iloc[i - 1, 0], df1.iloc[i - 2, 0]):
+            if np.isclose(df1.iloc[i - 1, 0], df1.iloc[i - 2, 0], atol=atol, rtol=rtol):
                 i -= 1
-        df = df1.iloc[:i,:] if not np.isclose(df1.iloc[0, 0], start_loc) else pd.DataFrame()
+        df = df1.iloc[:i,:] if not np.isclose(df1.iloc[0, 0], start_loc, atol=atol, rtol=rtol) else pd.DataFrame()
 
         # combine the first part of the first dataframe with the inserted section
         df = pd.concat([df, df2_], axis=0, ignore_index=True) if not df.empty else df2_
@@ -700,16 +703,16 @@ class CATCHJson(MapOutput):
             return df
 
         # get the part of the first dataframe that will be after the inserted section
-        mask = df1.iloc[:, 0] >= end_loc
+        mask = df1.iloc[:, 0] >= end_loc - atol
         # check for duplicate "offset" values
         inds = np.where(mask)
         i = inds[0][0] if inds[0].size else df1.shape[0]
         if inds[0].size > 1:
-            if np.isclose(df1.iloc[i,0], df1.iloc[i+1,0]):
+            if np.isclose(df1.iloc[i,0], df1.iloc[i+1,0], atol=atol, rtol=rtol):
                 i += 1
 
         # combine the last part of the first dataframe with the inserted section
-        if not np.isclose(df1.iloc[-1, 0], end_loc):
+        if not np.isclose(df1.iloc[-1, 0], end_loc, atol=atol, rtol=rtol):
             df = pd.concat([df, df1.iloc[i:, :]], axis=0, ignore_index=True)
 
         return df

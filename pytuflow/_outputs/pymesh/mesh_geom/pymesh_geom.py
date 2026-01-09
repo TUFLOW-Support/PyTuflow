@@ -462,7 +462,6 @@ class PyMeshGeometry(PointMixin, LineStringMixin):
         """The workhorse for the above routine. Calculates per line segment information."""
         p1 = np.append(line[0], self.dtype(0))
         p2 = np.append(line[1], self.dtype(0))
-        tol = 1e-6
         points, cell_ids = self._mesh_intersects(p1, p2)
 
         length = np.linalg.norm(p2 - p1).astype(self.dtype)
@@ -491,7 +490,7 @@ class PyMeshGeometry(PointMixin, LineStringMixin):
                 j = idx[-1]
                 nudged.append(j)
                 dir_ = ((p2 - p1) / np.linalg.norm(p2 - p1))[:2]
-                p = p + dir_ * tol * k
+                p = p + dir_ * atol * k
                 id_ = self.find_containing_cell(p, scope='local')
                 if id_ != -1:
                     cell_ids[j] = id_
@@ -524,8 +523,9 @@ class PyMeshGeometry(PointMixin, LineStringMixin):
             last_cell = cell_ids[-1]
             last_point = points[-1]
             intersections = self.cell_edge_intersections(last_cell, p1, p2, scope='local')
+            atol_ = rtol_ = 4 * np.finfo(np.float32).eps if isinstance(self._mesh, pv.PolyData) else atol
             for pt in intersections:
-                if not np.isclose(last_point, pt, atol=atol, rtol=rtol).all():
+                if not np.isclose(last_point, pt, atol=atol_, rtol=rtol_).all():
                     points = np.append(points, pt.reshape((-1, 2)), axis=0)
                     break
             else:

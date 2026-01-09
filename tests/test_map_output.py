@@ -550,7 +550,7 @@ class TestDAT(unittest.TestCase):
         with pyqgis():
             res = DAT(p)
             dtypes = res.data_types()
-            self.assertEqual(['bed level', 'water level', 'max water level'], dtypes)
+            self.assertEqual(sorted(['bed level', 'water level', 'max water level']), sorted(dtypes))
 
     def test_time_series(self):
         p = './tests/dat/small_model_002_h.dat'

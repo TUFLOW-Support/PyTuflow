@@ -66,7 +66,6 @@ class PyNCMeshGeometry(PyMeshGeometry, GeometryLazyLoadMixin, VTKGeometryMixin):
 
             self._global_bbox.update_extents(self._vertices)
 
-            dtype = np.float32
             if self.spherical:
                 # transform object converts spherical to a local cartesian system using the proj library
                 cartesian_transformer, inverse = proj_transformer(self._vertices[:, 0:2])
@@ -76,8 +75,8 @@ class PyNCMeshGeometry(PyMeshGeometry, GeometryLazyLoadMixin, VTKGeometryMixin):
 
             self._local_bbox = self._global_bbox.transform(self._trans)
             self._vertices_local = np.append(
-                self._trans.transform(self._vertices[:, 0:2]).astype(dtype),
-                self._vertices[:, [2]].astype(dtype),
+                self._trans.transform(self._vertices[:, 0:2]).astype(self.dtype),
+                self._vertices[:, [2]].astype(self.dtype),
                 axis=1
             )
 
