@@ -22,11 +22,11 @@ class DAT(Mesh):
         Path to the 2dm file. If not provided, the class will attempt to find the 2dm file with the same name as the
         DAT file. If an SUP file is provided in the first argument, the 2dm argument is not used.
     driver: str, optional
-       The driver to use for reading the XMDF file. Options are:
+       The driver to use for reading the DAT file. Options are:
 
-       - ``"v1.0"``: Use PyTUFLOW v1.0 XMDF reader (legacy). This is the equivalent of using ``"qgis geometry engine"``.
+       - ``"v1.0"``: Use PyTUFLOW v1.0 DAT reader (legacy). This is the equivalent of using ``"qgis geometry engine"``.
          This option is exclusive and can't be used with other options.
-       - ``"v1.1"``: Use PyTUFLOW v1.1 XMDF reader (default). Uses ``vtk`` geometry if available, otherwise uses
+       - ``"v1.1"``: Use PyTUFLOW v1.1 DAT reader (default). Uses ``vtk`` geometry if available, otherwise uses
          ``QGIS`` geometry. In order of preference, uses ``h5py``, ``netcdf4``, or ``QGIS`` engine for extracting data.
          This option is exclusive and can't be used with other options.
        - ``"qgis [geometry] | [engine]"``: Use QGIS libraries for geometry (``"qgis geometry"``) and/or use QGIS libraries

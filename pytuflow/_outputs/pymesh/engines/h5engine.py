@@ -56,7 +56,8 @@ class H5Engine(DatasetEngine):
     def get_property(self, data_path: str, property_name: str) -> typing.Any:
         with self.open():
             path = self._case_correct_path(data_path)
-            prop = self.hnd[path].attrs[property_name]
+            if path:
+                prop = self.hnd[path].attrs[property_name]
             if isinstance(prop, np.ndarray):
                 if prop.dtype.type is np.bytes_:
                     ret = tuple([p.decode('utf-8') for p in prop])

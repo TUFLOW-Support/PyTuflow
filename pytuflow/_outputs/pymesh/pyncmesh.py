@@ -2,16 +2,23 @@ from pathlib import Path
 
 import numpy as np
 
-from . import PyMesh, PyNCMeshGeometry, PyNCMeshDataExtractor
+from . import PyMesh, PyNCMeshGeometry, PyNCMeshDataExtractor, QgisMeshGeometry
 
 
 class PyNCMesh(PyMesh):
 
-    def __init__(self, fpath: str | Path, engine: str = None):
+    def __init__(self, fpath: str | Path, geom_driver: str = None, engine: str = None):
         super().__init__()
         self.fpath = Path(fpath)
-        self.geom = PyNCMeshGeometry(fpath)
-        self.extractor: PyNCMeshDataExtractor = PyNCMeshDataExtractor(fpath, engine)
+        if (geom_driver and geom_driver.lower()) == 'qgis' or (geom_driver is None and not self.pv_available()):
+            self.geom = QgisMeshGeometry(fpath)
+        else:
+            self.geom = PyNCMeshGeometry(fpath)
+        if engine == 'qgis':
+            pass
+        else:
+            self.extractor = PyNCMeshDataExtractor(fpath, engine)
+        self.geom.spherical = self.extractor.spherical()
         self.name = self.fpath.stem
         with self.extractor.open():
             for dtype in self.data_types():

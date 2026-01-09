@@ -10,8 +10,8 @@ def ellipsoid_distance(points, ref):
     ref:    (2,) array of [lat, lon] in degrees
     returns: (N,) distances in meters
     """
-    lons1 = np.full(len(points), ref[0])
-    lats1 = np.full(len(points), ref[1])
+    lons1 = np.full(points.shape[0], ref[0,0])
+    lats1 = np.full(points.shape[0], ref[0,1])
 
     lats2 = points[:, 1]
     lons2 = points[:, 0]

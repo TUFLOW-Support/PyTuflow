@@ -91,6 +91,12 @@ class PyNCMeshDataExtractor(PyDataExtractor):
             return True
         return False
 
+    def spherical(self) -> bool:
+        if self.engine == 'netcdf4':
+            return self.engine.get_property('', 'spherical').lower() == 'true'
+        else:
+            return self.engine.get_property('cell_X', 'units').lower() == 'decimal degrees'
+
     def maximum(self, data_type: str) -> float:
         return float(self.engine.data(data_type).max())
 

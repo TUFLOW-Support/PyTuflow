@@ -28,6 +28,20 @@ class NCMesh(Mesh):
     ----------
     fpath : PathLike
         Path to the NetCDF file.
+    driver: str, optional
+       The driver to use for reading the NcMesh file. Options are:
+
+       - ``"v1.0"``: Use PyTUFLOW v1.0 NcMesh reader (legacy). This uses old QGIS geometry and extraction methods.
+         This option is exclusive and can't be used with other options.
+       - ``"v1.1"``: Use PyTUFLOW v1.1 NcMesh reader (default). Uses ``vtk`` geometry if available, otherwise uses
+         ``QGIS`` geometry. In order of preference, uses ``h5py``, ``netcdf4``, or ``QGIS`` engine for extracting data.
+         This option is exclusive and can't be used with other options.
+       - ``"qgis [geometry] | [engine]"``: Use QGIS libraries for geometry (``"qgis geometry"``) and/or use QGIS libraries
+          for extracting data (``"qgis engine"``). Both can be passed together as ``"qgis geometry engine"``. This option
+          can be used in conjunctionwith other extracting data options e.g. ``"qgis geometry netcdf4"``. The QGIS engine
+          must be used with QGIS geometry.
+       - ``"netcdf4"``: Use NetCDF4 library for extracting data. Exclusive with other extraction options.
+       - ``"h5py"``: Use h5py library for extracting data. Exclusive with other extraction options.
 
     Examples
     --------
@@ -129,16 +143,32 @@ class NCMesh(Mesh):
     3       1.0  0.424264
     """
 
-    def __init__(self, fpath: PathLike):
+    def __init__(self, fpath: PathLike, driver: str = 'v1.1'):
         super().__init__(fpath)
-        if PyNCMesh.available():
-            self._driver = PyNCMesh(self.fpath)
-            self._soft_load_driver = self._driver
+
+        if driver.lower() == 'v1.0':
+            geom_driver = 'qgis'
+            engine = 'qgis'
+        elif driver.lower() == 'v1.1':  # PyNCMesh will choose best available
+            geom_driver = None
+            engine = None
         else:
+            geom_driver = 'qgis' if 'qgis geometry' in driver.lower() else None
+            engine = 'qgis' if 'qgis engine' in driver.lower() or 'qgis geometry engine' in driver.lower() else None
+            if 'h5py' in driver.lower():
+                engine = 'h5py'
+            elif 'netcdf4' in driver.lower():
+                engine = 'netcdf4'
+
+        if driver.lower() == 'v1.0':
             self._driver = QgisNcMeshDriver(self.fpath)
             self._soft_load_driver = NCMeshDriverNC(self.fpath)
             if self._soft_load_driver.valid:
                 self._driver.spherical = self._soft_load_driver.spherical
+        else:
+            self._driver = PyNCMesh(self.fpath, geom_driver, engine)
+            self._soft_load_driver = self._driver
+
         self._initial_load()
 
     @staticmethod

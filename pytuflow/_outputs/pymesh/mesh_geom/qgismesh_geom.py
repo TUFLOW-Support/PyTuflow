@@ -187,13 +187,13 @@ class QgisMeshGeometry(PyMeshGeometry, PointMixinQgis):
         return (b1 == b2) and (b2 == b3)
 
     def distance(self, p2: np.ndarray, p1: np.ndarray) -> np.ndarray:
-        if not QgsProject.instance().crs().isGeographic():
+        if not self.spherical:
             return super().distance(p2, p1)
         n1 = 1 if p1.ndim == 1 else p1.shape[0]
         n2 = 1 if p2.ndim == 1 else p2.shape[0]
         if n1 != n2:
             p1 = np.repeat(p1.reshape(1, -1), n2, axis=0)
-        return ellipsoid_distance(p2, p1)
+        return ellipsoid_distance(p2.reshape(n2, -1), p1.reshape(n1, -1))
 
     def _mesh_intersects(self, p1: np.ndarray, p2: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         """Returns points and cell_ids where the line segment intersects the mesh. Last point is not returned."""

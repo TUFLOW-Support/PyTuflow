@@ -541,7 +541,7 @@ class PyMeshGeometry(PointMixin, LineStringMixin):
             points = np.append(points, p2[:2].reshape((-1, 2)), axis=0)
 
         cell_ids = np.append(cell_ids, cell_ids[-1])
-        offsets = np.linalg.norm(points - p1[:2], axis=1).astype(self.dtype)
+        offsets = self.distance(points, p1[:2]).astype(self.dtype)
 
         if p1_outside:
             cell_ids = np.append([-1], cell_ids)
