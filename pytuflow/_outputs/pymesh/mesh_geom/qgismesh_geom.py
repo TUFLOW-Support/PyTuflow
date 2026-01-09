@@ -147,6 +147,35 @@ class QgisMeshGeometry(PyMeshGeometry, PointMixinQgis):
                         return tri_id
         return -1
 
+    def cell_edge_intersections(self, cell_id: int, p0: np.ndarray, p1: np.ndarray, scope: str = 'global') -> np.ndarray:
+        def cross2d(x: np.ndarray, y: np.ndarray) -> np.ndarray:
+            """2D cross product. Numpy 2.0 deprecates np.cross for 2D arrays."""
+            return x[..., 0] * y[..., 1] - x[..., 1] * y[..., 0]
+
+        def intersection(p1: np.ndarray, p2: np.ndarray, q1: np.ndarray, q2: np.ndarray) -> np.ndarray | None:
+            """Finds the intersection between 2 lines (p1, p2) and (q1, q2)."""
+            r = p2 - p1
+            s = q2 - q1
+            denom = cross2d(r, s)
+            if abs(denom) < 1e-12:
+                return None  # parallel
+            t = cross2d((q1 - p1), s) / denom
+            u = cross2d((q1 - p1), r) / denom
+            if 0 <= t <= 1 and 0 <= u <= 1:
+                return p1 + t * r
+            return None
+
+        edges = self.cell_edges(cell_id)
+        pts = self.vertex_position(edges, get_z=False).reshape((-1, 3))
+        intersections = []
+        for i in range(0, pts.shape[0], 2):
+            p0_ = pts[i, :2]
+            p1_ = pts[i+1, :2]
+            pt = intersection(p0[:2], p1[:2], p0_, p1_)
+            if pt is not None:
+                intersections.append(pt)
+        return np.array(intersections)
+
     @staticmethod
     def point_in_triangle(pt, v1, v2, v3):
         def sign(p1, p2, p3):
