@@ -388,6 +388,13 @@ class PyMeshGeometry(PointMixin, LineStringMixin):
         trans = Transform2D(translate=[-self.global_bbox.x.min, -self.global_bbox.y.min])
         return extents.transform(trans)
 
+    def distance(self, p2: np.ndarray, p1: np.ndarray) -> np.ndarray:
+        n1 = 1 if p1.ndim == 1 else p1.shape[0]
+        n2 = 1 if p2.ndim == 1 else p2.shape[0]
+        if n1 != n2:
+            p1 = np.repeat(p1.reshape(1, -1), n2, axis=0)
+        return np.linalg.norm(p2.reshape(n2, -1) - p1.reshape(n2, -1), axis=1).reshape(n2,)
+
     def mesh_line(self,
                   line: LineStringLike,
                   scope: str = 'global',
@@ -464,7 +471,7 @@ class PyMeshGeometry(PointMixin, LineStringMixin):
         p2 = np.append(line[1], self.dtype(0))
         points, cell_ids = self._mesh_intersects(p1, p2)
 
-        length = np.linalg.norm(p2 - p1).astype(self.dtype)
+        length = self.distance(p2, p1).astype(self.dtype)[0]
         if cell_ids.size == 0:
             mid_point = (p1 + p2) / 2.
             return (
@@ -499,7 +506,7 @@ class PyMeshGeometry(PointMixin, LineStringMixin):
         cell_ids = cell_ids[idx]
 
         # figure out if the line leaves the mesh and then re-enters
-        offsets = np.linalg.norm(points - p1[:2], axis=1).astype(self.dtype)
+        offsets = self.distance(points, p1[:2]).astype(self.dtype)
         mid_offsets = np.append(self.dtype(0), offsets + np.append(np.diff(offsets) / 2., self.dtype(0)))
         dir_ = (p2 - p1)[:2].astype(self.dtype).reshape((1, 2)) / length
         p0 = p1[:2].reshape((1, 2))

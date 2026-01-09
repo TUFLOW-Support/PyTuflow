@@ -1,4 +1,4 @@
-from .geom import PointMixin, LineStringMixin, PointLike, LineStringLike
+from .geom import PointMixin, LineStringMixin, PointLike, LineStringLike, ellipsoid_distance
 from .barycentric import barycentric_coord
 from .data_cache import Cache
 from .transform import Transform2D

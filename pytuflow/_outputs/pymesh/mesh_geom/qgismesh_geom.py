@@ -5,13 +5,13 @@ import numpy as np
 
 try:
     from qgis.core import (QgsApplication, QgsMesh, QgsMeshLayer, QgsMeshSpatialIndex, QgsPoint,
-                           QgsPointXY, QgsGeometry, QgsMeshDatasetIndex)
+                           QgsPointXY, QgsGeometry, QgsMeshDatasetIndex, QgsProject, QgsDistanceArea)
 except ImportError:
     from ..stubs.qgis.core import (QgsApplication, QgsMesh, QgsMeshLayer, QgsMeshSpatialIndex, QgsPoint,
-                                   QgsPointXY, QgsGeometry, QgsMeshDatasetIndex)
+                                   QgsPointXY, QgsGeometry, QgsMeshDatasetIndex, QgsProject, QgsDistanceArea)
 
 from . import PyMeshGeometry
-from .. import barycentric_coord, Bbox2D, Transform2D, PointMixin, PointLike, LineStringMixin, LineStringLike
+from .. import ellipsoid_distance, Transform2D, PointMixin, PointLike
 
 
 class PointMixinQgis(PointMixin):
@@ -185,6 +185,15 @@ class QgisMeshGeometry(PyMeshGeometry, PointMixinQgis):
         b2 = sign(pt, v2, v3) < 0.0
         b3 = sign(pt, v3, v1) < 0.0
         return (b1 == b2) and (b2 == b3)
+
+    def distance(self, p2: np.ndarray, p1: np.ndarray) -> np.ndarray:
+        if not QgsProject.instance().crs().isGeographic():
+            return super().distance(p2, p1)
+        n1 = 1 if p1.ndim == 1 else p1.shape[0]
+        n2 = 1 if p2.ndim == 1 else p2.shape[0]
+        if n1 != n2:
+            p1 = np.repeat(p1.reshape(1, -1), n2, axis=0)
+        return ellipsoid_distance(p2, p1)
 
     def _mesh_intersects(self, p1: np.ndarray, p2: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         """Returns points and cell_ids where the line segment intersects the mesh. Last point is not returned."""

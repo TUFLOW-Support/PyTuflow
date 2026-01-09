@@ -30,3 +30,11 @@ class QgsGeometry:
 
 class QgsMeshDatasetIndex:
     pass
+
+
+class QgsProject:
+    pass
+
+
+class QgsDistanceArea:
+    pass
