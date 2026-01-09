@@ -802,6 +802,7 @@ class TestMeshRegression(unittest.TestCase):
         point = './tests/nc_mesh/ncmesh_point_longlat.shp'
         line = './tests/nc_mesh/ncmesh_line_longlat.shp'
         line_outside_mesh = './tests/nc_mesh/ncmesh_line_longlat_outside_mesh.shp'
+        line_outside_mesh_2 = './tests/nc_mesh/ncmesh_line_longlat_outside_mesh_2.shp'
         comp = './tests/regression_test_comparisons/test_qgis_cell_mesh_latlong'
         with pyqgis():
             res = NCMesh(p)
@@ -965,6 +966,14 @@ class TestMeshRegression(unittest.TestCase):
             # with open(f'{comp}_section_outside_mesh_vec.data', 'wb') as f:
             #     f.write(a.tobytes())
             b = load_comparison_data(f'{comp}_section_outside_mesh_vec.data').reshape(a.shape)
+            is_close = np.isclose(a, b, equal_nan=True)
+            self.assertTrue(is_close.all())
+
+            # section outside mesh - leaves and re-enters mesh in a single segment
+            a = res.section(line_outside_mesh_2, 'salinity', 186969).reset_index().to_numpy()
+            # with open(f'{comp}_section_outside_mesh_reenters.data', 'wb') as f:
+            #     f.write(a.tobytes())
+            b = load_comparison_data(f'{comp}_section_outside_mesh_reenters.data').reshape(a.shape)
             is_close = np.isclose(a, b, equal_nan=True)
             self.assertTrue(is_close.all())
 

@@ -389,7 +389,8 @@ class PyMeshGeometry(PointMixin, LineStringMixin):
         return extents.transform(trans)
 
     def mesh_line(self,
-                  line: LineStringLike
+                  line: LineStringLike,
+                  scope: str = 'global',
                   ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """Calculates the mesh intersections along a line. The line is broken into parts separated
         by where the mesh edges intersect the line.
@@ -424,7 +425,9 @@ class PyMeshGeometry(PointMixin, LineStringMixin):
             5. ``Nx3`` - ``[offset, x, y]`` - Mid-points between intersections + start and end points.
             6. ``Nx2`` - ``[dir-x, dir-y]`` - Direction vectors for each mid-segment between intersections.
         """
-        line = self.trans.transform(self._coerce_into_line(line)).astype(self.dtype)
+        line = self._coerce_into_line(line)
+        if scope == 'global':
+            line = self.trans.transform(line).astype(self.dtype)
 
         cell_ids = np.array([])
         mid_cell_ids = np.array([])
@@ -495,6 +498,22 @@ class PyMeshGeometry(PointMixin, LineStringMixin):
 
         points = np.array(unique, dtype=self.dtype)
         cell_ids = cell_ids[idx]
+
+        # figure out if the line leaves the mesh and then re-enters
+        offsets = np.linalg.norm(points - p1[:2], axis=1).astype(self.dtype)
+        mid_offsets = np.append(self.dtype(0), offsets + np.append(np.diff(offsets) / 2., self.dtype(0)))
+        dir_ = (p2 - p1)[:2].astype(self.dtype).reshape((1, 2)) / length
+        p0 = p1[:2].reshape((1, 2))
+        mid_points = p0 + dir_ * mid_offsets.reshape((-1, 1))
+        mid_cell_ids = np.array([self.find_containing_cell(pt, scope='local') for pt in mid_points])
+        outside_idx = np.flatnonzero(np.diff(np.diff((np.array(mid_cell_ids) == -1).astype(int))) == -2)
+        if outside_idx.size:
+            polyline = [p1[:2]] + mid_points[outside_idx + 1].tolist() + [p2[:2]]
+            cell_ids, points, _, mid_cell_ids, mid_points, _ = self.mesh_line(polyline, scope='local')
+            mask = np.flatnonzero(np.diff(np.diff((np.array(cell_ids) == -1).astype(int))) == -2)
+            cell_ids[mask] = -1
+            mask = np.arange(cell_ids.size) != mask + 1
+            return cell_ids[mask], points[mask], mid_cell_ids, mid_points
 
         # test if p1 or p2 are outside the mesh
         p1_outside = self.find_containing_cell(p1, scope='local') == -1

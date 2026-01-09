@@ -381,6 +381,7 @@ class TestPyMeshRegression(unittest.TestCase):
         point = './tests/nc_mesh/ncmesh_point_longlat.shp'
         line = './tests/nc_mesh/ncmesh_line_longlat.shp'
         line_outside_mesh = './tests/nc_mesh/ncmesh_line_longlat_outside_mesh.shp'
+        line_outside_mesh_2 = './tests/nc_mesh/ncmesh_line_longlat_outside_mesh_2.shp'
         comp = './tests/regression_test_comparisons/test_qgis_cell_mesh_latlong'
 
         res = NCMesh(p)
@@ -542,6 +543,14 @@ class TestPyMeshRegression(unittest.TestCase):
         self.assertTrue(is_close_val2.all())
         self.assertTrue(is_close_offset3.all())
         self.assertTrue(is_close_val3.all())
+
+        # section outside mesh - leaves and re-enters mesh in a single segment
+        a = res.section(line_outside_mesh_2, 'salinity', 186969).reset_index().to_numpy()
+        b = load_comparison_data(f'{comp}_section_outside_mesh_reenters.data').reshape(a.shape)
+        is_close_offset = np.isclose(a[:, 1], b[:, 1], atol=1, equal_nan=True)
+        is_close_val = np.isclose(a[:, 2], b[:, 2], equal_nan=True)
+        self.assertTrue(is_close_offset.all())
+        self.assertTrue(is_close_val.all())
 
         # profile
         a = res.profile(point, 'salinity', 186969).reset_index().to_numpy()
