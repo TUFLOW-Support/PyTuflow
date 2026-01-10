@@ -299,7 +299,7 @@ class TestNCMesh(unittest.TestCase):
         nc = './tests/nc_mesh/fv_res.nc'
         with pyqgis():
             res = NCMesh(nc)
-            df = res.time_series((1.5, 4.5), 'vel', averaging_method='singlelevel?top&1')
+            df = res.time_series((1.5, 4.5), 'vel', averaging_method='singlelevel?dir=top&1')
             self.assertEqual((7, 1), df.shape)
 
     def test_section(self):

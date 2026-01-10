@@ -76,6 +76,15 @@ class TestDAT(unittest.TestCase):
         self.assertEqual((4, 2), df.shape)
 
 
+class TestNCMesh(unittest.TestCase):
+
+    def test_time_series_averaging(self):
+        nc = './tests/nc_mesh/fv_res.nc'
+        res = NCMesh(nc)
+        df = res.time_series((1.5, 4.5), 'vel', averaging_method='singlelevel?dir=top&1')
+        self.assertEqual((7, 1), df.shape)
+
+
 class TestCATCHJson(unittest.TestCase):
 
     def test_load(self):

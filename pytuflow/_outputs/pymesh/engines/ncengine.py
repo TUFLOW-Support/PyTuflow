@@ -90,7 +90,7 @@ class NCEngine(DatasetEngine):
                 a = grp.variables[varname][idx]
             if np.ma.isMaskedArray(a):
                 if np.ma.is_masked(a):
-                    a = np.ma.filled(np.nan)
+                    a = a.filled(np.nan)
                 else:
                     a = np.array(a)
             return a

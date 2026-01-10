@@ -50,6 +50,7 @@ class PyNCMesh(PyMesh):
     def zlevels(self, time_index: int, nlevels: int, cell_idx2: int, cell_idx3: int) -> np.ndarray:
         idx = cell_idx2 + cell_idx3
         if isinstance(cell_idx2, int):
-            return self.extractor.data('layerface_Z', (time_index, slice(idx, idx + nlevels + 1)))
+            a = self.extractor.data('layerface_Z', (time_index, slice(idx, idx + nlevels + 1)))
         idx = [i + j for i, nlevel in np.column_stack((idx, nlevels)) for j in range(nlevel + 1)]
-        return self.extractor.data('layerface_Z', (time_index, idx))
+        a = self.extractor.data('layerface_Z', (time_index, idx))
+        return a[~np.isnan(a)].reshape((-1, nlevels + 1) if a.ndim > 1 else (-1, ))
