@@ -8,6 +8,7 @@ class PyDataExtractor:
     """Base class for extracting data from the mesh format."""
     SliceType = int | slice | list[int]
     MultiSliceType = tuple[SliceType, SliceType]
+    Name = 'PyDataExtractor'
 
     @contextlib.contextmanager
     def open(self):

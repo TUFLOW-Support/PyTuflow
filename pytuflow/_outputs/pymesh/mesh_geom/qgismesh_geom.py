@@ -35,7 +35,7 @@ class QgisMeshGeometry(PyMeshGeometry, PointMixinQgis):
         super().__init__(fpath)
         self.has_z = True
         self.trans = Transform2D()
-        self._lyr = None
+        self.lyr = None
         self._mesh = QgsMesh()
         self._si = None
         self._loaded = False
@@ -51,12 +51,12 @@ class QgisMeshGeometry(PyMeshGeometry, PointMixinQgis):
         if not QgsApplication.instance():
             raise RuntimeError('QGIS application instance not found.')
         if not self._loaded:
-            self._lyr = QgsMeshLayer(str(self.fpath), self.fpath.stem, 'mdal')
-            dp = self._lyr.dataProvider()
+            self.lyr = QgsMeshLayer(str(self.fpath), self.fpath.stem, 'mdal')
+            dp = self.lyr.dataProvider()
             dp.populateMesh(self._mesh)
             self._si = QgsMeshSpatialIndex(self._mesh)
-            for i in range(self._lyr.dataProvider().datasetGroupCount()):
-                if self._lyr.dataProvider().datasetGroupMetadata(i).name().lower() == 'bed elevation':
+            for i in range(self.lyr.dataProvider().datasetGroupCount()):
+                if self.lyr.dataProvider().datasetGroupMetadata(i).name().lower() == 'bed elevation':
                     self._ibed = i
                     break
             self._loaded = True
@@ -77,7 +77,7 @@ class QgisMeshGeometry(PyMeshGeometry, PointMixinQgis):
             a[i, 0] = v.x()
             a[i, 1] = v.y()
             if get_z:
-                a[i, 2] = self._lyr.dataProvider().datasetValue(QgsMeshDatasetIndex(self._ibed, 0), vid).scalar()
+                a[i, 2] = self.lyr.dataProvider().datasetValue(QgsMeshDatasetIndex(self._ibed, 0), vid).scalar()
             else:
                 a[i, 2] = 0.
         return a

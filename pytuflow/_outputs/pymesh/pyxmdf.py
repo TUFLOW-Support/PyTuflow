@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from . import PyMesh, Py2dm, PyXMDFDataExtractor, QgisMeshGeometry
+from . import PyMesh, Py2dm, PyXMDFDataExtractor, QgisMeshGeometry, QgisDataExtractor
 from .mesh3d import Mesh3DMixin, GLTFMixin, AlembicMixin
 
 
@@ -16,7 +16,8 @@ class PyXMDF(PyMesh, Mesh3DMixin, GLTFMixin, AlembicMixin):
         else:
             self.geom = Py2dm(twodm)
         if engine == 'qgis':
-            pass
+            self.extractor = QgisDataExtractor(twodm, [fpath])
+            self.geom.lyr = self.extractor.lyr
         else:
             self.extractor = PyXMDFDataExtractor(fpath, engine)
         self.name = twodm.stem
@@ -26,4 +27,4 @@ class PyXMDF(PyMesh, Mesh3DMixin, GLTFMixin, AlembicMixin):
                 if ref_time is not None:
                     self.has_inherent_reference_time = True
                     self.reference_time = ref_time
-                break
+                    break
