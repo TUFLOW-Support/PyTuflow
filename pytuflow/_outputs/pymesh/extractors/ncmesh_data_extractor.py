@@ -92,8 +92,11 @@ class PyNCMeshDataExtractor(PyDataExtractor):
         return False
 
     def spherical(self) -> bool:
-        if self.engine == 'netcdf4':
-            return self.engine.get_property('', 'spherical').lower() == 'true'
+        if self.engine.ENGINE_NAME == 'NetCDF4':
+            try:
+                return self.engine.get_property('', 'spherical').lower() == 'true'
+            except AttributeError:
+                return False
         else:
             return self.engine.get_property('cell_X', 'units').lower() == 'decimal degrees'
 

@@ -16,5 +16,15 @@ def ellipsoid_distance(points, ref):
     lats2 = points[:, 1]
     lons2 = points[:, 0]
 
+    is_point = False
+    if lons1.size == 1:
+        is_point = True
+        lons1 = np.repeat(lons1, 2)
+        lats1 = np.repeat(lats1, 2)
+        lats2 = np.repeat(lats2, 2)
+        lons2 = np.repeat(lons2, 2)
+
     _, _, dist = geod.inv(lons1, lats1, lons2, lats2)
+    if is_point:
+        dist = dist[:1]
     return dist
