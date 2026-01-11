@@ -27,39 +27,66 @@ def pyqgis():
 
 class TestXMDF(unittest.TestCase):
 
-    def test_load(self):
+    def test_load_netcdf4_driver(self):
         xmdf = './tests/xmdf/run.xmdf'
         with pyqgis():
-            res = XMDF(xmdf)
+            res = XMDF(xmdf, driver='qgis geometry netcdf4')
             self.assertEqual(res.name, 'run')
             self.assertFalse(res.has_reference_time)
 
-    def test_times(self):
+    def test_load_qgis_driver(self):
         xmdf = './tests/xmdf/run.xmdf'
         with pyqgis():
-            res = XMDF(xmdf)
+            res = XMDF(xmdf, driver='qgis geometry engine')
+            self.assertEqual(res.name, 'run')
+            self.assertFalse(res.has_reference_time)
+
+    def test_times_netcdf4_driver(self):
+        xmdf = './tests/xmdf/run.xmdf'
+        with pyqgis():
+            res = XMDF(xmdf, driver='qgis geometry netcdf4')
             times = res.times()
             self.assertEqual(7, len(times))
 
-    def test_times_filter(self):
+    def test_times_qgis_driver(self):
         xmdf = './tests/xmdf/run.xmdf'
         with pyqgis():
-            res = XMDF(xmdf)
+            res = XMDF(xmdf, driver='qgis geometry engine')
+            times = res.times()
+            self.assertEqual(7, len(times))
+
+    def test_times_filter_netcdf4_driver(self):
+        xmdf = './tests/xmdf/run.xmdf'
+        with pyqgis():
+            res = XMDF(xmdf, driver='qgis geometry netcdf4')
             times = res.times('depth')
             self.assertEqual(7, len(times))
 
-
-    def test_data_types(self):
+    def test_times_filter_qgis_driver(self):
         xmdf = './tests/xmdf/run.xmdf'
         with pyqgis():
-            res = XMDF(xmdf)
+            res = XMDF(xmdf, driver='qgis geometry engine')
+            times = res.times('depth')
+            self.assertEqual(7, len(times))
+
+    def test_data_types_netcdf4_driver(self):
+        xmdf = './tests/xmdf/run.xmdf'
+        with pyqgis():
+            res = XMDF(xmdf, driver='qgis geometry netcdf4')
             dtypes = res.data_types()
             self.assertEqual(10, len(dtypes))
 
-    def test_data_types_filter(self):
+    def test_data_types_qgis_driver(self):
         xmdf = './tests/xmdf/run.xmdf'
         with pyqgis():
-            res = XMDF(xmdf)
+            res = XMDF(xmdf, driver='qgis geometry engine')
+            dtypes = res.data_types()
+            self.assertEqual(10, len(dtypes))
+
+    def test_data_types_filter_netcdf4_driver(self):
+        xmdf = './tests/xmdf/run.xmdf'
+        with pyqgis():
+            res = XMDF(xmdf, driver='qgis geometry netcdf4')
             dtypes = res.data_types('max')
             self.assertEqual(4, len(dtypes))
             dtypes = res.data_types('temporal')
@@ -67,193 +94,394 @@ class TestXMDF(unittest.TestCase):
             dtypes = res.data_types('vector')
             self.assertEqual(2, len(dtypes))
 
-    def test_time_series(self):
+    def test_data_types_filter_qgis_driver(self):
         xmdf = './tests/xmdf/run.xmdf'
         with pyqgis():
-            res = XMDF(xmdf)
+            res = XMDF(xmdf, driver='qgis geometry engine')
+            dtypes = res.data_types('max')
+            self.assertEqual(4, len(dtypes))
+            dtypes = res.data_types('temporal')
+            self.assertEqual(4, len(dtypes))
+            dtypes = res.data_types('vector')
+            self.assertEqual(2, len(dtypes))
+
+    def test_time_series_netcdf4_driver(self):
+        xmdf = './tests/xmdf/run.xmdf'
+        with pyqgis():
+            res = XMDF(xmdf, driver='qgis geometry netcdf4')
             df = res.time_series((1, 1), 'water level')
             self.assertEqual((7, 1), df.shape)
 
-    def test_time_series_2(self):
+    def test_time_series_qgis_driver(self):
         xmdf = './tests/xmdf/run.xmdf'
         with pyqgis():
-            res = XMDF(xmdf)
+            res = XMDF(xmdf, driver='qgis geometry engine')
+            df = res.time_series((1, 1), 'water level')
+            self.assertEqual((7, 1), df.shape)
+
+    def test_time_series_2_netcdf4_driver(self):
+        xmdf = './tests/xmdf/run.xmdf'
+        with pyqgis():
+            res = XMDF(xmdf, driver='qgis geometry netcdf4')
             df = res.time_series({'test name': 'POINT (1.5 3.2)'}, 'water level')
             self.assertEqual((7, 1), df.shape)
 
-    def test_time_series_3(self):
+    def test_time_series_2_qgis_driver(self):
+        xmdf = './tests/xmdf/run.xmdf'
+        with pyqgis():
+            res = XMDF(xmdf, driver='qgis geometry engine')
+            df = res.time_series({'test name': 'POINT (1.5 3.2)'}, 'water level')
+            self.assertEqual((7, 1), df.shape)
+
+    def test_time_series_3_netcdf4_driver(self):
         xmdf = './tests/xmdf/run.xmdf'
         shp = './tests/xmdf/time_series_point.shp'
         with pyqgis():
-            res = XMDF(xmdf)
+            res = XMDF(xmdf, driver='qgis geometry netcdf4')
             df = res.time_series(shp, 'vel')
             self.assertEqual((7, 1), df.shape)
 
-    def test_time_series_4(self):
+    def test_time_series_3_qgis_driver(self):
+        xmdf = './tests/xmdf/run.xmdf'
+        shp = './tests/xmdf/time_series_point.shp'
+        with pyqgis():
+            res = XMDF(xmdf, driver='qgis geometry engine')
+            df = res.time_series(shp, 'vel')
+            self.assertEqual((7, 1), df.shape)
+
+    def test_time_series_4_netcdf4_driver(self):
         xmdf = './tests/xmdf/run.xmdf'
         shp = './tests/xmdf/time_series_multi_point.shp'
         with pyqgis():
-            res = XMDF(xmdf)
+            res = XMDF(xmdf, driver='qgis geometry netcdf4')
             df = res.time_series(shp, 'vel')
             self.assertEqual((7, 2), df.shape)
 
-    def test_time_series_vec(self):
+    def test_time_series_4_qgis_driver(self):
         xmdf = './tests/xmdf/run.xmdf'
         shp = './tests/xmdf/time_series_multi_point.shp'
         with pyqgis():
-            res = XMDF(xmdf)
+            res = XMDF(xmdf, driver='qgis geometry engine')
+            df = res.time_series(shp, 'vel')
+            self.assertEqual((7, 2), df.shape)
+
+    def test_time_series_vec_netcdf4_driver(self):
+        xmdf = './tests/xmdf/run.xmdf'
+        shp = './tests/xmdf/time_series_multi_point.shp'
+        with pyqgis():
+            res = XMDF(xmdf, driver='qgis geometry netcdf4')
             df = res.time_series(shp, 'vector velocity')
             self.assertEqual((7, 2), df.shape)
 
-    def test_section(self):
+    def test_time_series_vec_qgis_driver(self):
+        xmdf = './tests/xmdf/run.xmdf'
+        shp = './tests/xmdf/time_series_multi_point.shp'
+        with pyqgis():
+            res = XMDF(xmdf, driver='qgis geometry engine')
+            df = res.time_series(shp, 'vector velocity')
+            self.assertEqual((7, 2), df.shape)
+
+    def test_section_netcdf4_driver(self):
         xmdf = './tests/xmdf/run.xmdf'
         shp = './tests/xmdf/section_line.shp'
         with pyqgis():
-            res = XMDF(xmdf)
+            res = XMDF(xmdf, driver='qgis geometry netcdf4')
             df = res.section(shp, 'h', 0)
             self.assertEqual((9, 2), df.shape)
 
-    def test_section_2(self):
+    def test_section_qgis_driver(self):
+        xmdf = './tests/xmdf/run.xmdf'
+        shp = './tests/xmdf/section_line.shp'
+        with pyqgis():
+            res = XMDF(xmdf, driver='qgis geometry engine')
+            df = res.section(shp, 'h', 0)
+            self.assertEqual((9, 2), df.shape)
+
+    def test_section_2_netcdf4_driver(self):
         xmdf = './tests/xmdf/run.xmdf'
         with pyqgis():
-            res = XMDF(xmdf)
+            res = XMDF(xmdf, driver='qgis geometry netcdf4')
             line = 'LINESTRING (0.697468354430381 0.633670886075949,3.27063291139241 3.34506329113924)'
             df = res.section(line, 'h', 0)
             self.assertEqual((9, 2), df.shape)
 
-    def test_section_3(self):
+    def test_section_2_qgis_driver(self):
+        xmdf = './tests/xmdf/run.xmdf'
+        with pyqgis():
+            res = XMDF(xmdf, driver='qgis geometry engine')
+            line = 'LINESTRING (0.697468354430381 0.633670886075949,3.27063291139241 3.34506329113924)'
+            df = res.section(line, 'h', 0)
+            self.assertEqual((9, 2), df.shape)
+
+    def test_section_3_netcdf4_driver(self):
         xmdf = './tests/xmdf/run.xmdf'
         shp = './tests/xmdf/section_multi_line.shp'
         with pyqgis():
-            res = XMDF(xmdf)
+            res = XMDF(xmdf, driver='qgis geometry netcdf4')
             df = res.section(shp, 'h', 0)
             self.assertEqual((9, 4), df.shape)
 
-    def test_section_4(self):
-        xmdf = './tests/xmdf/run.xmdf'
-        shp = './tests/xmdf/section_line.shp'
-        with pyqgis():
-            res = XMDF(xmdf)
-            df = res.section(shp, ['h', 'v'], 0)
-            self.assertEqual((9, 3), df.shape)
-
-    def test_section_5(self):
+    def test_section_3_qgis_driver(self):
         xmdf = './tests/xmdf/run.xmdf'
         shp = './tests/xmdf/section_multi_line.shp'
         with pyqgis():
-            res = XMDF(xmdf)
-            df = res.section(shp, ['h', 'v'], 0)
-            self.assertEqual((9, 6), df.shape)
+            res = XMDF(xmdf, driver='qgis geometry engine')
+            df = res.section(shp, 'h', 0)
+            self.assertEqual((9, 4), df.shape)
 
-    def test_section_6(self):
+    def test_section_4_netcdf4_driver(self):
         xmdf = './tests/xmdf/run.xmdf'
         shp = './tests/xmdf/section_line.shp'
         with pyqgis():
-            res = XMDF(xmdf)
+            res = XMDF(xmdf, driver='qgis geometry netcdf4')
+            df = res.section(shp, ['h', 'v'], 0)
+            self.assertEqual((9, 3), df.shape)
+
+    def test_section_4_qgis_driver(self):
+        xmdf = './tests/xmdf/run.xmdf'
+        shp = './tests/xmdf/section_line.shp'
+        with pyqgis():
+            res = XMDF(xmdf, driver='qgis geometry enginer')
+            df = res.section(shp, ['h', 'v'], 0)
+            self.assertEqual((9, 3), df.shape)
+
+    def test_section_5_netcdf4_driver(self):
+        xmdf = './tests/xmdf/run.xmdf'
+        shp = './tests/xmdf/section_multi_line.shp'
+        with pyqgis():
+            res = XMDF(xmdf, driver='qgis geometry netcdf4')
+            df = res.section(shp, ['h', 'v'], 0)
+            self.assertEqual((9, 6), df.shape)
+
+    def test_section_5_qgis_driver(self):
+        xmdf = './tests/xmdf/run.xmdf'
+        shp = './tests/xmdf/section_multi_line.shp'
+        with pyqgis():
+            res = XMDF(xmdf, driver='qgis geometry engine')
+            df = res.section(shp, ['h', 'v'], 0)
+            self.assertEqual((9, 6), df.shape)
+
+    def test_section_6_netcdf4_driver(self):
+        xmdf = './tests/xmdf/run.xmdf'
+        shp = './tests/xmdf/section_line.shp'
+        with pyqgis():
+            res = XMDF(xmdf, driver='qgis geometry netcdf4')
             df = res.section(shp, ['bed level', 'h'], 0)
             self.assertEqual((9, 3), df.shape)
 
-    def test_section_7(self):
+    def test_section_6_qgis_driver(self):
+        xmdf = './tests/xmdf/run.xmdf'
+        shp = './tests/xmdf/section_line.shp'
+        with pyqgis():
+            res = XMDF(xmdf, driver='qgis geometry engine')
+            df = res.section(shp, ['bed level', 'h'], 0)
+            self.assertEqual((9, 3), df.shape)
+
+    def test_section_7_netcdf4_driver(self):
         xmdf = './tests/xmdf/run.xmdf'
         with pyqgis():
-            res = XMDF(xmdf)
+            res = XMDF(xmdf, driver='qgis geometry netcdf4')
             line = [(0.5, 0.5), (1.5, 1.5)]
             df = res.section(line, 'max h', 0)
             self.assertEqual((4, 2), df.shape)
 
-    def test_section_vec(self):
+    def test_section_7_qgis_driver(self):
         xmdf = './tests/xmdf/run.xmdf'
         with pyqgis():
-            res = XMDF(xmdf)
+            res = XMDF(xmdf, driver='qgis geometry engine')
+            line = [(0.5, 0.5), (1.5, 1.5)]
+            df = res.section(line, 'max h', 0)
+            self.assertEqual((4, 2), df.shape)
+
+    def test_section_vec_netcdf4_driver(self):
+        xmdf = './tests/xmdf/run.xmdf'
+        with pyqgis():
+            res = XMDF(xmdf, driver='qgis geometry netcdf4')
             line = [(0.5, 0.5), (1.5, 1.5)]
             df = res.section(line, 'vector velocity', 0)
             self.assertEqual((4, 2), df.shape)
 
-    def test_section_long(self):
+    def test_section_vec_qgis_driver(self):
+        xmdf = './tests/xmdf/run.xmdf'
+        with pyqgis():
+            res = XMDF(xmdf, driver='qgis geometry engine')
+            line = [(0.5, 0.5), (1.5, 1.5)]
+            df = res.section(line, 'vector velocity', 0)
+            self.assertEqual((4, 2), df.shape)
+
+    def test_section_long_netcdf4_driver(self):
         xmdf = './tests/xmdf/run.xmdf'
         shp = './tests/xmdf/section_line_long.shp'
         with pyqgis():
-            res = XMDF(xmdf)
+            res = XMDF(xmdf, driver='qgis geometry netcdf4')
             df = res.section(shp, 'max h', 0)
             self.assertEqual((8, 2), df.shape)
 
-    def test_section_quadtree(self):
-        xmdf = './tests/quadtree/EG13_001.xmdf'
-        shp = './tests/quadtree/simple_line_3.shp'
-        with pyqgis():
-            res = XMDF(xmdf)
-            df = res.section(shp, 'h', 1.)
-            self.assertEqual((6, 2), df.shape)
-
-    def test_curtain(self):
-        xmdf = './tests/xmdf/run.xmdf'
-        shp = './tests/xmdf/section_line.shp'
-        with pyqgis():
-            res = XMDF(xmdf)
-            df = res.curtain(shp, 'vel', 0)
-            self.assertEqual((28, 4), df.shape)
-
-    def test_curtain_2(self):
-        xmdf = './tests/xmdf/run.xmdf'
-        shp = './tests/xmdf/section_multi_line.shp'
-        with pyqgis():
-            res = XMDF(xmdf)
-            df = res.curtain(shp, 'vel', 0)
-            self.assertEqual((28, 8), df.shape)
-
-    def test_curtain_3(self):
-        xmdf = './tests/xmdf/run.xmdf'
-        shp = './tests/xmdf/section_line.shp'
-        with pyqgis():
-            res = XMDF(xmdf)
-            df = res.curtain(shp, ['vel', 'depth'], 0)
-            self.assertEqual((28, 5), df.shape)
-
-    def test_curtain_vector(self):
-        xmdf = './tests/xmdf/run.xmdf'
-        shp = './tests/xmdf/section_line.shp'
-        with pyqgis():
-            res = XMDF(xmdf)
-            df = res.curtain(shp, 'vector velocity', 0)
-            self.assertEqual((28, 4), df.shape)
-
-    def test_curtain_long(self):
+    def test_section_long_qgis_driver(self):
         xmdf = './tests/xmdf/run.xmdf'
         shp = './tests/xmdf/section_line_long.shp'
         with pyqgis():
-            res = XMDF(xmdf)
+            res = XMDF(xmdf, driver='qgis geometry engine')
+            df = res.section(shp, 'max h', 0)
+            self.assertEqual((8, 2), df.shape)
+
+    def test_section_quadtree_netcdf4_driver(self):
+        xmdf = './tests/quadtree/EG13_001.xmdf'
+        shp = './tests/quadtree/simple_line_3.shp'
+        with pyqgis():
+            res = XMDF(xmdf, driver='qgis geometry netcdf4')
+            df = res.section(shp, 'h', 1.)
+            self.assertEqual((6, 2), df.shape)
+
+    def test_section_quadtree_qgis_driver(self):
+        xmdf = './tests/quadtree/EG13_001.xmdf'
+        shp = './tests/quadtree/simple_line_3.shp'
+        with pyqgis():
+            res = XMDF(xmdf, driver='qgis geometry engine')
+            df = res.section(shp, 'h', 1.)
+            self.assertEqual((6, 2), df.shape)
+
+    def test_curtain_netcdf4_driver(self):
+        xmdf = './tests/xmdf/run.xmdf'
+        shp = './tests/xmdf/section_line.shp'
+        with pyqgis():
+            res = XMDF(xmdf, driver='qgis geometry netcdf4')
+            df = res.curtain(shp, 'vel', 0)
+            self.assertEqual((28, 4), df.shape)
+
+    def test_curtain_qgis_driver(self):
+        xmdf = './tests/xmdf/run.xmdf'
+        shp = './tests/xmdf/section_line.shp'
+        with pyqgis():
+            res = XMDF(xmdf, driver='qgis geometry engine')
+            df = res.curtain(shp, 'vel', 0)
+            self.assertEqual((28, 4), df.shape)
+
+    def test_curtain_2_netcdf4_driver(self):
+        xmdf = './tests/xmdf/run.xmdf'
+        shp = './tests/xmdf/section_multi_line.shp'
+        with pyqgis():
+            res = XMDF(xmdf, driver='qgis geometry netcdf4')
+            df = res.curtain(shp, 'vel', 0)
+            self.assertEqual((28, 8), df.shape)
+
+    def test_curtain_2_qgis_driver(self):
+        xmdf = './tests/xmdf/run.xmdf'
+        shp = './tests/xmdf/section_multi_line.shp'
+        with pyqgis():
+            res = XMDF(xmdf, driver='qgis geometry engine')
+            df = res.curtain(shp, 'vel', 0)
+            self.assertEqual((28, 8), df.shape)
+
+    def test_curtain_3_netcdf4_driver(self):
+        xmdf = './tests/xmdf/run.xmdf'
+        shp = './tests/xmdf/section_line.shp'
+        with pyqgis():
+            res = XMDF(xmdf, driver='qgis geometry netcdf4')
+            df = res.curtain(shp, ['vel', 'depth'], 0)
+            self.assertEqual((28, 5), df.shape)
+
+    def test_curtain_3_qgis_driver(self):
+        xmdf = './tests/xmdf/run.xmdf'
+        shp = './tests/xmdf/section_line.shp'
+        with pyqgis():
+            res = XMDF(xmdf, driver='qgis geometry engine')
+            df = res.curtain(shp, ['vel', 'depth'], 0)
+            self.assertEqual((28, 5), df.shape)
+
+    def test_curtain_vector_netcdf4_driver(self):
+        xmdf = './tests/xmdf/run.xmdf'
+        shp = './tests/xmdf/section_line.shp'
+        with pyqgis():
+            res = XMDF(xmdf, driver='qgis geometry netcdf4')
+            df = res.curtain(shp, 'vector velocity', 0)
+            self.assertEqual((28, 4), df.shape)
+
+    def test_curtain_vector_qgis_driver(self):
+        xmdf = './tests/xmdf/run.xmdf'
+        shp = './tests/xmdf/section_line.shp'
+        with pyqgis():
+            res = XMDF(xmdf, driver='qgis geometry engine')
+            df = res.curtain(shp, 'vector velocity', 0)
+            self.assertEqual((28, 4), df.shape)
+
+    def test_curtain_long_netcdf4_driver(self):
+        xmdf = './tests/xmdf/run.xmdf'
+        shp = './tests/xmdf/section_line_long.shp'
+        with pyqgis():
+            res = XMDF(xmdf, driver='qgis geometry netcdf4')
             df = res.curtain(shp, 'vel', 0)
             self.assertEqual((16, 4), df.shape)
 
-    def test_curtain_maximums(self):
+    def test_curtain_long_qgis_driver(self):
+        xmdf = './tests/xmdf/run.xmdf'
+        shp = './tests/xmdf/section_line_long.shp'
+        with pyqgis():
+            res = XMDF(xmdf, driver='qgis geometry engine')
+            df = res.curtain(shp, 'vel', 0)
+            self.assertEqual((16, 4), df.shape)
+
+    def test_curtain_maximums_netcdf4_driver(self):
         xmdf = './tests/xmdf/run.xmdf'
         shp = './tests/xmdf/section_line.shp'
         with pyqgis():
-            res = XMDF(xmdf)
+            res = XMDF(xmdf, driver='qgis geometry netcdf4')
             df = res.curtain(shp, 'max vel', 0)
             self.assertEqual((28, 4), df.shape)
 
-    def test_curtain_maximums_2(self):
+    def test_curtain_maximums_qgis_driver(self):
         xmdf = './tests/xmdf/run.xmdf'
         shp = './tests/xmdf/section_line.shp'
         with pyqgis():
-            res = XMDF(xmdf)
+            res = XMDF(xmdf, driver='qgis geometry engine')
+            df = res.curtain(shp, 'max vel', 0)
+            self.assertEqual((28, 4), df.shape)
+
+    def test_curtain_maximums_2_netcdf4_driver(self):
+        xmdf = './tests/xmdf/run.xmdf'
+        shp = './tests/xmdf/section_line.shp'
+        with pyqgis():
+            res = XMDF(xmdf, driver='qgis geometry netcdf4')
             df = res.curtain(shp, 'max depth', 0)
             self.assertEqual((28, 3), df.shape)
 
-    def test_profile(self):
+    def test_curtain_maximums_2_qgis_driver(self):
+        xmdf = './tests/xmdf/run.xmdf'
+        shp = './tests/xmdf/section_line.shp'
+        with pyqgis():
+            res = XMDF(xmdf, driver='qgis geometry engine')
+            df = res.curtain(shp, 'max depth', 0)
+            self.assertEqual((28, 3), df.shape)
+
+    def test_profile_netcdf4_driver(self):
         xmdf = './tests/xmdf/run.xmdf'
         shp = './tests/xmdf/time_series_point.shp'
         with pyqgis():
-            res = XMDF(xmdf)
+            res = XMDF(xmdf, driver='qgis geometry netcdf4')
             df = res.profile(shp, 'vel', 0)
             self.assertEqual((2, 2), df.shape)
 
-    def test_profile_vec(self):
+    def test_profile_qgis_driver(self):
         xmdf = './tests/xmdf/run.xmdf'
         shp = './tests/xmdf/time_series_point.shp'
         with pyqgis():
-            res = XMDF(xmdf)
+            res = XMDF(xmdf, driver='qgis geometry engine')
+            df = res.profile(shp, 'vel', 0)
+            self.assertEqual((2, 2), df.shape)
+
+    def test_profile_vec_netcdf4_driver(self):
+        xmdf = './tests/xmdf/run.xmdf'
+        shp = './tests/xmdf/time_series_point.shp'
+        with pyqgis():
+            res = XMDF(xmdf, driver='qgis geometry netcdf4')
+            df = res.profile(shp, 'vector velocity', 0)
+            self.assertEqual((2, 2), df.shape)
+
+    def test_profile_vec_qgis_driver(self):
+        xmdf = './tests/xmdf/run.xmdf'
+        shp = './tests/xmdf/time_series_point.shp'
+        with pyqgis():
+            res = XMDF(xmdf, driver='qgis geometry engine')
             df = res.profile(shp, 'vector velocity', 0)
             self.assertEqual((2, 2), df.shape)
 
