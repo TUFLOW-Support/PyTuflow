@@ -251,7 +251,7 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
         """
         return self.extractor.is_3d(self.translate_data_type(data_type)[0])
 
-    def cell_index(self, cell_id: int | list[int] | np.ndarray, data_type: str) -> int | np.ndarray | list[int]:
+    def cell_index(self, cell_id: int | list[int] | np.ndarray, data_type: str) -> np.ndarray:
         """Returns the index of the given cell ID for the specified data type. For 2D data types, the cell ID
         is the same as the index, but for 3D data types the cell index can be different.
 

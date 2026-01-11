@@ -488,84 +488,126 @@ class TestXMDF(unittest.TestCase):
 
 class TestNCMesh(unittest.TestCase):
 
-    def test_load(self):
+    def test_load_netcdf4_driver(self):
         nc = './tests/nc_mesh/fv_res.nc'
         with pyqgis():
-            res = NCMesh(nc)
+            res = NCMesh(nc, driver='qgis geometry netcdf4')
             self.assertEqual('fv_res', res.name)
             self.assertFalse(res.has_reference_time)
 
-    def test_times(self):
+    def test_load_qgis_driver(self):
         nc = './tests/nc_mesh/fv_res.nc'
         with pyqgis():
-            res = NCMesh(nc)
+            res = NCMesh(nc, driver='qgis geometry engine')
+            self.assertEqual('fv_res', res.name)
+            self.assertTrue(res.has_reference_time)  # different from above - QGIS seems to assume 1990-01-01 if none is set
+
+    def test_times_netcdf4_driver(self):
+        nc = './tests/nc_mesh/fv_res.nc'
+        with pyqgis():
+            res = NCMesh(nc, driver='qgis geometry netcdf4')
             times = res.times()
             self.assertEqual(7, len(times))
 
-    def test_data_types(self):
+    def test_times_qgis_driver(self):
         nc = './tests/nc_mesh/fv_res.nc'
         with pyqgis():
-            res = NCMesh(nc)
+            res = NCMesh(nc, driver='qgis geometry engine')
+            times = res.times()
+            self.assertEqual(7, len(times))
+
+    def test_data_types_netcdf4_driver(self):
+        nc = './tests/nc_mesh/fv_res.nc'
+        with pyqgis():
+            res = NCMesh(nc, driver='qgis geometry netcdf4')
             dtypes = res.data_types()
             self.assertEqual(3, len(dtypes))
 
-    def test_data_types_filter(self):
+    def test_data_types_qgis_driver(self):
         nc = './tests/nc_mesh/fv_res.nc'
         with pyqgis():
-            res = NCMesh(nc)
+            res = NCMesh(nc, driver='qgis geometry engine')
+            dtypes = res.data_types()
+            self.assertEqual(3, len(dtypes))
+
+    def test_data_types_filter_netcdf4_driver(self):
+        nc = './tests/nc_mesh/fv_res.nc'
+        with pyqgis():
+            res = NCMesh(nc, driver='qgis geometry netcdf4')
             dtypes = res.data_types('static')
             self.assertEqual(1, len(dtypes))
 
-    def test_time_series(self):
+    def test_data_types_filter_qgis_driver(self):
         nc = './tests/nc_mesh/fv_res.nc'
         with pyqgis():
-            res = NCMesh(nc)
+            res = NCMesh(nc, driver='qgis geometry engine')
+            dtypes = res.data_types('static')
+            self.assertEqual(1, len(dtypes))
+
+    def test_time_series_netcdf4_driver(self):
+        nc = './tests/nc_mesh/fv_res.nc'
+        with pyqgis():
+            res = NCMesh(nc, driver='qgis geometry netcdf4')
             df = res.time_series((1.5, 4.5), 'water level')
             self.assertEqual((7, 1), df.shape)
 
-    def test_time_series_averaging(self):
+    def test_time_series_qgis_driver(self):
         nc = './tests/nc_mesh/fv_res.nc'
         with pyqgis():
-            res = NCMesh(nc)
+            res = NCMesh(nc, driver='qgis geometry engine')
+            df = res.time_series((1.5, 4.5), 'water level')
+            self.assertEqual((7, 1), df.shape)
+
+    def test_time_series_averaging_netcdf4_driver(self):
+        nc = './tests/nc_mesh/fv_res.nc'
+        with pyqgis():
+            res = NCMesh(nc, driver='qgis geometry netcdf4')
             df = res.time_series((1.5, 4.5), 'vel', averaging_method='singlelevel?dir=top&1')
             self.assertEqual((7, 1), df.shape)
 
-    def test_section(self):
+    def test_time_series_averaging_qgis_driver(self):
         nc = './tests/nc_mesh/fv_res.nc'
         with pyqgis():
-            res = NCMesh(nc)
+            res = NCMesh(nc, driver='qgis geometry engine')
+            df = res.time_series((1.5, 4.5), 'vel', averaging_method='singlelevel?dir=top&1')
+            self.assertEqual((7, 1), df.shape)
+
+    def test_section_netcdf4_driver(self):
+        nc = './tests/nc_mesh/fv_res.nc'
+        with pyqgis():
+            res = NCMesh(nc, driver='qgis geometry netcdf4')
             line = [(1.4, 4.5), (3.6, 4.2)]
             df = res.section(line, 'h', 0)
             self.assertEqual((6, 2), df.shape)
 
-    def test_section_averaging(self):
+    def test_section_averaging_netcdf4_driver(self):
         nc = './tests/nc_mesh/fv_res.nc'
         with pyqgis():
-            res = NCMesh(nc)
+            res = NCMesh(nc, driver='qgis geometry netcdf4')
             line = [(1.4, 4.5), (3.6, 4.2)]
             df = res.section(line, 'v', 0, averaging_method='sigma&0.1&0.9')
             self.assertEqual((6, 2), df.shape)
 
-    def test_section_long_lat(self):
+    def test_section_long_lat_netcdf4_driver(self):
         nc = './tests/nc_mesh/EST001_3D_002.nc'
         with pyqgis():
-            res = NCMesh(nc)
+            res = NCMesh(nc, driver='qgis geometry netcdf4')
             line = [(159.07617177, -31.36419353), (159.07704259, -31.36703514), (159.07855506, -31.36937259)]
             df = res.section(line, 'salinity', 186961)
             self.assertTrue(np.isclose(df.iloc[:,0].max(), 622.208, atol=0.001))
 
-    def test_curtain(self):
+    def test_curtain_netcdf4_driver(self):
         nc = './tests/nc_mesh/fv_res.nc'
         with pyqgis():
-            res = NCMesh(nc)
+            res = NCMesh(nc, driver='qgis geometry netcdf4')
             line = [(1.4, 4.5), (3.6, 4.2)]
             df = res.curtain(line, 'v', 0)
             self.assertEqual((24, 4), df.shape)
 
-    def test_profile(self):
+    def test_profile_netcdf4_driver(self):
         nc = './tests/nc_mesh/fv_res.nc'
         with pyqgis():
-            res = NCMesh(nc)
+            res = NCMesh(nc, driver='qgis geometry netcdf4')
             df = res.profile((1.5, 4.5), 'v', 0)
             self.assertEqual((4, 2), df.shape)
 

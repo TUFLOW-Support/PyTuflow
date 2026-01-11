@@ -57,6 +57,16 @@ class PyDataExtractor:
         """
         raise NotImplementedError
 
+    def spherical(self) -> bool:
+        """Returns whether the mesh is in spherical coordinates.
+
+        Returns
+        -------
+        bool
+            True if the mesh is in spherical coordinates, False if it is in Cartesian coordinates.
+        """
+        return False
+
     def is_vector(self, data_type: str) -> bool:
         """Returns whether the given data_type is a vector.
 
@@ -171,8 +181,8 @@ class PyDataExtractor:
     def on_vertex(self, data_type: str) -> bool:
         return True
 
-    def cell_index(self, cell_id: int | list[int] | np.ndarray, data_type: str) -> int | np.ndarray | list[int]:
-        return cell_id
+    def cell_index(self, cell_id: int | list[int] | np.ndarray, data_type: str) -> np.ndarray:
+        return np.array([cell_id])
 
     def zlevel_count(self, cell_idx2: int | np.ndarray | list[int]) -> int | np.ndarray | list[int]:
         raise NotImplementedError

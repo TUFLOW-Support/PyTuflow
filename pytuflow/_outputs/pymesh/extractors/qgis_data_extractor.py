@@ -7,9 +7,9 @@ import numpy as np
 from . import PyDataExtractor
 
 try:
-    from qgis.core import QgsMeshLayer, QgsMeshDatasetIndex
+    from qgis.core import QgsMeshLayer, QgsMeshDatasetIndex, QgsMeshDatasetGroupMetadata
 except ImportError:
-    from ..stubs.qgis.core import QgsMeshLayer, QgsMeshDatasetIndex
+    from ..stubs.qgis.core import QgsMeshLayer, QgsMeshDatasetIndex, QgsMeshDatasetGroupMetadata
 
 
 class QgisDataExtractor(PyDataExtractor):
@@ -17,6 +17,7 @@ class QgisDataExtractor(PyDataExtractor):
 
     def __init__(self, mesh: str | Path, extra_datasets: list[str | Path]):
         self.lyr = QgsMeshLayer(str(mesh), Path(mesh).stem, 'mdal')
+        self._3d_grp_idx = -1
         for dataset in extra_datasets:
             success = self.lyr.dataProvider().addDataset(str(dataset))
             if not success:
@@ -61,8 +62,55 @@ class QgisDataExtractor(PyDataExtractor):
         grp_idx = self.find_group_index(data_type)
         if grp_idx == -1:
             raise ValueError(f'Data type not found: {data_type}')
+        return self._is_3d(grp_idx)
+
+    def _is_3d(self, grp_idx: int) -> bool:
         idx = QgsMeshDatasetIndex(grp_idx)
-        return self.lyr.datasetGroupMetadata(idx).maximumVerticalLevelsCount() > 1
+        return self.lyr.datasetGroupMetadata(idx).dataType() == QgsMeshDatasetGroupMetadata.DataOnVolumes
+
+    def on_vertex(self, data_type: str) -> bool:
+        grp_idx = self.find_group_index(data_type)
+        if grp_idx == -1:
+            raise ValueError(f'Data type not found: {data_type}')
+        idx = QgsMeshDatasetIndex(grp_idx)
+        return self.lyr.datasetGroupMetadata(idx).dataType() == QgsMeshDatasetGroupMetadata.DataOnVertices
+
+    def zlevel_count(self, cell_idx2: int | np.ndarray | list[int]) -> int | np.ndarray | list[int]:
+        _3d_grp_idx = self._3d_dataset_index()
+        if _3d_grp_idx == -1:
+            return 1
+        if isinstance(cell_idx2, int):
+            cell_idx2 = [cell_idx2]
+        elif isinstance(cell_idx2, np.ndarray):
+            cell_idx2 = cell_idx2.tolist()
+        result = []
+        cell_idx2 = cell_idx2.tolist() if isinstance(cell_idx2, np.ndarray) else cell_idx2
+        for cid, count in self.clump_indexes(cell_idx2.copy()):
+            data_block = self.lyr.dataProvider().dataset3dValues(_3d_grp_idx, cid, count)
+            result.extend(data_block.verticalLevelsCount())
+        return np.array(result)
+
+    def zlevels(self, time_index: PyDataExtractor.SliceType, nlevels: int, cell_idx2: int | np.ndarray,
+                cell_idx3: int | np.ndarray) -> np.ndarray:
+        _3d_grp_idx = self._3d_dataset_index()
+        if _3d_grp_idx == -1:
+            raise ValueError('No 3D dataset found in mesh output')
+        if isinstance(cell_idx2, int):
+            cell_idx2 = [cell_idx2]
+        elif isinstance(cell_idx2, np.ndarray):
+            cell_idx2 = cell_idx2.tolist()
+        result = []
+        cell_idx2 = cell_idx2.tolist() if isinstance(cell_idx2, np.ndarray) else cell_idx2
+        time_idx = self.expand_index(time_index, max_=self.lyr.dataProvider().datasetCount(QgsMeshDatasetIndex(_3d_grp_idx)))
+        cum_nlevels = np.array([nlevels]) if isinstance(nlevels, (int, np.int32, np.int64)) else np.asarray(nlevels)
+        cum_nlevels = np.cumsum(cum_nlevels + 1)[0]
+        shape = (nlevels,) if isinstance(time_index, int) else (len(time_idx), cum_nlevels)
+        for time_idx in time_idx:
+            for cid, count in self.clump_indexes(cell_idx2.copy()):
+                idx = QgsMeshDatasetIndex(_3d_grp_idx.group(), time_idx)
+                data_block = self.lyr.dataProvider().dataset3dValues(idx, cid, count)
+                result.extend(data_block.verticalLevels())
+        return np.array(result).reshape(shape)
 
     def maximum(self, data_type: str) -> float:
         idx = self.find_group_index(data_type)
@@ -89,15 +137,22 @@ class QgisDataExtractor(PyDataExtractor):
         elem_idx = self.expand_index(elem_index, max_=self.lyr.dataProvider().vertexCount())
         n, m = len(time_idx), len(elem_idx)
         if isinstance(time_index, int):
-            shape = (m, 2) if self.is_vector(data_type) else (m,)
+            shape = (-1, 2) if self.is_vector(data_type) else (m,)
+        elif isinstance(elem_index, (int, np.int32, np.int64)):
+            shape = (-1, 2) if self.is_vector(data_type) else (n,)
         else:
-            shape = (n, m, 2) if self.is_vector(data_type) else (n, m)
+            shape = (n, -1, 2) if self.is_vector(data_type) else (n, m)
         values = []
         for tidx in time_idx:
             for vert_id, count in self.clump_indexes(elem_idx.copy()):
-                values.extend(
-                    self.lyr.dataProvider().datasetValues(QgsMeshDatasetIndex(grp_idx, tidx), vert_id, count).values()
-                )
+                if self._is_3d(grp_idx):
+                    values.extend(
+                        self.lyr.dataProvider().dataset3dValues(QgsMeshDatasetIndex(grp_idx, tidx), vert_id, count).values()
+                    )
+                else:
+                    values.extend(
+                        self.lyr.dataProvider().datasetValues(QgsMeshDatasetIndex(grp_idx, tidx), vert_id, count).values()
+                    )
         return np.array(values).reshape(shape)
 
     def wd_flag(self, data_type: str, index: PyDataExtractor.SliceType | PyDataExtractor.MultiSliceType) -> np.ndarray:
@@ -115,9 +170,10 @@ class QgisDataExtractor(PyDataExtractor):
         shape = (m,) if isinstance(time_index, int) else (n, m)
         wd = []
         for tidx in time_idx:
-            wd.extend([
-                self.lyr.dataProvider().isFaceActive(QgsMeshDatasetIndex(grp_idx, tidx), x) for x in elem_idx
-            ])
+            for face_id, count in self.clump_indexes(elem_idx.copy()):
+                wd.extend(
+                    self.lyr.dataProvider().areFacesActive(QgsMeshDatasetIndex(grp_idx, tidx), face_id, count).active()
+                )
         return np.array(wd).reshape(shape)
 
     def find_group_index(self, data_type: str, source: str = 'layer') -> int:
@@ -134,7 +190,7 @@ class QgisDataExtractor(PyDataExtractor):
     def expand_index(self, idx: int | slice, max_: int) -> list[int]:
         if isinstance(idx, (list, np.ndarray)):
             return idx.tolist() if isinstance(idx, np.ndarray) else idx
-        elif isinstance(idx, int):
+        elif isinstance(idx, (int, np.int32, np.int64)):
             start = idx
             end = idx + 1
         else:
@@ -150,3 +206,11 @@ class QgisDataExtractor(PyDataExtractor):
                 count += 1
                 idxs.pop(0)
             yield idx, count
+
+    def _3d_dataset_index(self) -> QgsMeshDatasetIndex | int:
+        if self._3d_grp_idx == -1:
+            for i in range(self.lyr.dataProvider().datasetGroupCount()):
+                if self._is_3d(i):
+                    self._3d_grp_idx = QgsMeshDatasetIndex(i, 0)
+                    break
+        return self._3d_grp_idx

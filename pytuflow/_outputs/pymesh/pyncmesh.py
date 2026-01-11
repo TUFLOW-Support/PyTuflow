@@ -2,7 +2,7 @@ from pathlib import Path
 
 import numpy as np
 
-from . import PyMesh, PyNCMeshGeometry, PyNCMeshDataExtractor, QgisMeshGeometry
+from . import PyMesh, PyNCMeshGeometry, PyNCMeshDataExtractor, QgisMeshGeometry, QgisDataExtractor
 
 
 class PyNCMesh(PyMesh):
@@ -15,7 +15,7 @@ class PyNCMesh(PyMesh):
         else:
             self.geom = PyNCMeshGeometry(fpath)
         if engine == 'qgis':
-            pass
+            self.extractor = QgisDataExtractor(fpath, extra_datasets=[])
         else:
             self.extractor = PyNCMeshDataExtractor(fpath, engine)
         self.geom.spherical = self.extractor.spherical()

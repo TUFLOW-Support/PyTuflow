@@ -75,7 +75,13 @@ class CellDataMixin:
         values = []
         for dtype in data_type:
             if is_3d:
-                a = self.extractor.data(dtype, (slice(None), slice(cell_idx, cell_idx + nlevels)))
+                if self.extractor.Name == 'QgisDataExtractor':
+                    a = self.extractor.data(dtype, (slice(None), [cell_idx]))
+                    if a.ndim == 3:
+                        values = [a[:,:, 0], a[:,:, 1]]
+                        break
+                else:
+                    a = self.extractor.data(dtype, (slice(None), slice(cell_idx, cell_idx + nlevels)))
             else:
                 cell_idx = cell_id
                 a = self.extractor.data(dtype, (slice(None), cell_idx))

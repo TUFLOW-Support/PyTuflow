@@ -119,7 +119,7 @@ class PyNCMeshDataExtractor(PyDataExtractor):
         dims = set([x.lower() for x in self.dimension_names(data_type)])
         return len({'numcells2d', 'numcells3d'}.intersection(dims)) == 0
 
-    def cell_index(self, cell_id: int | list[int] | np.ndarray, data_type: str) -> int | np.ndarray | list[int]:
+    def cell_index(self, cell_id: int | list[int] | np.ndarray, data_type: str) -> np.ndarray:
         return self.data('idx3', cell_id).flatten() - 1
 
     def zlevel_count(self, cell_idx2: int | np.ndarray | list[int]) -> int | np.ndarray | list[int]:

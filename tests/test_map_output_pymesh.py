@@ -78,6 +78,12 @@ class TestDAT(unittest.TestCase):
 
 class TestNCMesh(unittest.TestCase):
 
+    def test_load(self):
+        nc = './tests/nc_mesh/fv_res.nc'
+        res = NCMesh(nc)
+        self.assertEqual('fv_res', res.name)
+        self.assertFalse(res.has_reference_time)
+
     def test_time_series_averaging(self):
         nc = './tests/nc_mesh/fv_res.nc'
         res = NCMesh(nc)

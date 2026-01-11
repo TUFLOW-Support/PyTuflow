@@ -38,3 +38,7 @@ class QgsProject:
 
 class QgsDistanceArea:
     pass
+
+
+class QgsMeshDatasetGroupMetadata:
+    pass
