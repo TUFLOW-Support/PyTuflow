@@ -114,3 +114,23 @@ class PyNCMeshDataExtractor(PyDataExtractor):
 
     def dimension_names(self, variable_name: str) -> tuple[str, ...]:
         return self.engine.dimension_names(variable_name)
+
+    def on_vertex(self, data_type: str) -> bool:
+        dims = set([x.lower() for x in self.dimension_names(data_type)])
+        return len({'numcells2d', 'numcells3d'}.intersection(dims)) == 0
+
+    def cell_index(self, cell_id: int | list[int] | np.ndarray, data_type: str) -> int | np.ndarray | list[int]:
+        return self.data('idx3', cell_id).flatten() - 1
+
+    def zlevel_count(self, cell_idx2: int | np.ndarray | list[int]) -> int | np.ndarray | list[int]:
+        return self.data('NL', cell_idx2).flatten()
+
+    def zlevels(self, time_index: int, nlevels: int, cell_idx2: int | np.ndarray,
+                cell_idx3: int | np.ndarray) -> np.ndarray:
+        idx = cell_idx2 + cell_idx3
+        if isinstance(cell_idx2, int):
+            a = self.data('layerface_Z', (time_index, slice(idx, idx + nlevels + 1)))
+        else:
+            idx = [i + j for i, nlevel in np.column_stack((idx, nlevels)) for j in range(nlevel + 1)]
+            a = self.data('layerface_Z', (time_index, idx))
+        return a[~np.isnan(a)].reshape((-1, nlevels + 1) if a.ndim > 1 else (-1,))

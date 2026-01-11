@@ -31,26 +31,8 @@ class PyNCMesh(PyMesh):
 
     def translate_data_type(self, data_type: str) -> tuple[str, ...]:
         data_type = super().translate_data_type(data_type)
+        if self.extractor.Name == 'QgisDataExtractor':
+            return data_type
         if len(data_type) == 1 and data_type[0].lower() == 'v':
             return 'V_x', 'V_y'
         return data_type
-
-    def on_vertex(self, data_type: str) -> bool:
-        if data_type.lower() == 'bed elevation':
-            return True
-        dims = set([x.lower() for x in self.extractor.dimension_names(self.translate_data_type(data_type)[0])])
-        return len({'numcells2d', 'numcells3d'}.intersection(dims)) == 0
-
-    def cell_index(self, cell_id: int | list[int] | np.ndarray, data_type: str) -> int:
-        return self.extractor.data('idx3', cell_id).flatten() - 1  # convert to 0-based index
-
-    def zlevel_count(self, cell_idx2: int) -> int:
-        return self.extractor.data('NL', cell_idx2).flatten()
-
-    def zlevels(self, time_index: int, nlevels: int, cell_idx2: int, cell_idx3: int) -> np.ndarray:
-        idx = cell_idx2 + cell_idx3
-        if isinstance(cell_idx2, int):
-            a = self.extractor.data('layerface_Z', (time_index, slice(idx, idx + nlevels + 1)))
-        idx = [i + j for i, nlevel in np.column_stack((idx, nlevels)) for j in range(nlevel + 1)]
-        a = self.extractor.data('layerface_Z', (time_index, idx))
-        return a[~np.isnan(a)].reshape((-1, nlevels + 1) if a.ndim > 1 else (-1, ))

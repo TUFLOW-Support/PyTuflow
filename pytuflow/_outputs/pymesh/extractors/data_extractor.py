@@ -167,3 +167,16 @@ class PyDataExtractor:
             The wet/dry flag for the given data_type and index.
         """
         raise NotImplementedError
+
+    def on_vertex(self, data_type: str) -> bool:
+        return True
+
+    def cell_index(self, cell_id: int | list[int] | np.ndarray, data_type: str) -> int | np.ndarray | list[int]:
+        return cell_id
+
+    def zlevel_count(self, cell_idx2: int | np.ndarray | list[int]) -> int | np.ndarray | list[int]:
+        raise NotImplementedError
+
+    def zlevels(self, time_index: int, nlevels: int, cell_idx2: int | np.ndarray,
+                cell_idx3: int | np.ndarray) -> np.ndarray:
+        raise NotImplementedError

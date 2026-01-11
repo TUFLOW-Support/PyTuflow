@@ -232,7 +232,9 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
         bool
             ``True`` if the data type is stored on mesh vertices, ``False`` otherwise.
         """
-        return True
+        if data_type.lower() == 'bed elevation':
+            return True
+        return self.extractor.on_vertex(self.translate_data_type(data_type)[0])
 
     def is_3d(self, data_type: str) -> bool:
         """Returns whether the specified data type is a 3D result.
@@ -249,7 +251,7 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
         """
         return self.extractor.is_3d(self.translate_data_type(data_type)[0])
 
-    def cell_index(self, cell_id: int | list[int] | np.ndarray, data_type: str) -> int:
+    def cell_index(self, cell_id: int | list[int] | np.ndarray, data_type: str) -> int | np.ndarray | list[int]:
         """Returns the index of the given cell ID for the specified data type. For 2D data types, the cell ID
         is the same as the index, but for 3D data types the cell index can be different.
 
@@ -265,7 +267,44 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
         int
             The index of the given cell ID for the specified data type.
         """
-        return cell_id
+        return self.extractor.cell_index(cell_id, self.translate_data_type(data_type)[0])
+
+    def zlevel_count(self, cell_idx2: int | np.ndarray | list[int]) -> int | np.ndarray | list[int]:
+        """Returns the number of vertical levels for the given 2D cell index.
+
+        Parameters
+        ----------
+        cell_idx2 : int | np.ndarray | list[int]
+            The 2D cell index to get the number of vertical levels for.
+
+        Returns
+        -------
+        int | np.ndarray | list[int]
+            The number of vertical levels for the given 2D cell index.
+        """
+        return self.extractor.zlevel_count(cell_idx2)
+
+    def zlevels(self, time_index: int, nlevels: int, cell_idx2: int | np.ndarray,
+                cell_idx3: int | np.ndarray) -> np.ndarray:
+        """Returns the vertical levels for the given time index, number of levels, 2D cell index, and 3D cell index.
+
+        Parameters
+        ----------
+        time_index : int
+            The time index to get the vertical levels for.
+        nlevels : int
+            The number of vertical levels.
+        cell_idx2 : int | np.ndarray
+            The 2D cell index.
+        cell_idx3 : int | np.ndarray
+            The 3D cell index.
+
+        Returns
+        -------
+        np.ndarray
+            The vertical levels for the given parameters.
+        """
+        return self.extractor.zlevels(time_index, nlevels, cell_idx2, cell_idx3)
 
     def data_point(self,
                    point: PointLike,
