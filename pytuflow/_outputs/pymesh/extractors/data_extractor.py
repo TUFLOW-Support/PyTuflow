@@ -182,7 +182,7 @@ class PyDataExtractor:
         return True
 
     def cell_index(self, cell_id: int | list[int] | np.ndarray, data_type: str) -> np.ndarray:
-        return np.array([cell_id])
+        return np.array([cell_id] if isinstance(cell_id, (int, np.int32, np.int64)) else cell_id)
 
     def zlevel_count(self, cell_idx2: int | np.ndarray | list[int]) -> int | np.ndarray | list[int]:
         raise NotImplementedError

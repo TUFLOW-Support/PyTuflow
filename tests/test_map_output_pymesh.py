@@ -90,6 +90,13 @@ class TestNCMesh(unittest.TestCase):
         df = res.time_series((1.5, 4.5), 'vel', averaging_method='singlelevel?dir=top&1')
         self.assertEqual((7, 1), df.shape)
 
+    def test_section_averaging(self):
+        nc = './tests/nc_mesh/fv_res.nc'
+        res = NCMesh(nc)
+        line = [(1.4, 4.5), (3.6, 4.2)]
+        df = res.section(line, 'v', 0, averaging_method='sigma&0.1&0.9')
+        self.assertEqual((6, 2), df.shape)
+
 
 class TestCATCHJson(unittest.TestCase):
 

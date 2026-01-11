@@ -33,6 +33,33 @@ class Mesh(MapOutput):
     def _looks_empty(driver: QgisMeshDriver) -> bool:
         return False
 
+    @property
+    def spherical(self) -> bool:
+        """Returns whether the mesh is in spherical coordinates.
+
+        Returns
+        -------
+        bool
+            True if the mesh is in spherical coordinates, False if it is in Cartesian coordinates.
+        """
+        if self._driver.DRIVER_SOURCE == 'python':
+            return self._driver.geom.spherical
+        raise NotImplementedError('v1.0 driver does contain spherical attribute information.')
+
+    @spherical.setter
+    def spherical(self, value: bool):
+        """Sets whether the mesh is in spherical coordinates.
+
+        Parameters
+        ----------
+        value : bool
+            True if the mesh is in spherical coordinates, False if it is in Cartesian coordinates.
+        """
+        if self._driver.DRIVER_SOURCE == 'python':
+            self._driver.geom.spherical = value
+        else:
+            raise NotImplementedError('v1.0 driver does contain spherical attribute information.')
+
     def times(self, filter_by: str = None, fmt: str = 'relative') -> list[TimeLike]:
         """Returns a list of times for the given filter.
 

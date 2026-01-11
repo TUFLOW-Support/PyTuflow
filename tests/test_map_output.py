@@ -580,6 +580,14 @@ class TestNCMesh(unittest.TestCase):
             df = res.section(line, 'h', 0)
             self.assertEqual((6, 2), df.shape)
 
+    def test_section_qgis_driver(self):
+        nc = './tests/nc_mesh/fv_res.nc'
+        with pyqgis():
+            res = NCMesh(nc, driver='qgis geometry engine')
+            line = [(1.4, 4.5), (3.6, 4.2)]
+            df = res.section(line, 'h', 0)
+            self.assertEqual((6, 2), df.shape)
+
     def test_section_averaging_netcdf4_driver(self):
         nc = './tests/nc_mesh/fv_res.nc'
         with pyqgis():
@@ -588,10 +596,27 @@ class TestNCMesh(unittest.TestCase):
             df = res.section(line, 'v', 0, averaging_method='sigma&0.1&0.9')
             self.assertEqual((6, 2), df.shape)
 
+    def test_section_averaging_qgis_driver(self):
+        nc = './tests/nc_mesh/fv_res.nc'
+        with pyqgis():
+            res = NCMesh(nc, driver='qgis geometry engine')
+            line = [(1.4, 4.5), (3.6, 4.2)]
+            df = res.section(line, 'v', 0, averaging_method='sigma&0.1&0.9')
+            self.assertEqual((6, 2), df.shape)
+
     def test_section_long_lat_netcdf4_driver(self):
         nc = './tests/nc_mesh/EST001_3D_002.nc'
         with pyqgis():
             res = NCMesh(nc, driver='qgis geometry netcdf4')
+            line = [(159.07617177, -31.36419353), (159.07704259, -31.36703514), (159.07855506, -31.36937259)]
+            df = res.section(line, 'salinity', 186961)
+            self.assertTrue(np.isclose(df.iloc[:,0].max(), 622.208, atol=0.001))
+
+    def test_section_long_lat_qgis_driver(self):
+        nc = './tests/nc_mesh/EST001_3D_002.nc'
+        with pyqgis():
+            res = NCMesh(nc, driver='qgis geometry engine')
+            res.spherical = True
             line = [(159.07617177, -31.36419353), (159.07704259, -31.36703514), (159.07855506, -31.36937259)]
             df = res.section(line, 'salinity', 186961)
             self.assertTrue(np.isclose(df.iloc[:,0].max(), 622.208, atol=0.001))

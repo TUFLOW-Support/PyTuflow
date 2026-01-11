@@ -123,7 +123,10 @@ class CellDataMixin:
         if is_3d:
             nlevels = self.zlevel_count(cells)
             max_nlevels = nlevels.max()
-            idx = [icell + ilevel for icell, nlevel in np.column_stack((cell_idx, nlevels)) for ilevel in range(nlevel)]
+            if self.extractor.Name == 'QgisDataExtractor':
+                idx = cells
+            else:
+                idx = [icell + ilevel for icell, nlevel in np.column_stack((cell_idx, nlevels)) for ilevel in range(nlevel)]
         else:
             max_nlevels = 1
             idx = cells
@@ -131,20 +134,22 @@ class CellDataMixin:
         values = []
         for dtype in data_type:
             a = self.extractor.data(dtype, (time_index, idx))
-            if is_3d:
-                zlevels = self.zlevels(time_index, nlevels, cells, cell_idx)
-                a_padded = np.full((cell_idx.shape[0], max_nlevels), np.nan)
-                b_padded = np.full((cell_idx.shape[0], max_nlevels + 1), np.nan)
-                k1, k2 = 0, 0
-                for i, nlevel in enumerate(nlevels):
-                    a_padded[i, :nlevel] = a[k1:k1 + nlevel]
-                    b_padded[i, :nlevel+1] = zlevels[k2:k2 + nlevel + 1]
-                    k1 += nlevel
-                    k2 += nlevel + 1
-                avg = depth_averaging.get_method_func(depth_averaging_method)(b_padded, a_padded)
-                values.append(avg)
-            else:
-                values.append(a)
+            extracted = [a[:,0], a[:,1]] if a.ndim == 2 else [a]
+            for a in extracted:
+                if is_3d:
+                    zlevels = self.zlevels(time_index, nlevels, cells, cell_idx)
+                    a_padded = np.full((cell_idx.shape[0], max_nlevels), np.nan)
+                    b_padded = np.full((cell_idx.shape[0], max_nlevels + 1), np.nan)
+                    k1, k2 = 0, 0
+                    for i, nlevel in enumerate(nlevels):
+                        a_padded[i, :nlevel] = a[k1:k1 + nlevel]
+                        b_padded[i, :nlevel+1] = zlevels[k2:k2 + nlevel + 1]
+                        k1 += nlevel
+                        k2 += nlevel + 1
+                    avg = depth_averaging.get_method_func(depth_averaging_method)(b_padded, a_padded)
+                    values.append(avg)
+                else:
+                    values.append(a)
 
         if len(values) > 1:
             data = np.column_stack(values)

@@ -100,11 +100,10 @@ class QgisDataExtractor(PyDataExtractor):
         elif isinstance(cell_idx2, np.ndarray):
             cell_idx2 = cell_idx2.tolist()
         result = []
-        cell_idx2 = cell_idx2.tolist() if isinstance(cell_idx2, np.ndarray) else cell_idx2
         time_idx = self.expand_index(time_index, max_=self.lyr.dataProvider().datasetCount(QgsMeshDatasetIndex(_3d_grp_idx)))
-        cum_nlevels = np.array([nlevels]) if isinstance(nlevels, (int, np.int32, np.int64)) else np.asarray(nlevels)
-        cum_nlevels = np.cumsum(cum_nlevels + 1)[0]
-        shape = (nlevels,) if isinstance(time_index, int) else (len(time_idx), cum_nlevels)
+        sum_nlevels = np.array([nlevels]) if isinstance(nlevels, (int, np.int32, np.int64)) else np.asarray(nlevels)
+        sum_nlevels = np.sum(sum_nlevels + 1)
+        shape = (sum_nlevels,) if isinstance(time_index, int) else (len(time_idx), sum_nlevels)
         for time_idx in time_idx:
             for cid, count in self.clump_indexes(cell_idx2.copy()):
                 idx = QgsMeshDatasetIndex(_3d_grp_idx.group(), time_idx)
@@ -137,11 +136,11 @@ class QgisDataExtractor(PyDataExtractor):
         elem_idx = self.expand_index(elem_index, max_=self.lyr.dataProvider().vertexCount())
         n, m = len(time_idx), len(elem_idx)
         if isinstance(time_index, int):
-            shape = (-1, 2) if self.is_vector(data_type) else (m,)
+            shape = (-1, 2) if self.is_vector(data_type) else (-1,)
         elif isinstance(elem_index, (int, np.int32, np.int64)):
             shape = (-1, 2) if self.is_vector(data_type) else (n,)
         else:
-            shape = (n, -1, 2) if self.is_vector(data_type) else (n, m)
+            shape = (n, -1, 2) if self.is_vector(data_type) else (n, -1)
         values = []
         for tidx in time_idx:
             for vert_id, count in self.clump_indexes(elem_idx.copy()):
