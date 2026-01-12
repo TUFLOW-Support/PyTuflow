@@ -270,7 +270,6 @@ class PyDATDataExtractor(PyDataExtractor):
         data_types.extend(list(self._results.keys()))
         return data_types
 
-
     def reference_time(self, data_type: str) -> datetime | None:
         dtype, _, _ = self.strip_data_type(data_type)
         cards = self._results.get(dtype, {})

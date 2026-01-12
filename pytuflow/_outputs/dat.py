@@ -169,10 +169,8 @@ class DAT(Mesh):
         else:
             geom_driver = 'qgis' if 'qgis geometry' in driver.lower() else None
             engine = 'qgis' if 'qgis engine' in driver.lower() or 'qgis geometry engine' in driver.lower() else None
-            if 'h5py' in driver.lower():
-                engine = 'h5py'
-            elif 'netcdf4' in driver.lower():
-                engine = 'netcdf4'
+            if 'python' in driver.lower():
+                engine = 'python'
 
         if driver.lower() == 'v1.0':
             self._driver = QgisDATMeshDriver(self.twodm, self.fpath)

@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from . import PyMesh, Py2dm, PyDATDataExtractor, QgisMeshGeometry
+from . import PyMesh, Py2dm, PyDATDataExtractor, QgisMeshGeometry, QgisDataExtractor
 
 
 class PyDAT(PyMesh):
@@ -12,7 +12,14 @@ class PyDAT(PyMesh):
         else:
             self.geom = Py2dm(twodm)
         if engine == 'qgis':
-            pass
+            self.extractor = QgisDataExtractor(twodm, fpaths)
+            self.geom.lyr = self.extractor.lyr
         else:
             self.extractor = PyDATDataExtractor(fpaths, self._map_wet_dry_to_verts)
         self.name = twodm.stem
+
+    def data_types(self) -> list[str]:
+        if not self._data_types:
+            data_types = self.extractor.data_types()
+            self._data_types = ['Bed Elevation'] + data_types if self.geom.has_z else data_types
+        return self._data_types

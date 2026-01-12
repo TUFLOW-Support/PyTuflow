@@ -826,53 +826,103 @@ class TestCATCHJson(unittest.TestCase):
 
 class TestDAT(unittest.TestCase):
 
-    def test_load(self):
+    def test_load_python_driver(self):
         p = './tests/dat/small_model_001.ALL.sup'
         with pyqgis():
-            res = DAT(p)
+            res = DAT(p, driver='qgis geometry python')
             self.assertEqual('small_model_001', res.name)
             self.assertFalse(res.has_reference_time)
 
-    def test_load_2(self):
+    def test_load_qgis_driver(self):
+        p = './tests/dat/small_model_001.ALL.sup'
+        with pyqgis():
+            res = DAT(p, driver='qgis geometry engine')
+            self.assertEqual('small_model_001', res.name)
+            self.assertFalse(res.has_reference_time)
+
+    def test_load_2_python_driver(self):
         p = ['./tests/dat/small_model_001_d.dat', './tests/dat/small_model_001_V.dat',
              './tests/dat/small_model_001_h.dat', './tests/dat/small_model_001_q.dat',
              './tests/dat/small_model_001_Times.dat']
         with pyqgis():
-            res = DAT(p)
+            res = DAT(p, driver='qgis geometry python')
             self.assertEqual('small_model_001', res.name)
 
-    def test_times(self):
+    def test_load_2_qgis_driver(self):
+        p = ['./tests/dat/small_model_001_d.dat', './tests/dat/small_model_001_V.dat',
+             './tests/dat/small_model_001_h.dat', './tests/dat/small_model_001_q.dat',
+             './tests/dat/small_model_001_Times.dat']
+        with pyqgis():
+            res = DAT(p, driver='qgis geometry engine')
+            self.assertEqual('small_model_001', res.name)
+
+    def test_times_python_driver(self):
         p = './tests/dat/small_model_001.ALL.sup'
         with pyqgis():
-            res = DAT(p)
+            res = DAT(p, driver='qgis geometry python')
             times = res.times()
             self.assertEqual(13, len(times))
 
-    def test_data_types(self):
+    def test_times_qgis_driver(self):
         p = './tests/dat/small_model_001.ALL.sup'
         with pyqgis():
-            res = DAT(p)
+            res = DAT(p, driver='qgis geometry engine')
+            times = res.times()
+            self.assertEqual(13, len(times))
+
+    def test_data_types_python_driver(self):
+        p = './tests/dat/small_model_001.ALL.sup'
+        with pyqgis():
+            res = DAT(p, driver='qgis geometry python')
             dtypes = res.data_types()
             self.assertEqual(8, len(dtypes))
 
-    def test_newer_format(self):
+    def test_data_types_qgis_driver(self):
+        p = './tests/dat/small_model_001.ALL.sup'
+        with pyqgis():
+            res = DAT(p, driver='qgis geometry engine')
+            dtypes = res.data_types()
+            self.assertEqual(8, len(dtypes))
+
+    def test_newer_format_python_driver(self):
         p = './tests/dat/small_model_002_h.dat'  # model name is now 80 characters long rather than 40
         with pyqgis():
-            res = DAT(p)
+            res = DAT(p, driver='qgis geometry python')
             dtypes = res.data_types()
             self.assertEqual(sorted(['bed level', 'water level', 'max water level']), sorted(dtypes))
 
-    def test_time_series(self):
+    def test_newer_format_qgis_driver(self):
+        p = './tests/dat/small_model_002_h.dat'  # model name is now 80 characters long rather than 40
+        with pyqgis():
+            res = DAT(p, driver='qgis geometry engine')
+            dtypes = res.data_types()
+            self.assertEqual(sorted(['bed level', 'water level', 'max water level']), sorted(dtypes))
+
+    def test_time_series_python_driver(self):
         p = './tests/dat/small_model_002_h.dat'
         with pyqgis():
-            res = DAT(p)
+            res = DAT(p, driver='qgis geometry python')
             df = res.time_series((1.0, 1.0), 'water level')
             self.assertEqual((13, 1), df.shape)
 
-    def test_section(self):
+    def test_time_series_qgis_driver(self):
         p = './tests/dat/small_model_002_h.dat'
         with pyqgis():
-            res = DAT(p)
+            res = DAT(p, driver='qgis geometry engine')
+            df = res.time_series((1.0, 1.0), 'water level')
+            self.assertEqual((13, 1), df.shape)
+
+    def test_section_python_driver(self):
+        p = './tests/dat/small_model_002_h.dat'
+        with pyqgis():
+            res = DAT(p, driver='qgis geometry python')
+            df = res.section([(1.5, 1.2), (2.5, 1.2)], 'water level', 1.0)
+            self.assertEqual((4, 2), df.shape)
+
+    def test_section_qgis_driver(self):
+        p = './tests/dat/small_model_002_h.dat'
+        with pyqgis():
+            res = DAT(p, driver='qgis geometry engine')
             df = res.section([(1.5, 1.2), (2.5, 1.2)], 'water level', 1.0)
             self.assertEqual((4, 2), df.shape)
 

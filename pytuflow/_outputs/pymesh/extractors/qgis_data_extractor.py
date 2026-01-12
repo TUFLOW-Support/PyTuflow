@@ -18,7 +18,10 @@ class QgisDataExtractor(PyDataExtractor):
     def __init__(self, mesh: str | Path, extra_datasets: list[str | Path]):
         self.lyr = QgsMeshLayer(str(mesh), Path(mesh).stem, 'mdal')
         self._3d_grp_idx = -1
+        self._is_dat = False
         for dataset in extra_datasets:
+            if Path(dataset).suffix.lower() == '.dat':
+                self._is_dat = True
             success = self.lyr.dataProvider().addDataset(str(dataset))
             if not success:
                 raise ValueError(f'Failed to load results onto mesh: {dataset}')
@@ -33,10 +36,13 @@ class QgisDataExtractor(PyDataExtractor):
         ])
 
     def data_types(self) -> list[str]:
-        return [
+        data_types = [
             self.lyr.datasetGroupMetadata(QgsMeshDatasetIndex(i)).name() for i in range(self.lyr.datasetGroupCount())
             if self.lyr.datasetGroupMetadata(QgsMeshDatasetIndex(i)).name() != 'Bed Elevation'
         ]
+        if self._is_dat:
+            return [self.translate_dat_data_type(x) for x in data_types]
+        return data_types
 
     def reference_time(self, data_type: str) -> datetime:
         grp_idx = self.find_group_index(data_type)
@@ -181,7 +187,11 @@ class QgisDataExtractor(PyDataExtractor):
         data_source = self.lyr if source == 'layer' else self.lyr.dataProvider()
         for i in range(data_source.datasetGroupCount()):
             group_meta = data_source.datasetGroupMetadata(QgsMeshDatasetIndex(i))
-            name = MapOutput._get_standard_data_type_name(group_meta.name())
+            if self._is_dat:
+                name = self.translate_dat_data_type(group_meta.name())
+            else:
+                name = group_meta.name()
+            name = MapOutput._get_standard_data_type_name(name)
             if name == data_type:
                 return i
         return -1
@@ -205,6 +215,20 @@ class QgisDataExtractor(PyDataExtractor):
                 count += 1
                 idxs.pop(0)
             yield idx, count
+
+    @staticmethod
+    def translate_dat_data_type(data_type: str) -> str:
+        from ...map_output import MapOutput
+        from .dat_data_extractor import PyDATDataExtractor
+        dtype, is_max, is_min = PyDATDataExtractor.strip_data_type(data_type)
+        dtype, _ = dtype.split(' ', 1)
+        dtype = MapOutput._get_standard_data_type_name(dtype)
+        if is_max:
+            return f'max {dtype}'
+        elif is_min:
+            return f'min {dtype}'
+        else:
+            return dtype
 
     def _3d_dataset_index(self) -> QgsMeshDatasetIndex | int:
         if self._3d_grp_idx == -1:
