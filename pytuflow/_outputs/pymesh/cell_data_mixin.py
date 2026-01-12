@@ -240,7 +240,10 @@ class CellDataMixin:
         nlevels = self.zlevel_count(cells)
         zlevels = self.zlevels(time_index, nlevels, cells, cell_idx)
         if self.is_3d(data_type[0]):
-            idx = [icell + ilevel for icell, nlevel in np.column_stack((cell_idx, nlevels)) for ilevel in range(nlevel)]
+            if self.extractor.Name == 'QgisDataExtractor':
+                idx = cells
+            else:
+                idx = [icell + ilevel for icell, nlevel in np.column_stack((cell_idx, nlevels)) for ilevel in range(nlevel)]
         else:
             idx = cells
 
