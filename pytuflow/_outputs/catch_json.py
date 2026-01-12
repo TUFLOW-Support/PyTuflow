@@ -26,6 +26,20 @@ class CATCHJson(MapOutput):
     ----------
     fpath : PathLike
         Path to the NetCDF file.
+    driver: str, optional
+       The driver to use for reading the XMDF file. Options are:
+
+       - ``"v1.0"``: Use PyTUFLOW v1.0 XMDF reader (legacy). This uses old QGIS geometry and extraction methods.
+         This option is exclusive and can't be used with other options.
+       - ``"v1.1"``: Use PyTUFLOW v1.1 XMDF reader (default). Uses ``vtk`` geometry if available, otherwise uses
+         ``QGIS`` geometry. In order of preference, uses ``h5py``, ``netcdf4``, or ``QGIS`` engine for extracting data.
+         This option is exclusive and can't be used with other options.
+       - ``"qgis [geometry] | [engine]"``: Use QGIS libraries for geometry (``"qgis geometry"``) and/or use QGIS libraries
+          for extracting data (``"qgis engine"``). Both can be passed together as ``"qgis geometry engine"``. This option
+          can be used in conjunctionwith other extracting data options e.g. ``"qgis geometry netcdf4"``. The QGIS engine
+          must be used with QGIS geometry.
+       - ``"netcdf4"``: Use NetCDF4 library for extracting data. Exclusive with other extraction options.
+       - ``"h5py"``: Use h5py library for extracting data. Exclusive with other extraction options.
 
     Examples
     --------
@@ -120,9 +134,10 @@ class CATCHJson(MapOutput):
     3       1.0  0.424264
     """
 
-    def __init__(self, fpath: PathLike | str):
+    def __init__(self, fpath: PathLike | str, driver: str = 'v1.1'):
         super().__init__(fpath)
         self.fpath = Path(fpath)
+        self.driver = driver
         self._data = {}
         self._providers = OrderedDict()
         self._idx_provider = None
@@ -632,7 +647,7 @@ class CATCHJson(MapOutput):
         index_result_name = self._data.get('index')
         for res_name in self._data.get('outputs', []):
             output = self._data.get('output data', {}).get(res_name, {})
-            provider = CATCHProvider.from_catch_json_output(self.fpath.parent, output)
+            provider = CATCHProvider.from_catch_json_output(self.fpath.parent, output, self.driver)
             if res_name == index_result_name:
                 self._idx_provider = provider
             if provider.has_inherent_reference_time:

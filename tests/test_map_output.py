@@ -654,173 +654,330 @@ class TestNCMesh(unittest.TestCase):
 
 class TestCATCHJson(unittest.TestCase):
 
-    # def test_load_tmp(self):
-    #     dtime = datetime(2021, 1, 1, 1)
-    #     p = r"C:\TUFLOW\working\catch_units\model\TUFLOWCatch\results\Demonstration_005.tuflow.json"
-    #     with pyqgis():
-    #         res = CATCHJson(p)
-    #         df = res.section(r"C:\Users\ellis.symons\Downloads\demonstation_line.shp", 'h', dtime)
-    #         print()
-
-    def test_load(self):
+    def test_load_netcdf4_driver(self):
         p = './tests/catch_json/res.tuflow.json'
-        res = CATCHJson(p)
+        res = CATCHJson(p, driver='qgis geometry netcdf4')
         self.assertEqual('res', res.name)
         self.assertTrue(res.has_reference_time)
 
-    def test_times(self):
+    def test_load_qgis_driver(self):
         p = './tests/catch_json/res.tuflow.json'
-        res = CATCHJson(p)
+        with pyqgis():
+            res = CATCHJson(p, driver='qgis geometry engine')
+            self.assertEqual('res', res.name)
+            self.assertTrue(res.has_reference_time)
+
+    def test_times_netcdf4_driver(self):
+        p = './tests/catch_json/res.tuflow.json'
+        res = CATCHJson(p, driver='qgis geometry netcdf4')
         times = res.times()
         self.assertEqual(7, len(times))
 
-    def test_data_types(self):
+    def test_times_qgis_driver(self):
         p = './tests/catch_json/res.tuflow.json'
-        res = CATCHJson(p)
+        with pyqgis():
+            res = CATCHJson(p, driver='qgis geometry engine')
+            times = res.times()
+            self.assertEqual(7, len(times))
+
+    def test_data_types_netcdf4_driver(self):
+        p = './tests/catch_json/res.tuflow.json'
+        res = CATCHJson(p, driver='qgis geometry netcdf4')
         dtypes = res.data_types()
         self.assertEqual(10, len(dtypes))
 
-    def test_time_series(self):
+    def test_data_types_qgis_driver(self):
+        p = './tests/catch_json/res.tuflow.json'
+        with pyqgis():
+            res = CATCHJson(p, driver='qgis geometry engine')
+            dtypes = res.data_types()
+            self.assertEqual(10, len(dtypes))
+
+    def test_time_series_netcdf4_driver(self):
         p = './tests/catch_json/res.tuflow.json'
         point = (1.5, 4.5)
         with pyqgis():
-            res = CATCHJson(p)
+            res = CATCHJson(p, driver='qgis geometry netcdf4')
             df = res.time_series(point, 'water level')
             self.assertEqual((7, 1), df.shape)
 
-    def test_time_series_2(self):
+    def test_time_series_qgis_driver(self):
         p = './tests/catch_json/res.tuflow.json'
         point = (1.5, 4.5)
         with pyqgis():
-            res = CATCHJson(p)
+            res = CATCHJson(p, driver='qgis geometry engine')
+            df = res.time_series(point, 'water level')
+            self.assertEqual((7, 1), df.shape)
+
+    def test_time_series_2_netcdf4_driver(self):
+        p = './tests/catch_json/res.tuflow.json'
+        point = (1.5, 4.5)
+        with pyqgis():
+            res = CATCHJson(p, driver='qgis geometry netcdf4')
             df = res.time_series(point, 'water level', time_fmt='absolute')
             self.assertEqual((7, 1), df.shape)
 
-    def test_section(self):
-        p = './tests/catch_json/res.tuflow.json'
-        line = './tests/catch_json/section_line.shp'
-        with pyqgis():
-            res = CATCHJson(p)
-            df = res.section(line, 'water level', 0.)
-            self.assertEqual((9, 2), df.shape)
-
-    def test_section_2(self):
-        p = './tests/catch_json/res.tuflow.json'
-        line = './tests/catch_json/section_line.shp'
-        with pyqgis():
-            res = CATCHJson(p)
-            df = res.section(line, ['water level', 'velocity'], 0.)
-            self.assertEqual((9, 3), df.shape)
-
-    def test_section_3(self):
-        p = './tests/catch_json/res_reversed.tuflow.json'
-        line = './tests/catch_json/section_line.shp'
-        with pyqgis():
-            res = CATCHJson(p)
-            df = res.section(line, ['water level'], 0.)
-            self.assertEqual((9, 2), df.shape)
-
-    def test_section_4(self):
-        p = './tests/catch_json/res.tuflow.json'
-        line = './tests/catch_json/section_line_reversed.shp'
-        with pyqgis():
-            res = CATCHJson(p)
-            df = res.section(line, ['water level'], 0.)
-            self.assertEqual((9, 2), df.shape)
-
-    def test_section_5(self):
-        p = './tests/catch_json/res_reversed.tuflow.json'
-        line = './tests/catch_json/section_line_reversed.shp'
-        with pyqgis():
-            res = CATCHJson(p)
-            df = res.section(line, ['water level'], 0.)
-            self.assertEqual((9, 2), df.shape)
-
-    def test_section_6(self):
-        p = './tests/catch_json/res.tuflow.json'
-        line = './tests/catch_json/section_line_hook.shp'
-        with pyqgis():
-            res = CATCHJson(p)
-            df = res.section(line, ['water level'], 0.)
-            self.assertEqual((12, 2), df.shape)
-
-    def test_section_7(self):
-        p = './tests/catch_json/res.tuflow.json'
-        line = './tests/catch_json/section_line_hook_reversed.shp'
-        with pyqgis():
-            res = CATCHJson(p)
-            df = res.section(line, ['water level'], 0.)
-            self.assertEqual((8, 2), df.shape)
-
-    def test_section_8(self):
-        p = './tests/catch_json/res_shifted.tuflow.json'
-        line = './tests/xmdf/section_line_long.shp'
-        with pyqgis():
-            res = CATCHJson(p)
-            df = res.section(line, ['water level'], 0.)
-            self.assertEqual((9, 2), df.shape)
-
-    def test_section_9(self):
-        p = './tests/catch_json/res_shifted.tuflow.json'
-        line = './tests/catch_json/section_line_ugly.shp'
-        with pyqgis():
-            res = CATCHJson(p)
-            df = res.section(line, ['water level'], 0.)
-            self.assertEqual((16, 2), df.shape)
-
-    def test_curtain(self):
-        p = './tests/catch_json/res.tuflow.json'
-        line = './tests/catch_json/section_line.shp'
-        with pyqgis():
-            res = CATCHJson(p)
-            df = res.curtain(line, 'velocity', 0.)
-            self.assertEqual((24, 4), df.shape)
-
-    def test_curtain_2(self):
-        p = './tests/catch_json/res.tuflow.json'
-        line = './tests/catch_json/section_line_hook.shp'
-        with pyqgis():
-            res = CATCHJson(p)
-            df = res.curtain(line, 'velocity', 0.)
-            self.assertEqual((40, 4), df.shape)
-
-    def test_curtain_3(self):
-        p = './tests/catch_json/res.tuflow.json'
-        line = './tests/catch_json/section_line_hook_reversed.shp'
-        with pyqgis():
-            res = CATCHJson(p)
-            df = res.curtain(line, 'velocity', 0.)
-            self.assertEqual((32, 4), df.shape)
-
-    def test_curtain_4(self):
-        p = './tests/catch_json/res_shifted.tuflow.json'
-        line = './tests/xmdf/section_line_long.shp'
-        with pyqgis():
-            res = CATCHJson(p)
-            df = res.curtain(line, 'velocity', 0.)
-            self.assertEqual((24, 4), df.shape)
-
-    def test_curtain_5(self):
-        p = './tests/catch_json/res_shifted.tuflow.json'
-        line = './tests/catch_json/section_line_ugly.shp'
-        with pyqgis():
-            res = CATCHJson(p)
-            df = res.curtain(line, 'velocity', 0.)
-            self.assertEqual((64, 4), df.shape)
-
-    def test_profile(self):
+    def test_time_series_2_qgis_driver(self):
         p = './tests/catch_json/res.tuflow.json'
         point = (1.5, 4.5)
         with pyqgis():
-            res = CATCHJson(p)
+            res = CATCHJson(p, driver='qgis geometry engine')
+            df = res.time_series(point, 'water level', time_fmt='absolute')
+            self.assertEqual((7, 1), df.shape)
+
+    def test_section_netcdf4_driver(self):
+        p = './tests/catch_json/res.tuflow.json'
+        line = './tests/catch_json/section_line.shp'
+        with pyqgis():
+            res = CATCHJson(p, driver='qgis geometry netcdf4')
+            df = res.section(line, 'water level', 0.)
+            self.assertEqual((9, 2), df.shape)
+
+    def test_section_qgis_driver(self):
+        p = './tests/catch_json/res.tuflow.json'
+        line = './tests/catch_json/section_line.shp'
+        with pyqgis():
+            res = CATCHJson(p, driver='qgis geometry engine')
+            df = res.section(line, 'water level', 0.)
+            self.assertEqual((9, 2), df.shape)
+
+    def test_section_2_netcdf4_driver(self):
+        p = './tests/catch_json/res.tuflow.json'
+        line = './tests/catch_json/section_line.shp'
+        with pyqgis():
+            res = CATCHJson(p, driver='qgis geometry netcdf4')
+            df = res.section(line, ['water level', 'velocity'], 0.)
+            self.assertEqual((9, 3), df.shape)
+
+    def test_section_2_qgis_driver(self):
+        p = './tests/catch_json/res.tuflow.json'
+        line = './tests/catch_json/section_line.shp'
+        with pyqgis():
+            res = CATCHJson(p, driver='qgis geometry engine')
+            df = res.section(line, ['water level', 'velocity'], 0.)
+            self.assertEqual((9, 3), df.shape)
+
+    def test_section_3_netcdf4_driver(self):
+        p = './tests/catch_json/res_reversed.tuflow.json'
+        line = './tests/catch_json/section_line.shp'
+        with pyqgis():
+            res = CATCHJson(p, driver='qgis geometry netcdf4')
+            df = res.section(line, ['water level'], 0.)
+            self.assertEqual((9, 2), df.shape)
+
+    def test_section_3_qgis_driver(self):
+        p = './tests/catch_json/res_reversed.tuflow.json'
+        line = './tests/catch_json/section_line.shp'
+        with pyqgis():
+            res = CATCHJson(p, driver='qgis geometry engine')
+            df = res.section(line, ['water level'], 0.)
+            self.assertEqual((9, 2), df.shape)
+
+    def test_section_4_netcdf4_driver(self):
+        p = './tests/catch_json/res.tuflow.json'
+        line = './tests/catch_json/section_line_reversed.shp'
+        with pyqgis():
+            res = CATCHJson(p, driver='qgis geometry netcdf4')
+            df = res.section(line, ['water level'], 0.)
+            self.assertEqual((9, 2), df.shape)
+
+    def test_section_4_qgis_driver(self):
+        p = './tests/catch_json/res.tuflow.json'
+        line = './tests/catch_json/section_line_reversed.shp'
+        with pyqgis():
+            res = CATCHJson(p, driver='qgis geometry engine')
+            df = res.section(line, ['water level'], 0.)
+            self.assertEqual((9, 2), df.shape)
+
+    def test_section_5_netcdf4_driver(self):
+        p = './tests/catch_json/res_reversed.tuflow.json'
+        line = './tests/catch_json/section_line_reversed.shp'
+        with pyqgis():
+            res = CATCHJson(p, driver='qgis geometry netcdf4')
+            df = res.section(line, ['water level'], 0.)
+            self.assertEqual((9, 2), df.shape)
+
+    def test_section_5_qgis_driver(self):
+        p = './tests/catch_json/res_reversed.tuflow.json'
+        line = './tests/catch_json/section_line_reversed.shp'
+        with pyqgis():
+            res = CATCHJson(p, driver='qgis geometry engine')
+            df = res.section(line, ['water level'], 0.)
+            self.assertEqual((9, 2), df.shape)
+
+    def test_section_6_netcdf4_driver(self):
+        p = './tests/catch_json/res.tuflow.json'
+        line = './tests/catch_json/section_line_hook.shp'
+        with pyqgis():
+            res = CATCHJson(p, driver='qgis geometry netcdf4')
+            df = res.section(line, ['water level'], 0.)
+            self.assertEqual((12, 2), df.shape)
+
+    def test_section_6_qgis_driver(self):
+        p = './tests/catch_json/res.tuflow.json'
+        line = './tests/catch_json/section_line_hook.shp'
+        with pyqgis():
+            res = CATCHJson(p, driver='qgis geometry engine')
+            df = res.section(line, ['water level'], 0.)
+            self.assertEqual((12, 2), df.shape)
+
+    def test_section_7_netcdf4_driver(self):
+        p = './tests/catch_json/res.tuflow.json'
+        line = './tests/catch_json/section_line_hook_reversed.shp'
+        with pyqgis():
+            res = CATCHJson(p, driver='qgis geometry netcdf4')
+            df = res.section(line, ['water level'], 0.)
+            self.assertEqual((8, 2), df.shape)
+
+    def test_section_7_qgis_driver(self):
+        p = './tests/catch_json/res.tuflow.json'
+        line = './tests/catch_json/section_line_hook_reversed.shp'
+        with pyqgis():
+            res = CATCHJson(p, driver='qgis geometry engine')
+            df = res.section(line, ['water level'], 0.)
+            self.assertEqual((8, 2), df.shape)
+
+    def test_section_8_netcdf4_driver(self):
+        p = './tests/catch_json/res_shifted.tuflow.json'
+        line = './tests/xmdf/section_line_long.shp'
+        with pyqgis():
+            res = CATCHJson(p, driver='qgis geometry netcdf4')
+            df = res.section(line, ['water level'], 0.)
+            self.assertEqual((9, 2), df.shape)
+
+    def test_section_8_qgis_driver(self):
+        p = './tests/catch_json/res_shifted.tuflow.json'
+        line = './tests/xmdf/section_line_long.shp'
+        with pyqgis():
+            res = CATCHJson(p, driver='qgis geometry engine')
+            df = res.section(line, ['water level'], 0.)
+            self.assertEqual((9, 2), df.shape)
+
+    def test_section_9_netcdf4_driver(self):
+        p = './tests/catch_json/res_shifted.tuflow.json'
+        line = './tests/catch_json/section_line_ugly.shp'
+        with pyqgis():
+            res = CATCHJson(p, driver='qgis geometry netcdf4')
+            df = res.section(line, ['water level'], 0.)
+            self.assertEqual((16, 2), df.shape)
+
+    def test_section_9_qgis_driver(self):
+        p = './tests/catch_json/res_shifted.tuflow.json'
+        line = './tests/catch_json/section_line_ugly.shp'
+        with pyqgis():
+            res = CATCHJson(p, driver='qgis geometry engine')
+            df = res.section(line, ['water level'], 0.)
+            self.assertEqual((16, 2), df.shape)
+
+    def test_curtain_netcdf4_driver(self):
+        p = './tests/catch_json/res.tuflow.json'
+        line = './tests/catch_json/section_line.shp'
+        with pyqgis():
+            res = CATCHJson(p, driver='qgis geometry netcdf4')
+            df = res.curtain(line, 'velocity', 0.)
+            self.assertEqual((24, 4), df.shape)
+
+    def test_curtain_qgis_driver(self):
+        p = './tests/catch_json/res.tuflow.json'
+        line = './tests/catch_json/section_line.shp'
+        with pyqgis():
+            res = CATCHJson(p, driver='qgis geometry engine')
+            df = res.curtain(line, 'velocity', 0.)
+            self.assertEqual((24, 4), df.shape)
+
+    def test_curtain_2_netcdf4_driver(self):
+        p = './tests/catch_json/res.tuflow.json'
+        line = './tests/catch_json/section_line_hook.shp'
+        with pyqgis():
+            res = CATCHJson(p, driver='qgis geometry netcdf4')
+            df = res.curtain(line, 'velocity', 0.)
+            self.assertEqual((40, 4), df.shape)
+
+    def test_curtain_2_qgis_driver(self):
+        p = './tests/catch_json/res.tuflow.json'
+        line = './tests/catch_json/section_line_hook.shp'
+        with pyqgis():
+            res = CATCHJson(p, driver='qgis geometry engine')
+            df = res.curtain(line, 'velocity', 0.)
+            self.assertEqual((40, 4), df.shape)
+
+    def test_curtain_3_netcdf4_driver(self):
+        p = './tests/catch_json/res.tuflow.json'
+        line = './tests/catch_json/section_line_hook_reversed.shp'
+        with pyqgis():
+            res = CATCHJson(p, driver='qgis geometry netcdf4')
+            df = res.curtain(line, 'velocity', 0.)
+            self.assertEqual((32, 4), df.shape)
+
+    def test_curtain_3_qgis_driver(self):
+        p = './tests/catch_json/res.tuflow.json'
+        line = './tests/catch_json/section_line_hook_reversed.shp'
+        with pyqgis():
+            res = CATCHJson(p, driver='qgis geometry engine')
+            df = res.curtain(line, 'velocity', 0.)
+            self.assertEqual((32, 4), df.shape)
+
+    def test_curtain_4_netcdf4_driver(self):
+        p = './tests/catch_json/res_shifted.tuflow.json'
+        line = './tests/xmdf/section_line_long.shp'
+        with pyqgis():
+            res = CATCHJson(p, driver='qgis geometry netcdf4')
+            df = res.curtain(line, 'velocity', 0.)
+            self.assertEqual((24, 4), df.shape)
+
+    def test_curtain_4_qgis_driver(self):
+        p = './tests/catch_json/res_shifted.tuflow.json'
+        line = './tests/xmdf/section_line_long.shp'
+        with pyqgis():
+            res = CATCHJson(p, driver='qgis geometry engine')
+            df = res.curtain(line, 'velocity', 0.)
+            self.assertEqual((24, 4), df.shape)
+
+    def test_curtain_5_netcdf4_driver(self):
+        p = './tests/catch_json/res_shifted.tuflow.json'
+        line = './tests/catch_json/section_line_ugly.shp'
+        with pyqgis():
+            res = CATCHJson(p, driver='qgis geometry netcdf4')
+            df = res.curtain(line, 'velocity', 0.)
+            self.assertEqual((64, 4), df.shape)
+
+    def test_curtain_5_qgis_driver(self):
+        p = './tests/catch_json/res_shifted.tuflow.json'
+        line = './tests/catch_json/section_line_ugly.shp'
+        with pyqgis():
+            res = CATCHJson(p, driver='qgis geometry engine')
+            df = res.curtain(line, 'velocity', 0.)
+            self.assertEqual((64, 4), df.shape)
+
+    def test_profile_netcdf4_driver(self):
+        p = './tests/catch_json/res.tuflow.json'
+        point = (1.5, 4.5)
+        with pyqgis():
+            res = CATCHJson(p, driver='qgis geometry netcdf4')
             df = res.profile(point, 'v', 0)
             self.assertEqual((4, 2), df.shape)
 
-    def test_profile_2(self):
+    def test_profile_qgis_driver(self):
+        p = './tests/catch_json/res.tuflow.json'
+        point = (1.5, 4.5)
+        with pyqgis():
+            res = CATCHJson(p, driver='qgis geometry engine')
+            df = res.profile(point, 'v', 0)
+            self.assertEqual((4, 2), df.shape)
+
+    def test_profile_2_netcdf4_driver(self):
         p = './tests/catch_json/res.tuflow.json'
         shp = './tests/xmdf/time_series_point.shp'
         with pyqgis():
-            res = CATCHJson(p)
+            res = CATCHJson(p, driver='qgis geometry netcdf4')
+            df = res.profile(shp, 'v', 0)
+            self.assertEqual((2, 2), df.shape)
+
+    def test_profile_2_qgis_driver(self):
+        p = './tests/catch_json/res.tuflow.json'
+        shp = './tests/xmdf/time_series_point.shp'
+        with pyqgis():
+            res = CATCHJson(p, driver='qgis geometry engine')
             df = res.profile(shp, 'v', 0)
             self.assertEqual((2, 2), df.shape)
 
