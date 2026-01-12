@@ -12,7 +12,7 @@ except ImportError:
     from ..stubs.qgis.core import QgsMeshLayer, QgsMeshDatasetIndex, QgsMeshDatasetGroupMetadata
 
 
-MAX_BLOCK_SIZE = 100_000
+MAX_BLOCK_SIZE = 1_000_000
 
 
 class QgisDataExtractor(PyDataExtractor):
@@ -97,7 +97,7 @@ class QgisDataExtractor(PyDataExtractor):
         for cid, count, idx in self.clump_indexes(cell_idx2):
             levels = np.array(self.lyr.dataProvider().dataset3dValues(_3d_grp_idx, cid, count).verticalLevelsCount())
             result.append(levels[idx])
-        return np.array(result).flatten()
+        return np.hstack(result).flatten()
 
     def zlevels(self, time_index: PyDataExtractor.SliceType, nlevels: int, cell_idx2: int | np.ndarray,
                 cell_idx3: int | np.ndarray) -> np.ndarray:
@@ -128,7 +128,7 @@ class QgisDataExtractor(PyDataExtractor):
                 vals = extracted[idx].flatten()
                 vals = vals[~np.isnan(vals)]
                 result.append(vals)
-        return np.array(result).reshape(shape)
+        return np.hstack(result).reshape(shape)
 
     def maximum(self, data_type: str) -> float:
         idx = self.find_group_index(data_type)
@@ -187,7 +187,7 @@ class QgisDataExtractor(PyDataExtractor):
                 vals = extracted[idx].flatten()
                 vals = vals[~np.isnan(vals)]
                 values.append(vals)
-        return np.array(values).reshape(shape)
+        return np.hstack(values).reshape(shape)
 
     def wd_flag(self, data_type: str, index: PyDataExtractor.SliceType | PyDataExtractor.MultiSliceType) -> np.ndarray:
         if isinstance(index, tuple) and len(index) == 2:
@@ -210,7 +210,7 @@ class QgisDataExtractor(PyDataExtractor):
                     self.lyr.dataProvider().areFacesActive(QgsMeshDatasetIndex(grp_idx, tidx), face_id, count).active()
                 )
                 wd.append(extracted[idx].flatten())
-        return np.array(wd).reshape(shape)
+        return np.hstack(wd).reshape(shape)
 
     def find_group_index(self, data_type: str, source: str = 'layer') -> int:
         from ...map_output import MapOutput
@@ -243,9 +243,9 @@ class QgisDataExtractor(PyDataExtractor):
         stop = idx.size
         while i < stop:
             start = idx[i]
-            end = min(idx[-1], start + MAX_BLOCK_SIZE)
+            end = min(idx[-1], start + MAX_BLOCK_SIZE - 1)
             range_ = end - start + 1
-            mask = np.flatnonzero(idx <= end)
+            mask = (idx >= start) & (idx <= end)
             yield start, range_, idx[mask] - start
             next_ = np.flatnonzero(idx > end)
             if next_.size == 0:
