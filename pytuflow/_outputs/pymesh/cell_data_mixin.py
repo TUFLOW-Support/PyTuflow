@@ -201,6 +201,8 @@ class CellDataMixin:
             if self.is_3d(dtype):
                 if self.extractor.Name == 'QgisDataExtractor':
                     values = self.extractor.data(dtype, (time_index, [cell_idx]))
+                    shape = (-1, 2 if self.is_vector(dtype) else 1)
+                    values = values.reshape(shape)
                     break
                 a = self.extractor.data(dtype, (time_index, slice(cell_idx, cell_idx + nlevels)))
             else:

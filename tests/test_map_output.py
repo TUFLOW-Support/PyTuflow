@@ -1414,13 +1414,13 @@ class TestMeshRegression(unittest.TestCase):
             is_close = np.isclose(a, b, equal_nan=True)
             self.assertTrue(is_close.all())
 
-    def test_qgis_dat_mesh(self):
+    def test_qgis_dat_mesh_python_driver(self):
         p = './tests/dat/EG00_001.ALL.sup'
         point = './tests/xmdf/xmdf_point.shp'
         line = './tests/xmdf/xmdf_line.shp'
         comp = './tests/regression_test_comparisons/test_qgis_dat_mesh'
         with pyqgis():
-            res = DAT(p)
+            res = DAT(p, driver='qgis geometry python')
 
             # time series
             a = res.time_series(point, 'water level').reset_index().to_numpy()
@@ -1438,7 +1438,31 @@ class TestMeshRegression(unittest.TestCase):
             is_close = np.isclose(a, b, equal_nan=True)
             self.assertTrue(is_close.all())
 
-    def test_qgis_cell_mesh_latlong(self):
+    def test_qgis_dat_mesh_qgis_driver(self):
+        p = './tests/dat/EG00_001.ALL.sup'
+        point = './tests/xmdf/xmdf_point.shp'
+        line = './tests/xmdf/xmdf_line.shp'
+        comp = './tests/regression_test_comparisons/test_qgis_dat_mesh'
+        with pyqgis():
+            res = DAT(p, driver='qgis geometry engine')
+
+            # time series
+            a = res.time_series(point, 'water level').reset_index().to_numpy()
+            # with open(f'{comp}_time_series.data', 'wb') as f:
+            #     f.write(a.tobytes())
+            b = load_comparison_data(f'{comp}_time_series.data').reshape(a.shape)
+            is_close = np.isclose(a, b, equal_nan=True)
+            self.assertTrue(is_close.all())
+
+            # section
+            a = res.section(line, 'water level', 1.).reset_index().to_numpy()
+            # with open(f'{comp}_section.data', 'wb') as f:
+            #     f.write(a.tobytes())
+            b = load_comparison_data(f'{comp}_section.data').reshape(a.shape)
+            is_close = np.isclose(a, b, equal_nan=True)
+            self.assertTrue(is_close.all())
+
+    def test_qgis_cell_mesh_latlong_netcdf4_driver(self):
         p = './tests/nc_mesh/EST000_3D_001.nc'
         point = './tests/nc_mesh/ncmesh_point_longlat.shp'
         line = './tests/nc_mesh/ncmesh_line_longlat.shp'
@@ -1446,7 +1470,7 @@ class TestMeshRegression(unittest.TestCase):
         line_outside_mesh_2 = './tests/nc_mesh/ncmesh_line_longlat_outside_mesh_2.shp'
         comp = './tests/regression_test_comparisons/test_qgis_cell_mesh_latlong'
         with pyqgis():
-            res = NCMesh(p)
+            res = NCMesh(p, driver='qgis geometry netcdf4')
 
             # time series
             a = res.time_series(point, 'salinity').reset_index().to_numpy()
@@ -1717,26 +1741,351 @@ class TestMeshRegression(unittest.TestCase):
             self.assertTrue(is_close_offset3.all())
             self.assertTrue(is_close_val3.all())
 
-    def test_qgis_quadtree(self):
+    def test_qgis_cell_mesh_latlong_qgis_driver(self):
+        p = './tests/nc_mesh/EST000_3D_001.nc'
+        point = './tests/nc_mesh/ncmesh_point_longlat.shp'
+        line = './tests/nc_mesh/ncmesh_line_longlat.shp'
+        line_outside_mesh = './tests/nc_mesh/ncmesh_line_longlat_outside_mesh.shp'
+        line_outside_mesh_2 = './tests/nc_mesh/ncmesh_line_longlat_outside_mesh_2.shp'
+        comp = './tests/regression_test_comparisons/test_qgis_cell_mesh_latlong'
+        with pyqgis():
+            res = NCMesh(p, driver='qgis geometry engine')
+            res.spherical = True
+
+            # time series
+            a = res.time_series(point, 'salinity').reset_index().to_numpy()
+            # with open(f'{comp}_time_series.data', 'wb') as f:
+            #     f.write(a.tobytes())
+            b = load_comparison_data(f'{comp}_time_series.data').reshape(a.shape)
+            is_close = np.isclose(a, b, equal_nan=True)
+            self.assertTrue(is_close.all())
+
+            # time series level
+            a = res.time_series(point, 'h').reset_index().to_numpy()
+            # with open(f'{comp}_time_series_h.data', 'wb') as f:
+            #     f.write(a.tobytes())
+            b = load_comparison_data(f'{comp}_time_series_h.data').reshape(a.shape)
+            is_close = np.isclose(a, b, equal_nan=True)
+            self.assertTrue(is_close.all())
+
+            # time series with depth averaging
+            a = res.time_series(point, 'salinity', averaging_method='singlelevel?dir=top&4').reset_index().to_numpy()
+            # with open(f'{comp}_time_series_single_top_4.data', 'wb') as f:
+            #     f.write(a.tobytes())
+            b = load_comparison_data(f'{comp}_time_series_single_top_4.data').reshape(a.shape)
+            is_close = np.isclose(a, b, equal_nan=True)
+            self.assertTrue(is_close.all())
+
+            a = res.time_series(point, 'salinity', averaging_method='singlelevel?dir=bottom&2').reset_index().to_numpy()
+            # with open(f'{comp}_time_series_single_bottom_2.data', 'wb') as f:
+            #     f.write(a.tobytes())
+            b = load_comparison_data(f'{comp}_time_series_single_bottom_2.data').reshape(a.shape)
+            is_close = np.isclose(a, b, equal_nan=True)
+            self.assertTrue(is_close.all())
+
+            a = res.time_series(point, 'salinity', averaging_method='multilevel?dir=top&2&4').reset_index().to_numpy()
+            # with open(f'{comp}_time_series_multi_top_2_4.data', 'wb') as f:
+            #     f.write(a.tobytes())
+            b = load_comparison_data(f'{comp}_time_series_multi_top_2_4.data').reshape(a.shape)
+            is_close = np.isclose(a, b, equal_nan=True)
+            self.assertTrue(is_close.all())
+
+            a = res.time_series(point, 'salinity', averaging_method='multilevel?dir=bottom&2&4').reset_index().to_numpy()
+            # with open(f'{comp}_time_series_multi_bottom_2_4.data', 'wb') as f:
+            #     f.write(a.tobytes())
+            b = load_comparison_data(f'{comp}_time_series_multi_bottom_2_4.data').reshape(a.shape)
+            is_close = np.isclose(a, b, equal_nan=True)
+            self.assertTrue(is_close.all())
+
+            a = res.time_series(point, 'salinity', averaging_method='depth&0.5&2.0').reset_index().to_numpy()
+            # with open(f'{comp}_time_series_depth_05_2.data', 'wb') as f:
+            #     f.write(a.tobytes())
+            b = load_comparison_data(f'{comp}_time_series_depth_05_2.data').reshape(a.shape)
+            is_close = np.isclose(a, b, equal_nan=True)
+            self.assertTrue(is_close.all())
+
+            a = res.time_series(point, 'salinity', averaging_method='height&0.5&2.0').reset_index().to_numpy()
+            # with open(f'{comp}_time_series_height_05_2.data', 'wb') as f:
+            #     f.write(a.tobytes())
+            b = load_comparison_data(f'{comp}_time_series_height_05_2.data').reshape(a.shape)
+            is_close = np.isclose(a, b, equal_nan=True)
+            self.assertTrue(is_close.all())
+
+            a = res.time_series(point, 'salinity', averaging_method='elevation&-5&0').reset_index().to_numpy()
+            # with open(f'{comp}_time_series_elevation_5_0.data', 'wb') as f:
+            #     f.write(a.tobytes())
+            b = load_comparison_data(f'{comp}_time_series_elevation_5_0.data').reshape(a.shape)
+            is_close = np.isclose(a, b, equal_nan=True)
+            self.assertTrue(is_close.all())
+
+            a = res.time_series(point, 'salinity', averaging_method='sigma&0.1&0.9').reset_index().to_numpy()
+            # with open(f'{comp}_time_series_sigma_01_09.data', 'wb') as f:
+            #     f.write(a.tobytes())
+            b = load_comparison_data(f'{comp}_time_series_sigma_01_09.data').reshape(a.shape)
+            is_close = np.isclose(a, b, equal_nan=True)
+            self.assertTrue(is_close.all())
+
+            # section
+            a = res.section(line, 'salinity', 186969).reset_index().to_numpy()
+            # with open(f'{comp}_section.data', 'wb') as f:
+            #     f.write(a.tobytes())
+            b = load_comparison_data(f'{comp}_section.data').reshape(a.shape)
+            is_close_offset = np.isclose(a[:, 1], b[:, 1], atol=1, equal_nan=True)
+            is_close_val = np.isclose(a[:, 2], b[:, 2], equal_nan=True)
+            self.assertTrue(is_close_offset.all())
+            self.assertTrue(is_close_val.all())
+
+            # section level
+            a = res.section(line, 'h', 186969).reset_index().to_numpy()
+            # with open(f'{comp}_section_h.data', 'wb') as f:
+            #     f.write(a.tobytes())
+            b = load_comparison_data(f'{comp}_section_h.data').reshape(a.shape)
+            is_close_offset = np.isclose(a[:, 1], b[:, 1], atol=1, equal_nan=True)
+            is_close_val = np.isclose(a[:, 2], b[:, 2], equal_nan=True)
+            self.assertTrue(is_close_offset.all())
+            self.assertTrue(is_close_val.all())
+
+            # section with depth averaging
+            a = res.section(line, 'salinity', 186969, averaging_method='singlelevel?dir=top&4').reset_index().to_numpy()
+            # with open(f'{comp}_section_single_top_4.data', 'wb') as f:
+            #     f.write(a.tobytes())
+            b = load_comparison_data(f'{comp}_section_single_top_4.data').reshape(a.shape)
+            is_close_offset = np.isclose(a[:, 1], b[:, 1], atol=1, equal_nan=True)
+            is_close_val = np.isclose(a[:, 2], b[:, 2], equal_nan=True)
+            self.assertTrue(is_close_offset.all())
+            self.assertTrue(is_close_val.all())
+
+            a = res.section(line, 'salinity', 186969, averaging_method='singlelevel?dir=bottom&4').reset_index().to_numpy()
+            # with open(f'{comp}_section_single_bottom_4.data', 'wb') as f:
+            #     f.write(a.tobytes())
+            b = load_comparison_data(f'{comp}_section_single_bottom_4.data').reshape(a.shape)
+            is_close_offset = np.isclose(a[:, 1], b[:, 1], atol=1, equal_nan=True)
+            is_close_val = np.isclose(a[:, 2], b[:, 2], equal_nan=True)
+            self.assertTrue(is_close_offset.all())
+            self.assertTrue(is_close_val.all())
+
+            a = res.section(line, 'salinity', 186969, averaging_method='multilevel?dir=top&2&4').reset_index().to_numpy()
+            # with open(f'{comp}_section_multi_top_2_4.data', 'wb') as f:
+            #     f.write(a.tobytes())
+            b = load_comparison_data(f'{comp}_section_multi_top_2_4.data').reshape(a.shape)
+            is_close_offset = np.isclose(a[:, 1], b[:, 1], atol=1, equal_nan=True)
+            is_close_val = np.isclose(a[:, 2], b[:, 2], equal_nan=True)
+            self.assertTrue(is_close_offset.all())
+            self.assertTrue(is_close_val.all())
+
+            a = res.section(line, 'salinity', 186969,averaging_method='multilevel?dir=bottom&2&4').reset_index().to_numpy()
+            # with open(f'{comp}_section_multi_bottom_2_4.data', 'wb') as f:
+            #     f.write(a.tobytes())
+            b = load_comparison_data(f'{comp}_section_multi_bottom_2_4.data').reshape(a.shape)
+            is_close_offset = np.isclose(a[:, 1], b[:, 1], atol=1, equal_nan=True)
+            is_close_val = np.isclose(a[:, 2], b[:, 2], equal_nan=True)
+            self.assertTrue(is_close_offset.all())
+            self.assertTrue(is_close_val.all())
+
+            a = res.section(line, 'salinity', 186969, averaging_method='depth&0.5&2.0').reset_index().to_numpy()
+            # with open(f'{comp}_section_depth_05_2.data', 'wb') as f:
+            #     f.write(a.tobytes())
+            b = load_comparison_data(f'{comp}_section_depth_05_2.data').reshape(a.shape)
+            is_close_offset = np.isclose(a[:, 1], b[:, 1], atol=1, equal_nan=True)
+            is_close_val = np.isclose(a[:, 2], b[:, 2], equal_nan=True)
+            self.assertTrue(is_close_offset.all())
+            self.assertTrue(is_close_val.all())
+
+            a = res.section(line, 'salinity', 186969, averaging_method='height&0.5&2.0').reset_index().to_numpy()
+            # with open(f'{comp}_section_height_05_2.data', 'wb') as f:
+            #     f.write(a.tobytes())
+            b = load_comparison_data(f'{comp}_section_height_05_2.data').reshape(a.shape)
+            is_close_offset = np.isclose(a[:, 1], b[:, 1], atol=1, equal_nan=True)
+            is_close_val = np.isclose(a[:, 2], b[:, 2], equal_nan=True)
+            self.assertTrue(is_close_offset.all())
+            self.assertTrue(is_close_val.all())
+
+            a = res.section(line, 'salinity', 186969, averaging_method='elevation&-5&0').reset_index().to_numpy()
+            # with open(f'{comp}_section_elevation_5_0.data', 'wb') as f:
+            #     f.write(a.tobytes())
+            b = load_comparison_data(f'{comp}_section_elevation_5_0.data').reshape(a.shape)
+            is_close_offset = np.isclose(a[:, 1], b[:, 1], atol=1, equal_nan=True)
+            is_close_val = np.isclose(a[:, 2], b[:, 2], equal_nan=True)
+            self.assertTrue(is_close_offset.all())
+            self.assertTrue(is_close_val.all())
+
+            a = res.section(line, 'salinity', 186969, averaging_method='sigma&0.1&0.9').reset_index().to_numpy()
+            # with open(f'{comp}_section_sigma_01_09.data', 'wb') as f:
+            #     f.write(a.tobytes())
+            b = load_comparison_data(f'{comp}_section_sigma_01_09.data').reshape(a.shape)
+            is_close_offset = np.isclose(a[:, 1], b[:, 1], atol=1, equal_nan=True)
+            is_close_val = np.isclose(a[:, 2], b[:, 2], equal_nan=True)
+            self.assertTrue(is_close_offset.all())
+            self.assertTrue(is_close_val.all())
+
+            # section outside mesh
+            a = res.section(line_outside_mesh, 'salinity', 186969).reset_index().to_numpy()
+            # with open(f'{comp}_section_outside_mesh.data', 'wb') as f:
+            #     f.write(a.tobytes())
+            b = load_comparison_data(f'{comp}_section_outside_mesh.data').reshape(a.shape)
+            is_close_offset1 = np.isclose(a[:, 1], b[:, 1], atol=1, equal_nan=True)
+            is_close_val1 = np.isclose(a[:, 2], b[:, 2], equal_nan=True)
+            is_close_offset2 = np.isclose(a[:, 3], b[:, 3], atol=1, equal_nan=True)
+            is_close_val2 = np.isclose(a[:, 4], b[:, 4], equal_nan=True)
+            is_close_offset3 = np.isclose(a[:, 5], b[:, 5], atol=1, equal_nan=True)
+            is_close_val3 = np.isclose(a[:, 6], b[:, 6], equal_nan=True)
+            self.assertTrue(is_close_offset1.all())
+            self.assertTrue(is_close_val1.all())
+            self.assertTrue(is_close_offset2.all())
+            self.assertTrue(is_close_val2.all())
+            self.assertTrue(is_close_offset3.all())
+            self.assertTrue(is_close_val3.all())
+
+            # section outside mesh vector
+            a = res.section(line_outside_mesh, 'velocity', 186969).reset_index().to_numpy()
+            # with open(f'{comp}_section_outside_mesh_vec.data', 'wb') as f:
+            #     f.write(a.tobytes())
+            b = load_comparison_data(f'{comp}_section_outside_mesh_vec.data').reshape(a.shape)
+            is_close_offset1 = np.isclose(a[:, 1], b[:, 1], atol=1, equal_nan=True)
+            is_close_val1 = np.isclose(a[:, 2], b[:, 2], equal_nan=True)
+            is_close_offset2 = np.isclose(a[:, 3], b[:, 3], atol=1, equal_nan=True)
+            is_close_val2 = np.isclose(a[:, 4], b[:, 4], equal_nan=True)
+            is_close_offset3 = np.isclose(a[:, 5], b[:, 5], atol=1, equal_nan=True)
+            is_close_val3 = np.isclose(a[:, 6], b[:, 6], equal_nan=True)
+            self.assertTrue(is_close_offset1.all())
+            self.assertTrue(is_close_val1.all())
+            self.assertTrue(is_close_offset2.all())
+            self.assertTrue(is_close_val2.all())
+            self.assertTrue(is_close_offset3.all())
+            self.assertTrue(is_close_val3.all())
+
+            # section outside mesh - leaves and re-enters mesh in a single segment
+            a = res.section(line_outside_mesh_2, 'salinity', 186969).reset_index().to_numpy()
+            # with open(f'{comp}_section_outside_mesh_reenters.data', 'wb') as f:
+            #     f.write(a.tobytes())
+            b = load_comparison_data(f'{comp}_section_outside_mesh_reenters.data').reshape(a.shape)
+            is_close_offset = np.isclose(a[:, 1], b[:, 1], atol=1, equal_nan=True)
+            is_close_val = np.isclose(a[:, 2], b[:, 2], equal_nan=True)
+            self.assertTrue(is_close_offset.all())
+            self.assertTrue(is_close_val.all())
+
+            # profile
+            a = res.profile(point, 'salinity', 186969).reset_index().to_numpy()
+            # with open(f'{comp}_profile.data', 'wb') as f:
+            #     f.write(a.tobytes())
+            b = load_comparison_data(f'{comp}_profile.data').reshape(a.shape)
+            is_close = np.isclose(a, b, equal_nan=True)
+            self.assertTrue(is_close.all())
+
+            # profile linear interpolation
+            a = res.profile(point, 'salinity', 186969, 'linear').reset_index().to_numpy()
+            # with open(f'{comp}_profile_linear.data', 'wb') as f:
+            #     f.write(a.tobytes())
+            b = load_comparison_data(f'{comp}_profile_linear.data').reshape(a.shape)
+            is_close = np.isclose(a, b, equal_nan=True)
+            self.assertTrue(is_close.all())
+
+            # curtain
+            a = res.curtain(line, 'salinity', 186969).reset_index().to_numpy()
+            # with open(f'{comp}_curtain.data', 'wb') as f:
+            #     f.write(a.tobytes())
+            b = load_comparison_data(f'{comp}_curtain.data').reshape(a.shape)
+            is_close_offset = np.isclose(a[:, 1], b[:, 1], atol=1, equal_nan=True)
+            is_close_val = np.isclose(a[:, 2:], b[:, 2:], equal_nan=True)
+            self.assertTrue(is_close_offset.all())
+            self.assertTrue(is_close_val.all())
+
+            # curtain vector
+            a = res.curtain(line, 'velocity', 186969).reset_index().to_numpy()
+            a = np.column_stack((a[...,:3], np.vstack(a[...,3]), np.vstack(a[...,4]))).astype('f8')
+            # with open(f'{comp}_curtain_vec.data', 'wb') as f:
+            #     f.write(a.tobytes())
+            b = load_comparison_data(f'{comp}_curtain_vec.data').reshape(a.shape)
+            is_close_offset = np.isclose(a[:, 1], b[:, 1], atol=1, equal_nan=True)
+            is_close_val = np.isclose(a[:, 2:5], b[:, 2:5], equal_nan=True)
+            is_close_local_vec = np.isclose(a[:, 5:], b[:, 5:], atol=0.1, equal_nan=True)
+            self.assertTrue(is_close_offset.all())
+            self.assertTrue(is_close_val.all())
+            self.assertTrue(is_close_local_vec.all())
+
+            # curtain outside mesh
+            a = res.curtain(line_outside_mesh, 'salinity', 186969).reset_index().to_numpy()
+            # with open(f'{comp}_curtain_outside_mesh.data', 'wb') as f:
+            #     f.write(a.tobytes())
+            b = load_comparison_data(f'{comp}_curtain_outside_mesh.data').reshape(a.shape)
+            is_close_offset1 = np.isclose(a[:, 1], b[:, 1], atol=1, equal_nan=True)
+            is_close_val1 = np.isclose(a[:, 2:4], b[:, 2:4], equal_nan=True)
+            is_close_offset2 = np.isclose(a[:, 4], b[:, 4], atol=1, equal_nan=True)
+            is_close_val2 = np.isclose(a[:, 5:7], b[:, 5:7], equal_nan=True)
+            is_close_offset3 = np.isclose(a[:, 7], b[:, 7], atol=1, equal_nan=True)
+            is_close_val3 = np.isclose(a[:, 8:10], b[:, 8:10], equal_nan=True)
+            self.assertTrue(is_close_offset1.all())
+            self.assertTrue(is_close_val1.all())
+            self.assertTrue(is_close_offset2.all())
+            self.assertTrue(is_close_val2.all())
+            self.assertTrue(is_close_offset3.all())
+            self.assertTrue(is_close_val3.all())
+
+    def test_qgis_quadtree_netcdf4_driver(self):
         p = './tests/quadtree/EG13_001.xmdf'
         point = './tests/quadtree/qdt_point.shp'
         line = './tests/quadtree/qdt_line.shp'
         point_outside = './tests/quadtree/qdt_point_outside.shp'
         comp = './tests/regression_test_comparisons/test_qgis_quadtree'
         with pyqgis():
-            res = XMDF(p)
+            res = XMDF(p, driver='qgis geometry netcdf4')
 
-            # # time series
-            # a = res.time_series(point, 'water level').reset_index().to_numpy()
-            # # with open(f'{comp}_time_series.data', 'wb') as f:
-            # #     f.write(a.tobytes())
-            # b = load_comparison_data(f'{comp}_time_series.data').reshape(a.shape)
-            # is_close = np.isclose(a, b, equal_nan=True)
-            # self.assertTrue(is_close.all())
-            #
-            # # point outside mesh
-            # a = res.time_series(point_outside, 'water level').reset_index().to_numpy()
-            # self.assertTrue(a.size == 0)
+            # time series
+            a = res.time_series(point, 'water level').reset_index().to_numpy()
+            # with open(f'{comp}_time_series.data', 'wb') as f:
+            #     f.write(a.tobytes())
+            b = load_comparison_data(f'{comp}_time_series.data').reshape(a.shape)
+            is_close = np.isclose(a, b, equal_nan=True)
+            self.assertTrue(is_close.all())
+
+            # point outside mesh
+            a = res.time_series(point_outside, 'water level').reset_index().to_numpy()
+            self.assertTrue(a.size == 0)
+
+            # section
+            a = res.section(line, 'water level', 1.).reset_index().to_numpy()
+            # with open(f'{comp}_section.data', 'wb') as f:
+            #     f.write(a.tobytes())
+            b = load_comparison_data(f'{comp}_section.data').reshape(a.shape)
+            is_close = np.isclose(a, b, equal_nan=True)
+            self.assertTrue(is_close.all())
+
+            # profile
+            a = res.profile(point, 'velocity', 1.).reset_index().to_numpy()
+            # with open(f'{comp}_profile.data', 'wb') as f:
+            #     f.write(a.tobytes())
+            b = load_comparison_data(f'{comp}_profile.data').reshape(a.shape)
+            is_close = np.isclose(a, b, equal_nan=True)
+            self.assertTrue(is_close.all())
+
+            # curtain
+            a = res.curtain(line, 'z0', 1.).reset_index().to_numpy()
+            # with open(f'{comp}_curtain.data', 'wb') as f:
+            #     f.write(a.tobytes())
+            b = load_comparison_data(f'{comp}_curtain.data').reshape(a.shape)
+            is_close = np.isclose(a, b, equal_nan=True)
+            self.assertTrue(is_close.all())
+
+    def test_qgis_quadtree_qgis_driver(self):
+        p = './tests/quadtree/EG13_001.xmdf'
+        point = './tests/quadtree/qdt_point.shp'
+        line = './tests/quadtree/qdt_line.shp'
+        point_outside = './tests/quadtree/qdt_point_outside.shp'
+        comp = './tests/regression_test_comparisons/test_qgis_quadtree'
+        with pyqgis():
+            res = XMDF(p, driver='qgis geometry engine')
+
+            # time series
+            a = res.time_series(point, 'water level').reset_index().to_numpy()
+            # with open(f'{comp}_time_series.data', 'wb') as f:
+            #     f.write(a.tobytes())
+            b = load_comparison_data(f'{comp}_time_series.data').reshape(a.shape)
+            is_close = np.isclose(a, b, equal_nan=True)
+            self.assertTrue(is_close.all())
+
+            # point outside mesh
+            a = res.time_series(point_outside, 'water level').reset_index().to_numpy()
+            self.assertTrue(a.size == 0)
 
             # section
             a = res.section(line, 'water level', 1.).reset_index().to_numpy()
