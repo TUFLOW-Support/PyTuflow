@@ -75,7 +75,7 @@ class CellDataMixin:
         values = []
         for dtype in data_type:
             if is_3d:
-                if self.extractor.Name == 'QgisDataExtractor':
+                if self.extractor.NAME == 'QgisDataExtractor':
                     a = self.extractor.data(dtype, (slice(None), [cell_idx]))
                     if a.ndim == 3:
                         values = [a[:,:, 0], a[:,:, 1]]
@@ -123,7 +123,7 @@ class CellDataMixin:
         if is_3d:
             nlevels = self.zlevel_count(cells)
             max_nlevels = nlevels.max()
-            if self.extractor.Name == 'QgisDataExtractor':
+            if self.extractor.NAME == 'QgisDataExtractor':
                 idx = cells
             else:
                 idx = [icell + ilevel for icell, nlevel in np.column_stack((cell_idx, nlevels)) for ilevel in range(nlevel)]
@@ -199,7 +199,7 @@ class CellDataMixin:
         values = []
         for dtype in data_type:
             if self.is_3d(dtype):
-                if self.extractor.Name == 'QgisDataExtractor':
+                if self.extractor.NAME == 'QgisDataExtractor':
                     values = self.extractor.data(dtype, (time_index, [cell_idx]))
                     shape = (-1, 2 if self.is_vector(dtype) else 1)
                     values = values.reshape(shape)
@@ -245,7 +245,7 @@ class CellDataMixin:
         nlevels = self.zlevel_count(cells)
         zlevels = self.zlevels(time_index, nlevels, cells, cell_idx)
         if self.is_3d(data_type[0]):
-            if self.extractor.Name == 'QgisDataExtractor':
+            if self.extractor.NAME == 'QgisDataExtractor':
                 idx = cells
             else:
                 idx = [icell + ilevel for icell, nlevel in np.column_stack((cell_idx, nlevels)) for ilevel in range(nlevel)]

@@ -31,7 +31,7 @@ class PyNCMesh(PyMesh):
 
     def translate_data_type(self, data_type: str) -> tuple[str, ...]:
         data_type = super().translate_data_type(data_type)
-        if self.extractor.Name == 'QgisDataExtractor':
+        if self.extractor.NAME == 'QgisDataExtractor':
             return data_type
         if len(data_type) == 1 and data_type[0].lower() == 'v':
             return 'V_x', 'V_y'
