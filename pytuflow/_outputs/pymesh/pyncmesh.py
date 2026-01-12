@@ -1,7 +1,5 @@
 from pathlib import Path
 
-import numpy as np
-
 from . import PyMesh, PyNCMeshGeometry, PyNCMeshDataExtractor, QgisMeshGeometry, QgisDataExtractor
 
 
@@ -10,14 +8,32 @@ class PyNCMesh(PyMesh):
     def __init__(self, fpath: str | Path, geom_driver: str = None, engine: str = None):
         super().__init__()
         self.fpath = Path(fpath)
-        if (geom_driver and geom_driver.lower()) == 'qgis' or (geom_driver is None and not self.pv_available()):
+
+        if not geom_driver and engine == 'qgis':
+            geom_driver = 'qgis'
+        elif not geom_driver and not engine:
+            if not self.pv_available() and not self.qgis_available():
+                raise ValueError('Neither PyVista nor QGIS python bindings were found.')
+
+        if (geom_driver and geom_driver.lower() == 'qgis') or (geom_driver is None and not self.pv_available()):
+            if not self.qgis_available():
+                raise ValueError("QGIS python bindings not found.")
+            if not self.qgis_initialized():
+                raise ValueError('QGIS application has not been initialized.')
             self.geom = QgisMeshGeometry(fpath)
         else:
             self.geom = PyNCMeshGeometry(fpath)
+
         if engine == 'qgis':
+            if not self.qgis_available():
+                raise ValueError("QGIS python bindings not found.")
+            if not self.qgis_initialized():
+                raise ValueError('QGIS application has not been initialized.')
             self.extractor = QgisDataExtractor(fpath, extra_datasets=[])
+            self.geom.lyr = self.extractor.lyr
         else:
             self.extractor = PyNCMeshDataExtractor(fpath, engine)
+
         self.geom.spherical = self.extractor.spherical()
         self.name = self.fpath.stem
         with self.extractor.open():

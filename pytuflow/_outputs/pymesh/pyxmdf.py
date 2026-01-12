@@ -11,15 +11,32 @@ class PyXMDF(PyMesh, Mesh3DMixin, GLTFMixin, AlembicMixin):
         self.fpath = Path(fpath)
         if not twodm:
             twodm = self.fpath.with_suffix('.2dm')
-        if (geom_driver and geom_driver.lower()) == 'qgis' or (geom_driver is None and not self.pv_available()):
+
+        if not geom_driver and engine == 'qgis':
+            geom_driver = 'qgis'
+        elif not geom_driver and not engine:
+            if not self.pv_available() and not self.qgis_available():
+                raise ValueError('Neither PyVista nor QGIS python bindings were found.')
+
+        if (geom_driver and geom_driver.lower() == 'qgis') or (geom_driver is None and not self.pv_available()):
+            if not self.qgis_available():
+                raise ValueError("QGIS python bindings not found.")
+            if not self.qgis_initialized():
+                raise ValueError('QGIS application has not been initialized.')
             self.geom = QgisMeshGeometry(twodm)
         else:
             self.geom = Py2dm(twodm)
+
         if engine == 'qgis':
+            if not self.qgis_available():
+                raise ValueError("QGIS python bindings not found.")
+            if not self.qgis_initialized():
+                raise ValueError('QGIS application has not been initialized.')
             self.extractor = QgisDataExtractor(twodm, [fpath])
             self.geom.lyr = self.extractor.lyr
         else:
             self.extractor = PyXMDFDataExtractor(fpath, engine)
+
         self.name = twodm.stem
         for dtype in self.data_types():
             if dtype.lower() != 'bed elevation':

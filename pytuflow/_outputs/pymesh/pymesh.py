@@ -55,6 +55,10 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
         return '.stubs' not in QgsApplication.__module__
 
     @staticmethod
+    def qgis_initialized() -> bool:
+        return QgsApplication.instance() is not None
+
+    @staticmethod
     def pv_available() -> bool:
         return '.stubs' not in pv.__name__
 
