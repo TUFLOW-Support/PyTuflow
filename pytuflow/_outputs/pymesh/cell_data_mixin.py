@@ -199,11 +199,14 @@ class CellDataMixin:
         values = []
         for dtype in data_type:
             if self.is_3d(dtype):
+                if self.extractor.Name == 'QgisDataExtractor':
+                    values = self.extractor.data(dtype, (time_index, [cell_idx]))
+                    break
                 a = self.extractor.data(dtype, (time_index, slice(cell_idx, cell_idx + nlevels)))
             else:
                 a = self.extractor.data(dtype, (time_index, cell_id))
             values.append(a)
-        values = np.column_stack(values).reshape(-1, len(values))
+        values = np.column_stack(values).reshape(-1, len(values)) if isinstance(values, list) else values
 
         zlevels = self.zlevels(time_index, nlevels, cell_id, cell_idx)
         zlevels = list(zip(zlevels[:-1], zlevels[1:]))

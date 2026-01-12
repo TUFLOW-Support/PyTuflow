@@ -644,6 +644,13 @@ class TestNCMesh(unittest.TestCase):
             df = res.profile((1.5, 4.5), 'v', 0)
             self.assertEqual((4, 2), df.shape)
 
+    def test_profile_qgis_driver(self):
+        nc = './tests/nc_mesh/fv_res.nc'
+        with pyqgis():
+            res = NCMesh(nc, driver='qgis geometry engine')
+            df = res.profile((1.5, 4.5), 'v', 0)
+            self.assertEqual((4, 2), df.shape)
+
 
 class TestCATCHJson(unittest.TestCase):
 
