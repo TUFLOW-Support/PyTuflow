@@ -51,7 +51,7 @@ class QgisMeshGeometry(PyMeshGeometry, PointMixinQgis):
         if not QgsApplication.instance():
             raise RuntimeError('QGIS application instance not found.')
         if not self._loaded:
-            if self._lyr is None:
+            if self.lyr is None:
                 self.lyr = QgsMeshLayer(str(self.fpath), self.fpath.stem, 'mdal')
             if self._si is None:
                 dp = self.lyr.dataProvider()
