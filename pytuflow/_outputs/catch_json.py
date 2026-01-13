@@ -26,6 +26,20 @@ class CATCHJson(MapOutput):
     ----------
     fpath : PathLike
         Path to the NetCDF file.
+    driver: str, optional
+       The driver to use for reading the XMDF file. Options are:
+
+       - ``"v1.0"``: Use PyTUFLOW v1.0 XMDF reader (legacy). This uses old QGIS geometry and extraction methods.
+         This option is exclusive and can't be used with other options.
+       - ``"v1.1"``: Use PyTUFLOW v1.1 XMDF reader (default). Uses ``vtk`` geometry if available, otherwise uses
+         ``QGIS`` geometry. In order of preference, uses ``h5py``, ``netcdf4``, or ``QGIS`` engine for extracting data.
+         This option is exclusive and can't be used with other options.
+       - ``"qgis [geometry] | [engine]"``: Use QGIS libraries for geometry (``"qgis geometry"``) and/or use QGIS libraries
+          for extracting data (``"qgis engine"``). Both can be passed together as ``"qgis geometry engine"``. This option
+          can be used in conjunctionwith other extracting data options e.g. ``"qgis geometry netcdf4"``. The QGIS engine
+          must be used with QGIS geometry.
+       - ``"netcdf4"``: Use NetCDF4 library for extracting data. Exclusive with other extraction options.
+       - ``"h5py"``: Use h5py library for extracting data. Exclusive with other extraction options.
 
     Examples
     --------
@@ -120,9 +134,10 @@ class CATCHJson(MapOutput):
     3       1.0  0.424264
     """
 
-    def __init__(self, fpath: PathLike | str):
+    def __init__(self, fpath: PathLike | str, driver: str = 'v1.1'):
         super().__init__(fpath)
         self.fpath = Path(fpath)
+        self.driver = driver
         self._data = {}
         self._providers = OrderedDict()
         self._idx_provider = None
@@ -632,7 +647,7 @@ class CATCHJson(MapOutput):
         index_result_name = self._data.get('index')
         for res_name in self._data.get('outputs', []):
             output = self._data.get('output data', {}).get(res_name, {})
-            provider = CATCHProvider.from_catch_json_output(self.fpath.parent, output)
+            provider = CATCHProvider.from_catch_json_output(self.fpath.parent, output, self.driver)
             if res_name == index_result_name:
                 self._idx_provider = provider
             if provider.has_inherent_reference_time:
@@ -668,11 +683,14 @@ class CATCHJson(MapOutput):
 
         # the dataframe can have duplicate "offset" values, we only want the offsets "inside" the start/end locs
         # check for duplicate "offset" values at the start
+        k = 4
+        eps = np.finfo(np.float32).eps
+        atol = rtol = k * eps
         inds = np.where(mask2)
         i = 0
         if inds[0].size > 1:
             i, j = inds[0][:2]
-            if np.isclose(df2.iloc[i, 0], df2.iloc[j, 0]):
+            if np.isclose(df2.iloc[i, 0], df2.iloc[j, 0], atol=atol, rtol=rtol):
                 mask2[i] = False
                 i += 1
         # check for duplicate "offset" values at the end
@@ -680,7 +698,7 @@ class CATCHJson(MapOutput):
         if inds[0].size:
             i += inds[0][0] - 1
             j = i - 1
-            if np.isclose(df2.iloc[i, 0], df2.iloc[j, 0]):
+            if np.isclose(df2.iloc[i, 0], df2.iloc[j, 0], atol=atol, rtol=rtol):
                 mask2[i] = False
         df2_ = df2[mask2]  # the dataframe with the desired section to be inserted
 
@@ -690,9 +708,9 @@ class CATCHJson(MapOutput):
         inds = np.where(~mask)
         i = inds[0][0] if inds[0].size else df1.shape[0]
         if i > 2:
-            if np.isclose(df1.iloc[i - 1, 0], df1.iloc[i - 2, 0]):
+            if np.isclose(df1.iloc[i - 1, 0], df1.iloc[i - 2, 0], atol=atol, rtol=rtol):
                 i -= 1
-        df = df1.iloc[:i,:] if not np.isclose(df1.iloc[0, 0], start_loc) else pd.DataFrame()
+        df = df1.iloc[:i,:] if not np.isclose(df1.iloc[0, 0], start_loc, atol=atol, rtol=rtol) else pd.DataFrame()
 
         # combine the first part of the first dataframe with the inserted section
         df = pd.concat([df, df2_], axis=0, ignore_index=True) if not df.empty else df2_
@@ -700,16 +718,16 @@ class CATCHJson(MapOutput):
             return df
 
         # get the part of the first dataframe that will be after the inserted section
-        mask = df1.iloc[:, 0] >= end_loc
+        mask = df1.iloc[:, 0] >= end_loc - atol
         # check for duplicate "offset" values
         inds = np.where(mask)
         i = inds[0][0] if inds[0].size else df1.shape[0]
         if inds[0].size > 1:
-            if np.isclose(df1.iloc[i,0], df1.iloc[i+1,0]):
+            if np.isclose(df1.iloc[i,0], df1.iloc[i+1,0], atol=atol, rtol=rtol):
                 i += 1
 
         # combine the last part of the first dataframe with the inserted section
-        if not np.isclose(df1.iloc[-1, 0], end_loc):
+        if not np.isclose(df1.iloc[-1, 0], end_loc, atol=atol, rtol=rtol):
             df = pd.concat([df, df1.iloc[i:, :]], axis=0, ignore_index=True)
 
         return df

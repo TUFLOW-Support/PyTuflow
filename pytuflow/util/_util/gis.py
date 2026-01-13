@@ -84,15 +84,20 @@ def point_gis_file_to_dict(fpath: PathLike):
     with open_gis(fpath) as lyr:
         if ogr_basic_geom_type(lyr.GetGeomType()) != ogr.wkbPoint:
             raise ValueError(f'Layer {lyr.GetName()} is not a point layer.')
+        id_fields = ['Id', 'Label', 'Name']
         for feature in lyr:
             geom = feature.GetGeometryRef()
-            fi = feature.GetFieldIndex('Name')
-            if fi == -1:
-                fi = feature.GetFieldIndex('name')
-            if fi == -1:
-                fi = feature.GetFieldIndex('Label')
-            if fi == -1:
-                fi = feature.GetFieldIndex('label')
+            fi = -1
+            for id_field in id_fields:
+                fi = feature.GetFieldIndex(id_field)
+                if fi != -1:
+                    break
+                fi = feature.GetFieldIndex(id_field.upper())
+                if fi != -1:
+                    break
+                fi = feature.GetFieldIndex(id_field.lower())
+                if fi != -1:
+                    break
             name = feature[fi] if fi != -1 else f'pnt{i+1}'
             i += 1
             try:

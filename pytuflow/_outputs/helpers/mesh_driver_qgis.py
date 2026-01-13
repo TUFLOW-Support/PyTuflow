@@ -40,6 +40,7 @@ logger = pytuflow_logging.get_logger()
 
 
 class QgisMeshDriver(MeshDriver):
+    DRIVER_SOURCE = 'qgis'
 
     def __init__(self, mesh: Path):
         super().__init__(mesh)
@@ -152,6 +153,28 @@ class QgisMeshDriver(MeshDriver):
             raise ValueError(f'Data type {data_type} not found in mesh output {self.mesh.stem}')
         return self.lyr.datasetGroupMetadata(QgsMeshDatasetIndex(idx)).minimum()
 
+    def data_point(self, point: Point, data_type: str, time: TimeLike, averaging_method: str | None = None, return_type: str = 'scalar') -> float | tuple[float, float]:
+        self.init_spatial_index()
+        igrp = self.group_index_from_name(data_type)
+
+        if isinstance(time, datetime):
+            reltime = (time - self.reference_time).total_seconds()
+        else:
+            reltime = time * 3600  # convert to seconds
+        time_interval = QgsInterval(reltime)
+        index = self.lyr.datasetIndexAtRelativeTime(time_interval, igrp)
+
+        vector = self.lyr.datasetGroupMetadata(QgsMeshDatasetIndex(igrp)).isVector()
+        if vector and return_type == 'vector':
+            res = self._vector_point_result(QgsPointXY(*point))
+        else:
+            res = self._scalar_point_result(QgsPointXY(*point))
+
+        value = res.value(index, averaging_method)
+        if vector and isinstance(value, tuple) and return_type == 'scalar':
+            value = np.sqrt(value[0] ** 2 + value[1] ** 2)
+        return value
+
     def time_series(self, name: str, point: Point, data_type: str, averaging_method: str | None = None, return_type: str = 'scalar') -> pd.DataFrame:
         from ..map_output import MapOutput  # import here to avoid circular import
         self.init_spatial_index()
@@ -170,7 +193,7 @@ class QgisMeshDriver(MeshDriver):
             index = QgsMeshDatasetIndex(igrp, i)
             ds = self.dp.datasetMetadata(index)
             value = res.value(index, averaging_method)
-            if vector and isinstance(value, tuple):
+            if vector and isinstance(value, tuple) and return_type == 'scalar':
                 value = np.sqrt(value[0] ** 2 + value[1] ** 2)
             time = ds.time()
             data.append((time, value))
@@ -316,7 +339,7 @@ class QgisMeshDriver(MeshDriver):
 
         data_ = []
         valid = False
-        for z, value in res.vertical_values(index, interpolation):
+        for z, value in res.vertical_values(index, 'stepped'):
             if isinstance(value, tuple):
                 value = np.sqrt(value[0] ** 2 + value[1] ** 2)
             data_.append((value, z))

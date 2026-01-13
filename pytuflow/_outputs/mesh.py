@@ -33,6 +33,33 @@ class Mesh(MapOutput):
     def _looks_empty(driver: QgisMeshDriver) -> bool:
         return False
 
+    @property
+    def spherical(self) -> bool:
+        """Returns whether the mesh is in spherical coordinates.
+
+        Returns
+        -------
+        bool
+            True if the mesh is in spherical coordinates, False if it is in Cartesian coordinates.
+        """
+        if self._driver.DRIVER_SOURCE == 'python':
+            return self._driver.geom.spherical
+        raise NotImplementedError('v1.0 driver does contain spherical attribute information.')
+
+    @spherical.setter
+    def spherical(self, value: bool):
+        """Sets whether the mesh is in spherical coordinates.
+
+        Parameters
+        ----------
+        value : bool
+            True if the mesh is in spherical coordinates, False if it is in Cartesian coordinates.
+        """
+        if self._driver.DRIVER_SOURCE == 'python':
+            self._driver.geom.spherical = value
+        else:
+            raise NotImplementedError('v1.0 driver does contain spherical attribute information.')
+
     def times(self, filter_by: str = None, fmt: str = 'relative') -> list[TimeLike]:
         """Returns a list of times for the given filter.
 
@@ -95,6 +122,107 @@ class Mesh(MapOutput):
         """
         return super().data_types(filter_by)
 
+    def data_point(self, locations: PointLocation, data_types: str | list[str] | None, time: TimeLike,
+                   averaging_method: str = None) -> float | tuple[float, float] | pd.DataFrame:
+        """Extracts the data value for the given point locations and data types at the specified time.
+
+        The ``locations`` can be a single point in the form of a tuple ``(x, y)`` or in the Well Known Text (WKT)
+        format. It can also be a list of points, or a dictionary of points where the key will be used in the column name
+        in the resulting DataFrame.
+
+        The ``locations`` argument can also be a single GIS file path e.g. Shapefile or GPKG (but any format supported
+        by GDAL is also supported). GPKG's should follow the TUFLOW convention if specifying the layer name within
+        the database ``database.gpkg >> layer``. If the GIS layer has a field called ``name``, ``label``, or ``ID``
+        then this will be used as the column name in the resulting DataFrame.
+
+        The returned value will be a single float if a single location and data type is provided, or a tuple if the
+        data type is a vector result type. If multiple locations and/or data types are provided, a DataFrame will
+        be returned with the data types as columns and the point locations as the index.
+
+        Parameters
+        ----------
+        locations : Point | list[Point] | dict[str, Point] | PathLike
+            The location to extract the data for.
+        data_types : str | list[str]
+            The data types to extract the data for.
+        time : TimeLike
+            The time to extract the data for.
+        averaging_method : str, optional
+            The depth-averaging method to use. Only applicable for 3D results.
+
+            The averaging methods are:
+
+            * ``singlelevel``
+            * ``multilevel``
+            * ``depth``
+            * ``height``
+            * ``elevation``
+            * ``sigma``
+
+            The averaging method parameters can be adjusted by building them into the method string in a URI style
+            format. The format is as follows:
+
+            ``<method>?dir=<dir>&<value1>&<value2>``
+
+            Where
+
+            * ``<method>`` is the averaging method name
+            * ``<dir>`` is the direction, ``top`` or ``bottom`` (i.e. from top or from bottom) - only used by certain
+              averaging methods
+            * ``<value1>``, ``<value2>``... are the values to be used in the averaging method (the number required to be
+              passed depends on the averaging method)
+
+            e.g. ``'singlelevel?dir=top&1'`` uses the single level averaging method and takes the first vertical layer
+            from the top. Or ``'sigma&0.1&0.9'`` uses the sigma averaging method and averages values located between
+            the 10th and 90th water column depth.
+
+        Returns
+        -------
+        float | tuple[float, float] | pd.DataFrame
+            The data value(s) for the given location(s) and data type(s).
+
+        Examples
+        --------
+        Get the water level data for a given point defined as ``(x, y)``:
+
+        >>> mesh = ... # Assume mesh is a loaded Mesh result
+        >>> mesh.data_point((293250, 6178030), 'water level', 1.5)
+        42.723076
+
+        Get velocity vector data for a given point defined as ``(x, y)``:
+
+        >>> mesh.data_point((293250, 6178030), 'vector velocity', 1.5)
+        (0.282843, 0.154213)
+
+        Get the maximum water level and depth for multiple points defined in a shapefile. Time is passed as ``-1`` since
+        it is a static dataset (it could be any time value since it won't affect the result):
+
+        >>> mesh.data_point('/path/to/points.shp', ['max water level', 'max depth'], -1)
+              max water level  max depth
+        pnt1        40.501997   2.785571
+        pnt2        43.221862   3.450053
+        """
+        self._load()
+        pnts = self._translate_point_location(locations)
+        data_types = self._figure_out_data_types(data_types, None)
+        rows = []
+        values1 = []
+        val = np.nan
+        for name, pnt in pnts.items():
+            rows.append(name)
+            values2 = []
+            for dtype in data_types:
+                if self._driver.DRIVER_SOURCE == 'python':
+                    val = self._driver.data_point(pnt, dtype, time, depth_averaging=averaging_method, return_type='vector')
+                else:
+                    val = self._driver.data_point(pnt, dtype, time, averaging_method, return_type='vector')
+                values2.append(val)
+            values1.append(values2)
+        if len(rows) == 1 and len(data_types) == 1:
+            return val
+        df = pd.DataFrame(values1[::-1]).rename(columns=dict(enumerate(data_types)), index=dict(enumerate(rows[::-1])))
+        return df
+
     def time_series(self, locations: PointLocation, data_types: str | list[str] | None,
                     time_fmt: str = 'relative', averaging_method: str = None) -> pd.DataFrame:
         """Extracts time-series data for the given locations and data types.
@@ -120,8 +248,7 @@ class Mesh(MapOutput):
         time_fmt : str, optional
             The format for the time values. Options are 'relative' or 'absolute'.
         averaging_method : str, optional
-            The depth-averaging method to use. Only applicable for 3D results. If None is provided for a 3D result,
-            the current rendering method will be used.
+            The depth-averaging method to use. Only applicable for 3D results.
 
             The averaging methods are:
 
@@ -205,7 +332,18 @@ class Mesh(MapOutput):
         data_types = self._figure_out_data_types(data_types, 'temporal')
         for name, pnt in pnts.items():
             for dtype in data_types:
-                df1 = self._driver.time_series(name, pnt, dtype, averaging_method)
+                if self._driver.DRIVER_SOURCE == 'python':
+                    a = self._driver.time_series(pnt, dtype, averaging_method)
+                    if a.size:
+                        a = a.reshape(a.shape[0], -1)
+                        if a.shape[1] > 2:
+                            a = np.append(a[:,[0]], np.linalg.norm(a[:,1:], axis=1).reshape(-1, 1), axis=1)
+                        df1 = pd.DataFrame(a[:,1], index=a[:,0], columns=[name])
+                        df1.index.name = 'time'
+                    else:
+                        df1 = pd.DataFrame()
+                else:
+                    df1 = self._driver.time_series(name, pnt, dtype, averaging_method)
                 if df1.empty:
                     continue
                 if not df.empty:
@@ -332,7 +470,15 @@ class Mesh(MapOutput):
         for name, line in lines.items():
             df1 = pd.DataFrame()
             for dtype in data_types:
-                df2 = self._driver.section(line, dtype, time, averaging_method)
+                if self._driver.DRIVER_SOURCE == 'python':
+                    a = self._driver.section(line, dtype, time, averaging_method)
+                    a = a.reshape(a.shape[0], -1)
+                    if a.shape[1] > 2:
+                        a = np.append(a[:, [0]], np.linalg.norm(a[:, 1:], axis=1).reshape(-1, 1), axis=1)
+                    df2 = pd.DataFrame(a[:,1], index=a[:,0], columns=[dtype])
+                    df2.index.name = 'offset'
+                else:
+                    df2 = self._driver.section(line, dtype, time, averaging_method)
                 if df2.empty:
                     continue
                 df1 = pd.concat([df1, df2], axis=1) if not df1.empty else df2
@@ -406,7 +552,17 @@ class Mesh(MapOutput):
         for name, line in lines.items():
             df1 = pd.DataFrame()
             for dtype in data_types:
-                df2 = self._driver.curtain(line, dtype, time)
+                if self._driver.DRIVER_SOURCE == 'python':
+                    a = self._driver.curtain(line, dtype, time)
+                    if a.shape[1] == 3:
+                        df2 = pd.DataFrame(a, columns=['x', 'y', dtype])
+                    else:
+                        a = a.reshape(-1, 6)
+                        df2 = pd.DataFrame(a[:,:2], columns=['x', 'y'])
+                        df2[dtype] = list(map(tuple, a[:,2:4].tolist()))
+                        df2[f'{dtype}_local'] = list(map(tuple, a[:,4:].tolist()))
+                else:
+                    df2 = self._driver.curtain(line, dtype, time)
                 if df2.empty:
                     continue
                 df1 = pd.concat([df1, df2[dtype]], axis=1) if not df1.empty else df2
@@ -468,7 +624,28 @@ class Mesh(MapOutput):
         for name, pnt in pnts.items():
             df1 = pd.DataFrame()
             for dtype in data_types:
-                df2 = self._driver.profile(pnt, dtype, time, interpolation)
+                if self._driver.DRIVER_SOURCE == 'python':
+                    a = self._driver.profile(pnt, dtype, time)
+                    if a.size:
+                        a = a.reshape(a.shape[0], -1)
+                        if a.shape[1] > 2:
+                            a = np.append(a[:, [0]], np.linalg.norm(a[:, 1:], axis=1).reshape(-1, 1), axis=1)
+                        df2 = pd.DataFrame(a[:,1], index=a[:,0], columns=[dtype])
+                        df2.index.name = 'elevation'
+                    else:
+                        df2 = pd.DataFrame()
+                else:
+                    df2 = self._driver.profile(pnt, dtype, time, interpolation)
+                if interpolation.lower() == 'linear' and df2.shape[0] > 2:
+                    df2 = df2.sort_index()
+                    df3 = pd.DataFrame()
+                    df3['elevation'] = df2.index.dropna().unique().tolist()
+                    df3[dtype] = np.interp(
+                        df3['elevation'],
+                        df2.index,
+                        df2[dtype],
+                    )
+                    df2 = df3.set_index('elevation').sort_index(ascending=False)
                 if df2.empty:
                     continue
                 df1 = pd.concat([df1, df2], axis=1) if not df1.empty else df2
