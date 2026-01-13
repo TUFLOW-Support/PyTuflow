@@ -1,3 +1,4 @@
+import typing
 from pathlib import Path
 
 from . import PyMesh, Py2dm, PyXMDFDataExtractor, QgisMeshGeometry, QgisDataExtractor
@@ -6,7 +7,7 @@ from .mesh3d import Mesh3DMixin, GLTFMixin, AlembicMixin
 
 class PyXMDF(PyMesh, Mesh3DMixin, GLTFMixin, AlembicMixin):
 
-    def __init__(self, fpath: Path | str, twodm: Path | str = None, geom_driver: str = None, engine: str = None):
+    def __init__(self, fpath: Path | str, twodm: Path | str = None, geom_driver: str = None, engine: str = None, mesh: typing.Any = None):
         super().__init__()
         self.fpath = Path(fpath)
         if not twodm:
@@ -24,6 +25,8 @@ class PyXMDF(PyMesh, Mesh3DMixin, GLTFMixin, AlembicMixin):
             if not self.qgis_initialized():
                 raise ValueError('QGIS application has not been initialized.')
             self.geom = QgisMeshGeometry(twodm)
+            if mesh is not None:
+                self.geom.lyr = mesh
         else:
             self.geom = Py2dm(twodm)
 
@@ -32,7 +35,7 @@ class PyXMDF(PyMesh, Mesh3DMixin, GLTFMixin, AlembicMixin):
                 raise ValueError("QGIS python bindings not found.")
             if not self.qgis_initialized():
                 raise ValueError('QGIS application has not been initialized.')
-            self.extractor = QgisDataExtractor(twodm, [fpath])
+            self.extractor = QgisDataExtractor(twodm, [fpath], layer=self.geom.lyr)
             self.geom.lyr = self.extractor.lyr
         else:
             self.extractor = PyXMDFDataExtractor(fpath, engine)

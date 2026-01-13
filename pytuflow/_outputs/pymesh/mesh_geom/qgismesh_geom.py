@@ -44,21 +44,24 @@ class QgisMeshGeometry(PyMeshGeometry, PointMixinQgis):
         self._triangle2cell = {}
         self._triangles = {}
         self._tri_count = 0
-        self._ibed = 0
+        self._ibed = -1
         self.dtype = np.float64
 
     def load(self):
         if not QgsApplication.instance():
             raise RuntimeError('QGIS application instance not found.')
         if not self._loaded:
-            self.lyr = QgsMeshLayer(str(self.fpath), self.fpath.stem, 'mdal')
-            dp = self.lyr.dataProvider()
-            dp.populateMesh(self._mesh)
-            self._si = QgsMeshSpatialIndex(self._mesh)
-            for i in range(self.lyr.dataProvider().datasetGroupCount()):
-                if self.lyr.dataProvider().datasetGroupMetadata(i).name().lower() == 'bed elevation':
-                    self._ibed = i
-                    break
+            if self._lyr is None:
+                self.lyr = QgsMeshLayer(str(self.fpath), self.fpath.stem, 'mdal')
+            if self._si is None:
+                dp = self.lyr.dataProvider()
+                dp.populateMesh(self._mesh)
+                self._si = QgsMeshSpatialIndex(self._mesh)
+            if self._ibed == -1:
+                for i in range(self.lyr.dataProvider().datasetGroupCount()):
+                    if self.lyr.dataProvider().datasetGroupMetadata(i).name().lower() == 'bed elevation':
+                        self._ibed = i
+                        break
             self._loaded = True
 
     def cell_vertices(self, cell_id: int) -> list[int]:

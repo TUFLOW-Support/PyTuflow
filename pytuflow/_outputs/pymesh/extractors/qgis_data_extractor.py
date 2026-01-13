@@ -18,16 +18,17 @@ MAX_BLOCK_SIZE = 1_000_000
 class QgisDataExtractor(PyDataExtractor):
     NAME = 'QgisDataExtractor'
 
-    def __init__(self, mesh: str | Path, extra_datasets: list[str | Path]):
-        self.lyr = QgsMeshLayer(str(mesh), Path(mesh).stem, 'mdal')
+    def __init__(self, mesh: str | Path, extra_datasets: list[str | Path], layer: QgsMeshLayer = None):
         self._3d_grp_idx = -1
-        self._is_dat = False
-        for dataset in extra_datasets:
-            if Path(dataset).suffix.lower() == '.dat':
-                self._is_dat = True
-            success = self.lyr.dataProvider().addDataset(str(dataset))
-            if not success:
-                raise ValueError(f'Failed to load results onto mesh: {dataset}')
+        self._is_dat = extra_datasets and Path(extra_datasets[0]).suffix.lower() == '.dat'
+        if layer is None:
+            self.lyr = QgsMeshLayer(str(mesh), Path(mesh).stem, 'mdal')
+            for dataset in extra_datasets:
+                success = self.lyr.dataProvider().addDataset(str(dataset))
+                if not success:
+                    raise ValueError(f'Failed to load results onto mesh: {dataset}')
+        else:
+            self.lyr = layer
 
     def times(self, data_type: str) -> np.ndarray:
         grp_idx = self.find_group_index(data_type)
