@@ -94,7 +94,7 @@ class QgisDataExtractor(PyDataExtractor):
             cell_idx2 = cell_idx2.tolist()
         result = []
         cell_idx2 = np.array(cell_idx2) if isinstance(cell_idx2, list) else cell_idx2
-        for cid, count, idx in self.clump_indexes(cell_idx2):
+        for cid, count, idx in self.chunk_indexes(cell_idx2):
             levels = np.array(self.lyr.dataProvider().dataset3dValues(_3d_grp_idx, cid, count).verticalLevelsCount())
             result.append(levels[idx])
         return np.hstack(result).flatten()
@@ -114,7 +114,7 @@ class QgisDataExtractor(PyDataExtractor):
         sum_nlevels = np.sum(sum_nlevels + 1)
         shape = (sum_nlevels,) if isinstance(time_index, int) else (len(time_idx), sum_nlevels)
         for time_idx in time_idx:
-            for cid, count, idx in self.clump_indexes(cell_idx2):
+            for cid, count, idx in self.chunk_indexes(cell_idx2):
                 qgsidx = QgsMeshDatasetIndex(_3d_grp_idx.group(), time_idx)
                 data_blocks = self.lyr.dataProvider().dataset3dValues(qgsidx, cid, count)
                 nlevels = np.array(data_blocks.verticalLevelsCount()) + 1
@@ -148,6 +148,7 @@ class QgisDataExtractor(PyDataExtractor):
         else:
             time_index = index
             elem_index = slice(None)
+        time_index = 0 if time_index == -1 else time_index  # -1 can be passed in for static datasets
         grp_idx = self.find_group_index(data_type, 'dataProvider')
         if grp_idx == -1:
             raise ValueError(f'Data type not found: {data_type}')
@@ -164,7 +165,7 @@ class QgisDataExtractor(PyDataExtractor):
         values = []
         a_elem_idx = np.array(elem_idx)
         for tidx in time_idx:
-            for vert_id, count, idx in self.clump_indexes(a_elem_idx):
+            for vert_id, count, idx in self.chunk_indexes(a_elem_idx):
                 if self._is_3d(grp_idx):
                     data_blocks = (
                         self.lyr.dataProvider().dataset3dValues(QgsMeshDatasetIndex(grp_idx, tidx), vert_id, count)
@@ -195,6 +196,7 @@ class QgisDataExtractor(PyDataExtractor):
         else:
             time_index = index
             elem_index = slice(None)
+        time_index = 0 if time_index == -1 else time_index  # -1 can be passed in for static datasets
         grp_idx = self.find_group_index(data_type, 'dataProvider')
         if grp_idx == -1:
             raise ValueError(f'Data type not found: {data_type}')
@@ -205,7 +207,7 @@ class QgisDataExtractor(PyDataExtractor):
         wd = []
         a_elem_array = np.array(elem_idx)
         for tidx in time_idx:
-            for face_id, count, idx in self.clump_indexes(a_elem_array):
+            for face_id, count, idx in self.chunk_indexes(a_elem_array):
                 extracted = np.array(
                     self.lyr.dataProvider().areFacesActive(QgsMeshDatasetIndex(grp_idx, tidx), face_id, count).active()
                 )
@@ -238,7 +240,7 @@ class QgisDataExtractor(PyDataExtractor):
             end = idx.stop if isinstance(idx.stop, int) else max_
         return list(range(start, end))
 
-    def clump_indexes(self, idx: np.ndarray) -> typing.Generator[tuple[int, int, np.ndarray], None, None]:
+    def chunk_indexes(self, idx: np.ndarray) -> typing.Generator[tuple[int, int, np.ndarray], None, None]:
         i = 0
         stop = idx.size
         while i < stop:

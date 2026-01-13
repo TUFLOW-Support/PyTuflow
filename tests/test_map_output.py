@@ -105,6 +105,42 @@ class TestXMDF(unittest.TestCase):
             dtypes = res.data_types('vector')
             self.assertEqual(2, len(dtypes))
 
+    def test_data_point_v1_driver(self):
+        xmdf = './tests/xmdf/run.xmdf'
+        with pyqgis():
+            res = XMDF(xmdf, driver='v1.0')
+            point = (1.0, 1.0)
+            df = res.data_point(point, 'max h', 0)
+            self.assertTrue(isinstance(df, float))
+            df = res.data_point(point, 'max vector velocity', 0)
+            self.assertTrue(isinstance(df, tuple))
+            df = res.data_point(point, ['max h', 'max vector velocity'], 0)
+            self.assertEqual(2, len(df))
+
+    def test_data_point_netcdf4_driver(self):
+        xmdf = './tests/xmdf/run.xmdf'
+        with pyqgis():
+            res = XMDF(xmdf, driver='qgis geometry netcdf4')
+            point = (1.0, 1.0)
+            df = res.data_point(point, 'max h', 0)
+            self.assertTrue(isinstance(df, float))
+            df = res.data_point(point, 'max vector velocity', 0)
+            self.assertTrue(isinstance(df, tuple))
+            df = res.data_point(point, ['max h', 'max vector velocity'], 0)
+            self.assertEqual(2, len(df))
+
+    def test_data_point_qgis_driver(self):
+        xmdf = './tests/xmdf/run.xmdf'
+        with pyqgis():
+            res = XMDF(xmdf, driver='qgis geometry engine')
+            point = (1.0, 1.0)
+            df = res.data_point(point, 'max h', 0)
+            self.assertTrue(isinstance(df, float))
+            df = res.data_point(point, 'max vector velocity', 0)
+            self.assertTrue(isinstance(df, tuple))
+            df = res.data_point(point, ['max h', 'max vector velocity'], 0)
+            self.assertEqual(2, len(df))
+
     def test_time_series_netcdf4_driver(self):
         xmdf = './tests/xmdf/run.xmdf'
         with pyqgis():
@@ -1175,6 +1211,12 @@ class TestMeshRegression(unittest.TestCase):
         with pyqgis():
             res = XMDF(p, driver='qgis geometry netcdf4')
 
+            # data point
+            a = res.data_point(point, 'water level', 1.)
+            b = load_comparison_data(f'{comp}_time_series.data').reshape(-1, 2)[2, 1]
+            is_close = np.isclose(a, b)
+            self.assertTrue(is_close.all())
+
             # time series
             a = res.time_series(point, 'water level').reset_index().to_numpy()
             b = load_comparison_data(f'{comp}_time_series.data').reshape(a.shape)
@@ -1299,10 +1341,16 @@ class TestMeshRegression(unittest.TestCase):
         with pyqgis():
             res = XMDF(p, driver='qgis geometry engine')
 
+            # data point
+            a = res.data_point(point, 'water level', 1.)
+            b = load_comparison_data(f'{comp}_time_series.data').reshape(-1, 2)[2, 1]
+            is_close = np.isclose(a, b)
+
             # time series
             a = res.time_series(point, 'water level').reset_index().to_numpy()
             b = load_comparison_data(f'{comp}_time_series.data').reshape(a.shape)
             is_close = np.isclose(a, b, equal_nan=True)
+            self.assertTrue(is_close.all())
             self.assertTrue(is_close.all())
 
             # time series vector
@@ -1422,6 +1470,12 @@ class TestMeshRegression(unittest.TestCase):
         with pyqgis():
             res = DAT(p, driver='qgis geometry python')
 
+            # data point
+            a = res.data_point(point, 'water level', 1.)
+            b = load_comparison_data(f'{comp}_time_series.data').reshape(-1, 2)[2, 1]
+            is_close = np.isclose(a, b)
+            self.assertTrue(is_close.all())
+
             # time series
             a = res.time_series(point, 'water level').reset_index().to_numpy()
             # with open(f'{comp}_time_series.data', 'wb') as f:
@@ -1445,6 +1499,12 @@ class TestMeshRegression(unittest.TestCase):
         comp = './tests/regression_test_comparisons/test_qgis_dat_mesh'
         with pyqgis():
             res = DAT(p, driver='qgis geometry engine')
+
+            # data point
+            a = res.data_point(point, 'water level', 1.)
+            b = load_comparison_data(f'{comp}_time_series.data').reshape(-1, 2)[2, 1]
+            is_close = np.isclose(a, b)
+            self.assertTrue(is_close.all())
 
             # time series
             a = res.time_series(point, 'water level').reset_index().to_numpy()
@@ -1471,6 +1531,65 @@ class TestMeshRegression(unittest.TestCase):
         comp = './tests/regression_test_comparisons/test_qgis_cell_mesh_latlong'
         with pyqgis():
             res = NCMesh(p, driver='qgis geometry netcdf4')
+
+            # data point
+            a = res.data_point(point, 'salinity', 186972)
+            b = load_comparison_data(f'{comp}_time_series.data').reshape(-1, 2)[4, 1]
+            is_close = np.isclose(a, b)
+            self.assertTrue(is_close.all())
+
+            # data point level
+            a = res.data_point(point, 'h', 186972)
+            b = load_comparison_data(f'{comp}_time_series_h.data').reshape(-1, 2)[4, 1]
+            is_close = np.isclose(a, b)
+            self.assertTrue(is_close.all())
+
+            # data point vector
+            a = res.data_point(point, 'velocity', 186972)
+            b = (0.028592855, -0.020573288)
+            is_close = np.isclose(a, b)
+            self.assertTrue(is_close.all())
+
+            # data point with depth averaging
+            a = res.data_point(point, 'salinity', 186972, averaging_method='singlelevel?dir=top&4')
+            b = load_comparison_data(f'{comp}_time_series_single_top_4.data').reshape(-1, 2)[4, 1]
+            is_close = np.isclose(a, b)
+            self.assertTrue(is_close.all())
+
+            a = res.data_point(point, 'salinity', 186972, averaging_method='singlelevel?dir=bottom&2')
+            b = load_comparison_data(f'{comp}_time_series_single_bottom_2.data').reshape(-1, 2)[4, 1]
+            is_close = np.isclose(a, b)
+            self.assertTrue(is_close.all())
+
+            a = res.data_point(point, 'salinity', 186972, averaging_method='multilevel?dir=top&2&4')
+            b = load_comparison_data(f'{comp}_time_series_multi_top_2_4.data').reshape(-1, 2)[4, 1]
+            is_close = np.isclose(a, b)
+            self.assertTrue(is_close.all())
+
+            a = res.data_point(point, 'salinity', 186972, averaging_method='multilevel?dir=bottom&2&4')
+            b = load_comparison_data(f'{comp}_time_series_multi_bottom_2_4.data').reshape(-1, 2)[4, 1]
+            is_close = np.isclose(a, b)
+            self.assertTrue(is_close.all())
+
+            a = res.data_point(point, 'salinity', 186972, averaging_method='depth&0.5&2.0')
+            b = load_comparison_data(f'{comp}_time_series_depth_05_2.data').reshape(-1, 2)[4, 1]
+            is_close = np.isclose(a, b)
+            self.assertTrue(is_close.all())
+
+            a = res.data_point(point, 'salinity', 186972, averaging_method='height&0.5&2.0')
+            b = load_comparison_data(f'{comp}_time_series_height_05_2.data').reshape(-1, 2)[4, 1]
+            is_close = np.isclose(a, b)
+            self.assertTrue(is_close.all())
+
+            a = res.data_point(point, 'salinity', 186972, averaging_method='elevation&-5&0')
+            b = load_comparison_data(f'{comp}_time_series_elevation_5_0.data').reshape(-1, 2)[4, 1]
+            is_close = np.isclose(a, b)
+            self.assertTrue(is_close.all())
+
+            a = res.data_point(point, 'salinity', 186972, averaging_method='sigma&0.1&0.9')
+            b = load_comparison_data(f'{comp}_time_series_sigma_01_09.data').reshape(-1, 2)[4, 1]
+            is_close = np.isclose(a, b)
+            self.assertTrue(is_close.all())
 
             # time series
             a = res.time_series(point, 'salinity').reset_index().to_numpy()
@@ -1751,6 +1870,65 @@ class TestMeshRegression(unittest.TestCase):
         with pyqgis():
             res = NCMesh(p, driver='qgis geometry engine')
             res.spherical = True
+
+            # data point
+            a = res.data_point(point, 'salinity', 186972)
+            b = load_comparison_data(f'{comp}_time_series.data').reshape(-1, 2)[4, 1]
+            is_close = np.isclose(a, b)
+            self.assertTrue(is_close.all())
+
+            # data point level
+            a = res.data_point(point, 'h', 186972)
+            b = load_comparison_data(f'{comp}_time_series_h.data').reshape(-1, 2)[4, 1]
+            is_close = np.isclose(a, b)
+            self.assertTrue(is_close.all())
+
+            # data point vector
+            a = res.data_point(point, 'velocity', 186972)
+            b = (0.028592855, -0.020573288)
+            is_close = np.isclose(a, b)
+            self.assertTrue(is_close.all())
+
+            # data point with depth averaging
+            a = res.data_point(point, 'salinity', 186972, averaging_method='singlelevel?dir=top&4')
+            b = load_comparison_data(f'{comp}_time_series_single_top_4.data').reshape(-1, 2)[4, 1]
+            is_close = np.isclose(a, b)
+            self.assertTrue(is_close.all())
+
+            a = res.data_point(point, 'salinity', 186972, averaging_method='singlelevel?dir=bottom&2')
+            b = load_comparison_data(f'{comp}_time_series_single_bottom_2.data').reshape(-1, 2)[4, 1]
+            is_close = np.isclose(a, b)
+            self.assertTrue(is_close.all())
+
+            a = res.data_point(point, 'salinity', 186972, averaging_method='multilevel?dir=top&2&4')
+            b = load_comparison_data(f'{comp}_time_series_multi_top_2_4.data').reshape(-1, 2)[4, 1]
+            is_close = np.isclose(a, b)
+            self.assertTrue(is_close.all())
+
+            a = res.data_point(point, 'salinity', 186972, averaging_method='multilevel?dir=bottom&2&4')
+            b = load_comparison_data(f'{comp}_time_series_multi_bottom_2_4.data').reshape(-1, 2)[4, 1]
+            is_close = np.isclose(a, b)
+            self.assertTrue(is_close.all())
+
+            a = res.data_point(point, 'salinity', 186972, averaging_method='depth&0.5&2.0')
+            b = load_comparison_data(f'{comp}_time_series_depth_05_2.data').reshape(-1, 2)[4, 1]
+            is_close = np.isclose(a, b)
+            self.assertTrue(is_close.all())
+
+            a = res.data_point(point, 'salinity', 186972, averaging_method='height&0.5&2.0')
+            b = load_comparison_data(f'{comp}_time_series_height_05_2.data').reshape(-1, 2)[4, 1]
+            is_close = np.isclose(a, b)
+            self.assertTrue(is_close.all())
+
+            a = res.data_point(point, 'salinity', 186972, averaging_method='elevation&-5&0')
+            b = load_comparison_data(f'{comp}_time_series_elevation_5_0.data').reshape(-1, 2)[4, 1]
+            is_close = np.isclose(a, b)
+            self.assertTrue(is_close.all())
+
+            a = res.data_point(point, 'salinity', 186972, averaging_method='sigma&0.1&0.9')
+            b = load_comparison_data(f'{comp}_time_series_sigma_01_09.data').reshape(-1, 2)[4, 1]
+            is_close = np.isclose(a, b)
+            self.assertTrue(is_close.all())
 
             # time series
             a = res.time_series(point, 'salinity').reset_index().to_numpy()

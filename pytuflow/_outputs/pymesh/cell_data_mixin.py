@@ -37,7 +37,13 @@ class CellDataMixin:
         values = []
         for dtype in data_type:
             if is_3d:
-                a = self.extractor.data(dtype, (time_index, slice(cell_idx, cell_idx + nlevels)))
+                if self.extractor.NAME == 'QgisDataExtractor':
+                    a = self.extractor.data(dtype, (time_index, [cell_idx]))
+                    if a.ndim == 2:
+                        values = [a[:, 0], a[:, 1]]
+                        break
+                else:
+                    a = self.extractor.data(dtype, (time_index, slice(cell_idx, cell_idx + nlevels)))
             else:
                 a = self.extractor.data(dtype, (time_index, cell_idx))
             values.append(a)
@@ -54,7 +60,7 @@ class CellDataMixin:
             data = np.column_stack(values)
         else:
             data = values[0]
-        return float(data) if len(values) == 1 else tuple(data.flatten())
+        return float(data[0] if isinstance(data, np.ndarray) and data.ndim > 0 else data) if len(values) == 1 else tuple([x for x in data.flatten()])
 
     def time_series_from_cell_data(
             self: 'PyMesh',

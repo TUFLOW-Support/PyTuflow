@@ -122,6 +122,29 @@ class Mesh(MapOutput):
         """
         return super().data_types(filter_by)
 
+    def data_point(self, locations: PointLocation, data_types: str | list[str] | None, time: TimeLike,
+                   averaging_method: str = None) -> float | tuple[float, float] | pd.DataFrame:
+        self._load()
+        pnts = self._translate_point_location(locations)
+        data_types = self._figure_out_data_types(data_types, None)
+        cols = []
+        values1 = []
+        val = np.nan
+        for name, pnt in pnts.items():
+            cols.append(name)
+            values2 = []
+            for dtype in data_types:
+                if self._driver.DRIVER_SOURCE == 'python':
+                    val = self._driver.data_point(pnt, dtype, time, depth_averaging=averaging_method, return_type='vector')
+                else:
+                    val = self._driver.data_point(pnt, dtype, time, averaging_method, return_type='vector')
+                values2.append(val)
+            values1.append(values2)
+        if len(cols) == 1 and len(data_types) == 1:
+            return val
+        df = pd.DataFrame(values1).transpose().rename(columns=dict(enumerate(cols)), index=dict(enumerate(data_types)))
+        return df
+
     def time_series(self, locations: PointLocation, data_types: str | list[str] | None,
                     time_fmt: str = 'relative', averaging_method: str = None) -> pd.DataFrame:
         """Extracts time-series data for the given locations and data types.

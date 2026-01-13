@@ -312,7 +312,8 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
 
     def data_point(self,
                    point: PointLike,
-                   data_type: str, time: float = 0.,
+                   data_type: str,
+                   time: float = 0.,
                    time_index: int = -1,
                    depth_averaging: str = 'sigma&0&1',
                    return_type: str = 'scalar',
