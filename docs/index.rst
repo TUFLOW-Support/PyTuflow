@@ -32,13 +32,6 @@ Check out the :doc:`usage` section for further information, including how to :re
 Changelog
 ---------
 
-1.0.3
-"""""
-
-Release date: 13 Jan 2026
-
-- Fixed a bug when reading a TCF file and the command ``Write Check Files ==`` was used and the file path did not have a trailing slash. Previously, this could cause a Python error.
-
 1.1
 """
 
@@ -61,6 +54,14 @@ Release date: XX XXX 2026
 - Fixed a bug for Quadtree results prior to the TUFLOW ``2026.0.0`` release. There was a bug in TUFLOW (fixed in ``2026.0.0``) where Quadtree hardcoded PO geometry types to "R" (region/polygon) in the ``plot/GIS/PLOT.csv`` file. This resulted in a downstream bug in PyTUFLOW when using any geometry filters in methods such as :meth:`data_types()<pytuflow.TPC.data_types>`. PyTUFLOW has been updated to double check the geometry types on load if encountering "R" geometries so results from TUFLOW versions prior to ``2026.0.0`` can still be used.
 - Fixed a bug for :class:`GPKG2D<pytuflow.GPKG2D>` and :class:`GPKGRL<pytuflow.GPKGRL>` classes where using a ``"polygon"`` filter in either the :meth:`data_types()<pytuflow.GPKG2D.data_types>` or :meth:`ids()<pytuflow.GPKG2D.ids>` methods would return an empty list even if there were PO or RL polygons in the results.
 - Fixed a bug for :meth:`section()<pytuflow.XMDF.section>` and :meth:`curtain()<pytuflow.XMDF.curtain>` methods for Quadtree results when the line intersected transition zones which could cause additional points to be added to the resulting DataFrame with ``NaN`` values.
+
+1.0.3
+"""""
+
+Release date: 13 Jan 2026
+
+- Fixed a bug when reading a TCF file and the command ``Write Check Files ==`` was used and the file path did not have a trailing slash. Previously, this could cause a Python error.
+
 
 1.0.2
 """""
