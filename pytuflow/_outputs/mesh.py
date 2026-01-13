@@ -338,7 +338,7 @@ class Mesh(MapOutput):
                         a = a.reshape(a.shape[0], -1)
                         if a.shape[1] > 2:
                             a = np.append(a[:,[0]], np.linalg.norm(a[:,1:], axis=1).reshape(-1, 1), axis=1)
-                        df1 = pd.DataFrame(a[:,1], index=a[:,0], columns=[f'{dtype}/{name}'])
+                        df1 = pd.DataFrame(a[:,1], index=a[:,0], columns=[f'{name}/{dtype}'])
                         df1.index.name = 'time'
                     else:
                         df1 = pd.DataFrame()
