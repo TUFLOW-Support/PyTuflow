@@ -137,7 +137,7 @@ class Mesh(MapOutput):
 
         The returned value will be a single float if a single location and data type is provided, or a tuple if the
         data type is a vector result type. If multiple locations and/or data types are provided, a DataFrame will
-        be returned with the locations as columns and data types as the index.
+        be returned with the data types as columns and the point locations as the index.
 
         Parameters
         ----------
@@ -188,15 +188,28 @@ class Mesh(MapOutput):
         >>> mesh = ... # Assume mesh is a loaded Mesh result
         >>> mesh.data_point((293250, 6178030), 'water level', 1.5)
         42.723076
+
+        Get velocity vector data for a given point defined as ``(x, y)``:
+
+        >>> mesh.data_point((293250, 6178030), 'vector velocity', 1.5)
+        (0.282843, 0.154213)
+
+        Get the maximum water level and depth for multiple points defined in a shapefile. Time is passed as ``-1`` since
+        it is a static dataset (it could be any time value since it won't affect the result):
+
+        >>> mesh.data_point('/path/to/points.shp', ['max water level', 'max depth'], -1)
+              max water level  max depth
+        pnt1        40.501997   2.785571
+        pnt2        43.221862   3.450053
         """
         self._load()
         pnts = self._translate_point_location(locations)
         data_types = self._figure_out_data_types(data_types, None)
-        cols = []
+        rows = []
         values1 = []
         val = np.nan
         for name, pnt in pnts.items():
-            cols.append(name)
+            rows.append(name)
             values2 = []
             for dtype in data_types:
                 if self._driver.DRIVER_SOURCE == 'python':
@@ -205,9 +218,9 @@ class Mesh(MapOutput):
                     val = self._driver.data_point(pnt, dtype, time, averaging_method, return_type='vector')
                 values2.append(val)
             values1.append(values2)
-        if len(cols) == 1 and len(data_types) == 1:
+        if len(rows) == 1 and len(data_types) == 1:
             return val
-        df = pd.DataFrame(values1).transpose().rename(columns=dict(enumerate(cols)), index=dict(enumerate(data_types)))
+        df = pd.DataFrame(values1[::-1]).rename(columns=dict(enumerate(data_types)), index=dict(enumerate(rows[::-1])))
         return df
 
     def time_series(self, locations: PointLocation, data_types: str | list[str] | None,

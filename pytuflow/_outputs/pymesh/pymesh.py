@@ -672,9 +672,13 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
         self.cache.set(curtain, 'curtain', data_type, time_index, self._linestring_as_wkt(line))
         return curtain
 
-    def _find_time_index(self, data_type: str, time: float) -> int:
+    def _find_time_index(self, data_type: str, time: float | datetime) -> int:
         if data_type.lower() in ['bed elevation', 'bed level']:
             return 0
+        if isinstance(time, datetime):
+            if time.tzinfo is None:
+                time = time.replace(tzinfo=timezone.utc)
+            time = (time - self.reference_time).total_seconds() / 3600.
         times = self.times(data_type)
         if len(times) == 1:  # assume static
             return 0

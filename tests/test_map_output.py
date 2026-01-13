@@ -141,6 +141,24 @@ class TestXMDF(unittest.TestCase):
             df = res.data_point(point, ['max h', 'max vector velocity'], 0)
             self.assertEqual(2, len(df))
 
+    def test_data_point_datetime_netcdf4_driver(self):
+        xmdf = './tests/xmdf/EG00_001.xmdf'
+        with pyqgis():
+            res = XMDF(xmdf, driver='qgis geometry netcdf4')
+            point = './tests/xmdf/xmdf_point.shp'
+            time = datetime(1970, 1, 1, 1)
+            val = res.data_point(point, 'h', time)
+            self.assertTrue(isinstance(val, float))
+
+    def test_data_point_datetime_qgis_driver(self):
+        xmdf = './tests/xmdf/EG00_001.xmdf'
+        with pyqgis():
+            res = XMDF(xmdf, driver='qgis geometry engine')
+            point = './tests/xmdf/xmdf_point.shp'
+            time = datetime(1970, 1, 1, 1)
+            val = res.data_point(point, 'h', time)
+            self.assertTrue(isinstance(val, float))
+
     def test_time_series_netcdf4_driver(self):
         xmdf = './tests/xmdf/run.xmdf'
         with pyqgis():
