@@ -24,7 +24,7 @@ class TestXMDF(unittest.TestCase):
         df = res.data_point(point, 'max vector velocity', 0)
         self.assertTrue(isinstance(df, tuple))
         df = res.data_point(point, ['max h', 'max vector velocity'], 0)
-        self.assertEqual(2, len(df))
+        self.assertEqual((1, 2), df.shape)
 
     def test_data_point_datetime(self):
         xmdf = './tests/xmdf/EG00_001.xmdf'

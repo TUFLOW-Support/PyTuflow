@@ -115,7 +115,7 @@ class TestXMDF(unittest.TestCase):
             df = res.data_point(point, 'max vector velocity', 0)
             self.assertTrue(isinstance(df, tuple))
             df = res.data_point(point, ['max h', 'max vector velocity'], 0)
-            self.assertEqual(2, len(df))
+            self.assertEqual((1, 2), df.shape)
 
     def test_data_point_netcdf4_driver(self):
         xmdf = './tests/xmdf/run.xmdf'
@@ -127,7 +127,7 @@ class TestXMDF(unittest.TestCase):
             df = res.data_point(point, 'max vector velocity', 0)
             self.assertTrue(isinstance(df, tuple))
             df = res.data_point(point, ['max h', 'max vector velocity'], 0)
-            self.assertEqual(2, len(df))
+            self.assertEqual((1, 2), df.shape)
 
     def test_data_point_qgis_driver(self):
         xmdf = './tests/xmdf/run.xmdf'
@@ -139,7 +139,7 @@ class TestXMDF(unittest.TestCase):
             df = res.data_point(point, 'max vector velocity', 0)
             self.assertTrue(isinstance(df, tuple))
             df = res.data_point(point, ['max h', 'max vector velocity'], 0)
-            self.assertEqual(2, len(df))
+            self.assertEqual((1, 2), df.shape)
 
     def test_data_point_datetime_netcdf4_driver(self):
         xmdf = './tests/xmdf/EG00_001.xmdf'
