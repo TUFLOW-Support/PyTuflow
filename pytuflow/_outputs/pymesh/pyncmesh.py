@@ -1,3 +1,4 @@
+import typing
 from pathlib import Path
 
 from . import PyMesh, PyNCMeshGeometry, PyNCMeshDataExtractor, QgisMeshGeometry, QgisDataExtractor
@@ -5,7 +6,7 @@ from . import PyMesh, PyNCMeshGeometry, PyNCMeshDataExtractor, QgisMeshGeometry,
 
 class PyNCMesh(PyMesh):
 
-    def __init__(self, fpath: str | Path, geom_driver: str = None, engine: str = None):
+    def __init__(self, fpath: str | Path, geom_driver: str = None, engine: str = None, mesh: typing.Any = None):
         super().__init__()
         self.fpath = Path(fpath)
 
@@ -21,6 +22,8 @@ class PyNCMesh(PyMesh):
             if not self.qgis_initialized():
                 raise ValueError('QGIS application has not been initialized.')
             self.geom = QgisMeshGeometry(fpath)
+            if mesh is not None:
+                self.geom.lyr = mesh
         else:
             self.geom = PyNCMeshGeometry(fpath)
 
@@ -29,7 +32,7 @@ class PyNCMesh(PyMesh):
                 raise ValueError("QGIS python bindings not found.")
             if not self.qgis_initialized():
                 raise ValueError('QGIS application has not been initialized.')
-            self.extractor = QgisDataExtractor(fpath, extra_datasets=[])
+            self.extractor = QgisDataExtractor(fpath, extra_datasets=[], layer=self.geom.lyr)
             self.geom.lyr = self.extractor.lyr
         else:
             self.extractor = PyNCMeshDataExtractor(fpath, engine)
