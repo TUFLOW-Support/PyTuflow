@@ -353,34 +353,35 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
             The data value at the given point. If the data type is a vector, a tuple of floats will be returned.
             If the data is 3D, a numpy array will be returned with the vertical profile.
         """
-        # coerce point
-        p = self.geom.trans.transform(self._coerce_into_point(point))
-        wkt = self._point_as_wkt(point)
+        with self.extractor.open():
+            # coerce point
+            p = self.geom.trans.transform(self._coerce_into_point(point))
+            wkt = self._point_as_wkt(point)
 
-        vector = self.is_vector(data_type)
-        if not vector:
-            return_type = 'scalar'
+            vector = self.is_vector(data_type)
+            if not vector:
+                return_type = 'scalar'
 
-        # time index
-        if self.is_static(data_type):
-            time_index = -1
-        else:
-            time_index = time_index if time_index >= 0 else self._find_time_index(data_type, time)
+            # time index
+            if self.is_static(data_type):
+                time_index = -1
+            else:
+                time_index = time_index if time_index >= 0 else self._find_time_index(data_type, time)
 
-        # check cache
-        if self.cache.contains('data_point', data_type, wkt, time_index, return_type, depth_averaging):
-            return self.cache.get('data_point', data_type, wkt, time_index, return_type, depth_averaging)
+            # check cache
+            if self.cache.contains('data_point', data_type, wkt, time_index, return_type, depth_averaging):
+                return self.cache.get('data_point', data_type, wkt, time_index, return_type, depth_averaging)
 
-        # get value
-        if self.on_vertex(data_type):
-            data_point = self.data_point_from_vertex_data(p, data_type, time_index, return_type)
-        else:
-            data_point = self.data_point_from_cell_data(p, data_type, time_index, depth_averaging)
+            # get value
+            if self.on_vertex(data_type):
+                data_point = self.data_point_from_vertex_data(p, data_type, time_index, return_type)
+            else:
+                data_point = self.data_point_from_cell_data(p, data_type, time_index, depth_averaging)
 
-        # save cache
-        self.cache.set(data_point, 'data_point', data_type, wkt, time_index, return_type, depth_averaging)
+            # save cache
+            self.cache.set(data_point, 'data_point', data_type, wkt, time_index, return_type, depth_averaging)
 
-        return data_point
+            return data_point
 
     def time_series(self,
                     point: PointLike,
@@ -420,42 +421,43 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
         np.ndarray
             An array containing the extracted time series data.
         """
-        if self.is_static(data_type):
-            raise ValueError('Time series not available for static data types.')
+        with self.extractor.open():
+            if self.is_static(data_type):
+                raise ValueError('Time series not available for static data types.')
 
-        # coerce point
-        p = self.geom.trans.transform(self._coerce_into_point(point))
-        wkt = self._point_as_wkt(point)
+            # coerce point
+            p = self.geom.trans.transform(self._coerce_into_point(point))
+            wkt = self._point_as_wkt(point)
 
-        vector = self.is_vector(data_type)
-        if not vector:
-            return_type = 'scalar'
+            vector = self.is_vector(data_type)
+            if not vector:
+                return_type = 'scalar'
 
-        depth_averaging = depth_averaging if self.is_3d(data_type) else None
+            depth_averaging = depth_averaging if self.is_3d(data_type) else None
 
-        # check cache
-        if self.cache.contains('time_series', data_type, return_type, depth_averaging, wkt):
-            return self.cache.get('time_series', data_type, return_type, depth_averaging, wkt)
+            # check cache
+            if self.cache.contains('time_series', data_type, return_type, depth_averaging, wkt):
+                return self.cache.get('time_series', data_type, return_type, depth_averaging, wkt)
 
-        # get data
-        if self.on_vertex(data_type):
-            data = self.time_series_from_vertex_data(p, data_type, return_type=return_type)
-        else:
-            data = self.time_series_from_cell_data(p, data_type, depth_averaging)
+            # get data
+            if self.on_vertex(data_type):
+                data = self.time_series_from_vertex_data(p, data_type, return_type=return_type)
+            else:
+                data = self.time_series_from_cell_data(p, data_type, depth_averaging)
 
-        if data.size == 0:
-            return np.array([])
+            if data.size == 0:
+                return np.array([])
 
-        time_series = np.append(
-            self.times(data_type).reshape((-1, 1, 1) if data.ndim > 2 else (-1, 1)),
-            data.reshape(-1, 1) if data.ndim == 1 else data,
-            axis=2 if data.ndim > 2 else 1
-        )
+            time_series = np.append(
+                self.times(data_type).reshape((-1, 1, 1) if data.ndim > 2 else (-1, 1)),
+                data.reshape(-1, 1) if data.ndim == 1 else data,
+                axis=2 if data.ndim > 2 else 1
+            )
 
-        # save cache
-        self.cache.set(time_series, 'time_series', data_type, return_type, depth_averaging, wkt)
+            # save cache
+            self.cache.set(time_series, 'time_series', data_type, return_type, depth_averaging, wkt)
 
-        return time_series
+            return time_series
 
 
     def section(self,
@@ -577,30 +579,31 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
         np.ndarray
             An array containing the extracted profile data.
         """
-        # coerce point
-        p = self.geom.trans.transform(self._coerce_into_point(point))
+        with self.extractor.open():
+            # coerce point
+            p = self.geom.trans.transform(self._coerce_into_point(point))
 
-        # time index
-        time_index = self._find_time_index(data_type, time)
+            # time index
+            time_index = self._find_time_index(data_type, time)
 
-        vector = self.is_vector(data_type)
-        if not vector:
-            return_type = 'scalar'
+            vector = self.is_vector(data_type)
+            if not vector:
+                return_type = 'scalar'
 
-        # check cache
-        if self.cache.contains('profile', data_type, time_index, return_type, self._point_as_wkt(p)):
-            return self.cache.get('profile', data_type, time_index, return_type, self._point_as_wkt(p))
+            # check cache
+            if self.cache.contains('profile', data_type, time_index, return_type, self._point_as_wkt(p)):
+                return self.cache.get('profile', data_type, time_index, return_type, self._point_as_wkt(p))
 
-        # get data
-        if self.on_vertex(data_type):
-            data = self.profile_from_vertex_data(point, data_type, time_index, return_type)
-        else:
-            data = self.profile_from_cell_data(p, data_type, time_index)
+            # get data
+            if self.on_vertex(data_type):
+                data = self.profile_from_vertex_data(point, data_type, time_index, return_type)
+            else:
+                data = self.profile_from_cell_data(p, data_type, time_index)
 
-        # save cache
-        self.cache.set(data, 'profile', data_type, time_index, return_type, self._point_as_wkt(p))
+            # save cache
+            self.cache.set(data, 'profile', data_type, time_index, return_type, self._point_as_wkt(p))
 
-        return data
+            return data
 
     def curtain(self, line: LineStringLike, data_type: str, time: float) -> np.ndarray:
         """Returns curtain plot information for the given data type along the specified line at the given time.
@@ -628,49 +631,51 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
         np.ndarray
             An array containing the extracted curtain data.
         """
-        # coerce line
-        line = self._coerce_into_line(line)
+        with self.extractor.open():
+            # coerce line
+            line = self._coerce_into_line(line)
 
-        # time index
-        time_index = self._find_time_index(data_type, time)
+            # time index
+            time_index = self._find_time_index(data_type, time)
 
-        # check cache for results
-        if self.cache.contains('curtain', data_type, time_index, self._linestring_as_wkt(line)):
-            return self.cache.get('curtain', data_type, time_index, self._linestring_as_wkt(line))
+            # check cache for results
+            if self.cache.contains('curtain', data_type, time_index, self._linestring_as_wkt(line)):
+                return self.cache.get('curtain', data_type, time_index, self._linestring_as_wkt(line))
 
-        if data_type.lower() in ['velocity', 'max velocity', 'min velocity'] and not self.is_vector(data_type):
-            if data_type.lower() == 'velocity':
-                test = f'vector {data_type}'
-            elif data_type.lower() == 'max velocity':
-                test = 'vector velocity/maximums'
+            if data_type.lower() in ['velocity', 'max velocity', 'min velocity'] and not self.is_vector(data_type):
+                if data_type.lower() == 'velocity':
+                    test = f'vector {data_type}'
+                elif data_type.lower() == 'max velocity':
+                    test = 'vector velocity/maximums'
+                else:
+                    test = 'vector velocity/minimums'
+                test_a = {x.lower(): x for x in self.data_types()}
+                if test in test_a:
+                    data_type = test_a[test]
+
+            # check cache for line intersections, otherwise calculate
+            if self.cache.contains('mesh_line', self._linestring_as_wkt(line)):
+                cell_ids, acell, dir_, mid_cell_ids, amid, dir_mid = self.cache.get('mesh_line', self._linestring_as_wkt(line))
             else:
-                test = 'vector velocity/minimums'
-            test_a = {x.lower(): x for x in self.data_types()}
-            if test in test_a:
-                data_type = test_a[test]
+                cell_ids, acell, dir_, mid_cell_ids, amid, dir_mid = self.geom.mesh_line(line)
+                self.cache.set(
+                    (cell_ids, acell, dir_, mid_cell_ids, amid, dir_mid),
+                    'mesh_line',
+                    self._linestring_as_wkt(line)
+                )
 
-        # check cache for line intersections, otherwise calculate
-        if self.cache.contains('mesh_line', self._linestring_as_wkt(line)):
-            cell_ids, acell, dir_, mid_cell_ids, amid, dir_mid = self.cache.get('mesh_line', self._linestring_as_wkt(line))
-        else:
-            cell_ids, acell, dir_, mid_cell_ids, amid, dir_mid = self.geom.mesh_line(line)
-            self.cache.set(
-                (cell_ids, acell, dir_, mid_cell_ids, amid, dir_mid),
-                'mesh_line',
-                self._linestring_as_wkt(line)
-            )
+            # get data
+            if self.on_vertex(data_type):
+                curtain = self.curtain_from_vertex_data(line, cell_ids, acell, dir_mid, data_type, time)
+            else:
+                curtain = self.curtain_from_cell_data(cell_ids, acell, dir_, data_type, time_index)
 
-        # get data
-        if self.on_vertex(data_type):
-            curtain = self.curtain_from_vertex_data(line, cell_ids, acell, dir_mid, data_type, time)
-        else:
-            curtain = self.curtain_from_cell_data(cell_ids, acell, dir_, data_type, time_index)
+            # start and end locations
+            self._get_start_end_locations(cell_ids, acell)
+            self._get_start_end_locations(cell_ids, acell)
 
-        # start and end locations
-        self._get_start_end_locations(cell_ids, acell)
-
-        self.cache.set(curtain, 'curtain', data_type, time_index, self._linestring_as_wkt(line))
-        return curtain
+            self.cache.set(curtain, 'curtain', data_type, time_index, self._linestring_as_wkt(line))
+            return curtain
 
     def _find_time_index(self, data_type: str, time: float | datetime) -> int:
         if data_type.lower() in ['bed elevation', 'bed level']:
