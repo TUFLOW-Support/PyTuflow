@@ -34,7 +34,7 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
         self.geom: PyMeshGeometry | QgisMeshGeometry = PyMeshGeometry('')
         self.extractor: PyDataExtractor = PyDataExtractor()
         self.has_inherent_reference_time = False
-        self.reference_time = datetime(1970, 1, 1, tzinfo=timezone.utc)
+        self.reference_time = datetime(1990, 1, 1, tzinfo=timezone.utc)
         self.start_end_locs = []  # used by CATCHJson to stitch sections together
 
         self._cached_data_types = {}
