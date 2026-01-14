@@ -107,9 +107,9 @@ class Py2dm(PyMeshGeometry, GeometryLazyLoadMixin, VTKGeometryMixin):
             columns={'A': 'shape', 'B': 'ind', 'C': 'n1', 'D': 'n2', 'E': 'n3', 'F': 'n4'}
         )
         tri = cells['shape'] == 'E3T'
-        cells.loc[tri, 'n4'] = -1
         cells = cells.drop(columns=['shape'])
         cells = cells.astype('i8') - 1 if fortran_indexing else cells.astype('i8')
+        cells.loc[tri, 'n4'] = -1
         return cells.set_index('ind')
 
     def tuflow_grid_bbox(self, output_cell_size: float) -> Bbox2D:
