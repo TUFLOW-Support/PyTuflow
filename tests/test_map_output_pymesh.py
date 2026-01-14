@@ -30,7 +30,7 @@ class TestXMDF(unittest.TestCase):
         xmdf = './tests/xmdf/EG00_001.xmdf'
         res = XMDF(xmdf)
         point = './tests/xmdf/xmdf_point.shp'
-        time = datetime(1970, 1, 1, 1)
+        time = datetime(1990, 1, 1, 1)
         val = res.data_point(point, 'h', time)
         self.assertTrue(isinstance(val, float))
 
