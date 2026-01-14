@@ -20,6 +20,7 @@ class QgisDataExtractor(PyDataExtractor):
     NAME = 'QgisDataExtractor'
 
     def __init__(self, mesh: str | Path, extra_datasets: list[str | Path], layer: QgsMeshLayer = None):
+        self.mesh = Path(mesh)
         self._3d_grp_idx = -1
         self._is_dat = extra_datasets and Path(extra_datasets[0]).suffix.lower() == '.dat'
         if layer is None:
@@ -246,13 +247,14 @@ class QgisDataExtractor(PyDataExtractor):
         data_type = MapOutput._get_standard_data_type_name(data_type)
         if self.cache.contains('group_index', data_type, source):
             return self.cache.get('group_index', data_type, source)
-        data_source = self.lyr if source == 'layer' else self.lyr.dataProvider()
-        for i in range(data_source.datasetGroupCount()):
-            group_meta = data_source.datasetGroupMetadata(QgsMeshDatasetIndex(i))
+
+        source_ = self.lyr if source == 'layer' else self.lyr.dataProvider()
+        for i in self.data_groups(source):
+            ind = QgsMeshDatasetIndex(i)
+            grp_metadata = source_.datasetGroupMetadata(ind)
+            name = grp_metadata.name()
             if self._is_dat:
-                name = self.translate_dat_data_type(group_meta.name())
-            else:
-                name = group_meta.name()
+                name = self.translate_dat_data_type(name)
             name = MapOutput._get_standard_data_type_name(name)
             if name == data_type:
                 self.cache.set(i, 'group_index', data_type, source)
@@ -300,8 +302,22 @@ class QgisDataExtractor(PyDataExtractor):
 
     def _3d_dataset_index(self) -> QgsMeshDatasetIndex | int:
         if self._3d_grp_idx == -1:
-            for i in range(self.lyr.dataProvider().datasetGroupCount()):
+            for i in self.data_groups():
                 if self._is_3d(i):
                     self._3d_grp_idx = QgsMeshDatasetIndex(i, 0)
                     break
         return self._3d_grp_idx
+
+    def data_groups(self, source: str = 'layer') -> typing.Generator[int, None, None]:
+        source = self.lyr if source == 'layer' else self.lyr.dataProvider()
+        dataset_group_count = source.datasetGroupCount()
+        i = -1
+        while dataset_group_count:
+            i += 1
+            ind = QgsMeshDatasetIndex(i, 0)
+            grp = source.datasetGroupMetadata(ind)
+            name = grp.name()
+            if not name:
+                continue
+            dataset_group_count -= 1
+            yield i

@@ -6,6 +6,9 @@ class Cache:
     def __init__(self):
         self._cache = {}
 
+    def clear(self):
+        self._cache.clear()
+
     def contains(self, type_: str, *key: typing.Any) -> bool:
         k = '::'.join([str(x) for x in key])
         return type_.lower() in self._cache and k.lower() in self._cache[type_]

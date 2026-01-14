@@ -67,6 +67,11 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
     def external_engine_available() -> bool:
         return H5Engine.available() or NCEngine.available()
 
+    def clear_cache(self):
+        self.cache.clear()
+        self._data_types.clear()
+        self._standardised_data_types.clear()
+
     def load(self):
         self.geom.load()
 
