@@ -40,7 +40,13 @@ class PyNCMeshDataExtractor(PyDataExtractor):
     def open(self) -> typing.Generator['PyNCMeshDataExtractor', None, None]:
         """Context manager for opening and closing the data extractor."""
         with self.engine.open():
-            yield self
+            yield self.engine.hnd
+
+    def open_reader(self):
+        self.engine.open_reader()
+
+    def close_reader(self):
+        self.engine.close()
 
     def times(self, data_type: str) -> np.ndarray:
         if self.is_static(data_type):

@@ -15,6 +15,12 @@ class PyDataExtractor:
         """Context manager for opening and closing the data extractor."""
         yield self
 
+    def open_reader(self):
+        pass
+
+    def close_reader(self):
+        pass
+
     def times(self, data_type: str) -> np.ndarray:
         """Return all times for a given data type.
 

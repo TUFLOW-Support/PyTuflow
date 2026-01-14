@@ -27,6 +27,12 @@ class PyXMDFDataExtractor(PyDataExtractor):
         with self.engine.open():
             yield self
 
+    def open_reader(self):
+        self.engine.open_reader()
+
+    def close_reader(self):
+        self.engine.close()
+
     def times(self, data_type: str) -> np.ndarray:
         path = self._create_path(data_type, 'Times')
         times = self.engine.data(path)

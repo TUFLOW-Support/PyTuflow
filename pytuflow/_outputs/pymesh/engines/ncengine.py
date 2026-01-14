@@ -38,6 +38,10 @@ class NCEngine(DatasetEngine):
         finally:
             self.close()
 
+    def open_reader(self):
+        if self.hnd is None:
+            self.hnd = Dataset(self.fpath, 'r')
+
     def close(self):
         if self.hnd is not None:
             self.hnd.close()

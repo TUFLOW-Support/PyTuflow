@@ -28,6 +28,9 @@ class DatasetEngine:
     def open(self) -> 'DatasetEngine':
         pass
 
+    def open_reader(self):
+        pass
+
     def close(self):
         pass
 

@@ -40,6 +40,10 @@ class H5Engine(DatasetEngine):
             self.close()
             self.hnd = None
 
+    def open_reader(self):
+        if self.hnd is None:
+            self.hnd = h5py.File(self.fpath, 'r')
+
     def close(self):
         if self.hnd is not None:
             self.hnd.close()
