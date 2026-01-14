@@ -5,6 +5,7 @@ from pathlib import Path
 import numpy as np
 
 from . import PyDataExtractor
+from .. import Cache
 
 try:
     from qgis.core import QgsMeshLayer, QgsMeshDatasetIndex, QgsMeshDatasetGroupMetadata
@@ -29,26 +30,36 @@ class QgisDataExtractor(PyDataExtractor):
                     raise ValueError(f'Failed to load results onto mesh: {dataset}')
         else:
             self.lyr = layer
+        self.cache = Cache()
 
     def times(self, data_type: str) -> np.ndarray:
+        if self.cache.contains('times', data_type):
+            return self.cache.get('times', data_type)
         grp_idx = self.find_group_index(data_type)
         if grp_idx == -1:
             raise ValueError(f'Data type not found: {data_type}')
         idx = QgsMeshDatasetIndex(grp_idx)
-        return np.array([
+        times = np.array([
             self.lyr.datasetMetadata(QgsMeshDatasetIndex(grp_idx, x)).time() for x in range(self.lyr.datasetCount(idx))
         ])
+        self.cache.set(times, 'times', data_type)
+        return times
 
     def data_types(self) -> list[str]:
+        if self.cache.contains('data_types'):
+            return self.cache.get('data_types')
         data_types = [
             self.lyr.datasetGroupMetadata(QgsMeshDatasetIndex(i)).name() for i in range(self.lyr.datasetGroupCount())
             if self.lyr.datasetGroupMetadata(QgsMeshDatasetIndex(i)).name() != 'Bed Elevation'
         ]
         if self._is_dat:
             return [self.translate_dat_data_type(x) for x in data_types]
+        self.cache.set(data_types, 'data_types')
         return data_types
 
     def reference_time(self, data_type: str) -> datetime:
+        if self.cache.contains('reference_time', data_type):
+            return self.cache.get('reference_time', data_type)
         grp_idx = self.find_group_index(data_type)
         if grp_idx == -1:
             raise ValueError(f'Data type not found: {data_type}')
@@ -56,34 +67,48 @@ class QgisDataExtractor(PyDataExtractor):
         ref_time = self.lyr.datasetGroupMetadata(idx).referenceTime()
         if ref_time and ref_time.isValid():
             ref_time = ref_time.toPyDateTime()
-            return ref_time.replace(tzinfo=timezone.utc)
+            ref_time = ref_time.replace(tzinfo=timezone.utc)
+            self.cache.set(ref_time, 'reference_time', data_type)
+            return ref_time
 
     def is_vector(self, data_type: str) -> bool:
+        if self.cache.contains('is_vector', data_type):
+            return self.cache.get('is_vector', data_type)
         grp_idx = self.find_group_index(data_type)
         if grp_idx == -1:
             raise ValueError(f'Data type not found: {data_type}')
         idx = QgsMeshDatasetIndex(grp_idx)
-        return self.lyr.datasetGroupMetadata(idx).isVector()
+        is_vector = self.lyr.datasetGroupMetadata(idx).isVector()
+        self.cache.set(is_vector, 'is_vector', data_type)
+        return is_vector
 
     def is_static(self, data_type: str) -> bool:
         return self.times(data_type).size <= 1
 
     def is_3d(self, data_type: str) -> bool:
+        if self.cache.contains('is_3d', data_type):
+            return self.cache.get('is_3d', data_type)
         grp_idx = self.find_group_index(data_type)
         if grp_idx == -1:
             raise ValueError(f'Data type not found: {data_type}')
-        return self._is_3d(grp_idx)
+        is_3d = self._is_3d(grp_idx)
+        self.cache.set(is_3d, 'is_3d', data_type)
+        return is_3d
 
     def _is_3d(self, grp_idx: int) -> bool:
         idx = QgsMeshDatasetIndex(grp_idx)
         return self.lyr.datasetGroupMetadata(idx).dataType() == QgsMeshDatasetGroupMetadata.DataOnVolumes
 
     def on_vertex(self, data_type: str) -> bool:
+        if self.cache.contains('on_vertex', data_type):
+            return self.cache.get('on_vertex', data_type)
         grp_idx = self.find_group_index(data_type)
         if grp_idx == -1:
             raise ValueError(f'Data type not found: {data_type}')
         idx = QgsMeshDatasetIndex(grp_idx)
-        return self.lyr.datasetGroupMetadata(idx).dataType() == QgsMeshDatasetGroupMetadata.DataOnVertices
+        on_vertex = self.lyr.datasetGroupMetadata(idx).dataType() == QgsMeshDatasetGroupMetadata.DataOnVertices
+        self.cache.set(on_vertex, 'on_vertex', data_type)
+        return on_vertex
 
     def zlevel_count(self, cell_idx2: int | np.ndarray | list[int]) -> int | np.ndarray | list[int]:
         _3d_grp_idx = self._3d_dataset_index()
@@ -165,9 +190,10 @@ class QgisDataExtractor(PyDataExtractor):
             shape = (n, -1, 2) if vector else (n, -1)
         values = []
         a_elem_idx = np.array(elem_idx)
+        is_3d = self._is_3d(grp_idx)
         for tidx in time_idx:
             for vert_id, count, idx in self.chunk_indexes(a_elem_idx):
-                if self._is_3d(grp_idx):
+                if is_3d:
                     data_blocks = (
                         self.lyr.dataProvider().dataset3dValues(QgsMeshDatasetIndex(grp_idx, tidx), vert_id, count)
                     )
@@ -218,6 +244,8 @@ class QgisDataExtractor(PyDataExtractor):
     def find_group_index(self, data_type: str, source: str = 'layer') -> int:
         from ...map_output import MapOutput
         data_type = MapOutput._get_standard_data_type_name(data_type)
+        if self.cache.contains('group_index', data_type, source):
+            return self.cache.get('group_index', data_type, source)
         data_source = self.lyr if source == 'layer' else self.lyr.dataProvider()
         for i in range(data_source.datasetGroupCount()):
             group_meta = data_source.datasetGroupMetadata(QgsMeshDatasetIndex(i))
@@ -227,6 +255,7 @@ class QgisDataExtractor(PyDataExtractor):
                 name = group_meta.name()
             name = MapOutput._get_standard_data_type_name(name)
             if name == data_type:
+                self.cache.set(i, 'group_index', data_type, source)
                 return i
         return -1
 
