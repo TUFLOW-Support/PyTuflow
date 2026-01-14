@@ -39,6 +39,7 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
 
         self._cached_data_types = {}
         self._data_types = []
+        self._standardised_data_types = []
 
     def __repr__(self) -> str:
         return f'<{self.__class__.__name__} {self.name}>'
@@ -86,13 +87,15 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
         tuple[str, ...]
             The translated data type(s). Returned as a tuple since vectors may require multiple data types.
         """
+        if self.cache.contains('translate_data_type', data_type):
+            return self.cache.get('translate_data_type', data_type)
         from ..map_output import MapOutput
         dtype = MapOutput._get_standard_data_type_name(data_type)
-        dtype = [x for x in self.data_types() if MapOutput._get_standard_data_type_name(x) == dtype]
-        data_type = dtype[0] if dtype else data_type
-        if not self._cached_data_types:
-            self._cached_data_types = {x.lower(): x for x in self.data_types()}
-        data_type = self._cached_data_types.get(data_type.lower(), data_type)
+        try:
+            data_type = self.data_types()[self._standardised_data_types.index(dtype)]
+            self.cache.set((data_type,), 'translate_data_type', data_type)
+        except ValueError:
+            pass
         return (data_type,)
 
     def times(self, data_type: str) -> np.ndarray:
@@ -108,7 +111,12 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
         np.ndarray[float]
             An array of times.
         """
-        return self.extractor.times(self.translate_data_type(data_type)[0])
+        data_type = self.translate_data_type(data_type)[0]
+        if self.cache.contains('times', data_type):
+            return self.cache.get('times', data_type)
+        times = self.extractor.times(self.translate_data_type(data_type)[0])
+        self.cache.set(times, 'times', data_type)
+        return times
 
     def data_types(self) -> list[str]:
         """Returns a list of the available data types for this mesh object. Typically, the data types will
@@ -124,7 +132,9 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
             A list of available data types in the mesh object.
         """
         if not self._data_types:
+            from ..map_output import MapOutput
             self._data_types = ['Bed Elevation'] + self.extractor.data_types() if self.geom.has_z else self.extractor.data_types()
+            self._standardised_data_types = [MapOutput._get_standard_data_type_name(x) for x in self._data_types]
         return self._data_types
 
     def reference_time_(self, data_type: str) -> datetime:
@@ -141,7 +151,11 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
         datetime
             The dataset reference time.
         """
-        return self.extractor.reference_time(self.translate_data_type(data_type)[0])
+        if self.cache.contains('reference_time', data_type):
+            return self.cache.get('reference_time', data_type)
+        ref_time = self.extractor.reference_time(self.translate_data_type(data_type)[0])
+        self.cache.set(ref_time, 'reference_time', data_type)
+        return ref_time
 
     def maximum(self, data_type: str) -> float:
         """Returns the maximum value for the specified result type. The full path the result type must be specified,
@@ -206,7 +220,11 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
         bool
             ``True`` if the data type is a vector result, ``False`` otherwise.
         """
-        return data_type.lower() not in ['bed elevation', 'bed level'] and self.extractor.is_vector(self.translate_data_type(data_type)[0])
+        if self.cache.contains('is_vector', data_type):
+            return self.cache.get('is_vector', data_type)
+        vector = data_type.lower() not in ['bed elevation', 'bed level'] and self.extractor.is_vector(self.translate_data_type(data_type)[0])
+        self.cache.set(vector, 'is_vector', data_type)
+        return vector
 
     def is_static(self, data_type: str) -> bool:
         """Returns whether the specified data type is a static result.
@@ -221,7 +239,11 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
         bool
             ``True`` if the data type is a static result, ``False`` otherwise.
         """
-        return data_type.lower() in ['bed elevation', 'bed level'] or self.extractor.is_static(self.translate_data_type(data_type)[0])
+        if self.cache.contains('is_static', data_type):
+            return self.cache.get('is_static', data_type)
+        static = data_type.lower() in ['bed elevation', 'bed level'] or self.extractor.is_static(self.translate_data_type(data_type)[0])
+        self.cache.set(static, 'is_static', data_type)
+        return static
 
     def on_vertex(self, data_type: str) -> bool:
         """Returns whether the specified data type is stored on mesh vertices.
@@ -238,7 +260,11 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
         """
         if data_type.lower() == 'bed elevation':
             return True
-        return self.extractor.on_vertex(self.translate_data_type(data_type)[0])
+        if self.cache.contains('on_vertex', data_type):
+            return self.cache.get('on_vertex', data_type)
+        vertex = self.extractor.on_vertex(self.translate_data_type(data_type)[0])
+        self.cache.set(vertex, 'on_vertex', data_type)
+        return vertex
 
     def is_3d(self, data_type: str) -> bool:
         """Returns whether the specified data type is a 3D result.
@@ -253,7 +279,11 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
         bool
             ``True`` if the data type is a 3D result, ``False`` otherwise.
         """
-        return self.extractor.is_3d(self.translate_data_type(data_type)[0])
+        if self.cache.contains('is_3d', data_type):
+            return self.cache.get('is_3d', data_type)
+        is_3d = self.extractor.is_3d(self.translate_data_type(data_type)[0])
+        self.cache.set(is_3d, 'is_3d', data_type)
+        return is_3d
 
     def cell_index(self, cell_id: int | list[int] | np.ndarray, data_type: str) -> np.ndarray:
         """Returns the index of the given cell ID for the specified data type. For 2D data types, the cell ID
