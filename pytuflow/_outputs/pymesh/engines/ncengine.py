@@ -25,7 +25,7 @@ class NCEngine(DatasetEngine):
 
     @staticmethod
     def available() -> bool:
-        return not isinstance(Dataset, str)
+        return '.stubs' not in Dataset.__module__
 
     @contextlib.contextmanager
     def open(self) -> typing.Generator['NCEngine', None, None]:

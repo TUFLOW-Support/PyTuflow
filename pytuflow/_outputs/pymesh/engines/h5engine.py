@@ -26,7 +26,7 @@ class H5Engine(DatasetEngine):
 
     @staticmethod
     def available() -> bool:
-        return not isinstance(h5py, str)
+        return '.stubs' not in h5py.__name__
 
     @contextlib.contextmanager
     def open(self) -> typing.Generator['H5Engine', None, None]:

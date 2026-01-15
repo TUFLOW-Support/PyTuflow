@@ -27,15 +27,17 @@ class PyNCMesh(PyMesh):
         else:
             self.geom = PyNCMeshGeometry(fpath)
 
-        if engine == 'qgis':
+        if engine == 'qgis' or (engine is None and not self.external_engine_available() and self.qgis_available()):
             if not self.qgis_available():
                 raise ValueError("QGIS python bindings not found.")
             if not self.qgis_initialized():
                 raise ValueError('QGIS application has not been initialized.')
             self.extractor = QgisDataExtractor(fpath, extra_datasets=[], layer=self.geom.lyr)
             self.geom.lyr = self.extractor.lyr
-        else:
+        elif self.external_engine_available():
             self.extractor = PyNCMeshDataExtractor(fpath, engine)
+        else:
+            raise ValueError('No suitable engine found for data extraction.')
 
         self.geom.spherical = self.extractor.spherical()
         self.name = self.fpath.stem

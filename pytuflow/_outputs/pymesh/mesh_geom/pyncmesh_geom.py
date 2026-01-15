@@ -14,10 +14,11 @@ File = None
 try:
     from h5py import File
 except ImportError:
-    try:
-        from netCDF4 import Dataset
-    except ImportError:
-        raise ImportError("NetCDF4 or h5py library is required to use NCMeshGeometry.")
+    from ..stubs.h5py import File
+try:
+    from netCDF4 import Dataset
+except ImportError:
+    from ..stubs.netCDF4 import Dataset
 
 from . import PyMeshGeometry, GeometryLazyLoadMixin, VTKGeometryMixin
 from .. import proj_transformer, Transform2D

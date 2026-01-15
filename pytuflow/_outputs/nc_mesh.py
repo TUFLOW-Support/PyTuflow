@@ -180,6 +180,8 @@ class NCMesh(Mesh):
                 with Dataset(fpath, 'r') as nc:
                     if 'Type' in nc.ncattrs() and nc.getncattr('Type') == 'Cell-centred TUFLOWFV output':
                         return True
+            else:
+                return True
         except Exception:
             return False
 

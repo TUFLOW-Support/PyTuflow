@@ -30,15 +30,17 @@ class PyXMDF(PyMesh, Mesh3DMixin, GLTFMixin, AlembicMixin):
         else:
             self.geom = Py2dm(twodm)
 
-        if engine == 'qgis':
+        if engine == 'qgis' or (engine is None and not self.external_engine_available() and self.qgis_available()):
             if not self.qgis_available():
                 raise ValueError("QGIS python bindings not found.")
             if not self.qgis_initialized():
                 raise ValueError('QGIS application has not been initialized.')
             self.extractor = QgisDataExtractor(twodm, [fpath], layer=self.geom.lyr)
             self.geom.lyr = self.extractor.lyr
-        else:
+        elif self.external_engine_available():
             self.extractor = PyXMDFDataExtractor(fpath, engine)
+        else:
+            raise ValueError('No suitable engine found for data extraction.')
 
         self.name = twodm.stem
         for dtype in self.data_types():
