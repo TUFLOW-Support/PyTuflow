@@ -1212,6 +1212,21 @@ class TestNCGrid(unittest.TestCase):
         dtypes = res.data_types('3d')
         self.assertEqual(0, len(dtypes))
 
+    def test_data_point(self):
+        p = './tests/nc_grid/small_model_001.nc'
+        pnt = './tests/nc_grid/time_series_point.shp'
+        res = NCGrid(p)
+        val = res.data_point(pnt, 'h', 1.5)
+        self.assertTrue(isinstance(val, float))
+
+    def test_data_point_2(self):
+        p = './tests/nc_grid/small_model_001.nc'
+        pnt = './tests/nc_grid/time_series_point.shp'
+        res = NCGrid(p)
+        val = res.data_point(pnt, ['h', 'd'], 1.5)
+        self.assertTrue(isinstance(val, pd.DataFrame))
+        self.assertEqual((1, 2), val.shape)
+
     def test_time_series(self):
         p = './tests/nc_grid/small_model_001.nc'
         pnt = './tests/nc_grid/time_series_point.shp'

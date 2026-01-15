@@ -20,6 +20,73 @@ class Grid(MapOutput):
     def _value(self, n: int, m: int, timeidx: int, dtype: str) -> float:
         pass
 
+    def data_point(self, locations: PointLocation, data_types: str | list[str],
+                   time: TimeLike) -> float | tuple[float, float] | pd.DataFrame:
+        """Extracts the data value for the given point locations and data types at the specified time.
+
+        The ``locations`` can be a single point in the form of a tuple ``(x, y)`` or in the Well Known Text (WKT)
+        format. It can also be a list of points, or a dictionary of points where the key will be used in the column name
+        in the resulting DataFrame.
+
+        The ``locations`` argument can also be a single GIS file path e.g. Shapefile or GPKG (but any format supported
+        by GDAL is also supported). GPKG's should follow the TUFLOW convention if specifying the layer name within
+        the database ``database.gpkg >> layer``. If the GIS layer has a field called ``name``, ``label``, or ``ID``
+        then this will be used as the column name in the resulting DataFrame.
+
+        The returned value will be a single float if a single location and data type is provided, or a tuple if the
+        data type is a vector result type. If multiple locations and/or data types are provided, a DataFrame will
+        be returned with the data types as columns and the point locations as the index.
+
+        Parameters
+        ----------
+        locations : Point | list[Point] | dict[str, Point] | PathLike
+            The location to extract the data for.
+        data_types : str | list[str]
+            The data types to extract the data for.
+        time : TimeLike
+            The time to extract the data for.
+
+        Returns
+        -------
+        float | tuple[float, float] | pd.DataFrame
+            The data value(s) for the given location(s) and data type(s).
+
+        Examples
+        --------
+        Get the water level data for a given point defined as ``(x, y)``:
+
+        >>> grid = ... # Assume grid is a loaded grid result instance
+        >>> grid.data_point((293250, 6178030), 'water level', 1.5)
+        42.723076
+
+        Get the maximum water level and depth for multiple points defined in a shapefile. Time is passed as ``-1`` since
+        it is a static dataset (it could be any time value since it won't affect the result):
+
+        >>> grid.data_point('/path/to/points.shp', ['max water level', 'max depth'], -1)
+              max water level  max depth
+        pnt1        40.501997   2.785571
+        pnt2        43.221862   3.450053
+        """
+        pnts = self._translate_point_location(locations)
+        data_types = self._figure_out_data_types(data_types, None)
+        rows = []
+        values1 = []
+        for name, pnt in pnts.items():
+            rows.append(name)
+            values2 = []
+            for dtype in data_types:
+                times = self.times(dtype, fmt='absolute') if isinstance(time, datetime) else self.times(dtype)
+                timeidx = self._closest_time_index(times, time)
+                dx, dy, ox, oy, ncol, nrow = self._grid_info(dtype)
+                n, m = self._get_xy_index(pnt, dx, dy, ox, oy, ncol, nrow)
+                val = self._value(n, m, timeidx, dtype)
+                if len(data_types) == 1 and len(pnts) == 1:
+                    return val
+                values2.append(val)
+            values1.append(values2)
+        df = pd.DataFrame(values1[::-1]).rename(columns=dict(enumerate(data_types)), index=dict(enumerate(rows[::-1])))
+        return df
+
     def time_series(self, locations: PointLocation, data_types: str | list[str] | None,
                     time_fmt: str = 'relative', **kwargs) -> pd.DataFrame:
         """Extracts time-series data for the given locations and data types.

@@ -247,6 +247,12 @@ class NCGrid(Grid):
         """
         return super().data_types(filter_by)
 
+    def data_point(self, locations: PointLocation, data_types: str | list[str],
+                   time: TimeLike) -> float | tuple[float, float] | pd.DataFrame:
+        self._load()
+        with self._open() as self._nc:
+            return super().data_point(locations, data_types, time)
+
     def time_series(self, locations: PointLocation, data_types: str | list[str] | None,
                     time_fmt: str = 'relative', **kwargs) -> pd.DataFrame:
         self._load()
