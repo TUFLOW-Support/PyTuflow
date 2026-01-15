@@ -7,6 +7,13 @@ except ImportError:
     Dataset = 'Dataset'
     has_nc = False
 
+try:
+    from osgeo import gdal
+    has_gdal = True
+except ImportError:
+    gdal = None
+    has_gdal = False
+
 from .helpers.mesh_driver_qgis_nc import QgisNcMeshDriver
 from .helpers.mesh_driver_nc_nc import NCMeshDriverNC
 from .mesh import Mesh
@@ -180,8 +187,17 @@ class NCMesh(Mesh):
                 with Dataset(fpath, 'r') as nc:
                     if 'Type' in nc.ncattrs() and nc.getncattr('Type') == 'Cell-centred TUFLOWFV output':
                         return True
+            elif has_gdal:
+                ds = gdal.Open(str(fpath))
+                attr = ds.GetMetadata()
+                type_ = attr.get('NC_GLOBAL#Type', '')
+                if type_ == 'Cell-centred TUFLOWFV output':
+                    return True
             else:
-                return True
+                with open(fpath, "rb") as f:
+                    head = f.read(8192).decode("latin1", errors="ignore")
+                if "Cell-centred TUFLOWFV output" in head:
+                    return True
         except Exception:
             return False
 
