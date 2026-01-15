@@ -20,7 +20,7 @@ class CellDataMixin:
         """Returns the data value from the mesh cell at the given point. No interpolation is performed."""
         cell_id = self.geom.find_containing_cell(point, scope='local')
         if cell_id == -1:
-            raise ValueError('Point falls outside mesh.')
+            return np.nan
 
         data_type = self.translate_data_type(data_type)
 

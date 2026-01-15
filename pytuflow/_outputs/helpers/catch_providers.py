@@ -13,6 +13,7 @@ from ..._pytuflow_types import TimeLike
 
 
 class CATCHProvider(Output):
+    PROVIDER_NAME = ''
 
     def __init__(self, *args, **kwargs):
         self.time_offset = 0  # seconds
@@ -119,6 +120,7 @@ class CATCHProvider(Output):
 
 
 class CATCHProviderXMDF(CATCHProvider, XMDF):
+    PROVIDER_NAME = 'XMDF'
 
     @staticmethod
     def from_catch_json_output(parent_dir: Path, data: dict, driver: str) -> 'CATCHProviderXMDF':
@@ -128,6 +130,7 @@ class CATCHProviderXMDF(CATCHProvider, XMDF):
 
 
 class CATCHProviderNCMesh(CATCHProvider, NCMesh):
+    PROVIDER_NAME = 'NCMesh'
 
     @staticmethod
     def from_catch_json_output(parent_dir: Path, data: dict, driver: str) -> 'CATCHProviderNCMesh':

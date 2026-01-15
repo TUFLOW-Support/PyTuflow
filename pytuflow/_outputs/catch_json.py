@@ -225,6 +225,123 @@ class CATCHJson(MapOutput):
         """
         return super().data_types(filter_by)
 
+    def data_point(self, locations: PointLocation, data_types: str | list[str] | None, time: TimeLike,
+                   averaging_method: str = None) -> float | tuple[float, float] | pd.DataFrame:
+        """Extracts the data value for the given point locations and data types at the specified time.
+
+        The ``locations`` can be a single point in the form of a tuple ``(x, y)`` or in the Well Known Text (WKT)
+        format. It can also be a list of points, or a dictionary of points where the key will be used in the column name
+        in the resulting DataFrame.
+
+        The ``locations`` argument can also be a single GIS file path e.g. Shapefile or GPKG (but any format supported
+        by GDAL is also supported). GPKG's should follow the TUFLOW convention if specifying the layer name within
+        the database ``database.gpkg >> layer``. If the GIS layer has a field called ``name``, ``label``, or ``ID``
+        then this will be used as the column name in the resulting DataFrame.
+
+        The returned value will be a single float if a single location and data type is provided, or a tuple if the
+        data type is a vector result type. If multiple locations and/or data types are provided, a DataFrame will
+        be returned with the data types as columns and the point locations as the index.
+
+        Parameters
+        ----------
+        locations : Point | list[Point] | dict[str, Point] | PathLike
+            The location to extract the data for.
+        data_types : str | list[str]
+            The data types to extract the data for.
+        time : TimeLike
+            The time to extract the data for.
+        averaging_method : str, optional
+            The depth-averaging method to use. Only applicable for 3D results.
+
+            The averaging methods are:
+
+            * ``singlelevel``
+            * ``multilevel``
+            * ``depth``
+            * ``height``
+            * ``elevation``
+            * ``sigma``
+
+            The averaging method parameters can be adjusted by building them into the method string in a URI style
+            format. The format is as follows:
+
+            ``<method>?dir=<dir>&<value1>&<value2>``
+
+            Where
+
+            * ``<method>`` is the averaging method name
+            * ``<dir>`` is the direction, ``top`` or ``bottom`` (i.e. from top or from bottom) - only used by certain
+              averaging methods
+            * ``<value1>``, ``<value2>``... are the values to be used in the averaging method (the number required to be
+              passed depends on the averaging method)
+
+            e.g. ``'singlelevel?dir=top&1'`` uses the single level averaging method and takes the first vertical layer
+            from the top. Or ``'sigma&0.1&0.9'`` uses the sigma averaging method and averages values located between
+            the 10th and 90th water column depth.
+
+        Returns
+        -------
+        float | tuple[float, float] | pd.DataFrame
+            The data value(s) for the given location(s) and data type(s).
+
+        Examples
+        --------
+        Get the water level data for a given point defined as ``(x, y)``:
+
+        >>> res = ... # Assume mesh is a loaded CATCHJson result
+        >>> res.data_point((293250, 6178030), 'water level', 1.5)
+        42.723076
+
+        Get velocity vector data for a given point defined as ``(x, y)``:
+
+        >>> res.data_point((293250, 6178030), 'vector velocity', 1.5)
+        (0.282843, 0.154213)
+
+        Get the maximum water level and depth for multiple points defined in a shapefile. Time is passed as ``-1`` since
+        it is a static dataset (it could be any time value since it won't affect the result):
+
+        >>> res.data_point('/path/to/points.shp', ['max water level', 'max depth'], -1)
+              max water level  max depth
+        pnt1        40.501997   2.785571
+        pnt2        43.221862   3.450053
+        """
+        df = pd.DataFrame()
+        pnts = self._translate_point_location(locations)
+        data_types = self._figure_out_data_types(data_types, None)
+        filter_by = '/'.join(data_types)
+        for provider in self._providers.values():
+            if provider == self._idx_provider:
+                continue
+            if provider != list(self._providers.values())[-1]:
+                intersection = np.intersect1d(data_types, provider.data_types(filter_by)) if data_types else True
+                intersection = bool(len(intersection))
+            else:
+                intersection = True
+            if intersection:
+                i, j = -1, -1
+                if 'velocity' in data_types and 'vector velocity' in provider.data_types():
+                    i = data_types.index('velocity')
+                    data_types[i] = 'vector velocity'
+                if 'max velocity' in data_types and 'max vector velocity' in provider.data_types():
+                    j = data_types.index('max velocity')
+                    data_types[j] = 'max vector velocity'
+                ret = provider.data_point(pnts, data_types, time, averaging_method)
+                if i > -1:
+                    data_types[i] = 'velocity'
+                    if isinstance(ret, pd.DataFrame):
+                        ret.rename(columns={'vector velocity': 'velocity'}, inplace=True)
+                if j > -1:
+                    data_types[j] = 'max velocity'
+                    if isinstance(ret, pd.DataFrame):
+                        ret.rename(columns={'max vector velocity': 'max velocity'}, inplace=True)
+                if len(pnts) == 1:
+                    return ret
+                if df.empty:
+                    df = ret
+                else:
+                    df[~ret.isna()] = ret[~ret.isna()]
+        return df if len(pnts) + len(data_types) > 1 else np.nan
+
     def time_series(self, locations: PointLocation, data_types: str | list[str] | None,
                     time_fmt: str = 'relative', averaging_method: str = None) -> pd.DataFrame:
         """Extracts time-series data for the given locations and data types.

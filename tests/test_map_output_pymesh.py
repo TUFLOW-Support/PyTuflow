@@ -138,6 +138,29 @@ class TestCATCHJson(unittest.TestCase):
         dtypes = res.data_types()
         self.assertEqual(10, len(dtypes))
 
+    def test_data_point(self):
+        p = './tests/catch_json/res.tuflow.json'
+        point = (1.5, 4.5)
+        res = CATCHJson(p)
+        df = res.data_point(point, 'water level', 0.)
+        self.assertTrue(isinstance(df, float))
+
+    def test_data_point_2(self):
+        p = './tests/catch_json/res.tuflow.json'
+        point = (1.5, 3.5)
+        res = CATCHJson(p)
+        df = res.data_point(point, 'vector velocity', 0.)
+        self.assertTrue(isinstance(df, tuple))
+
+    def test_data_point_3(self):
+        p = './tests/catch_json/res.tuflow.json'
+        points = [(1.5, 4.5), (1.5, 3.5)]
+        res = CATCHJson(p)
+        df = res.data_point(points, ['h', 'v'], 0.)
+        self.assertTrue(isinstance(df, pd.DataFrame))
+        self.assertEqual((2, 2), df.shape)
+        self.assertEqual(0, np.flatnonzero(df.isna()).size)
+
     def test_time_series(self):
         p = './tests/catch_json/res.tuflow.json'
         point = (1.5, 4.5)

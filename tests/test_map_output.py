@@ -747,6 +747,58 @@ class TestCATCHJson(unittest.TestCase):
             dtypes = res.data_types()
             self.assertEqual(10, len(dtypes))
 
+    def test_data_point_netcdf4_driver(self):
+        p = './tests/catch_json/res.tuflow.json'
+        with pyqgis():
+            point = (1.5, 4.5)
+            res = CATCHJson(p, driver='qgis geometry netcdf4')
+            df = res.data_point(point, 'water level', 0.)
+            self.assertTrue(isinstance(df, float))
+
+    def test_data_point_qgis_driver(self):
+        p = './tests/catch_json/res.tuflow.json'
+        with pyqgis():
+            point = (1.5, 4.5)
+            res = CATCHJson(p, driver='qgis geometry engine')
+            df = res.data_point(point, 'water level', 0.)
+            self.assertTrue(isinstance(df, float))
+
+    def test_data_point_2_netcdf4_driver(self):
+        p = './tests/catch_json/res.tuflow.json'
+        with pyqgis():
+            point = (1.5, 3.5)
+            res = CATCHJson(p, driver='qgis geometry netcdf4')
+            df = res.data_point(point, 'vector velocity', 0.)
+            self.assertTrue(isinstance(df, tuple))
+
+    def test_data_point_2_qgis_driver(self):
+        p = './tests/catch_json/res.tuflow.json'
+        with pyqgis():
+            point = (1.5, 3.5)
+            res = CATCHJson(p, driver='qgis geometry engine')
+            df = res.data_point(point, 'vector velocity', 0.)
+            self.assertTrue(isinstance(df, tuple))
+
+    def test_data_point_3_netcdf4_driver(self):
+        p = './tests/catch_json/res.tuflow.json'
+        points = [(1.5, 4.5), (1.5, 3.5)]
+        with pyqgis():
+            res = CATCHJson(p, driver='qgis geometry netcdf4')
+            df = res.data_point(points, ['h', 'v'], 0.)
+            self.assertTrue(isinstance(df, pd.DataFrame))
+            self.assertEqual((2, 2), df.shape)
+            self.assertEqual(0, np.flatnonzero(df.isna()).size)
+
+    def test_data_point_3_qgis_driver(self):
+        p = './tests/catch_json/res.tuflow.json'
+        points = [(1.5, 4.5), (1.5, 3.5)]
+        with pyqgis():
+            res = CATCHJson(p, driver='qgis geometry engine')
+            df = res.data_point(points, ['h', 'v'], 0.)
+            self.assertTrue(isinstance(df, pd.DataFrame))
+            self.assertEqual((2, 2), df.shape)
+            self.assertEqual(0, np.flatnonzero(df.isna()).size)
+
     def test_time_series_netcdf4_driver(self):
         p = './tests/catch_json/res.tuflow.json'
         point = (1.5, 4.5)
