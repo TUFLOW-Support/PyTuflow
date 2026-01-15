@@ -165,8 +165,21 @@ class NCGrid(Grid):
         """no-doc
         Returns True if the netCDF file is a TUFLOW output file.
         """
-        with Dataset(fpath, 'r') as nc:
-            return 'source' in nc.ncattrs() and nc.getncattr('source').startswith('TUFLOW Build:')
+        if has_nc:
+            with Dataset(fpath, 'r') as nc:
+                return 'source' in nc.ncattrs() and nc.getncattr('source').startswith('TUFLOW Build:')
+        elif has_gdal:
+            ds = gdal.Open(str(fpath))
+            attr = ds.GetMetadata()
+            source = attr.get('NC_GLOBAL#source', '')
+            ds = None
+            return source.startswith('TUFLOW Build:')
+        else:
+            with open(fpath, "rb") as f:
+                head = f.read(8192).decode("latin1", errors="ignore")
+            if "TUFLOW Build:" in head:
+                return True
+        return False
 
     def times(self, filter_by: str = None, fmt: str = 'relative') -> list[TimeLike]:
         """Returns a list of times for the given filter.
