@@ -193,6 +193,7 @@ class NCMesh(Mesh):
                 type_ = attr.get('NC_GLOBAL#Type', '')
                 if type_ == 'Cell-centred TUFLOWFV output':
                     return True
+                ds = None
             else:
                 with open(fpath, "rb") as f:
                     head = f.read(8192).decode("latin1", errors="ignore")

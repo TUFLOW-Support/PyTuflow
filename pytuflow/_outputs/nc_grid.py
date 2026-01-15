@@ -19,6 +19,13 @@ except ImportError:
     Dataset = 'Dataset'
     has_nc = False
 
+try:
+    from osgeo import gdal
+    has_gdal = True
+except ImportError:
+    gdal = None
+    has_gdal = False
+
 
 class NCGrid(Grid):
     """Class for reading netCDF grid outputs (NC) from TUFLOW, though any CF-compliant netCDF file should work.
@@ -113,14 +120,30 @@ class NCGrid(Grid):
         if not self._looks_like_this(self.fpath):
             raise ResultTypeError(f'{self.fpath} does not look like a netCDF grid file or could be empty or locked by another program.')
 
+        if not has_nc:
+            raise ImportError('NetCDF4 library is required to read NCGrid files.')
+
         self._initial_load()
 
     @staticmethod
     def _looks_like_this(fpath: PathLike) -> bool:
         # noinspection PyBroadException
         try:
-            for _ in NCGrid._nc_grid_layers(fpath):
-                return True
+            if has_nc:
+                for _ in NCGrid._nc_grid_layers(fpath):
+                    return True
+            elif has_gdal:
+                ds = gdal.Open(str(fpath))
+                for subset in ds.GetSubDatasets():
+                    subds = gdal.Open(subset[0])
+                    if subds.RasterCount == 0:
+                        continue
+                    # validity check here
+                    metadata = subds.GetMetadata()
+                    if 'crs#grid_mapping_name' in metadata:
+                        return True
+                    subds = None
+                ds = None
         except Exception:
             pass
         return False
