@@ -6,7 +6,7 @@ import numpy as np
 try:
     from netCDF4 import Dataset, Group
 except ImportError:
-    Dataset = 'Dataset'
+    from ..stubs.netCDF4 import Dataset, Group
 
 from . import DatasetEngine
 

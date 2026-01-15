@@ -6,7 +6,7 @@ import numpy as np
 try:
     import h5py
 except ImportError:
-    h5py = 'h5py'
+    from ..stubs import h5py
 
 from . import DatasetEngine
 
