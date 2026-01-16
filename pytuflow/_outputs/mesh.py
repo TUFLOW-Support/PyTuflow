@@ -1,3 +1,5 @@
+import typing
+from datetime import datetime
 from pathlib import Path
 from typing import Union
 
@@ -9,6 +11,7 @@ from .helpers.mesh_driver_nc import NCMeshDriver
 from .map_output import MapOutput, PointLocation, LineStringLocation
 from .._pytuflow_types import PathLike, TimeLike
 from ..util import pytuflow_logging
+from .pymesh import Bbox2D
 
 
 logger = pytuflow_logging.get_logger()
@@ -656,6 +659,55 @@ class Mesh(MapOutput):
             df = pd.concat([df, df1], axis=1) if not df.empty else df1
 
         return df
+
+    def to_gltf(self,
+                output_path: Path | str,
+                time: TimeLike,
+                data_types: typing.Iterable[str] = ('Depth', 'Vector Velocity-x', 'Vector Velocity-y'),
+                uv_projection_extent: typing.Iterable[float] | Bbox2D = (),
+                ):
+        """Exports the mesh to a glTF 2.0 file for visualisation in compatible software.
+        Both ``.gltf`` and ``.glb`` formats are supported.
+
+        Parameters
+        ----------
+        output_path : Path | str
+            The output file path for the glTF file.
+        time : float
+            The time to export the data for.
+        data_types : Array[str], optional
+            The provided data types will be exported into the mesh vertex colour (i.e. the RGB channels). The
+            data types will be re-mapped to the 0-1 range for the colour channels by using the maximum value as
+            returned by the ``maximum()`` method. The default data types are ``Depth``, ``Vector Velocity-x``,
+            and ``Vector Velocity-y`` (i.e. depth will be packed into the red channel, velocity x into green,
+            and velocity y into blue).
+        uv_projection_extent : Array[float], optional
+            The extent to use for UV projection of textures onto the mesh. The format is
+            ``(min_x, min_y, max_x, max_y)``. If not provided, the mesh bounding box will be used except for
+             TUFLOW HPC/Classic XMDF results which will use the model domain extent as defined in the ``.2dm``.
+             For HPC/Classic models, this matches the output grid setting ``Grid Output Origin == MODEL ORIGIN``.
+        """
+        if not hasattr(self._driver, 'to_gltf'):
+            raise NotImplementedError('The current driver does not support exporting to glTF format.')
+        self._load()
+
+        data_types = self._figure_out_data_types(list(data_types), None)
+        dtype = self.data_types('temporal')
+        if not dtype:
+            static = self.data_types('static')
+            for dt in data_types:
+                if not dt in static:
+                    raise ValueError(f'Time index could not be found for data type {dt}')
+            time_index = -1  # result types are all static
+        else:
+            time_index = self._driver._find_time_index(dtype[0], time)
+
+        self._driver.to_gltf(
+            output_path,
+            time_index=time_index,
+            data_types=data_types,
+            uv_projection_extent=uv_projection_extent
+        )
 
     def _initial_load(self):
         # attempt doing a "soft" load initially, loading the whole 2dm is expensive and not relevant to info in

@@ -85,38 +85,37 @@ class Mesh3DMixin:
                 typ = 'vecy'
             else:
                 typ = 'scalar'
+            data_type_ = self.translate_data_type(data_type_name)[0]
             lower = [x.lower() for x in self.data_types()]
-            return self.data_types()[lower.index(data_type_name.lower())], typ
+            return self.data_types()[lower.index(data_type_.lower())], typ
 
         def pack_data(data_type_name: str, typ: str, time_index: int) -> np.ndarray:
             if data_type_name not in results:
-                data = self.extractor.data(data_type_name, (time_index, slice(None)))
+                if data_type_name == 'Bed Elevation':
+                    data = self.geom.vertices[:, 2]
+                else:
+                    data = self.extractor.data(data_type_name, (time_index, slice(None)))
                 data_max = self.maximum(data_type_name)
-                results[data_type_name] = (data, data_max)
+                data_min = self.minimum(data_type_name)
+                results[data_type_name] = (data, data_max, data_min)
             else:
-                data, data_max = results[data_type_name]
+                data, data_max, data_min = results[data_type_name]
             if typ == 'scalar':
-                return (data / data_max).astype('f4') if data_max > 0 else data.astype('f4')
+                return ((data - data_min) / (data_max - data_min)).astype('f4') if data_max > 0 else data.astype('f4')
             idx = 0 if typ == 'vecx' else 1
-            return ((data[..., idx] / data_max).astype('f4') + 1) / 2 if data_max > 0 else data[..., idx].astype('f4')
-
-        if data_types and data_types[0].lower() == 'bed elevation':  # return only the 2dm height in the red channel
-            a = np.zeros((self.geom.vertices.shape[0], 3), dtype='f4')
-            zmin, zmax = self.geom.vertices[...,2].min(), self.geom.vertices[...,2].max()
-            z = (self.geom.vertices[...,2] - zmin) / (zmax - zmin) if (zmax - zmin) > 0 else self.geom.vertices[...,2]
-            a[:, 0] = z.astype('f4')
-            return a.flatten()
+            return (((data[..., idx] - data_min) / (data_max - data_min)).astype('f4') + 1) / 2 if data_max > 0 else data[..., idx].astype('f4')
 
         time_index = self._find_time_index(data_types[0], time) if time_index == -1 else time_index
 
-        red_type, typ = get_data_type(data_types[0])
-        red = pack_data(red_type, typ, time_index)
-        blue_type, typ = get_data_type(data_types[1])
-        blue = pack_data(blue_type, typ, time_index)
-        green_type, typ = get_data_type(data_types[2])
-        green = pack_data(green_type, typ, time_index)
+        colours = np.zeros((self.geom.vertices.shape[0], 3), dtype='f4')  # rgb
+        for i, dtype in enumerate(data_types):
+            if i > colours.shape[1] - 1:
+                raise ValueError('Only three data types can be used for vertex colors (R, G, B).')
+            dtype_name, dtype_dtype = get_data_type(dtype)
+            col = pack_data(dtype_name, dtype_dtype, time_index)
+            colours[:, i] = col
 
-        return np.column_stack((red.reshape(-1, 1), blue.reshape(-1, 1), green.reshape(-1, 1))).flatten()
+        return colours.flatten()
 
     def uvs(self: 'PyMesh',
             uv_projection_extent: 'typing.Iterable[float] | Bbox2D' = (),
