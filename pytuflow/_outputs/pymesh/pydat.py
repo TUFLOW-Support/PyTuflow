@@ -34,7 +34,7 @@ class PyDAT(PyMesh):
             self.extractor = QgisDataExtractor(twodm, fpaths, layer=self.geom.lyr)
             self.geom.lyr = self.extractor.lyr
         else:
-            self.extractor = PyDATDataExtractor(fpaths, self._map_wet_dry_to_verts)
+            self.extractor = PyDATDataExtractor(fpaths)
 
         self.name = twodm.stem
 

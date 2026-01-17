@@ -162,7 +162,7 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
         self.cache.set(ref_time, 'reference_time', data_type)
         return ref_time
 
-    def maximum(self, data_type: str) -> float:
+    def maximum(self, data_type: str, depth_averaging: str = None) -> float:
         """Returns the maximum value for the specified result type. The full path the result type must be specified,
         for example, "depth" will return the maximum for the temporal depth results. If searching for the absolute
         maximum (the maximum value in the maximum output surface) then "depth/maximums" must be used (if applicable).
@@ -183,8 +183,18 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
             mx = float(np.max(self.geom.vertices[:, 2]))
             self.cache.set('maximum', data_type, mx)
             return mx
-        mx = self.extractor.maximum(self.translate_data_type(data_type)[0])
-        self.cache.set('maximum', data_type, mx)
+
+        try:  # some formats store maximums/minimums in the metadata
+            data_type = self.translate_data_type(data_type)[0]
+            mx = self.extractor.maximum(self.translate_data_type(data_type)[0])
+        except NotImplementedError:  # need to extract full data to find maximum
+            if self.on_vertex(data_type):
+                data, mask = self.vertex_data(data_type, slice(None), self._map_wet_dry_to_verts)
+            else:
+                data, mask = self.cell_data(data_type, slice(None), depth_averaging)
+            mx = float(data[mask].max())
+
+        self.cache.set(mx, 'maximum', data_type)
         return mx
 
     def minimum(self, data_type: str) -> float:

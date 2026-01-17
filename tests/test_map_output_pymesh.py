@@ -95,6 +95,12 @@ class TestDAT(unittest.TestCase):
         df = res.section([(1.5, 1.2), (2.5, 1.2)], 'water level', 1.0)
         self.assertEqual((4, 2), df.shape)
 
+    def test_maximums(self):
+        p = './tests/dat/small_model_002_h.dat'
+        res = DAT(p)
+        mx = res.maximum('water level')
+        print()
+
 
 class TestNCMesh(unittest.TestCase):
 

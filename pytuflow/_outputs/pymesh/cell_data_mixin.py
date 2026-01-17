@@ -10,6 +10,9 @@ if typing.TYPE_CHECKING:
 
 class CellDataMixin:
 
+    def cell_data(self, data_type: str, time_index: int | slice, depth_averaging: str) -> tuple[np.ndarray, np.ndarray]:
+        pass
+
     def data_point_from_cell_data(
             self: 'PyMesh',
             point: np.ndarray,

@@ -122,6 +122,20 @@ class Mesh(MapOutput):
         """
         return super().data_types(filter_by)
 
+    def maximum(self, data_types: str | list[str]) -> float | pd.DataFrame:
+        data_types = self._figure_out_data_types(data_types, None)
+        df = pd.DataFrame()
+        if self._driver.DRIVER_SOURCE == 'python':
+            for dtype in data_types:
+                mx = self._driver.maximum(dtype)
+                if len(data_types) == 1:
+                    return mx
+                df_ = pd.DataFrame([mx], columns=['maximum'], index=[dtype])
+                df = pd.concat([df, df_], axis=0) if not df.empty else df_
+            return df
+        else:
+            raise NotImplementedError('v1.0 driver does not support maximum data extraction.')
+
     def data_point(self, locations: PointLocation, data_types: str | list[str] | None, time: TimeLike,
                    averaging_method: str = None) -> float | tuple[float, float] | pd.DataFrame:
         """Extracts the data value for the given point locations and data types at the specified time.
