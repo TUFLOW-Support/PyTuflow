@@ -52,7 +52,7 @@ class Mesh3DMixin:
             z = self.extractor.data(data_type, (time_index, slice(None))).astype('f4')
             wd = self.extractor.wd_flag(data_type, (time_index, slice(None)))
             wd = self._map_wet_dry_to_verts(wd)
-            z[~wd] = pos[~wd, 2]  # set dry cells to bed elevation
+            z[~wd] = pos[~wd, 2] - 0.01  # set dry cells to bed elevation minus small value
             pos[:, 2] = z.flatten()
 
         # move the origin to the centroid of the mesh bbox

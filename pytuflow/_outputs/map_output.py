@@ -132,6 +132,29 @@ class MapOutput(Output, ABC):
 
         return dtypes1
 
+    def _figure_out_data_types_game_mesh(self, data_types: str | list[str], filter_by: str | None) -> list[str]:
+        """Allow for '-x' and '-y' suffixes to indicate vector components."""
+        if isinstance(data_types, str):
+            data_types = [data_types]
+
+        data_types_ = []
+        suffixes = []
+        for dt in data_types:
+            if dt.endswith('-x'):
+                data_type_name = dt[:-2]
+                suffix = '-x'
+            elif dt.endswith('-y'):
+                data_type_name = dt[:-2]
+                suffix = '-y'
+            else:
+                data_type_name = dt
+                suffix = ''
+            data_types_.append(data_type_name)
+            suffixes.append(suffix)
+
+        data_types = self._figure_out_data_types(list(data_types), filter_by)
+        return [f'{dt}{sfx}' for dt, sfx in zip(data_types, suffixes)]
+
     def _translate_point_location(self, locations: PointLocation) -> dict[str, Point]:
         """Translate, as in to understand, not a spatial translation."""
         if not locations:

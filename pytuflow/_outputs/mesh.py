@@ -12,6 +12,7 @@ from .map_output import MapOutput, PointLocation, LineStringLocation
 from .._pytuflow_types import PathLike, TimeLike
 from ..util import pytuflow_logging
 from .pymesh import Bbox2D
+from .pymesh.mesh3d import FormatConvention
 
 
 logger = pytuflow_logging.get_logger()
@@ -691,14 +692,11 @@ class Mesh(MapOutput):
             raise NotImplementedError('The current driver does not support exporting to glTF format.')
         self._load()
 
-        data_types = self._figure_out_data_types(list(data_types), None)
+        data_types = self._figure_out_data_types_game_mesh(data_types, None)
+
         dtype = self.data_types('temporal')
         if not dtype:
-            static = self.data_types('static')
-            for dt in data_types:
-                if not dt in static:
-                    raise ValueError(f'Time index could not be found for data type {dt}')
-            time_index = -1  # result types are all static
+            time_index = -1  # assume static datasets
         else:
             time_index = self._driver._find_time_index(dtype[0], time)
 
@@ -707,6 +705,55 @@ class Mesh(MapOutput):
             time_index=time_index,
             data_types=data_types,
             uv_projection_extent=uv_projection_extent
+        )
+
+    def to_alembic(self,
+                   output_path: Path | str,
+                   time_sample_frequency: int = 1,
+                   data_types: typing.Iterable[str] = ('Depth', 'Vector Velocity-x', 'Vector Velocity-y'),
+                   uv_projection_extent: typing.Iterable[float] | Bbox2D = (),
+                   time_sampling: float = 1 / 24,
+                   format_convention: FormatConvention = FormatConvention.OpenGL
+                   ):
+        """Exports the mesh to an Alembic file for visualisation in compatible software.
+
+        Parameters
+        ----------
+        output_path : Path | str
+            The output file path for the Alembic file.
+        time_sample_frequency : int, optional
+            The frequency in which to sample the time steps in the mesh file. A value of 1 means every time step
+            will be exported, a value of 2 means every second time step will be exported, and so on. Default is 1.
+        data_types : Array[str], optional
+            The provided data types will be exported into the mesh vertex colour (i.e. the RGB channels). The
+            data types will be re-mapped to the 0-1 range for the colour channels by using the maximum value as
+            returned by the ``maximum()`` method. The default data types are ``Depth``, ``Vector Velocity-x``,
+            and ``Vector Velocity-y`` (i.e. depth will be packed into the red channel, velocity x into green,
+            and velocity y into blue).
+        uv_projection_extent : Array[float], optional
+            The extent to use for UV projection of textures onto the mesh. The format is
+            ``(min_x, min_y, max_x, max_y)``. If not provided, the mesh bounding box will be used except for
+             TUFLOW HPC/Classic XMDF results which will use the model domain extent as defined in the ``.2dm``.
+             For HPC/Classic models, this matches the output grid setting ``Grid Output Origin == MODEL ORIGIN``.
+        time_sampling : float, optional
+            The time sampling interval in seconds. Default is 1/24 (i.e. each output time step represents a separate
+            frame in a 24 fps sequence).
+        format_convention : FormatConvention, optional
+            The format convention to use for the Alembic file. Default is ``FormatConvention.Blender``.
+        """
+        if not hasattr(self._driver, 'to_alembic'):
+            raise NotImplementedError('The current driver does not support exporting to Alembic format.')
+        self._load()
+
+        data_types = self._figure_out_data_types_game_mesh(data_types, None)
+
+        self._driver.to_alembic(
+            output_path,
+            time_sample_frequency,
+            data_types,
+            uv_projection_extent,
+            time_sampling,
+            format_convention
         )
 
     def _initial_load(self):
