@@ -21,8 +21,32 @@ class CellDataMixin:
         is_static = self.is_static(data_types[0])
 
         index = slice(None) if is_static else (time_index, slice(None))
+
+        data = np.array([])
+        values = []
+        for dtype in data_types:
+            data = self.extractor.data(dtype, index)
+            if is_3d and depth_averaging is not None:
+                pass
+            if is_vector:
+                data = data.reshape(data.shape[0], -1, 1)
+            values.append(data)
+        if len(values) > 1:
+            if is_static:
+                data = np.column_stack(values).reshape((-1, 2) if is_vector else (-1, 1))
+            else:
+                data = np.concat(values, axis=2 if is_vector else 1)
+
         wd = self.extractor.wd_flag(data_types[0], index)
-        data = None
+        if is_3d:
+            wd3d_index = self.extractor.data('idx2', slice(None)) - 1
+            if is_static:
+                wd = wd[wd3d_index]
+            else:
+                wd3d = np.full((wd.shape[0], data.shape[1]), False, dtype=bool)
+                for t in range(wd.shape[0]):
+                    wd3d[t, :] = wd[t, wd3d_index]
+                wd = wd3d
 
         return data, wd
 

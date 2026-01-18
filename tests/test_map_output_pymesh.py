@@ -130,10 +130,22 @@ class TestNCMesh(unittest.TestCase):
         self.assertEqual((6, 2), df.shape)
 
     def test_maximum_water_level(self):
-        nc = './tests/nc_mesh/fv_res.nc'
+        nc = './tests/nc_mesh/EST000_3D_001.nc'
         res = NCMesh(nc)
         mx = res.maximum('h')
-        print()
+        self.assertTrue(np.isclose(mx, 0.185768127).all())
+
+    def test_maximum_salinity(self):
+        nc = './tests/nc_mesh/EST000_3D_001.nc'
+        res = NCMesh(nc)
+        mx = res.maximum('sal', averaging_method=None)
+        self.assertTrue(np.isclose(mx, 34.9937744).all())
+
+    def test_maximum_velocity(self):
+        nc = './tests/nc_mesh/EST000_3D_001.nc'
+        res = NCMesh(nc)
+        mx = res.maximum('V', averaging_method=None)
+        self.assertTrue(np.isclose(mx, 0.42056167).all())
 
 
 class TestCATCHJson(unittest.TestCase):

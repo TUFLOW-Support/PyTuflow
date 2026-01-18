@@ -122,12 +122,12 @@ class Mesh(MapOutput):
         """
         return super().data_types(filter_by)
 
-    def maximum(self, data_types: str | list[str]) -> float | pd.DataFrame:
+    def maximum(self, data_types: str | list[str], averaging_method: str = None) -> float | pd.DataFrame:
         data_types = self._figure_out_data_types(data_types, None)
         df = pd.DataFrame()
         if self._driver.DRIVER_SOURCE == 'python':
             for dtype in data_types:
-                mx = self._driver.maximum(dtype)
+                mx = self._driver.maximum(dtype, averaging_method)
                 if len(data_types) == 1:
                     return mx
                 df_ = pd.DataFrame([mx], columns=['maximum'], index=[dtype])
