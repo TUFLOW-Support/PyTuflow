@@ -17,7 +17,8 @@ class VertexDataMixin:
                     ) -> tuple[np.ndarray, np.ndarray]:
         """Returns data values and active mask for all vertices in the mesh for a given time slice."""
         data_type = self.translate_data_type(data_type)[0]
-        if self.is_static(data_type):
+        is_static = self.is_static(data_type)
+        if is_static:
             index = slice(None)
         else:
             index = (time_index, slice(None))
@@ -26,7 +27,7 @@ class VertexDataMixin:
         if wd.ndim == 1:
             wd_vert = cell_to_vertex_mapper(wd)
         else:
-            wd_vert = np.empty(data.shape, dtype=bool)
+            wd_vert = np.empty(data.shape[:2], dtype=bool)
             for t in range(wd.shape[0]):
                 wd_vert[t] = cell_to_vertex_mapper(wd[t])
         return data, wd_vert

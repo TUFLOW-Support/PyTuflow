@@ -10,8 +10,21 @@ if typing.TYPE_CHECKING:
 
 class CellDataMixin:
 
-    def cell_data(self, data_type: str, time_index: int | slice, depth_averaging: str) -> tuple[np.ndarray, np.ndarray]:
-        pass
+    def cell_data(self: 'PyMesh',
+                  data_type: str,
+                  time_index: int | slice,
+                  depth_averaging: str,
+                  ) -> tuple[np.ndarray, np.ndarray]:
+        data_types = self.translate_data_type(data_type)
+        is_3d = self.is_3d(data_types[0])
+        is_vector = self.is_vector(data_types[0])
+        is_static = self.is_static(data_types[0])
+
+        index = slice(None) if is_static else (time_index, slice(None))
+        wd = self.extractor.wd_flag(data_types[0], index)
+        data = None
+
+        return data, wd
 
     def data_point_from_cell_data(
             self: 'PyMesh',

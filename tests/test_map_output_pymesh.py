@@ -95,11 +95,17 @@ class TestDAT(unittest.TestCase):
         df = res.section([(1.5, 1.2), (2.5, 1.2)], 'water level', 1.0)
         self.assertEqual((4, 2), df.shape)
 
-    def test_maximums(self):
-        p = './tests/dat/small_model_002_h.dat'
+    def test_maximum_level(self):
+        p = './tests/dat/EG00_001_h.dat'
         res = DAT(p)
         mx = res.maximum('water level')
-        print()
+        self.assertTrue(np.isclose(mx, 50.4242821).all())
+
+    def test_maximum_velocity_vector(self):
+        p = './tests/dat/EG00_001_V.dat'
+        res = DAT(p)
+        mx = res.maximum('velocity')
+        self.assertTrue(np.isclose(mx, 3.03523898).all())
 
 
 class TestNCMesh(unittest.TestCase):
@@ -122,6 +128,12 @@ class TestNCMesh(unittest.TestCase):
         line = [(1.4, 4.5), (3.6, 4.2)]
         df = res.section(line, 'v', 0, averaging_method='sigma&0.1&0.9')
         self.assertEqual((6, 2), df.shape)
+
+    def test_maximum_water_level(self):
+        nc = './tests/nc_mesh/fv_res.nc'
+        res = NCMesh(nc)
+        mx = res.maximum('h')
+        print()
 
 
 class TestCATCHJson(unittest.TestCase):

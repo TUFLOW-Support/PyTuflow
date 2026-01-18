@@ -40,6 +40,7 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
         self._cached_data_types = {}
         self._data_types = []
         self._standardised_data_types = []
+        self._cells_4_mapping = None
 
     def __repr__(self) -> str:
         return f'<{self.__class__.__name__} {self.name}>'
@@ -192,6 +193,8 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
                 data, mask = self.vertex_data(data_type, slice(None), self._map_wet_dry_to_verts)
             else:
                 data, mask = self.cell_data(data_type, slice(None), depth_averaging)
+            if self.is_vector(data_type):
+                data = np.linalg.norm(data, axis=1 if data.ndim == 2 else 2)
             mx = float(data[mask].max())
 
         self.cache.set(mx, 'maximum', data_type)
@@ -747,6 +750,18 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
         df['wd'] = False
         df.loc[ind, 'wd'] = True
         return df['wd'].to_numpy()
+
+    def map_cell_data_to_vertexes(self, cell_data: np.ndarray, mapping_func: str) -> np.ndarray:
+        if self._cells_4_mapping is None:
+            self._cells_4_mapping = self.geom.cells_df.copy()
+        cells = self._cells_4_mapping
+        cells['cell_data'] = cell_data
+        m = cells.melt(id_vars=['cell_data'], value_vars=['n1', 'n2', 'n3', 'n4'])
+        ind = m[m['value'] != -1][['cell_data', 'value']]
+        if mapping_func == 'max':
+            return ind.groupby(by='value').max().to_numpy().reshape((-1,))
+        elif mapping_func == 'mean':
+            return ind.groupby(by='value').mean().to_numpy().reshape((-1,))
 
     def _2d_to_3d_data_types(self, data_type: str) -> tuple[str, str]:
         """Return the bed elevation and water level data types for the given 2d data type so that the 3D profile
