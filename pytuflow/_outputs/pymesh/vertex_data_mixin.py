@@ -22,7 +22,7 @@ class VertexDataMixin:
             index = slice(None)
         else:
             index = (time_index, slice(None))
-        wd = self.extractor.wd_flag(data_type, index).astype(np.bool)
+        wd = self.extractor.wd_flag(data_type, index).astype(bool)
         data = self.extractor.data(data_type, index)
         if wd.ndim == 1:
             wd_vert = cell_to_vertex_mapper(wd)

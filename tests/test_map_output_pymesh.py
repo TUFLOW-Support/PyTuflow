@@ -147,6 +147,22 @@ class TestNCMesh(unittest.TestCase):
         mx = res.maximum('V', averaging_method=None)
         self.assertTrue(np.isclose(mx, 0.42056167).all())
 
+    def test_maximum_salinity_depth_averaged(self):
+        nc = './tests/nc_mesh/EST000_3D_001.nc'
+        res = NCMesh(nc)
+        mx = res.maximum('sal', averaging_method='sigma&0.0&1.0')
+        self.assertTrue(np.isclose(mx, 34.9360265569985).all())
+        mx = res.maximum('sal', averaging_method='singlelevel?dir=top&1')
+        self.assertTrue(np.isclose(mx, 34.6935348510742).all())
+
+    def test_maximum_velocity_depth_averaged(self):
+        nc = './tests/nc_mesh/EST000_3D_001.nc'
+        res = NCMesh(nc)
+        mx = res.maximum('V', averaging_method='sigma&0.0&1.0')
+        self.assertTrue(np.isclose(mx, 0.419554057591823).all())
+        mx = res.maximum('V', averaging_method='singlelevel?dir=bottom&1')
+        self.assertTrue(np.isclose(mx, 0.419554057591823).all())
+
 
 class TestCATCHJson(unittest.TestCase):
 

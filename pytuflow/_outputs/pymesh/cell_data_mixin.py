@@ -13,7 +13,7 @@ class CellDataMixin:
     def cell_data(self: 'PyMesh',
                   data_type: str,
                   time_index: int | slice,
-                  depth_averaging: str,
+                  depth_averaging_method: str,
                   ) -> tuple[np.ndarray, np.ndarray]:
         data_types = self.translate_data_type(data_type)
         is_3d = self.is_3d(data_types[0])
@@ -22,12 +22,38 @@ class CellDataMixin:
 
         index = slice(None) if is_static else (time_index, slice(None))
 
+        if is_3d and depth_averaging_method is not None:
+            nlevels = self.zlevel_count(slice(None))
+            max_nlevels = nlevels.max()
+            zlevels = self.zlevels(slice(None), nlevels, np.arange(nlevels.shape[0]), self.cell_index(slice(None), data_types[0]))
+            a_padded = np.full((nlevels.shape[0], max_nlevels), np.nan)
+            b_padded = np.full((nlevels.shape[0], max_nlevels + 1), np.nan)
+
         data = np.array([])
         values = []
         for dtype in data_types:
             data = self.extractor.data(dtype, index)
-            if is_3d and depth_averaging is not None:
-                pass
+            if is_3d and depth_averaging_method is not None:
+
+                def depth_average(data_: np.ndarray, zlevels_: np.ndarray) -> np.ndarray:
+                    a_padded[:] = np.nan
+                    b_padded[:] = np.nan
+                    k1, k2 = 0, 0
+                    for i, nlevel in enumerate(nlevels):
+                        a_padded[i, :nlevel] = data_[k1:k1 + nlevel]
+                        b_padded[i, :nlevel + 1] = zlevels_[k2:k2 + nlevel + 1]
+                        k1 += nlevel
+                        k2 += nlevel + 1
+                    return depth_averaging.get_method_func(depth_averaging_method)(b_padded, a_padded)
+
+                if is_static:
+                    data = depth_average(data, zlevels)
+                else:
+                    data_avg = np.full((data.shape[0], nlevels.shape[0]), np.nan)
+                    for t in range(data.shape[0]):
+                        data_avg[t, :] = depth_average(data[t, :], zlevels[t, :])
+                    data = data_avg
+
             if is_vector:
                 data = data.reshape(data.shape[0], -1, 1)
             values.append(data)
@@ -35,10 +61,10 @@ class CellDataMixin:
             if is_static:
                 data = np.column_stack(values).reshape((-1, 2) if is_vector else (-1, 1))
             else:
-                data = np.concat(values, axis=2 if is_vector else 1)
+                data = np.concatenate(values, axis=2 if is_vector else 1)
 
         wd = self.extractor.wd_flag(data_types[0], index)
-        if is_3d:
+        if is_3d and depth_averaging_method is None:
             wd3d_index = self.extractor.data('idx2', slice(None)) - 1
             if is_static:
                 wd = wd[wd3d_index]

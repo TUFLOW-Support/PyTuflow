@@ -178,8 +178,11 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
         float
             The maximum value for the specified result type.
         """
-        if self.cache.contains('maximum', data_type):
-            return self.cache.get[('maximum', data_type)]
+        if not self.is_3d(data_type):
+            depth_averaging = None
+
+        if self.cache.contains('maximum', data_type, depth_averaging):
+            return self.cache.get('maximum', data_type, depth_averaging)
         if data_type.lower() in ['bed elevation', 'bed level']:
             mx = float(np.max(self.geom.vertices[:, 2]))
             self.cache.set('maximum', data_type, mx)
@@ -196,7 +199,7 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
                 data = np.linalg.norm(data, axis=1 if data.ndim == 2 else 2)
             mx = float(data[mask].max())
 
-        self.cache.set(mx, 'maximum', data_type)
+        self.cache.set(mx, 'maximum', data_type, depth_averaging)
         return mx
 
     def minimum(self, data_type: str) -> float:
@@ -320,7 +323,7 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
         """
         return self.extractor.cell_index(cell_id, self.translate_data_type(data_type)[0])
 
-    def zlevel_count(self, cell_idx2: int | np.ndarray | list[int]) -> int | np.ndarray | list[int]:
+    def zlevel_count(self, cell_idx2: int | np.ndarray | list[int] | slice) -> int | np.ndarray | list[int]:
         """Returns the number of vertical levels for the given 2D cell index.
 
         Parameters

@@ -127,6 +127,64 @@ class Mesh(MapOutput):
         return super().data_types(filter_by)
 
     def maximum(self, data_types: str | list[str], averaging_method: str = None) -> float | pd.DataFrame:
+        """Returns the maximum values for the given data types.
+
+        Some formats store maximum values in the metadata (e.g. XMDF), if this is the case, the maximum values
+        will be returned directly from the metadata. If the format does not store maximum values, the maximum
+        values will be calculated from the data. In this case, the maximum and temporal datasets will be treated
+        as separate. For example, if ``"depth"`` is requested as a data type, it will be calculated
+        from the temporal depth data. If ``"max depth"`` is requested, it will be calculated from the maximum
+        depth data.
+
+        If multiple data types are requested, a DataFrame will be returned with the data types as the index
+        and the maximum values as the column. Vector results will return the magnitude of the vector.
+
+        Parameters
+        ----------
+        data_types : str | list[str]
+            The data types to return the maximum values for.
+        averaging_method : str, optional
+            The depth-averaging method to use. Only applicable for 3D results. If set to ``None`` (the default),
+            then the maximum will be calculated from all vertical levels. If a depth averaging method is used,
+            then the maximum will be calculated from the depth-averaged data.
+
+            The averaging methods are:
+
+            * ``None``
+            * ``singlelevel``
+            * ``multilevel``
+            * ``depth``
+            * ``height``
+            * ``elevation``
+            * ``sigma``
+
+            The averaging method parameters can be adjusted by building them into the method string in a URI style
+            format. The format is as follows:
+
+            ``<method>?dir=<dir>&<value1>&<value2>``
+
+            The averaging method parameters can be adjusted by building them into the method string in a URI style
+            format. The format is as follows:
+
+            ``<method>?dir=<dir>&<value1>&<value2>``
+
+            Where
+
+            * ``<method>`` is the averaging method name
+            * ``<dir>`` is the direction, ``top`` or ``bottom`` (i.e. from top or from bottom) - only used by certain
+              averaging methods
+            * ``<value1>``, ``<value2>``... are the values to be used in the averaging method (the number required to be
+              passed depends on the averaging method)
+
+            e.g. ``'singlelevel?dir=top&1'`` uses the single level averaging method and takes the first vertical layer
+            from the top. Or ``'sigma&0.1&0.9'`` uses the sigma averaging method and averages values located between
+            the 10th and 90th water column depth.
+
+        Returns
+        -------
+        float | pd.DataFrame
+            The maximum value(s) for the given data type(s).
+        """
         data_types = self._figure_out_data_types(data_types, None)
         df = pd.DataFrame()
         if self._driver.DRIVER_SOURCE == 'python':
@@ -139,6 +197,67 @@ class Mesh(MapOutput):
             return df
         else:
             raise NotImplementedError('v1.0 driver does not support maximum data extraction.')
+
+    def minimum(self, data_types: str | list[str], averaging_method: str = None) -> float | pd.DataFrame:
+        """Returns the minimum values for the given data types.
+
+        Some formats store minimum values in the metadata (e.g. XMDF), if this is the case, the minimum values
+        will be returned directly from the metadata. If the format does not store minimum values, the minimum
+        values will be calculated from the data. In this case, the minimum and temporal datasets will be treated
+        as separate. For example, if ``"depth"`` is requested as a data type, it will be calculated
+        from the temporal depth data. If ``"max depth"`` is requested, it will be calculated from the minimum
+        depth data.
+
+        If multiple data types are requested, a DataFrame will be returned with the data types as the index
+        and the minimum values as the column. Vector results will return the magnitude of the vector.
+
+        Parameters
+        ----------
+        data_types : str | list[str]
+            The data types to return the minimum values for.
+        averaging_method : str, optional
+            The depth-averaging method to use. Only applicable for 3D results. If set to ``None`` (the default),
+            then the minimum will be calculated from all vertical levels. If a depth averaging method is used,
+            then the minimum will be calculated from the depth-averaged data.
+
+            The averaging methods are:
+
+            * ``None``
+            * ``singlelevel``
+            * ``multilevel``
+            * ``depth``
+            * ``height``
+            * ``elevation``
+            * ``sigma``
+
+            The averaging method parameters can be adjusted by building them into the method string in a URI style
+            format. The format is as follows:
+
+            ``<method>?dir=<dir>&<value1>&<value2>``
+
+            The averaging method parameters can be adjusted by building them into the method string in a URI style
+            format. The format is as follows:
+
+            ``<method>?dir=<dir>&<value1>&<value2>``
+
+            Where
+
+            * ``<method>`` is the averaging method name
+            * ``<dir>`` is the direction, ``top`` or ``bottom`` (i.e. from top or from bottom) - only used by certain
+              averaging methods
+            * ``<value1>``, ``<value2>``... are the values to be used in the averaging method (the number required to be
+              passed depends on the averaging method)
+
+            e.g. ``'singlelevel?dir=top&1'`` uses the single level averaging method and takes the first vertical layer
+            from the top. Or ``'sigma&0.1&0.9'`` uses the sigma averaging method and averages values located between
+            the 10th and 90th water column depth.
+
+        Returns
+        -------
+        float | pd.DataFrame
+            The minimum value(s) for the given data type(s).
+        """
+        pass
 
     def data_point(self, locations: PointLocation, data_types: str | list[str] | None, time: TimeLike,
                    averaging_method: str = None) -> float | tuple[float, float] | pd.DataFrame:
@@ -681,14 +800,14 @@ class Mesh(MapOutput):
                 data_types: typing.Iterable[str] = ('Depth', 'Vector Velocity-x', 'Vector Velocity-y'),
                 uv_projection_extent: typing.Iterable[float] | Bbox2D = (),
                 ):
-        """
-        .. admoninition:: Experimental Feature
+        """Exports the mesh to a glTF 2.0 file for visualisation in compatible software.
+        Both ``.gltf`` and ``.glb`` formats are supported.
+
+        .. admonition:: Experimental Feature
             :class: warning
 
-            gLTF export is an experimental feature. It requires the ``pygltf`` library to be installed.
-
-        Exports the mesh to a glTF 2.0 file for visualisation in compatible software.
-        Both ``.gltf`` and ``.glb`` formats are supported.
+            gLTF export is an experimental feature and may not work for all formats and drivers.
+            It requires the ``pygltf`` library to be installed.
 
         Parameters
         ----------
@@ -705,8 +824,8 @@ class Mesh(MapOutput):
         uv_projection_extent : Array[float], optional
             The extent to use for UV projection of textures onto the mesh. The format is
             ``(min_x, min_y, max_x, max_y)``. If not provided, the mesh bounding box will be used except for
-             TUFLOW HPC/Classic XMDF results which will use the model domain extent as defined in the ``.2dm``.
-             For HPC/Classic models, this matches the output grid setting ``Grid Output Origin == MODEL ORIGIN``.
+            TUFLOW HPC/Classic XMDF results which will use the model domain extent as defined in the ``.2dm``.
+            For HPC/Classic models, this matches the output grid setting ``Grid Output Origin == MODEL ORIGIN``.
         """
         if not hasattr(self._driver, 'to_gltf'):
             raise NotImplementedError('The current driver does not support exporting to glTF format.')
@@ -735,13 +854,13 @@ class Mesh(MapOutput):
                    time_sampling: float = 1 / 24,
                    format_convention: FormatConvention = FormatConvention.OpenGL
                    ):
-        """
-        .. admoninition:: Experimental Feature
+        """Exports the mesh to an Alembic file for visualisation in compatible software.
+
+        .. admonition:: Experimental Feature
             :class: warning
 
-            Alembic export is an experimental feature. It requires the ``pyalembic`` library to be installed.
-
-        Exports the mesh to an Alembic file for visualisation in compatible software.
+            Alembic export is an experimental feature and may not work for all formats and drivers.
+            It requires the ``pyalembic`` library to be installed.
 
         Parameters
         ----------
@@ -759,8 +878,8 @@ class Mesh(MapOutput):
         uv_projection_extent : Array[float], optional
             The extent to use for UV projection of textures onto the mesh. The format is
             ``(min_x, min_y, max_x, max_y)``. If not provided, the mesh bounding box will be used except for
-             TUFLOW HPC/Classic XMDF results which will use the model domain extent as defined in the ``.2dm``.
-             For HPC/Classic models, this matches the output grid setting ``Grid Output Origin == MODEL ORIGIN``.
+            TUFLOW HPC/Classic XMDF results which will use the model domain extent as defined in the ``.2dm``.
+            For HPC/Classic models, this matches the output grid setting ``Grid Output Origin == MODEL ORIGIN``.
         time_sampling : float, optional
             The time sampling interval in seconds. Default is 1/24 (i.e. each output time step represents a separate
             frame in a 24 fps sequence).

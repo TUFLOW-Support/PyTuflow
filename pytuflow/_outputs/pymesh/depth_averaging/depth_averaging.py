@@ -50,7 +50,9 @@ def multi_level(levels: list[int] | np.ndarray, zlevels: np.ndarray, values: np.
     numerator = (weights * np.nan_to_num(values, nan=0.)).sum(axis=1)
     denominator = weights.sum(axis=1)
 
-    result = numerator / denominator
+    ok = (denominator > 0)
+    result = np.full(numerator.shape, np.nan)
+    result[ok] = numerator[ok] / denominator[ok]
 
     return result
 
@@ -132,7 +134,9 @@ def depth(dist: np.ndarray | list[float], zlevels: np.ndarray, values: np.ndarra
     numerator = (weights * np.nan_to_num(values, nan=0.)).sum(axis=1)
     denominator = weights.sum(axis=1)
 
-    result = numerator / denominator
+    ok = (denominator > 0)
+    result = np.full(numerator.shape, np.nan)
+    result[ok] = numerator[ok] / denominator[ok]
 
     # apply invalid values
     result[invalid] = np.nan

@@ -133,4 +133,4 @@ class PyNCMeshDataExtractor(PyDataExtractor):
         else:
             idx = [i + j for i, nlevel in np.column_stack((idx, nlevels)) for j in range(nlevel + 1)]
             a = self.data('layerface_Z', (time_index, idx))
-        return a[~np.isnan(a)].reshape((-1, nlevels + 1) if a.ndim > 1 else (-1,))
+        return a
