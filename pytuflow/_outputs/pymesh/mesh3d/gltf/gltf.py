@@ -36,7 +36,7 @@ class GLTF:
             scenes=[pygltflib.Scene(nodes=[i for i in range(mesh_count)])],
             nodes=[pygltflib.Node(mesh=i) for i in range(mesh_count)],
             meshes=[
-                pygltflib.PyMesh(
+                pygltflib.Mesh(
                     primitives=[
                         pygltflib.Primitive(
                             attributes=pygltflib.Attributes(POSITION=1, COLOR_0=2, TEXCOORD_0=3), indices=0
