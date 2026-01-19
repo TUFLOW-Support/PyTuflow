@@ -667,7 +667,11 @@ class Mesh(MapOutput):
                 data_types: typing.Iterable[str] = ('Depth', 'Vector Velocity-x', 'Vector Velocity-y'),
                 uv_projection_extent: typing.Iterable[float] | Bbox2D = (),
                 ):
-        """Exports the mesh to a glTF 2.0 file for visualisation in compatible software.
+        """
+        .. admoninition:: Experimental Feature
+            :class: warning
+
+        Exports the mesh to a glTF 2.0 file for visualisation in compatible software.
         Both ``.gltf`` and ``.glb`` formats are supported.
 
         Parameters
@@ -715,7 +719,11 @@ class Mesh(MapOutput):
                    time_sampling: float = 1 / 24,
                    format_convention: FormatConvention = FormatConvention.OpenGL
                    ):
-        """Exports the mesh to an Alembic file for visualisation in compatible software.
+        """
+        .. admoninition:: Experimental Feature
+            :class: warning
+
+        Exports the mesh to an Alembic file for visualisation in compatible software.
 
         Parameters
         ----------
