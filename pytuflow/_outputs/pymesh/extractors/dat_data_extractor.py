@@ -434,10 +434,16 @@ class PyDATDataExtractor(PyDataExtractor):
     def strip_data_type(data_type: str) -> tuple[str, bool, bool]:
         is_max, is_min = False, False
         ret = data_type
-        if data_type.lower().endswith('/maximums'):
+        if data_type.lower().endswith('/maximums') or data_type.startswith('max '):
             is_max = True
-            ret = data_type[:-9].strip()
-        elif data_type.lower().endswith('/minimums'):
+            if data_type.lower().endswith('/maximums'):
+                ret = data_type[:-9].strip()
+            else:
+                ret = data_type[4:].strip()
+        elif data_type.lower().endswith('/minimums') or data_type.startswith('min '):
             is_min = True
-            ret = data_type[:-9].strip()
+            if data_type.lower().endswith('/minimums'):
+                ret = data_type[:-9].strip()
+            else:
+                ret = data_type[4:].strip()
         return ret, is_max, is_min

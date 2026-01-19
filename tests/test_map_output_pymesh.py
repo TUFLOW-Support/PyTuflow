@@ -107,6 +107,18 @@ class TestDAT(unittest.TestCase):
         mx = res.maximum('velocity')
         self.assertTrue(np.isclose(mx, 3.03523898).all())
 
+    def test_maximum_max_level(self):
+        p = './tests/dat/EG00_001_h.dat'
+        res = DAT(p)
+        mx = res.maximum('max water level')
+        self.assertTrue(np.isclose(mx, 50.42952346801758).all())
+
+    def test_maximum_bed_level(self):
+        p = './tests/dat/EG00_001_h.dat'
+        res = DAT(p)
+        mx = res.maximum('bed level')
+        self.assertTrue(np.isclose(mx, 100.).all())
+
 
 class TestNCMesh(unittest.TestCase):
 
