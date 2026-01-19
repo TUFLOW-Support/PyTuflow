@@ -189,7 +189,7 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
             return mx
 
         try:  # some formats store maximums/minimums in the metadata
-            mx = self.extractor.maximum(self.translate_data_type(data_type)[0])
+            mx = self.extractor.maximum(self.translate_data_type(data_type)[0], depth_averaging)
         except NotImplementedError:  # need to extract full data to find maximum
             if self.on_vertex(data_type):
                 data, mask = self.vertex_data(data_type, slice(None), self._map_wet_dry_to_verts)

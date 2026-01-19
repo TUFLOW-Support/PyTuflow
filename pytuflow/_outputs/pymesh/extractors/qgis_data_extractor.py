@@ -119,6 +119,10 @@ class QgisDataExtractor(PyDataExtractor):
             cell_idx2 = [cell_idx2]
         elif isinstance(cell_idx2, np.ndarray):
             cell_idx2 = cell_idx2.tolist()
+        elif isinstance(cell_idx2, slice):
+            start = cell_idx2.start or 0
+            stop = cell_idx2.stop or self.lyr.dataProvider().faceCount()
+            cell_idx2 = list(range(start, stop))
         result = []
         cell_idx2 = np.array(cell_idx2) if isinstance(cell_idx2, list) else cell_idx2
         for cid, count, idx in self.chunk_indexes(cell_idx2):
@@ -157,16 +161,16 @@ class QgisDataExtractor(PyDataExtractor):
                 result.append(vals)
         return np.hstack(result).reshape(shape)
 
-    def maximum(self, data_type: str) -> float:
-        if self._is_dat:  # not guaranteed to consider inactive cells, let it be calculated
+    def maximum(self, data_type: str, depth_averaging: str = None) -> float:
+        if self._is_dat or depth_averaging is not None:  # not guaranteed to consider inactive cells or depth averaging, let it be calculated
             raise NotImplementedError
         idx = self.find_group_index(data_type)
         if idx == -1:
             raise ValueError(f'Data type {data_type} not found in mesh output {self.mesh.stem}')
         return self.lyr.datasetGroupMetadata(QgsMeshDatasetIndex(idx)).maximum()
 
-    def minimum(self, data_type: str) -> float:
-        if self._is_dat:  # not guaranteed to consider inactive cells, let it be calculated
+    def minimum(self, data_type: str, depth_averaging: str = None) -> float:
+        if self._is_dat:  # not guaranteed to consider inactive cells or depth averaging, let it be calculated
             raise NotImplementedError
         idx = self.find_group_index(data_type)
         if idx == -1:
@@ -184,7 +188,12 @@ class QgisDataExtractor(PyDataExtractor):
         if grp_idx == -1:
             raise ValueError(f'Data type not found: {data_type}')
         time_idx = self.expand_index(time_index, max_=self.lyr.dataProvider().datasetCount(QgsMeshDatasetIndex(grp_idx)))
-        elem_idx = self.expand_index(elem_index, max_=self.lyr.dataProvider().vertexCount())
+        idx = QgsMeshDatasetIndex(grp_idx)
+        on_vertex = self.lyr.datasetGroupMetadata(idx).dataType() == QgsMeshDatasetGroupMetadata.DataOnVertices
+        if on_vertex:
+            elem_idx = self.expand_index(elem_index, max_=self.lyr.dataProvider().vertexCount())
+        else:
+            elem_idx = self.expand_index(elem_index, max_=self.lyr.dataProvider().faceCount())
         n, m = len(time_idx), len(elem_idx)
         vector = self.is_vector(data_type)
         if isinstance(time_index, int):
@@ -244,7 +253,7 @@ class QgisDataExtractor(PyDataExtractor):
                     self.lyr.dataProvider().areFacesActive(QgsMeshDatasetIndex(grp_idx, tidx), face_id, count).active()
                 )
                 wd.append(extracted[idx].flatten())
-        return np.hstack(wd).reshape(shape)
+        return np.hstack(wd).reshape(shape).astype(bool)
 
     def find_group_index(self, data_type: str, source: str = 'layer') -> int:
         from ...map_output import MapOutput

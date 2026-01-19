@@ -118,7 +118,7 @@ class PyDataExtractor:
         """
         return False
 
-    def maximum(self, data_type: str) -> float:
+    def maximum(self, data_type: str, depth_averaging: str = None) -> float:
         """Returns the maximum value for the given data type.
 
         Parameters
@@ -133,7 +133,7 @@ class PyDataExtractor:
         """
         raise NotImplementedError
 
-    def minimum(self, data_type: str) -> float:
+    def minimum(self, data_type: str, depth_averaging: str = None) -> float:
         """Returns the minimum value for the given data type.
 
         Parameters

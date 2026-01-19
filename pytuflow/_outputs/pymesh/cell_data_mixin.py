@@ -32,31 +32,33 @@ class CellDataMixin:
         data = np.array([])
         values = []
         for dtype in data_types:
-            data = self.extractor.data(dtype, index)
-            if is_3d and depth_averaging_method is not None:
+            a = self.extractor.data(dtype, index)
+            extracted = [a[..., 0], a[..., 1]] if a.ndim == 3 else [a]
+            for data in extracted:
+                if is_3d and depth_averaging_method is not None:
 
-                def depth_average(data_: np.ndarray, zlevels_: np.ndarray) -> np.ndarray:
-                    a_padded[:] = np.nan
-                    b_padded[:] = np.nan
-                    k1, k2 = 0, 0
-                    for i, nlevel in enumerate(nlevels):
-                        a_padded[i, :nlevel] = data_[k1:k1 + nlevel]
-                        b_padded[i, :nlevel + 1] = zlevels_[k2:k2 + nlevel + 1]
-                        k1 += nlevel
-                        k2 += nlevel + 1
-                    return depth_averaging.get_method_func(depth_averaging_method)(b_padded, a_padded)
+                    def depth_average(data_: np.ndarray, zlevels_: np.ndarray) -> np.ndarray:
+                        a_padded[:] = np.nan
+                        b_padded[:] = np.nan
+                        k1, k2 = 0, 0
+                        for i, nlevel in enumerate(nlevels):
+                            a_padded[i, :nlevel] = data_[k1:k1 + nlevel]
+                            b_padded[i, :nlevel + 1] = zlevels_[k2:k2 + nlevel + 1]
+                            k1 += nlevel
+                            k2 += nlevel + 1
+                        return depth_averaging.get_method_func(depth_averaging_method)(b_padded, a_padded)
 
-                if is_static:
-                    data = depth_average(data, zlevels)
-                else:
-                    data_avg = np.full((data.shape[0], nlevels.shape[0]), np.nan)
-                    for t in range(data.shape[0]):
-                        data_avg[t, :] = depth_average(data[t, :], zlevels[t, :])
-                    data = data_avg
+                    if is_static:
+                        data = depth_average(data, zlevels)
+                    else:
+                        data_avg = np.full((data.shape[0], nlevels.shape[0]), np.nan)
+                        for t in range(data.shape[0]):
+                            data_avg[t, :] = depth_average(data[t, :], zlevels[t, :])
+                        data = data_avg
 
-            if is_vector:
-                data = data.reshape(data.shape[0], -1, 1)
-            values.append(data)
+                if is_vector:
+                    data = data.reshape(data.shape[0], -1, 1)
+                values.append(data)
         if len(values) > 1:
             if is_static:
                 data = np.column_stack(values).reshape((-1, 2) if is_vector else (-1, 1))
