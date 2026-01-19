@@ -158,12 +158,16 @@ class QgisDataExtractor(PyDataExtractor):
         return np.hstack(result).reshape(shape)
 
     def maximum(self, data_type: str) -> float:
+        if self._is_dat:  # not guaranteed to consider inactive cells, let it be calculated
+            raise NotImplementedError
         idx = self.find_group_index(data_type)
         if idx == -1:
             raise ValueError(f'Data type {data_type} not found in mesh output {self.mesh.stem}')
         return self.lyr.datasetGroupMetadata(QgsMeshDatasetIndex(idx)).maximum()
 
     def minimum(self, data_type: str) -> float:
+        if self._is_dat:  # not guaranteed to consider inactive cells, let it be calculated
+            raise NotImplementedError
         idx = self.find_group_index(data_type)
         if idx == -1:
             raise ValueError(f'Data type {data_type} not found in mesh output {self.mesh.stem}')
@@ -272,7 +276,8 @@ class QgisDataExtractor(PyDataExtractor):
             end = idx.stop if isinstance(idx.stop, int) else max_
         return list(range(start, end))
 
-    def chunk_indexes(self, idx: np.ndarray) -> typing.Generator[tuple[int, int, np.ndarray], None, None]:
+    @staticmethod
+    def chunk_indexes(idx: np.ndarray) -> typing.Generator[tuple[int, int, np.ndarray], None, None]:
         i = 0
         stop = idx.size
         while i < stop:

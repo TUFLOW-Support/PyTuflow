@@ -191,7 +191,7 @@ class PyMeshGeometry(PointMixin, LineStringMixin):
         self.mesh.GetPointCells(vertex_id, cell_ids)
         return [cell_ids.GetId(i) for i in range(cell_ids.GetNumberOfIds())]
 
-    def vertex_position(self, vertex_id: int | typing.Iterable[int], scope: str = 'global', *args, **kwargs) -> np.ndarray:
+    def vertex_position(self, vertex_id: int | typing.Iterable[int] | slice, scope: str = 'global', *args, **kwargs) -> np.ndarray:
         """Returns the x,y position of the vertex ID(s).
 
         Parameters

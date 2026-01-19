@@ -1,7 +1,9 @@
 import typing
+from collections import OrderedDict
 from pathlib import Path
 
 import numpy as np
+import pandas as pd
 
 try:
     from qgis.core import (QgsApplication, QgsMesh, QgsMeshLayer, QgsMeshSpatialIndex, QgsPoint,
@@ -45,7 +47,33 @@ class QgisMeshGeometry(PyMeshGeometry, PointMixinQgis):
         self._triangles = {}
         self._tri_count = 0
         self._ibed = -1
+        self._vertex_positions_cache = None
         self.dtype = np.float64
+
+    @property
+    def cells_df(self) -> pd.DataFrame:
+        if self._cells_df.empty:
+            cell_ids = np.arange(self.lyr.dataProvider().faceCount())
+            d = OrderedDict()
+            d['nnode'] = []
+            d['n1'] = []
+            d['n2'] = []
+            d['n3'] = []
+            d['n4'] = []
+            for cid in cell_ids:
+                verts = self._mesh.face(cid)
+                d['nnode'].append(len(verts))
+                for i in range(4):
+                    if i < len(verts):
+                        d[f'n{i+1}'].append(verts[i])
+                    else:
+                        d[f'n{i+1}'].append(-1)
+            self._cells_df = pd.DataFrame(d, index=cell_ids)
+        return self._cells_df
+
+    @cells_df.setter
+    def cells_df(self, value: pd.DataFrame):
+        self._cells_df = value
 
     def load(self):
         if not QgsApplication.instance():
@@ -67,22 +95,43 @@ class QgisMeshGeometry(PyMeshGeometry, PointMixinQgis):
     def cell_vertices(self, cell_id: int) -> list[int]:
         return list(self._mesh.face(cell_id))
 
-    def vertex_position(self, vertex_id: int | typing.Iterable[int], get_z: bool = True, *args, **kwargs) -> np.ndarray:
+    def vertex_position(self, vertex_id: int | typing.Iterable[int] | slice, get_z: bool = True, *args, **kwargs) -> np.ndarray:
+        if not self._loaded:
+            self.load()
+
+        if self._vertex_positions_cache is not None:
+            return self._vertex_positions_cache[vertex_id]
+
+        cache_result = False
+        if isinstance(vertex_id, slice) == slice(None) and get_z:
+            cache_result = True
+
         if isinstance(vertex_id, (list, tuple)):
             vertex_id = np.array(vertex_id).flatten().tolist()
         if isinstance(vertex_id, int):
             vertex_id = [vertex_id]
         if isinstance(vertex_id, np.ndarray):
             vertex_id = vertex_id.flatten().tolist()
-        a = np.full((len(vertex_id), 3), -1, dtype=np.float64)
+        if isinstance(vertex_id, slice):
+            vertex_id = list(range(self.lyr.dataProvider().vertexCount()))[vertex_id]
+
+        a = np.full((len(vertex_id), 3), 0., dtype=np.float64)
         for i, vid in enumerate(vertex_id):
             v = self._mesh.vertex(vid)
             a[i, 0] = v.x()
             a[i, 1] = v.y()
-            if get_z:
-                a[i, 2] = self.lyr.dataProvider().datasetValue(QgsMeshDatasetIndex(self._ibed, 0), vid).scalar()
-            else:
-                a[i, 2] = 0.
+        if get_z:
+            from .. import QgisDataExtractor
+            a_vert_index = np.sort(vertex_id)
+            values = []
+            for vertid, count, idx in QgisDataExtractor.chunk_indexes(a_vert_index):
+                extracted = np.array(
+                    self.lyr.dataProvider().datasetValues(QgsMeshDatasetIndex(self._ibed, 0), vertid, count).values()
+                )
+                values.append(extracted[idx])
+            a[:, 2] = np.hstack(values)
+        if cache_result:
+            self._vertex_positions_cache = a
         return a
 
     def triangle_vertices(self, triangle_id: int) -> np.ndarray:

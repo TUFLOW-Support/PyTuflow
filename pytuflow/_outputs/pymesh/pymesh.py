@@ -184,7 +184,7 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
         if self.cache.contains('maximum', data_type, depth_averaging):
             return self.cache.get('maximum', data_type, depth_averaging)
         if data_type.lower() in ['bed elevation', 'bed level']:
-            mx = float(np.max(self.geom.vertices[:, 2]))
+            mx = float(np.max(self.geom.vertex_position(slice(None), get_z=True)[:, 2]))
             self.cache.set('maximum', data_type, mx)
             return mx
 
@@ -748,7 +748,7 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
         m = cells.melt(id_vars=['wd'], value_vars=['n1', 'n2', 'n3', 'n4'])
         ind = np.unique(m[m['wd'] == 1]['value'])
         ind = ind[ind != -1]
-        df = pd.DataFrame(self.geom.vertices, columns=['x', 'y', 'z'])
+        df = pd.DataFrame(self.geom.vertex_position(slice(None), get_z=True), columns=['x', 'y', 'z'])
         df['wd'] = False
         df.loc[ind, 'wd'] = True
         return df['wd'].to_numpy()

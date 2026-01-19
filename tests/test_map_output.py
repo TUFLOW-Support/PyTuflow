@@ -1189,6 +1189,62 @@ class TestDAT(unittest.TestCase):
             df = res.section([(1.5, 1.2), (2.5, 1.2)], 'water level', 1.0)
             self.assertEqual((4, 2), df.shape)
 
+    def test_maximum_level_netcdf4_driver(self):
+        p = './tests/dat/EG00_001_h.dat'
+        with pyqgis():
+            res = DAT(p, driver='qgis geometry python')
+            mx = res.maximum('water level')
+            self.assertTrue(np.isclose(mx, 50.4242821).all())
+
+    def test_maximum_level_qgis_driver(self):
+        p = './tests/dat/EG00_001_h.dat'
+        with pyqgis():
+            res = DAT(p, driver='qgis geometry engine')
+            mx = res.maximum('water level')
+            self.assertTrue(np.isclose(mx, 50.4242821).all())
+
+    def test_maximum_velocity_vector_netcdf4_driver(self):
+        p = './tests/dat/EG00_001_V.dat'
+        with pyqgis():
+            res = DAT(p, driver='qgis geometry python')
+            mx = res.maximum('velocity')
+            self.assertTrue(np.isclose(mx, 3.03523898).all())
+
+    def test_maximum_velocity_vector_qgis_driver(self):
+        p = './tests/dat/EG00_001_V.dat'
+        with pyqgis():
+            res = DAT(p, driver='qgis geometry engine')
+            mx = res.maximum('velocity')
+            self.assertTrue(np.isclose(mx, 3.03523898).all())
+
+    def test_maximum_max_level_netcdf4_driver(self):
+        p = './tests/dat/EG00_001_h.dat'
+        with pyqgis():
+            res = DAT(p, driver='qgis geometry python')
+            mx = res.maximum('max water level')
+            self.assertTrue(np.isclose(mx, 50.42952346801758).all())
+
+    def test_maximum_max_level_qgis_driver(self):
+        p = './tests/dat/EG00_001_h.dat'
+        with pyqgis():
+            res = DAT(p, driver='qgis geometry engine')
+            mx = res.maximum('max water level')
+            self.assertTrue(np.isclose(mx, 50.42952346801758).all())
+
+    def test_maximum_bed_level_netcdf4_driver(self):
+        p = './tests/dat/EG00_001_h.dat'
+        with pyqgis():
+            res = DAT(p, driver='qgis geometry python')
+            mx = res.maximum('bed level')
+            self.assertTrue(np.isclose(mx, 100.).all())
+
+    def test_maximum_bed_level_qgis_driver(self):
+        p = './tests/dat/EG00_001_h.dat'
+        with pyqgis():
+            res = DAT(p, driver='qgis geometry engine')
+            mx = res.maximum('bed level')
+            self.assertTrue(np.isclose(mx, 100.).all())
+
 
 class TestNCGrid(unittest.TestCase):
 

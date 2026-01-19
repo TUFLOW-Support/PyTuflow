@@ -185,6 +185,7 @@ class Mesh(MapOutput):
         float | pd.DataFrame
             The maximum value(s) for the given data type(s).
         """
+        self._load()
         data_types = self._figure_out_data_types(data_types, None)
         df = pd.DataFrame()
         if self._driver.DRIVER_SOURCE == 'python':
