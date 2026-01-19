@@ -671,6 +671,8 @@ class Mesh(MapOutput):
         .. admoninition:: Experimental Feature
             :class: warning
 
+            gLTF export is an experimental feature. It requires the ``pygltf`` library to be installed.
+
         Exports the mesh to a glTF 2.0 file for visualisation in compatible software.
         Both ``.gltf`` and ``.glb`` formats are supported.
 
@@ -722,6 +724,8 @@ class Mesh(MapOutput):
         """
         .. admoninition:: Experimental Feature
             :class: warning
+
+            Alembic export is an experimental feature. It requires the ``pyalembic`` library to be installed.
 
         Exports the mesh to an Alembic file for visualisation in compatible software.
 
