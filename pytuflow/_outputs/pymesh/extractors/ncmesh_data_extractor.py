@@ -106,12 +106,6 @@ class PyNCMeshDataExtractor(PyDataExtractor):
         else:
             return self.engine.get_property('cell_X', 'units').lower() == 'decimal degrees'
 
-    def maximum(self, data_type: str) -> float:
-        return float(self.engine.data(data_type).max())
-
-    def minimum(self, data_type: str) -> float:
-        return float(self.engine.data(data_type).min())
-
     def data(self, data_type: str, index: PyDataExtractor.SliceType | PyDataExtractor.MultiSliceType) -> np.ndarray:
         return self.engine.data(data_type, index)
 

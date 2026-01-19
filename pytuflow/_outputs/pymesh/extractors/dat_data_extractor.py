@@ -224,11 +224,10 @@ CARDS = {x.ID: x for x in _CARDS}
 
 class PyDATDataExtractor(PyDataExtractor):
 
-    def __init__(self, fpaths: list[str | Path], cell_to_vertex_mapper: typing.Callable):
+    def __init__(self, fpaths: list[str | Path]):
         super().__init__()
         self._dats = [Path(f) for f in fpaths]
         self._results = OrderedDict()
-        self.cell_to_vertex_mapper = cell_to_vertex_mapper
         for f in self._dats:
             dtype = self.translate_file_name(f)
             self._results[dtype] = self.extract_results_from_file(f)
@@ -311,27 +310,27 @@ class PyDATDataExtractor(PyDataExtractor):
             return True
         return ts_card.times.size < 2
 
-    def maximum(self, data_type: str) -> float:
-        data = self._data(data_type)
-        wd = self._stat(data_type)
-        if wd.ndim == 1:
-            mask = self.cell_to_vertex_mapper(wd)
-        else:
-            mask = np.empty(data.shape, dtype=bool)
-            for t in range(wd.shape[0]):
-                mask[t] = self.cell_to_vertex_mapper(wd[t])
-        return float(np.nanmax(data[mask]))
-
-    def minimum(self, data_type: str) -> float:
-        data = self._data(data_type)
-        wd = self._stat(data_type)
-        if wd.ndim == 1:
-            mask = self.cell_to_vertex_mapper(wd)
-        else:
-            mask = np.empty(data.shape, dtype=bool)
-            for t in range(wd.shape[0]):
-                mask[t] = self.cell_to_vertex_mapper(wd[t])
-        return float(np.nanmin(data[mask]))
+    # def maximum(self, data_type: str) -> float:
+    #     data = self._data(data_type)
+    #     wd = self._stat(data_type)
+    #     if wd.ndim == 1:
+    #         mask = self.cell_to_vertex_mapper(wd)
+    #     else:
+    #         mask = np.empty(data.shape, dtype=bool)
+    #         for t in range(wd.shape[0]):
+    #             mask[t] = self.cell_to_vertex_mapper(wd[t])
+    #     return float(np.nanmax(data[mask]))
+    #
+    # def minimum(self, data_type: str) -> float:
+    #     data = self._data(data_type)
+    #     wd = self._stat(data_type)
+    #     if wd.ndim == 1:
+    #         mask = self.cell_to_vertex_mapper(wd)
+    #     else:
+    #         mask = np.empty(data.shape, dtype=bool)
+    #         for t in range(wd.shape[0]):
+    #             mask[t] = self.cell_to_vertex_mapper(wd[t])
+    #     return float(np.nanmin(data[mask]))
 
     def data(self, data_type: str, index: PyDataExtractor.SliceType | PyDataExtractor.MultiSliceType) -> np.ndarray:
         data = self._data(data_type)
