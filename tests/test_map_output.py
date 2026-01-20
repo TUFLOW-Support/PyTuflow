@@ -1185,6 +1185,21 @@ class TestCATCHJson(unittest.TestCase):
             res = CATCHJson(p, driver='qgis geometry engine')
             df = res.profile(shp, 'v', 0)
             self.assertEqual((2, 2), df.shape)
+            
+    def test_maximum_netcdf4_driver(self):
+        p = './tests/catch_json/res.tuflow.json'
+        with pyqgis():
+            res = CATCHJson(p, driver='qgis geometry netcdf4')
+            mx = res.maximum('h')
+            self.assertTrue(np.isclose(mx, 1.0).all())
+
+    def test_maximum_qgis_driver(self):
+        p = './tests/catch_json/res.tuflow.json'
+        with pyqgis():
+            res = CATCHJson(p, driver='qgis geometry engine')
+            mx = res.maximum('h')
+            self.assertTrue(np.isclose(mx, 1.0).all())
+
 
 class TestDAT(unittest.TestCase):
 

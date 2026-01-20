@@ -358,6 +358,12 @@ class TestCATCHJson(unittest.TestCase):
         df = res.profile(shp, 'v', 0)
         self.assertEqual((2, 2), df.shape)
 
+    def test_maximum(self):
+        p = './tests/catch_json/res.tuflow.json'
+        res = CATCHJson(p)
+        mx = res.maximum('h')
+        self.assertTrue(np.isclose(mx, 1.0).all())
+
 
 class TestQuadtree(unittest.TestCase):
 

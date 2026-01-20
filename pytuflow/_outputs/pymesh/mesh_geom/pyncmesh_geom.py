@@ -51,12 +51,27 @@ class PyNCMeshGeometry(PyMeshGeometry, GeometryLazyLoadMixin, VTKGeometryMixin):
                 self._data(nc, 'node_Y'),
                 self._data(nc, 'node_Zb')
             ))
+            if np.ma.isMaskedArray(self._vertices):
+                if np.ma.is_masked(self._vertices):
+                    self._vertices = self._vertices.filled(np.nan)
+                else:
+                    self._vertices = np.array(self._vertices)
+            cell_node = self._data(nc, 'cell_node')
+            if np.ma.isMaskedArray(cell_node):
+                if np.ma.is_masked(cell_node):
+                    cell_node = cell_node.filled(np.nan)
+                else:
+                    cell_node = np.array(cell_node)
+            columns = ['n1', 'n2', 'n3', 'n4'] if cell_node.shape[1] == 4 else ['n1', 'n2', 'n3']
 
             self._cells_df = pd.DataFrame(
-                self._data(nc, 'cell_node') - 1,
-                columns=['n1', 'n2', 'n3', 'n4'],
+                cell_node - 1,
+                columns=columns,
                 dtype=np.int64
             )
+            if len(columns) == 3:
+                self._cells_df['n4'] = -1
+
             self._cells_df.insert(0, 'nnode', 4)
             self._cells_df.loc[self._cells_df['n4'] == -1, 'nnode'] = 3
             self._cells = self._flatten_cells(self._cells_df)

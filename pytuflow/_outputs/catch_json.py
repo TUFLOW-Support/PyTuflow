@@ -225,6 +225,104 @@ class CATCHJson(MapOutput):
         """
         return super().data_types(filter_by)
 
+    def maximum(self, data_types: str | list[str], averaging_method: str = None) -> float | pd.DataFrame:
+        """Returns the maximum values for the given data types.
+
+        Some formats store maximum values in the metadata (e.g. XMDF), if this is the case, the maximum values
+        will be returned directly from the metadata. If the format does not store maximum values, the maximum
+        values will be calculated from the data. In this case, the maximum and temporal datasets will be treated
+        as separate. For example, if ``"depth"`` is requested as a data type, it will be calculated
+        from the temporal depth data. If ``"max depth"`` is requested, it will be calculated from the maximum
+        depth data.
+
+        If multiple data types are requested, a DataFrame will be returned with the data types as the index
+        and the maximum values as the column. Vector results will return the magnitude of the vector.
+
+        Parameters
+        ----------
+        data_types : str | list[str]
+            The data types to return the maximum values for.
+        averaging_method : str, optional
+            The depth-averaging method to use. Only applicable for 3D results. If set to ``None`` (the default),
+            then the maximum will be calculated from all vertical levels. If a depth averaging method is used,
+            then the maximum will be calculated from the depth-averaged data.
+
+            The averaging methods are:
+
+            * ``None``
+            * ``singlelevel``
+            * ``multilevel``
+            * ``depth``
+            * ``height``
+            * ``elevation``
+            * ``sigma``
+
+            The averaging method parameters can be adjusted by building them into the method string in a URI style
+            format. The format is as follows:
+
+            ``<method>?dir=<dir>&<value1>&<value2>``
+
+            The averaging method parameters can be adjusted by building them into the method string in a URI style
+            format. The format is as follows:
+
+            ``<method>?dir=<dir>&<value1>&<value2>``
+
+            Where
+
+            * ``<method>`` is the averaging method name
+            * ``<dir>`` is the direction, ``top`` or ``bottom`` (i.e. from top or from bottom) - only used by certain
+              averaging methods
+            * ``<value1>``, ``<value2>``... are the values to be used in the averaging method (the number required to be
+              passed depends on the averaging method)
+
+            e.g. ``'singlelevel?dir=top&1'`` uses the single level averaging method and takes the first vertical layer
+            from the top. Or ``'sigma&0.1&0.9'`` uses the sigma averaging method and averages values located between
+            the 10th and 90th water column depth.
+
+        Returns
+        -------
+        float | pd.DataFrame
+            The maximum value(s) for the given data type(s).
+
+        Examples
+        --------
+        Get the maximum water level for a given mesh:
+
+        >>> mesh = ... # Assume mesh is a loaded Mesh result
+        >>> mesh.maximum('water level')
+        45.672345
+
+        Get the maximum velocity and depth for multiple data types:
+
+        >>> mesh.maximum(['vector velocity', 'depth'])
+                          maximum
+        vector velocity  1.234567
+        depth            5.678901
+        """
+        self._load()
+        data_types = self._figure_out_data_types(data_types, None)
+        df = pd.DataFrame()
+        filter_by = '/'.join(data_types)
+        for dtype in data_types:
+            max_dtype = None
+            for provider in self._providers.values():
+                if provider == self._idx_provider:
+                    continue
+                if provider != list(self._providers.values())[-1]:
+                    intersection = np.intersect1d(data_types, provider.data_types(filter_by)) if data_types else True
+                    intersection = bool(len(intersection))
+                else:
+                    intersection = True
+                if intersection:
+                    mx = provider.maximum(dtype, averaging_method)
+                    max_dtype = mx if max_dtype is None else max(max_dtype, mx)
+            max_dtype = np.nan if max_dtype is None else max_dtype
+            if len(data_types) == 1:
+                return max_dtype
+            df_ = pd.DataFrame([max_dtype], columns=['maximum'], index=[dtype])
+            df = pd.concat([df, df_], axis=0) if not df.empty else df_
+        return df
+
     def data_point(self, locations: PointLocation, data_types: str | list[str] | None, time: TimeLike,
                    averaging_method: str = None) -> float | tuple[float, float] | pd.DataFrame:
         """Extracts the data value for the given point locations and data types at the specified time.
