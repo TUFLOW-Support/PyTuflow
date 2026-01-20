@@ -2,6 +2,7 @@ from abc import abstractmethod
 from datetime import datetime
 from typing import Union
 
+import numpy as np
 import pandas as pd
 
 from .helpers.grid_line import GridLine
@@ -17,8 +18,50 @@ class Grid(MapOutput):
         self._info = pd.DataFrame()
 
     @abstractmethod
-    def _value(self, n: int, m: int, timeidx: int, dtype: str) -> float:
+    def _value(self, dtype: str, idx: tuple | int | np.ndarray | slice) -> float:
         pass
+
+    def maximum(self, data_types: str | list[str]) -> float | pd.DataFrame:
+        """Returns the maximum values for the given data types.
+
+        Some formats store maximum values in the metadata (e.g. XMDF), if this is the case, the maximum values
+        will be returned directly from the metadata. If the format does not store maximum values, the maximum
+        values will be calculated from the data. In this case, the maximum and temporal datasets will be treated
+        as separate. For example, if ``"depth"`` is requested as a data type, it will be calculated
+        from the temporal depth data. If ``"max depth"`` is requested, it will be calculated from the maximum
+        depth data.
+
+        If multiple data types are requested, a DataFrame will be returned with the data types as the index
+        and the maximum values as the column. Vector results will return the magnitude of the vector.
+
+        Parameters
+        ----------
+        data_types : str | list[str]
+            The data types to return the maximum values for.
+
+        Returns
+        -------
+        float | pd.DataFrame
+            The maximum value(s) for the given data type(s).
+
+        Examples
+        --------
+        Get the maximum water level for a given mesh:
+
+        >>> grid = ... # Assume grid is a loaded Grid result
+        >>> grid.maximum('water level')
+        45.672345
+
+        Get the maximum velocity and depth for multiple data types:
+
+        >>> grid.maximum(['velocity', 'depth'])
+                          maximum
+        velocity         1.234567
+        depth            5.678901
+        """
+        data_types = self._figure_out_data_types(data_types, None)
+        for dtype in data_types:
+            pass
 
     def data_point(self, locations: PointLocation, data_types: str | list[str],
                    time: TimeLike) -> float | tuple[float, float] | pd.DataFrame:
@@ -77,7 +120,7 @@ class Grid(MapOutput):
             for dtype in data_types:
                 times = self.times(dtype, fmt='absolute') if isinstance(time, datetime) else self.times(dtype)
                 timeidx = self._closest_time_index(times, time)
-                dx, dy, ox, oy, ncol, nrow = self._grid_info(dtype)
+                dx, dy, ox, oy, ncol, nrow, _ = self._grid_info(dtype)
                 n, m = self._get_xy_index(pnt, dx, dy, ox, oy, ncol, nrow)
                 val = self._value(n, m, timeidx, dtype)
                 if len(data_types) == 1 and len(pnts) == 1:
@@ -140,7 +183,7 @@ class Grid(MapOutput):
             df1 = pd.DataFrame()
             for dtype in data_types:
                 vals = []
-                dx, dy, ox, oy, ncol, nrow = self._grid_info(dtype)
+                dx, dy, ox, oy, ncol, nrow, _ = self._grid_info(dtype)
                 n, m = self._get_xy_index(pnt, dx, dy, ox, oy, ncol, nrow)
                 if n is None:
                     continue
@@ -235,5 +278,5 @@ class Grid(MapOutput):
         m = int((y - oy) / dy)
         return n, m
 
-    def _grid_info(self, dtype: str) -> tuple[float, float, float, float, int, int]:
-        return self._info[self._info['data_type'] == dtype].iloc[0, :][['dx', 'dy', 'ox', 'oy', 'ncol', 'nrow']].values
+    def _grid_info(self, dtype: str) -> tuple[float, float, float, float, int, int, float]:
+        return self._info[self._info['data_type'] == dtype].iloc[0, :][['dx', 'dy', 'ox', 'oy', 'ncol', 'nrow', 'nodatavalue']].values

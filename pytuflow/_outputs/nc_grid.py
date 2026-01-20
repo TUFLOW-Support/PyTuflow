@@ -247,6 +247,11 @@ class NCGrid(Grid):
         """
         return super().data_types(filter_by)
 
+    def maximum(self, data_types: str | list[str]) -> float | pd.DataFrame:
+        self._load()
+        with self._open() as self._nc:
+            return super().maximum(data_types)
+
     def data_point(self, locations: PointLocation, data_types: str | list[str],
                    time: TimeLike) -> float | tuple[float, float] | pd.DataFrame:
         self._load()
@@ -305,7 +310,7 @@ class NCGrid(Grid):
 
     def _load_info(self, nc: Dataset):
         d = {'data_type': [], 'type': [], 'is_max': [], 'is_min': [], 'static': [], 'start': [], 'end': [], 'dt': [],
-             'dx': [], 'dy': [], 'ox': [], 'oy': [], 'ncol': [], 'nrow': []}
+             'dx': [], 'dy': [], 'ox': [], 'oy': [], 'ncol': [], 'nrow': [], 'nodatavalue': []}
         for varname in nc.variables:
             var = NCGridVar(nc, varname)
             if not var.valid:
@@ -334,6 +339,13 @@ class NCGrid(Grid):
             d['oy'].append(var.oy)
             d['ncol'].append(var.ncol)
             d['nrow'].append(var.nrow)
+            try:
+                if var.mask:
+                    d['nodatavalue'].append(var._FillValue)
+                else:
+                    d['nodatavalue'].append(np.nan)
+            except AttributeError:
+                d['nodatavalue'].append(np.nan)
 
         self._info = pd.DataFrame(d)
 
@@ -342,7 +354,7 @@ class NCGrid(Grid):
             return
         self._loaded = True
 
-    def _value(self, n: int, m: int, timeidx: int, dtype: str) -> float:
+    def _value(self, dtype: str, idx: tuple | int | np.ndarray | slice) -> float:
         if n < 0 or m < 0:
             return np.nan
         varname = self._stnd2var[dtype]
