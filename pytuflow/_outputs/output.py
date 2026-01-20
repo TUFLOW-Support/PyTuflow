@@ -377,9 +377,9 @@ class Output(ABC):
         previous or next time depending on the method.
         """
         if isinstance(time, datetime):
-            a = np.array([abs((x - time).total_seconds()) for x in timesteps])
+            a = np.array([(x - time).total_seconds() for x in timesteps])
         else:
-            a = np.array([abs(x - time) for x in timesteps])
+            a = np.array([x - time for x in timesteps])
 
         isclose = np.isclose(a, 0, rtol=0., atol=tol)
         if isclose.any():
@@ -389,8 +389,10 @@ class Output(ABC):
             prev = a[a > 0]
             if prev.any():
                 return int(np.argwhere(prev).flatten()[0])
-            else:
+            elif a[a > 0].any():
                 return 0
+            else:
+                return len(timesteps) - 1
         elif method == 'next':
             next_ = a[a < 0]
             if next_.any():

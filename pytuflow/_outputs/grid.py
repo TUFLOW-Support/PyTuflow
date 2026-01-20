@@ -18,7 +18,7 @@ class Grid(MapOutput):
         self._info = pd.DataFrame()
 
     @abstractmethod
-    def _value(self, dtype: str, idx: tuple | int | np.ndarray | slice) -> float:
+    def _value(self, dtype: str, idx: tuple | int | np.ndarray | slice) -> float | np.ndarray:
         pass
 
     def maximum(self, data_types: str | list[str]) -> float | pd.DataFrame:
@@ -118,11 +118,16 @@ class Grid(MapOutput):
             rows.append(name)
             values2 = []
             for dtype in data_types:
-                times = self.times(dtype, fmt='absolute') if isinstance(time, datetime) else self.times(dtype)
-                timeidx = self._closest_time_index(times, time)
                 dx, dy, ox, oy, ncol, nrow, _ = self._grid_info(dtype)
                 n, m = self._get_xy_index(pnt, dx, dy, ox, oy, ncol, nrow)
-                val = self._value(n, m, timeidx, dtype)
+                is_static = self._is_static(dtype)
+                if not is_static:
+                    times = self.times(dtype, fmt='absolute') if isinstance(time, datetime) else self.times(dtype)
+                    timeidx = self._closest_time_index(times, time)
+                    idx = (timeidx, n, m)
+                else:
+                    idx = (n, m)
+                val = float(self._value(dtype, idx))
                 if len(data_types) == 1 and len(pnts) == 1:
                     return val
                 values2.append(val)
@@ -182,14 +187,12 @@ class Grid(MapOutput):
         for name, pnt in pnts.items():
             df1 = pd.DataFrame()
             for dtype in data_types:
-                vals = []
                 dx, dy, ox, oy, ncol, nrow, _ = self._grid_info(dtype)
                 n, m = self._get_xy_index(pnt, dx, dy, ox, oy, ncol, nrow)
                 if n is None:
                     continue
-                for timeidx, time in enumerate(self.times(dtype, fmt=time_fmt)):
-                    val = (time, self._value(n, m, timeidx, dtype))
-                    vals.append(val)
+                vals = self._value(dtype, (slice(None), n, m))
+                vals = np.column_stack((self.times(dtype, fmt=time_fmt), vals))
                 df2 = pd.DataFrame(vals, columns=['time', f'{name}/{dtype}'])
                 df2.set_index('time', inplace=True)
                 df1 = pd.concat([df1, df2], axis=1) if not df1.empty else df2
@@ -253,16 +256,21 @@ class Grid(MapOutput):
         for name, line in lines.items():
             df1 = pd.DataFrame()
             for dtype in data_types:
-                times = self.times(dtype, fmt='absolute') if isinstance(time, datetime) else self.times(dtype)
-                timeidx = self._closest_time_index(times, time)
-                d = []
                 gridline = GridLine(*self._grid_info(dtype))
-                for inter in gridline.cells_along_line(line):
-                    val = self._value(inter.m, inter.n, timeidx, dtype)
-                    d.append((inter.offsets[0], val))
-                    d.append((inter.offsets[1], val))
+                nm = np.array([(x.offsets[0], x.offsets[1], x.n, x.m) for x in gridline.cells_along_line(line)])
+                rows = nm[:, 2].flatten().astype(int)
+                cols = nm[:, 3].flatten().astype(int)
+                if self._is_static(dtype):
+                    idx = (rows, cols)
+                else:
+                    times = self.times(dtype, fmt='absolute') if isinstance(time, datetime) else self.times(dtype)
+                    timeidx = self._closest_time_index(times, time)
+                    idx = (timeidx, rows, cols)
 
-                df2 = pd.DataFrame(d, columns=['offset', f'{name}/{dtype}'])
+                val = self._value(dtype, idx)[rows, cols]
+                offsets = nm[:, :2].flatten()
+                val = np.column_stack((offsets, np.repeat(val, 2)))
+                df2 = pd.DataFrame(val, columns=['offset', f'{name}/{dtype}'])
                 df1 = pd.concat([df1, df2], axis=1) if not df1.empty else df2
 
             df = pd.concat([df, df1], axis=1) if not df.empty else df1
@@ -280,3 +288,6 @@ class Grid(MapOutput):
 
     def _grid_info(self, dtype: str) -> tuple[float, float, float, float, int, int, float]:
         return self._info[self._info['data_type'] == dtype].iloc[0, :][['dx', 'dy', 'ox', 'oy', 'ncol', 'nrow', 'nodatavalue']].values
+
+    def _is_static(self, dtype: str) -> bool:
+        return self._info[self._info['data_type'] == dtype].iloc[0]['static']

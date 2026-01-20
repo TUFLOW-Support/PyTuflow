@@ -354,11 +354,17 @@ class NCGrid(Grid):
             return
         self._loaded = True
 
-    def _value(self, dtype: str, idx: tuple | int | np.ndarray | slice) -> float:
-        if n < 0 or m < 0:
-            return np.nan
+    def _value(self, dtype: str, idx: tuple | int | np.ndarray | slice) -> float | np.ndarray:
         varname = self._stnd2var[dtype]
-        val = self._nc.variables[varname][timeidx, m, n]
-        if np.ma.is_masked(val):
-            return np.nan
-        return float(val)
+        if self._is_static(dtype) and len(self._nc.variables[varname].shape) == 3:
+            if isinstance(idx, tuple):
+                idx = tuple([0] + list(idx))
+            elif isinstance(idx, (int, np.integer, np.ndarray, slice)):
+                idx = (0, idx)
+        val = self._nc.variables[varname][idx]
+        if np.ma.isMaskedArray(val):
+            if np.ma.is_masked(val):
+                return val.filled(np.nan)
+            else:
+                return np.array(val)
+        return val
