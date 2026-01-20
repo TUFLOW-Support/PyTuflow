@@ -172,6 +172,8 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
         ----------
         data_type : str
             The type of result to return the maximum value for.
+        depth_averaging : str, optional
+            The depth averaging method to use when extracting 3D data.
 
         Returns
         -------
@@ -202,7 +204,7 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
         self.cache.set(mx, 'maximum', data_type, depth_averaging)
         return mx
 
-    def minimum(self, data_type: str) -> float:
+    def minimum(self, data_type: str, depth_averaging: str = None) -> float:
         """Returns the minimum value for the specified result type. The full path the result type must be specified,
         for example, "depth" will return the minimum for the temporal depth results. If searching for the absolute
         minimum (the minimum value in the minimum output surface) then "minimums/depth" must be used (if applicable).
@@ -211,20 +213,36 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
         ----------
         data_type : str
             The type of result to return the maximum value for.
+        depth_averaging : str, optional
+            The depth averaging method to use when extracting 3D data.
 
         Returns
         -------
         float
             The maximum value for the specified result type.
         """
-        if self.cache.contains('minimum', data_type):
-            return self.cache.get('minimum', data_type)
+        if not self.is_3d(data_type):
+            depth_averaging = None
+
+        if self.cache.contains('minimum', data_type, depth_averaging):
+            return self.cache.get('minimum', data_type, depth_averaging)
         if data_type.lower() in ['bed elevation', 'bed level']:
-            mx = float(np.min(self.geom.vertices[:, 2]))
-            self.cache.set('maximum', data_type, mx)
-            return mx
-        mn = self.extractor.minimum(self.translate_data_type(data_type)[0])
-        self.cache.set('minimum', data_type[0], mn)
+            mn = float(np.min(self.geom.vertex_position(slice(None), get_z=True)[:, 2]))
+            self.cache.set('minimum', data_type, mn)
+            return mn
+
+        try:  # some formats store maximums/minimums in the metadata
+            mn = self.extractor.minimum(self.translate_data_type(data_type)[0], depth_averaging)
+        except NotImplementedError:  # need to extract full data to find maximum
+            if self.on_vertex(data_type):
+                data, mask = self.vertex_data(data_type, slice(None), self._map_wet_dry_to_verts)
+            else:
+                data, mask = self.cell_data(data_type, slice(None), depth_averaging)
+            if self.is_vector(data_type):
+                data = np.linalg.norm(data, axis=1 if data.ndim == 2 else 2)
+            mn = float(data[mask].min())
+
+        self.cache.set(mn, 'minimum', data_type, depth_averaging)
         return mn
 
     def is_vector(self, data_type: str) -> bool:

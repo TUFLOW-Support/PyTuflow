@@ -62,6 +62,19 @@ class TestXMDF(unittest.TestCase):
         self.assertEqual((3, 1), mx.shape)
         self.assertTrue(np.isclose([50.42428, 3.03354, 3.03524], mx.to_numpy().flatten()).all())
 
+    def test_minimum_level(self):
+        xmdf = './tests/xmdf/EG00_001.xmdf'
+        res = XMDF(xmdf)
+        mn = res.minimum('h')
+        self.assertTrue(np.isclose(35.9343795, mn).all())
+
+    def test_minimum_multiple_result_types(self):
+        xmdf = './tests/xmdf/EG00_001.xmdf'
+        res = XMDF(xmdf)
+        mn = res.minimum(['h', 'd', 'v'])
+        self.assertEqual((3, 1), mn.shape)
+        self.assertTrue(np.isclose([35.9343795, 0., 0.], mn.to_numpy().flatten()).all())
+
 
 class TestDAT(unittest.TestCase):
 
@@ -132,6 +145,18 @@ class TestDAT(unittest.TestCase):
         mx = res.maximum('bed level')
         self.assertTrue(np.isclose(mx, 100.).all())
 
+    def test_minimum_level(self):
+        p = './tests/dat/EG00_001_h.dat'
+        res = DAT(p)
+        mn = res.minimum('water level')
+        self.assertTrue(np.isclose(mn, 35.9343795).all())
+
+    def test_minimum_bed_level(self):
+        p = './tests/dat/EG00_001_h.dat'
+        res = DAT(p)
+        mn = res.minimum('bed level')
+        self.assertTrue(np.isclose(mn, 36.01).all())
+
 
 class TestNCMesh(unittest.TestCase):
 
@@ -187,6 +212,12 @@ class TestNCMesh(unittest.TestCase):
         self.assertTrue(np.isclose(mx, 0.419554057591823).all())
         mx = res.maximum('V', averaging_method='singlelevel?dir=bottom&1')
         self.assertTrue(np.isclose(mx, 0.419554057591823).all())
+
+    def test_minimum_salinity(self):
+        nc = './tests/nc_mesh/EST000_3D_001.nc'
+        res = NCMesh(nc)
+        mn = res.minimum('sal', averaging_method=None)
+        self.assertTrue(np.isclose(mn, 0., atol=0.0001).all())
 
 
 class TestCATCHJson(unittest.TestCase):
@@ -363,6 +394,12 @@ class TestCATCHJson(unittest.TestCase):
         res = CATCHJson(p)
         mx = res.maximum('h')
         self.assertTrue(np.isclose(mx, 1.0).all())
+
+    def test_minimum(self):
+        p = './tests/catch_json/res.tuflow.json'
+        res = CATCHJson(p)
+        mn = res.minimum('h')
+        self.assertTrue(np.isclose(mn, 0.).all())
 
 
 class TestQuadtree(unittest.TestCase):

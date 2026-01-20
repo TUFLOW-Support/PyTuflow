@@ -272,8 +272,35 @@ class Mesh(MapOutput):
         -------
         float | pd.DataFrame
             The minimum value(s) for the given data type(s).
+
+        Examples
+        --------
+        Get the minimum water level for a given mesh:
+
+        >>> mesh = ... # Assume mesh is a loaded Mesh result
+        >>> mesh.minimum('water level')
+        33.456789
+
+        Get the minimum velocity and depth for multiple data types:
+
+        >>> mesh.minimum(['vector velocity', 'depth'])
+                          minimum
+        vector velocity  0.
+        depth            0.
         """
-        pass
+        self._load()
+        data_types = self._figure_out_data_types(data_types, None)
+        df = pd.DataFrame()
+        if self._driver.DRIVER_SOURCE == 'python':
+            for dtype in data_types:
+                mx = self._driver.minimum(dtype, averaging_method)
+                if len(data_types) == 1:
+                    return mx
+                df_ = pd.DataFrame([mx], columns=['minimum'], index=[dtype])
+                df = pd.concat([df, df_], axis=0) if not df.empty else df_
+            return df
+        else:
+            raise NotImplementedError('v1.0 driver does not support minimum data extraction.')
 
     def data_point(self, locations: PointLocation, data_types: str | list[str] | None, time: TimeLike,
                    averaging_method: str = None) -> float | tuple[float, float] | pd.DataFrame:
