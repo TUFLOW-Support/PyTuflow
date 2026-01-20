@@ -23,3 +23,5 @@ from .tabular_output import TabularOutput
 from .mesh import Mesh
 from .grid import Grid
 from .output import Output
+
+from .pymesh import FormatConvention

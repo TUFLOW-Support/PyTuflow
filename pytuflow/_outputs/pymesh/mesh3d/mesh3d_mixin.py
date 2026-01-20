@@ -26,6 +26,7 @@ class Mesh3DMixin:
         mesh3d.face_counts = np.full((mesh3d.inds.count() // 3,), 3, dtype='u4')
         mesh3d.cd = self.vertex_colors(time, time_index, data_types)
         mesh3d.uv = self.uvs(uv_projection_extent, convention)
+        mesh3d.norms = self.normals(convention)
         return mesh3d
 
     def indices(self: 'PyMesh', reverse_winding_order: bool) -> np.ndarray:
@@ -141,3 +142,10 @@ class Mesh3DMixin:
         if convention == FormatConvention.OpenGL:
             v = 1 - v  # reverse v
         return np.column_stack((u.astype('f4'), v.astype('f4'))).flatten()
+
+    def normals(self, convention: FormatConvention = FormatConvention.OpenGL) -> np.ndarray:
+        if convention in [FormatConvention.Unreal, FormatConvention.Blender]:
+            norm = np.array([0., 0., 1.], dtype='f4')
+        else:
+            norm = np.array([0., 1., 0.], dtype='f4')
+        return np.repeat(norm[np.newaxis, :], self.geom.vertices.shape[0], axis=0).flatten()

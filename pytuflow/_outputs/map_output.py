@@ -152,7 +152,7 @@ class MapOutput(Output, ABC):
             data_types_.append(data_type_name)
             suffixes.append(suffix)
 
-        data_types = self._figure_out_data_types(list(data_types), filter_by)
+        data_types = self._figure_out_data_types(list(data_types_), filter_by)
         return [f'{dt}{sfx}' for dt, sfx in zip(data_types, suffixes)]
 
     def _translate_point_location(self, locations: PointLocation) -> dict[str, Point]:

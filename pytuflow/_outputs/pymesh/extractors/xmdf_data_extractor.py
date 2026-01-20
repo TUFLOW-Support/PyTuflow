@@ -60,11 +60,11 @@ class PyXMDFDataExtractor(PyDataExtractor):
     def is_static(self, data_type: str) -> bool:
         return self.engine.data_shape(self._create_path(data_type, 'Times'))[0] == 1
 
-    def maximum(self, data_type: str) -> float:
+    def maximum(self, data_type: str, *args, **kwargs) -> float:
         path = self._create_path(data_type, 'Maxs')
         return float(np.nanmax(self.engine.data(path)))
 
-    def minimum(self, data_type: str) -> float:
+    def minimum(self, data_type: str, *args, **kwargs) -> float:
         path = self._create_path(data_type, 'Mins')
         return float(np.nanmin(self.engine.data(path)))
 

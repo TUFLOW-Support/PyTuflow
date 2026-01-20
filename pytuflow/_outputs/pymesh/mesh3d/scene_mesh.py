@@ -61,6 +61,7 @@ class SceneMesh:
         self._pos = Blob(3, float)
         self._uv = Blob(2, float)
         self._cd = Blob(3, float)
+        self._norms = Blob(3, float)
         self._face_counts = Blob(1, int)
 
     @property
@@ -94,6 +95,14 @@ class SceneMesh:
     @cd.setter
     def cd(self, data: np.ndarray):
         self._cd.data = data
+
+    @property
+    def norms(self) -> Blob:
+        return self._norms
+
+    @norms.setter
+    def norms(self, data: np.ndarray):
+        self._norms.data = data
 
     @property
     def face_counts(self) -> Blob:

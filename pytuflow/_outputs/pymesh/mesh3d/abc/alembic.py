@@ -6,13 +6,13 @@ try:
     from alembic.AbcCoreAbstract import TimeSampling
     from alembic.Abc import OArchive
     from alembic.AbcGeom import (OPolyMesh, OPolyMeshSchemaSample, GeometryScope, OC3fGeomParamSample,
-                                 OC3fGeomParam, OV2fGeomParamSample)
+                                 OC3fGeomParam, OV2fGeomParamSample, ON3fGeomParamSample)
     from imath import V3f, V2f, V3fArray, V2fArray, IntArray, Color3f, C3fArray, UnsignedIntArray
 except ImportError:
     from ...stubs.alembic.AbcCoreAbstract import TimeSampling
     from ...stubs.alembic.Abc import OArchive
     from ...stubs.alembic.AbcGeom import (OPolyMesh, OPolyMeshSchemaSample, GeometryScope, OC3fGeomParamSample,
-                                          OC3fGeomParam, OV2fGeomParamSample)
+                                          OC3fGeomParam, OV2fGeomParamSample, ON3fGeomParamSample)
     from ...stubs.imath import V3f, V2f, V3fArray, V2fArray, IntArray, Color3f, C3fArray, UnsignedIntArray
 
 if typing.TYPE_CHECKING:
@@ -51,6 +51,7 @@ class AlembicMesh:
         for i in range(0, mesh.pos.size(), mesh.pos.n):
             j = i // mesh.pos.n
             self._pos[j] = V3f(*mesh.pos.data[i:i+mesh.pos.n].tolist())
+            self._norm[j] = V3f(*mesh.norms.data[i:i+mesh.pos.n].tolist())
         for i in range(0, mesh.uv.size(), mesh.uv.n):
             j = i // mesh.uv.n
             self._uv[j] = V2f(*mesh.uv.data[i:i+mesh.uv.n].tolist())
@@ -61,8 +62,11 @@ class AlembicMesh:
         # create uv sample
         uv_sample = OV2fGeomParamSample(self._uv, self._inds_idx, GeometryScope.kFacevaryingScope)
 
+        # create normal sample
+        norm_sample = ON3fGeomParamSample(self._norm, GeometryScope.kFacevaryingScope)
+
         # set mesh sample
-        sample = OPolyMeshSchemaSample(self._pos, self._inds, self._face_counts, uv_sample)
+        sample = OPolyMeshSchemaSample(self._pos, self._inds, self._face_counts, uv_sample, norm_sample)
         self.mesh.set(sample)
 
         # set colour param
@@ -75,6 +79,7 @@ class AlembicMesh:
         self._face_counts = IntArray(mesh.face_counts.count())
         self._pos = V3fArray(mesh.pos.count())
         self._uv = V2fArray(mesh.uv.count())
+        self._norm = V3fArray(mesh.pos.count())
         self._cd = C3fArray(mesh.cd.count())
         self._arrays_initialised = True
 
