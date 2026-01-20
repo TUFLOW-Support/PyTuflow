@@ -49,6 +49,19 @@ class TestXMDF(unittest.TestCase):
         self.assertEqual((4, 2), df.shape)
         self.assertTrue(df[np.isnan(df.iloc[:, 1])].empty)
 
+    def test_maximum_level(self):
+        xmdf = './tests/xmdf/EG00_001.xmdf'
+        res = XMDF(xmdf)
+        mx = res.maximum('h')
+        self.assertTrue(np.isclose(50.42428207, mx).all())
+
+    def test_maximum_multiple_result_types(self):
+        xmdf = './tests/xmdf/EG00_001.xmdf'
+        res = XMDF(xmdf)
+        mx = res.maximum(['h', 'd', 'v'])
+        self.assertEqual((3, 1), mx.shape)
+        self.assertTrue(np.isclose([50.42428, 3.03354, 3.03524], mx.to_numpy().flatten()).all())
+
 
 class TestDAT(unittest.TestCase):
 
