@@ -184,6 +184,21 @@ class Mesh(MapOutput):
         -------
         float | pd.DataFrame
             The maximum value(s) for the given data type(s).
+
+        Examples
+        --------
+        Get the maximum water level for a given mesh:
+
+        >>> mesh = ... # Assume mesh is a loaded Mesh result
+        >>> mesh.maximum('water level')
+        45.672345
+
+        Get the maximum velocity and depth for multiple data types:
+
+        >>> mesh.maximum(['vector velocity', 'depth'])
+                          maximum
+        vector velocity  1.234567
+        depth            5.678901
         """
         self._load()
         data_types = self._figure_out_data_types(data_types, None)

@@ -539,6 +539,36 @@ class TestXMDF(unittest.TestCase):
             df = res.profile(shp, 'vector velocity', 0)
             self.assertEqual((2, 2), df.shape)
 
+    def test_maximum_level_netcdf4_driver(self):
+        xmdf = './tests/xmdf/EG00_001.xmdf'
+        with pyqgis():
+            res = XMDF(xmdf, driver='qgis geometry netcdf4')
+            mx = res.maximum('h')
+            self.assertTrue(np.isclose(50.42428207, mx).all())
+
+    def test_maximum_level_qgis_driver(self):
+        xmdf = './tests/xmdf/EG00_001.xmdf'
+        with pyqgis():
+            res = XMDF(xmdf, driver='qgis geometry engine')
+            mx = res.maximum('h')
+            self.assertTrue(np.isclose(50.42428207, mx).all())
+
+    def test_maximum_multiple_result_types_netcdf4_driver(self):
+        xmdf = './tests/xmdf/EG00_001.xmdf'
+        with pyqgis():
+            res = XMDF(xmdf, driver='qgis geometry netcdf4')
+            mx = res.maximum(['h', 'd', 'v'])
+            self.assertEqual((3, 1), mx.shape)
+            self.assertTrue(np.isclose([50.42428, 3.03354, 3.03524], mx.to_numpy().flatten()).all())
+
+    def test_maximum_multiple_result_types_qgis_driver(self):
+        xmdf = './tests/xmdf/EG00_001.xmdf'
+        with pyqgis():
+            res = XMDF(xmdf, driver='qgis geometry engine')
+            mx = res.maximum(['h', 'd', 'v'])
+            self.assertEqual((3, 1), mx.shape)
+            self.assertTrue(np.isclose([50.42428, 3.03354, 3.03524], mx.to_numpy().flatten()).all())
+
 
 class TestNCMesh(unittest.TestCase):
 
