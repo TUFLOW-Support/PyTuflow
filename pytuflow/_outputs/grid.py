@@ -9,13 +9,13 @@ from .helpers.grid_line import GridLine
 from .map_output import MapOutput, PointLocation, Point, LineStringLocation
 from .._pytuflow_types import PathLike, TimeLike
 
-from .pymesh import Cache, LineStringMixin
+from .pymesh import Cache, LineStringMixin, PointMixin
 
 
 GRIDLINE_METHOD = 'optimised'  # 'legacy' or 'optimised'
 
 
-class Grid(MapOutput, LineStringMixin):
+class Grid(MapOutput, LineStringMixin, PointMixin):
     """Abstract class for grid/raster outputs."""
 
     def __init__(self, fpath: PathLike):
@@ -218,13 +218,18 @@ class Grid(MapOutput, LineStringMixin):
         pnts = self._translate_point_location(locations)
         data_types = self._figure_out_data_types(data_types, 'temporal')
         for name, pnt in pnts.items():
+            wkt = self._point_as_wkt(self._coerce_into_point(pnt))
             df1 = pd.DataFrame()
             for dtype in data_types:
-                dx, dy, ox, oy, ncol, nrow, _ = self._grid_info(dtype)
-                n, m = self._get_xy_index(pnt, dx, dy, ox, oy, ncol, nrow)
-                if n is None:
-                    continue
-                vals = self._value(dtype, (slice(None), n, m))
+                if self.cache.contains('time_series', dtype, wkt):
+                    vals = self.cache.get('time_series', dtype, wkt)
+                else:
+                    dx, dy, ox, oy, ncol, nrow, _ = self._grid_info(dtype)
+                    n, m = self._get_xy_index(pnt, dx, dy, ox, oy, ncol, nrow)
+                    if n is None:
+                        continue
+                    vals = self._value(dtype, (slice(None), n, m))
+                    self.cache.set(vals, 'time_series', dtype, wkt)
                 vals = np.column_stack((self.times(dtype, fmt=time_fmt), vals))
                 df2 = pd.DataFrame(vals, columns=['time', f'{name}/{dtype}'])
                 df2.set_index('time', inplace=True)
