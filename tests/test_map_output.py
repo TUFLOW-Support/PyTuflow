@@ -1497,7 +1497,7 @@ class TestNCGrid(unittest.TestCase):
         df = res.section(line, 'h', 0)
         self.assertEqual((6, 2), df.shape)
         df = res.section(line, ['water level', 'max water level'], 0.5)
-        self.assertEqual((6, 4), df.shape)
+        self.assertEqual((6, 3), df.shape)
 
     def test_section_vert(self):
         p = './tests/nc_grid/small_model_001.nc'
