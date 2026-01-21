@@ -755,10 +755,8 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
         times = self.times(data_type)
         if len(times) == 1:  # assume static
             return 0
-        for i, t in enumerate(times):
-            if np.isclose(time, t, atol=0.001, rtol=0.):
-                return i
-        raise ValueError(f'No time found in Mesh file for {time}.')
+        diff = np.array([x - time for x in times])
+        return int(np.abs(diff).argmin())
 
     def _map_wet_dry_to_verts(self, wd: np.ndarray) -> np.ndarray:
         cells = self.geom.cells_df.copy()

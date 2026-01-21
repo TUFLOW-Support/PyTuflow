@@ -287,7 +287,7 @@ class Grid(MapOutput):
                     val = self._surface(dtype, -1)[rows, cols]
                 else:
                     times = self.times(dtype, fmt='absolute') if isinstance(time, datetime) else self.times(dtype)
-                    timeidx = self._closest_time_index(times, time)
+                    timeidx = self._closest_time_index(times, time, method='closest')
                     val = self._surface(dtype, timeidx)[rows, cols]
                 df2 = pd.DataFrame(np.repeat(val, 2), columns=[dtype], index=offsets)
                 df2.index.name = 'offset'

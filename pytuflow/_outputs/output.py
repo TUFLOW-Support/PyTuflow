@@ -388,19 +388,19 @@ class Output(ABC):
             return int(np.argwhere(isclose).flatten()[0])
 
         if method == 'previous':
-            prev = a[a > 0]
+            prev = a > 0
             if prev.any():
-                return int(np.argwhere(prev).flatten()[0])
-            elif a[a > 0].any():
-                return 0
+                return np.flatnonzero(prev)[0]
             else:
                 return len(timesteps) - 1
         elif method == 'next':
-            next_ = a[a < 0]
+            next_ = a < 0
             if next_.any():
-                return int(np.argwhere(next_).flatten()[0])
+                return np.flatnonzero(next_)[-1]
             else:
-                return len(timesteps) - 1
+                return 0
+        elif method == 'closest':
+            return int(np.abs(a).argmin())
 
         return 0
 
