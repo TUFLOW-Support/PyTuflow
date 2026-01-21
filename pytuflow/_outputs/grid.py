@@ -47,7 +47,12 @@ class Grid(MapOutput, LineStringMixin):
                 self._cached_data[dtype.lower()][idx, ...] = data
             self._cached_timesteps[dtype.lower()].add(time_index)
 
-        return self._cached_data[dtype.lower()] if data is None else data
+        if data is not None:
+            return data
+        elif is_static:
+            return self._cached_data[dtype.lower()]
+        else:
+            return self._cached_data[dtype.lower()][time_index]
 
     def maximum(self, data_types: str | list[str]) -> float | pd.DataFrame:
         """Returns the maximum values for the given data types.

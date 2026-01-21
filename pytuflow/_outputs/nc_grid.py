@@ -249,25 +249,25 @@ class NCGrid(Grid):
 
     def maximum(self, data_types: str | list[str]) -> float | pd.DataFrame:
         self._load()
-        with self._open() as self._nc:
+        with self._open():
             return super().maximum(data_types)
 
     def data_point(self, locations: PointLocation, data_types: str | list[str],
                    time: TimeLike) -> float | tuple[float, float] | pd.DataFrame:
         self._load()
-        with self._open() as self._nc:
+        with self._open():
             return super().data_point(locations, data_types, time)
 
     def time_series(self, locations: PointLocation, data_types: str | list[str] | None,
                     time_fmt: str = 'relative', **kwargs) -> pd.DataFrame:
         self._load()
-        with self._open() as self._nc:
+        with self._open():
             return super().time_series(locations, data_types, time_fmt)
 
     def section(self, locations: LineStringLocation, data_types: Union[str, list[str]],
                 time: TimeLike, **kwargs) -> pd.DataFrame:
         self._load()
-        with self._open() as self._nc:
+        with self._open():
             return super().section(locations, data_types, time)
 
     def curtain(self, locations: LineStringLocation, data_types: Union[str, list[str]],
@@ -285,13 +285,13 @@ class NCGrid(Grid):
         if self._nc is not None:
             yield self._nc
             return
-        with Dataset(self.fpath) as self._nc:
+        with Dataset(self.fpath, 'r') as self._nc:
             yield self._nc
-            self._nc = None
+        self._nc = None
 
     def open_reader(self):
         if self._nc is None:
-            self._nc = Dataset(self.fpath)
+            self._nc = Dataset(self.fpath, 'r')
 
     def close(self):
         if self._nc is not None:
