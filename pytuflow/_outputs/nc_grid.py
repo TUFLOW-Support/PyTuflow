@@ -282,8 +282,21 @@ class NCGrid(Grid):
 
     @contextmanager
     def _open(self):
-        with Dataset(self.fpath) as nc:
-            yield nc
+        if self._nc is not None:
+            yield self._nc
+            return
+        with Dataset(self.fpath) as self._nc:
+            yield self._nc
+            self._nc = None
+
+    def open_reader(self):
+        if self._nc is None:
+            self._nc = Dataset(self.fpath)
+
+    def close(self):
+        if self._nc is not None:
+            self._nc.close()
+            self._nc = None
 
     def _initial_load(self):
         self.name = self.fpath.stem

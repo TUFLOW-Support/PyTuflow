@@ -9,13 +9,19 @@ from .helpers.grid_line import GridLine
 from .map_output import MapOutput, PointLocation, Point, LineStringLocation
 from .._pytuflow_types import PathLike, TimeLike
 
+from .pymesh import Cache, LineStringMixin
 
-class Grid(MapOutput):
+
+GRIDLINE_METHOD = 'optimized'  # 'legacy' or 'optimized'
+
+
+class Grid(MapOutput, LineStringMixin):
     """Abstract class for grid/raster outputs."""
 
     def __init__(self, fpath: PathLike):
         super().__init__(fpath)
         self._info = pd.DataFrame()
+        self.cache = Cache()
         self._cached_timesteps = {}
         self._cached_data = {}
 
@@ -277,11 +283,23 @@ class Grid(MapOutput):
         data_types = self._figure_out_data_types(data_types, None)
         for name, line in lines.items():
             df1 = pd.DataFrame()
-            gridline = GridLine(*self._grid_info(data_types[0]))
-            nm = np.array([(x.offsets[0], x.offsets[1], x.n, x.m) for x in gridline.cells_along_line(line)])
-            rows = nm[:, 2].flatten().astype(int)
-            cols = nm[:, 3].flatten().astype(int)
-            offsets = nm[:, :2].flatten()
+            wkt = self._linestring_as_wkt(self._coerce_into_line(line))
+            if GRIDLINE_METHOD == 'legacy':
+                gridline = GridLine(*self._grid_info(data_types[0]))
+                nm = np.array([(x.offsets[0], x.offsets[1], x.n, x.m) for x in gridline.cells_along_line(line)])
+                rows = nm[:, 2].flatten().astype(int)
+                cols = nm[:, 3].flatten().astype(int)
+                offsets = nm[:, :2].flatten()
+            else:
+                if self.cache.contains('gridline', wkt):
+                    nm, intersections = self.cache.get('gridline', wkt)
+                else:
+                    nm, intersections = self.gridline(line, *self._grid_info(data_types[0]))
+                    self.cache.set((nm, intersections), 'gridline', wkt)
+                rows = nm[:, 0].flatten().astype(int)
+                cols = nm[:, 1].flatten().astype(int)
+                dists = intersections[:, 0]
+                offsets = np.repeat(dists[:-1], 2)
             for dtype in data_types:
                 if self._is_static(dtype):
                     val = self._surface(dtype, -1)[rows, cols]
@@ -311,3 +329,101 @@ class Grid(MapOutput):
 
     def _is_static(self, dtype: str) -> bool:
         return self._info[self._info['data_type'] == dtype].iloc[0]['static']
+
+    @staticmethod
+    def gridline(line: list[tuple[float, float]],
+                 dx: float,
+                 dy: float,
+                 ox: float,
+                 oy: float,
+                 nrow: int,
+                 ncol: int,
+                 *args, **kwargs
+                 ) -> tuple[np.ndarray, np.ndarray]:
+        cells = np.array([])
+        intersections = np.array([])
+        line = LineStringMixin._coerce_into_line(line)
+        for i in range(1, line.shape[0]):
+            seg = line[i - 1:i + 1, :2]
+            cells_, intersections_ = Grid.gridline_segment(seg, dx, dy, ox, oy, nrow, ncol)
+
+            if cells.size == 0:
+                cells = cells_
+                intersections = intersections_
+            else:
+                if cells_.size > 0:
+                    cells = np.vstack([cells, cells_])
+                if intersections_.size > 0:
+                    intersections_[:, 0] += intersections[-1, 0]
+                    intersections = np.vstack([intersections, intersections_[1:, :]])
+
+        return cells, intersections
+
+    @staticmethod
+    def gridline_segment(line: np.ndarray,
+                         dx: float,
+                         dy: float,
+                         ox: float,
+                         oy: float,
+                         nrow: int,
+                         ncol: int,
+                         ) -> tuple[np.ndarray, np.ndarray]:
+        p0 = line[0]
+        p1 = line[1]
+        x0, y0 = p0
+        x1, y1 = p1
+
+        # Direction
+        vx = x1 - x0
+        vy = y1 - y0
+
+        if vx == 0 and vy == 0:
+            return np.empty((0, 2), int), np.empty((0, 3), float)
+
+        # Vertical grid lines
+        x_lines = ox + np.arange(0, ncol + 1) * dx
+        t_x = (x_lines - x0) / vx if vx != 0 else np.array([])
+
+        # Horizontal grid lines
+        y_lines = oy + np.arange(0, nrow + 1) * dy
+        t_y = (y_lines - y0) / vy if vy != 0 else np.array([])
+
+        # Combine all t values
+        t_all = np.concatenate([
+            t_x if vx != 0 else [],
+            t_y if vy != 0 else [],
+            np.array([0.0, 1.0])
+        ])
+
+        # Keep valid intersections
+        mask = (t_all >= 0.0) & (t_all <= 1.0)
+        t_all = np.unique(t_all[mask])
+        t_all.sort()
+
+        # Intersection coordinates
+        xs = x0 + t_all * vx
+        ys = y0 + t_all * vy
+
+        intersections = np.column_stack([xs, ys])
+        intersections = np.column_stack((
+            np.linalg.norm(intersections - np.array([x0, y0]), axis=1),
+            intersections
+        ))
+
+        # Midpoints between intersections → cell indices
+        t_mid = 0.5 * (t_all[:-1] + t_all[1:])
+        xm = x0 + t_mid * vx
+        ym = y0 + t_mid * vy
+
+        col = np.floor((xm - ox) / dx).astype(int)
+        row = np.floor((ym - oy) / dy).astype(int)
+
+        # Clip to grid bounds
+        valid = (
+                (col >= 0) & (col < ncol) &
+                (row >= 0) & (row < nrow)
+        )
+
+        cells = np.column_stack([row[valid], col[valid]])
+
+        return cells, intersections
