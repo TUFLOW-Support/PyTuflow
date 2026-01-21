@@ -339,13 +339,7 @@ class NCGrid(Grid):
             d['oy'].append(var.oy)
             d['ncol'].append(var.ncol)
             d['nrow'].append(var.nrow)
-            try:
-                if var.mask:
-                    d['nodatavalue'].append(var._FillValue)
-                else:
-                    d['nodatavalue'].append(np.nan)
-            except AttributeError:
-                d['nodatavalue'].append(np.nan)
+            d['nodatavalue'].append(var.fill_value)
 
         self._info = pd.DataFrame(d)
 

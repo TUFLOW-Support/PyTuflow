@@ -37,6 +37,13 @@ class NCGridVar:
         self.is_max = varname.lower().startswith('maximum_')
         self.is_min = varname.lower().startswith('minimum_')
         self.type = 'scalar'
+        try:
+            if self.var.mask:
+                self.fill_value = self.var._FillValue
+            else:
+                self.fill_value = np.nan
+        except AttributeError:
+            self.fill_value = np.nan
         if not self.static:
             self.times = nc.variables['time'][:]
 

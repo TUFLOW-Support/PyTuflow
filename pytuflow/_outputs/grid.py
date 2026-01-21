@@ -16,10 +16,32 @@ class Grid(MapOutput):
     def __init__(self, fpath: PathLike):
         super().__init__(fpath)
         self._info = pd.DataFrame()
+        self._cached_timesteps = {}
+        self._cached_data = {}
 
     @abstractmethod
     def _value(self, dtype: str, idx: tuple | int | np.ndarray | slice) -> float | np.ndarray:
         pass
+
+    def _surface(self, dtype: str, time_index) -> np.ndarray:
+        is_static = self._is_static(dtype)
+        if dtype.lower() not in self._cached_timesteps:
+            self._cached_timesteps[dtype.lower()] = set()
+            _, _, _, _, ncol, nrow, _ = self._grid_info(dtype)
+            shape = (nrow, ncol) if is_static else (len(self.times(dtype)), nrow, ncol)
+            self._cached_data[dtype.lower()] = np.full(shape, np.nan, dtype=float)
+
+        data = None
+        if time_index not in self._cached_timesteps[dtype.lower()]:
+            idx = slice(None) if is_static else time_index
+            data = self._value(dtype, idx)
+            if is_static:
+                self._cached_data[dtype.lower()][:] = data
+            else:
+                self._cached_data[dtype.lower()][idx, ...] = data
+            self._cached_timesteps[dtype.lower()].add(time_index)
+
+        return self._cached_data[dtype.lower()] if data is None else data
 
     def maximum(self, data_types: str | list[str]) -> float | pd.DataFrame:
         """Returns the maximum values for the given data types.
@@ -261,13 +283,11 @@ class Grid(MapOutput):
                 rows = nm[:, 2].flatten().astype(int)
                 cols = nm[:, 3].flatten().astype(int)
                 if self._is_static(dtype):
-                    idx = (rows, cols)
+                    val = self._surface(dtype, -1)[rows, cols]
                 else:
                     times = self.times(dtype, fmt='absolute') if isinstance(time, datetime) else self.times(dtype)
                     timeidx = self._closest_time_index(times, time)
-                    idx = (timeidx, rows, cols)
-
-                val = self._value(dtype, idx)[rows, cols]
+                    val = self._surface(dtype, timeidx)[rows, cols]
                 offsets = nm[:, :2].flatten()
                 val = np.column_stack((offsets, np.repeat(val, 2)))
                 df2 = pd.DataFrame(val, columns=['offset', f'{name}/{dtype}'])
