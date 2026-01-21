@@ -302,6 +302,14 @@ class Mesh(MapOutput):
         else:
             raise NotImplementedError('v1.0 driver does not support minimum data extraction.')
 
+    def surface(self, data_type: str, time: TimeLike, averaging_method: str = 'sigma&0&1',
+                on_vertex: bool = False) -> pd.DataFrame:
+        self._load()
+        data_type = self._figure_out_data_types(data_type, None)[0]
+        if self._driver.DRIVER_SOURCE != 'python':
+            raise NotImplementedError('v1.0 driver does not support surface data extraction.')
+        return self._driver.surface(data_type, time, averaging_method, on_vertex)
+
     def data_point(self, locations: PointLocation, data_types: str | list[str] | None, time: TimeLike,
                    averaging_method: str = None) -> float | tuple[float, float] | pd.DataFrame:
         """Extracts the data value for the given point locations and data types at the specified time.
