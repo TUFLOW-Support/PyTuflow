@@ -377,6 +377,8 @@ class Output(ABC):
         previous or next time depending on the method.
         """
         if isinstance(time, datetime):
+            if time.tzinfo is None:
+                time = time.replace(tzinfo=timezone.utc)
             a = np.array([(x - time).total_seconds() for x in timesteps])
         else:
             a = np.array([x - time for x in timesteps])
