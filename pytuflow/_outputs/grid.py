@@ -332,8 +332,8 @@ class Grid(MapOutput, LineStringMixin, PointMixin):
         x, y = pnt
         if x < ox or x > ox + ncol * dx or pnt[1] < oy or pnt[1] > oy + nrow * dy:
             return None, None
-        n = int((x - ox) / dx)
-        m = int((y - oy) / dy)
+        m = int((x - ox) / dx)
+        n = int((y - oy) / dy)
         return n, m
 
     def _grid_info(self, dtype: str) -> tuple[float, float, float, float, int, int, float]:
