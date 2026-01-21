@@ -12,7 +12,7 @@ from .._pytuflow_types import PathLike, TimeLike
 from .pymesh import Cache, LineStringMixin
 
 
-GRIDLINE_METHOD = 'optimized'  # 'legacy' or 'optimized'
+GRIDLINE_METHOD = 'optimised'  # 'legacy' or 'optimised'
 
 
 class Grid(MapOutput, LineStringMixin):
@@ -292,6 +292,7 @@ class Grid(MapOutput, LineStringMixin):
             if GRIDLINE_METHOD == 'legacy':
                 gridline = GridLine(*self._grid_info(data_types[0]))
                 nm = np.array([(x.offsets[0], x.offsets[1], x.n, x.m) for x in gridline.cells_along_line(line)])
+                mask = np.full(nm.shape[0], True, dtype=bool)
                 rows = nm[:, 2].flatten().astype(int)
                 cols = nm[:, 3].flatten().astype(int)
                 offsets = nm[:, :2].flatten()
@@ -301,17 +302,18 @@ class Grid(MapOutput, LineStringMixin):
                 else:
                     nm, intersections = self.gridline(line, *self._grid_info(data_types[0]))
                     self.cache.set((nm, intersections), 'gridline', wkt)
-                rows = nm[:, 0].flatten().astype(int)
-                cols = nm[:, 1].flatten().astype(int)
-                dists = intersections[:, 0]
-                offsets = np.repeat(dists[:-1], 2)
+                mask = nm[:, 0] >= 0
+                rows = nm[mask, 0].flatten().astype(int)
+                cols = nm[mask, 1].flatten().astype(int)
+                offsets = np.repeat(intersections[:, 0], 2)[1:-1]
             for dtype in data_types:
+                val = np.full(nm.shape[0], np.nan)
                 if self._is_static(dtype):
-                    val = self._surface(dtype, -1)[rows, cols]
+                    val[mask] = self._surface(dtype, -1)[rows, cols]
                 else:
                     times = self.times(dtype, fmt='absolute') if isinstance(time, datetime) else self.times(dtype)
                     timeidx = self._closest_time_index(times, time, method='closest')
-                    val = self._surface(dtype, timeidx)[rows, cols]
+                    val[mask] = self._surface(dtype, timeidx)[rows, cols]
                 df2 = pd.DataFrame(np.repeat(val, 2), columns=[dtype], index=offsets)
                 df2.index.name = 'offset'
                 df1 = pd.concat([df1, df2], axis=1) if not df1.empty else df2
@@ -373,6 +375,31 @@ class Grid(MapOutput, LineStringMixin):
                          nrow: int,
                          ncol: int,
                          ) -> tuple[np.ndarray, np.ndarray]:
+        def clip_segment_to_aabb(x0_, y0_, x1_, y1_, xmin_, xmax_, ymin_, ymax_):
+            dx = x1_ - x0_
+            dy = y1_ - y0_
+
+            p = np.array([-dx, dx, -dy, dy])
+            q = np.array([x0_ - xmin_, xmax_ - x0_, y0_ - ymin_, ymax_ - y0_])
+
+            t0, t1 = 0.0, 1.0
+
+            for pi, qi in zip(p, q):
+                if pi == 0:
+                    if qi < 0:
+                        return None
+                else:
+                    t = qi / pi
+                    if pi < 0:
+                        t0 = max(t0, t)
+                    else:
+                        t1 = min(t1, t)
+
+            if t0 > t1:
+                return None
+
+            return t0, t1
+
         p0 = line[0]
         p1 = line[1]
         x0, y0 = p0
@@ -382,53 +409,67 @@ class Grid(MapOutput, LineStringMixin):
         vx = x1 - x0
         vy = y1 - y0
 
-        if vx == 0 and vy == 0:
-            return np.empty((0, 2), int), np.empty((0, 3), float)
+        # Grid extent
+        xmin, xmax = ox, ox + ncol * dx
+        ymin, ymax = oy, oy + nrow * dy
 
-        # Vertical grid lines
+        clip = clip_segment_to_aabb(x0, y0, x1, y1, xmin, xmax, ymin, ymax)
+
+        intersections = []
+        cells = []
+
+        if clip is None:  # line is completely outside
+            intersections = np.array([
+                [x0, y0, 0.0],
+                [x1, y1, 1.0]
+            ])
+            cells = np.array([[-1, -1]])
+            return cells, intersections
+
+        t0, t1 = clip
+
+        # Add outside start
+        if t0 > 0:
+            intersections.append([x0, y0])
+            cells.append([-1, -1])
+
         x_lines = ox + np.arange(0, ncol + 1) * dx
-        t_x = (x_lines - x0) / vx if vx != 0 else np.array([])
-
-        # Horizontal grid lines
         y_lines = oy + np.arange(0, nrow + 1) * dy
-        t_y = (y_lines - y0) / vy if vy != 0 else np.array([])
 
-        # Combine all t values
-        t_all = np.concatenate([
-            t_x if vx != 0 else [],
-            t_y if vy != 0 else [],
-            np.array([0.0, 1.0])
-        ])
+        t_x = (x_lines - x0) / vx if vx != 0 else np.empty(0)
+        t_y = (y_lines - y0) / vy if vy != 0 else np.empty(0)
 
-        # Keep valid intersections
-        mask = (t_all >= 0.0) & (t_all <= 1.0)
-        t_all = np.unique(t_all[mask])
-        t_all.sort()
+        t_cross = np.concatenate([t_x, t_y])
+        t_cross = t_cross[(t_cross > t0) & (t_cross < t1)]
+        t_cross = np.unique(t_cross)
+        t_cross.sort()
 
-        # Intersection coordinates
-        xs = x0 + t_all * vx
-        ys = y0 + t_all * vy
+        # Build full ordered t sequence for inside portion
+        t_inside = np.concatenate([[t0], t_cross, [t1]])
 
-        intersections = np.column_stack([xs, ys])
+        # Entry point
+        intersections.append([x0 + t0 * vx, y0 + t0 * vy])
+
+        for ta, tb in zip(t_inside[:-1], t_inside[1:]):
+            tmid = 0.5 * (ta + tb)
+            xm = x0 + tmid * vx
+            ym = y0 + tmid * vy
+
+            col = int(np.floor((xm - ox) / dx))
+            row = int(np.floor((ym - oy) / dy))
+
+            cells.append([row, col])
+            intersections.append([x0 + tb * vx, y0 + tb * vy])
+
+        # Add outside end
+        if t1 < 1:
+            intersections.append([x1, y1])
+            cells.append([-1, -1])
+
+        intersections = np.array(intersections)
         intersections = np.column_stack((
             np.linalg.norm(intersections - np.array([x0, y0]), axis=1),
             intersections
         ))
 
-        # Midpoints between intersections → cell indices
-        t_mid = 0.5 * (t_all[:-1] + t_all[1:])
-        xm = x0 + t_mid * vx
-        ym = y0 + t_mid * vy
-
-        col = np.floor((xm - ox) / dx).astype(int)
-        row = np.floor((ym - oy) / dy).astype(int)
-
-        # Clip to grid bounds
-        valid = (
-                (col >= 0) & (col < ncol) &
-                (row >= 0) & (row < nrow)
-        )
-
-        cells = np.column_stack([row[valid], col[valid]])
-
-        return cells, intersections
+        return np.array(cells), intersections
