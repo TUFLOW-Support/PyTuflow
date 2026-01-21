@@ -94,6 +94,13 @@ The tables below summarise benchmarking results for the different drivers. The t
 
 \* Did not finish within 30 minutes.
 
+Optimised NetCDF Grid Output
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The :class:`NCGrid<pytuflow.NCGrid>` output class has been optimised for speed when extracting data. In particular, the :meth:`NCGrid.section()<pytuflow.NCGrid.section>` has also been optimised when finding the cells along a linestring. The :meth:`NCGrid.section()<pytuflow.NCGrid.section>` method is now ~2x faster than in previous versions.
+
+Some data caching has also been implemented for faster repeated calls to the same data type.
+
 Minor New Features
 ^^^^^^^^^^^^^^^^^^
 
