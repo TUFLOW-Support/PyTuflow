@@ -29,7 +29,7 @@ class Grid(MapOutput, LineStringMixin, PointMixin):
     def _value(self, dtype: str, idx: tuple | int | np.ndarray | slice) -> float | np.ndarray:
         pass
 
-    def _surface(self, dtype: str, time_index) -> np.ndarray:
+    def _surface(self, dtype: str, time_index: int | np.ndarray | slice) -> np.ndarray:
         is_static = self._is_static(dtype)
         if dtype.lower() not in self._cached_timesteps:
             self._cached_timesteps[dtype.lower()] = set()
@@ -37,22 +37,43 @@ class Grid(MapOutput, LineStringMixin, PointMixin):
             shape = (nrow, ncol) if is_static else (len(self.times(dtype)), nrow, ncol)
             self._cached_data[dtype.lower()] = np.full(shape, np.nan, dtype=float)
 
-        data = None
-        if time_index not in self._cached_timesteps[dtype.lower()]:
-            idx = slice(None) if is_static else time_index
-            data = self._value(dtype, idx)
-            if is_static:
-                self._cached_data[dtype.lower()][:] = data
-            else:
-                self._cached_data[dtype.lower()][idx, ...] = data
-            self._cached_timesteps[dtype.lower()].add(time_index)
+        # special treatment if time_index is slice(None)
+        if not is_static and isinstance(time_index, slice) and time_index == slice(None):
+            vals = self._value(dtype, time_index)
+            for i, val in enumerate(vals):
+                if i not in self._cached_timesteps[dtype.lower()]:
+                    self._cached_data[dtype.lower()][i, ...] = val
+                    self._cached_timesteps[dtype.lower()].add(i)
+            return vals
 
-        if data is not None:
-            return data
-        elif is_static:
-            return self._cached_data[dtype.lower()]
+
+        if isinstance(time_index, (int, np.int32, np.int64)):
+            time_indexes = {time_index}
+        elif not is_static and isinstance(time_index, slice):
+            start = time_index.start or 0
+            stop = time_index.stop or len(self.times(dtype))
+            step = time_index.step or 1
+            time_indexes = set(range(start, stop, step))
         else:
-            return self._cached_data[dtype.lower()][time_index]
+            time_indexes = time_index
+
+        data = []
+        for ti in time_indexes:
+            if ti not in self._cached_timesteps[dtype.lower()]:
+                idx = slice(None) if is_static else ti
+                val = self._value(dtype, idx)
+                if is_static:
+                    self._cached_data[dtype.lower()][:] = val
+                else:
+                    self._cached_data[dtype.lower()][idx, ...] = val
+                self._cached_timesteps[dtype.lower()].add(time_index)
+            else:
+                val = self._cached_data[dtype.lower()][ti] if not is_static else self._cached_data[dtype.lower()]
+            data.append(val)
+
+        if len(data) == 1:
+            return data[0]
+        return np.array(data).reshape(len(time_indexes), *data[0].shape)
 
     def maximum(self, data_types: str | list[str]) -> float | pd.DataFrame:
         """Returns the maximum values for the given data types.
@@ -92,9 +113,16 @@ class Grid(MapOutput, LineStringMixin, PointMixin):
         velocity         1.234567
         depth            5.678901
         """
+        df = pd.DataFrame()
         data_types = self._figure_out_data_types(data_types, None)
         for dtype in data_types:
-            pass
+            surface = self._surface(dtype, slice(None))
+            mx = np.nanmax(surface)
+            if len(data_types) == 1:
+                return float(mx)
+            df_ = pd.DataFrame([mx], columns=['maximum'], index=[dtype])
+            df = pd.concat([df, df_], axis=0) if not df.empty else df_
+        return df
 
     def data_point(self, locations: PointLocation, data_types: str | list[str],
                    time: TimeLike) -> float | tuple[float, float] | pd.DataFrame:

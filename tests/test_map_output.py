@@ -1534,6 +1534,19 @@ class TestNCGrid(unittest.TestCase):
         df = res.section(line, 'h', 0)
         self.assertEqual((18, 2), df.shape)
 
+    def test_maximum(self):
+        p = './tests/nc_grid/small_model_001.nc'
+        res = NCGrid(p)
+        mx = res.maximum('h')
+        self.assertTrue(np.isclose(mx, 1.0).all())
+
+    def test_maximum_dataframe(self):
+        p = './tests/nc_grid/small_model_001.nc'
+        res = NCGrid(p)
+        mx = res.maximum(['h', 'v'])
+        self.assertEqual((2, 1), mx.shape)
+        self.assertTrue(np.isclose(mx.to_numpy().flatten(), [1.0, 0.]).all())
+
 
 def load_comparison_data(path):
     with open(path, 'rb') as f:
