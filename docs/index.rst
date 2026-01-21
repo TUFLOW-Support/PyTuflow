@@ -52,7 +52,16 @@ To install PyVista and h5py:
 
     pip install h5py
 
-This change comes with speed improvements for loading mesh outputs as well as significant speed improvements when extracting data along a linestring (e.g. for :meth:`XMDF.section()<pytuflow.XMDF.section>` and :meth:`XMDF.curtain()<pytuflow.XMDF.curtain>` methods). See the :ref:`Optimised Mesh Outputs<v1.1_optimisations>` section for more detials.
+This change comes with speed improvements for loading mesh outputs as well as significant speed improvements when extracting data along a linestring (e.g. for :meth:`XMDF.section()<pytuflow.XMDF.section>` and :meth:`XMDF.curtain()<pytuflow.XMDF.curtain>` methods). See the :ref:`Optimised Mesh Outputs<v1.1_optimisations>` section for more details.
+
+New Methods for Map Output Classes
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+New methods have been added to the map output classes (:meth:`XMDF<pytuflow.XMDF>`, :meth:`NCMesh<pytuflow.NCMesh>`, :meth:`DAT<pytuflow.DAT>`, :meth:`NCGrid<pytuflow.NCGrid>`, :meth:`CATCHJson<pytuflow.CATCHJson>`):
+
+- :meth:`data_point()<pytuflow.XMDF.data_point>`: Extract a single data point at a given time and location.
+- :meth:`maximum()<pytuflow.XMDF.maximum>`: Extract the maximum value over the entire simulation for a given location or set of locations.
+- :meth:`minimum()<pytuflow.XMDF.minimum>`: Extract the minimum value over the entire simulation for a given location or set of locations.
 
 .. _v1.1_optimisations:
 
@@ -101,11 +110,15 @@ The :class:`NCGrid<pytuflow.NCGrid>` output class has been optimised for speed w
 
 Some data caching has also been implemented for faster repeated calls to the same data type.
 
+Optimised TPC Output
+^^^^^^^^^^^^^^^^^^^^
+
+Significant speed up for loading TPC results from a model that contains a lot of channels (in the order of > 500). For example, a test was run on a model that contained approximately 5,000 pipes, and the load time went from 15 seconds to < 1 second.
+
 Minor New Features
 ^^^^^^^^^^^^^^^^^^
 
 - Added Flood Modeller DAT cross-section output class - :class:`DATCrossSections<pytuflow.DATCrossSections>`. This is essentially a wrapper around the :class:`FmCrossSectionDatabaseDriver<pytuflow.FmCrossSectionDatabaseDriver>` class and allows users to interact with Flood Modeller DAT files in an easier way via the ``Output`` class methods - e.g. :meth:`ids()<pytuflow.DATCrossSections.ids>`, :meth:`data_types()<pytuflow.DATCrossSections.data_types>`, :meth:`section()<pytuflow.DATCrossSections.section>`.
-- Significant speed up for loading TPC results from a model that contains a lot of channels (in the order of > 500). For example, a test was run on a model that contained approximately 5,000 pipes, and the load time went from 15 seconds to < 1 second.
 - Added :attr:`has_reference_time<pytuflow.XMDF.has_reference_time>` property to all output classes. This property holds whether the loaded output contains an explicit reference time. The :attr:`reference_time<pytuflow.XMDF.reference_time>` property will always return a value and as a consequence cannot be used for this purpose.
 - Curtain plots will now return a fourth column for vector results that contain the vector projected onto the direction of the input linestring.
 - ``direction_of_velocity`` and ``direction_of_unit_flow`` are now recognised as separate scalar datasets. Previously, these would be assumed to be combined with the velocity and unit flow magnitude datasets respectively and then treated as a vector dataset. This change allows the datasets to be treated separately and the available datasets align more closely with what is in the NCGrid format. This also allows users to plot the direction datasets as scalar datasets.
