@@ -277,23 +277,23 @@ class Grid(MapOutput):
         data_types = self._figure_out_data_types(data_types, None)
         for name, line in lines.items():
             df1 = pd.DataFrame()
+            gridline = GridLine(*self._grid_info(data_types[0]))
+            nm = np.array([(x.offsets[0], x.offsets[1], x.n, x.m) for x in gridline.cells_along_line(line)])
+            rows = nm[:, 2].flatten().astype(int)
+            cols = nm[:, 3].flatten().astype(int)
+            offsets = nm[:, :2].flatten()
             for dtype in data_types:
-                gridline = GridLine(*self._grid_info(dtype))
-                nm = np.array([(x.offsets[0], x.offsets[1], x.n, x.m) for x in gridline.cells_along_line(line)])
-                rows = nm[:, 2].flatten().astype(int)
-                cols = nm[:, 3].flatten().astype(int)
                 if self._is_static(dtype):
                     val = self._surface(dtype, -1)[rows, cols]
                 else:
                     times = self.times(dtype, fmt='absolute') if isinstance(time, datetime) else self.times(dtype)
                     timeidx = self._closest_time_index(times, time)
                     val = self._surface(dtype, timeidx)[rows, cols]
-                offsets = nm[:, :2].flatten()
-                val = np.column_stack((offsets, np.repeat(val, 2)))
-                df2 = pd.DataFrame(val, columns=['offset', f'{name}/{dtype}'])
+                df2 = pd.DataFrame(np.repeat(val, 2), columns=[dtype], index=offsets)
+                df2.index.name = 'offset'
                 df1 = pd.concat([df1, df2], axis=1) if not df1.empty else df2
 
-            df = pd.concat([df, df1], axis=1) if not df.empty else df1
+            df = self._merge_line_dataframe(df, df1, name, reset_index=True)
 
         return df
 

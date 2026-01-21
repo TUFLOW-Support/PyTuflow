@@ -982,12 +982,3 @@ class Mesh(MapOutput):
             return
         self._driver.load()
         self._loaded = True
-
-    @staticmethod
-    def _merge_line_dataframe(df1: pd.DataFrame, df2: pd.DataFrame, name: str, reset_index: bool) -> pd.DataFrame:
-        if df2.empty:
-            return df1
-        if reset_index:
-            df2.reset_index(inplace=True, drop=False)
-        df2.columns = pd.MultiIndex.from_tuples([(name, x) for x in df2.columns])
-        return pd.concat([df1, df2], axis=1) if not df1.empty else df2
