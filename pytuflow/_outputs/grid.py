@@ -124,6 +124,55 @@ class Grid(MapOutput, LineStringMixin, PointMixin):
             df = pd.concat([df, df_], axis=0) if not df.empty else df_
         return df
 
+    def minimum(self, data_types: str | list[str]) -> float | pd.DataFrame:
+        """Returns the minimum values for the given data types.
+
+        Some formats store minimum values in the metadata (e.g. XMDF), if this is the case, the minimum values
+        will be returned directly from the metadata. If the format does not store minimum values, the minimum
+        values will be calculated from the data. In this case, the minimum and temporal datasets will be treated
+        as separate. For example, if ``"depth"`` is requested as a data type, it will be calculated
+        from the temporal depth data. If ``"max depth"`` is requested, it will be calculated from the minimum
+        depth data.
+
+        If multiple data types are requested, a DataFrame will be returned with the data types as the index
+        and the minimum values as the column. Vector results will return the magnitude of the vector.
+
+        Parameters
+        ----------
+        data_types : str | list[str]
+            The data types to return the minimum values for.
+
+        Returns
+        -------
+        float | pd.DataFrame
+            The minimum value(s) for the given data type(s).
+
+        Examples
+        --------
+        Get the minimum water level for a given mesh:
+
+        >>> grid = ... # Assume grid is a loaded Grid result
+        >>> grid.minimum('water level')
+        32.547954
+
+        Get the minimum velocity and depth for multiple data types:
+
+        >>> grid.minimum(['velocity', 'depth'])
+                    minimum
+        velocity         0.
+        depth            0.
+        """
+        df = pd.DataFrame()
+        data_types = self._figure_out_data_types(data_types, None)
+        for dtype in data_types:
+            surface = self._surface(dtype, slice(None))
+            mx = np.nanmin(surface)
+            if len(data_types) == 1:
+                return float(mx)
+            df_ = pd.DataFrame([mx], columns=['minimum'], index=[dtype])
+            df = pd.concat([df, df_], axis=0) if not df.empty else df_
+        return df
+
     def data_point(self, locations: PointLocation, data_types: str | list[str],
                    time: TimeLike) -> float | tuple[float, float] | pd.DataFrame:
         """Extracts the data value for the given point locations and data types at the specified time.
