@@ -106,7 +106,7 @@ class PyNCMeshDataExtractor(PyDataExtractor):
         else:
             try:
                 return self.engine.get_property('', 'spherical').lower() == 'true'
-            except AttributeError:
+            except (AttributeError, KeyError):
                 return False
 
     def data(self, data_type: str, index: PyDataExtractor.SliceType | PyDataExtractor.MultiSliceType) -> np.ndarray:
