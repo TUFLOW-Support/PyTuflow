@@ -196,7 +196,7 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
             if self.on_vertex(data_type):
                 data, mask = self.vertex_data(data_type, slice(None), self._map_wet_dry_to_verts)
             else:
-                data, mask = self.cell_data(data_type, slice(None), depth_averaging)
+                data, mask = self.cell_data(data_type, slice(None), depth_averaging, None)
             if self.is_vector(data_type):
                 data = np.linalg.norm(data, axis=1 if data.ndim == 2 else 2)
             mx = float(data[mask].max())
@@ -237,7 +237,7 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
             if self.on_vertex(data_type):
                 data, mask = self.vertex_data(data_type, slice(None), self._map_wet_dry_to_verts)
             else:
-                data, mask = self.cell_data(data_type, slice(None), depth_averaging)
+                data, mask = self.cell_data(data_type, slice(None), depth_averaging, None)
             if self.is_vector(data_type):
                 data = np.linalg.norm(data, axis=1 if data.ndim == 2 else 2)
             mn = float(data[mask].min())
@@ -377,6 +377,81 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
             The vertical levels for the given parameters.
         """
         return self.extractor.zlevels(time_index, nlevels, cell_idx2, cell_idx3)
+
+    def surface(self,
+                data_type: str,
+                time: float | datetime,
+                depth_averaging: str = 'sigma&0&1',
+                on_vertex: bool = False,
+                coord_scope: str = 'global',
+                time_index: int = -1
+                ) -> tuple[np.ndarray, np.ndarray]:
+        """Returns the surface data for the specified data type and time.
+
+        Parameters
+        ----------
+        data_type : str
+            The result type to extract the surface for.
+        time : float | datetime
+            The time to extract the data for.
+        depth_averaging : str, optional
+            The depth averaging method to use when extracting 3D data. Options are:
+
+            - `singlelevel`
+            - `multilevel`
+            - `depth`
+            - `height`
+            - `elevation`
+            - `sigma` (default)
+
+        on_vertex : bool, optional
+            Whether to return data on vertices. If the data already exists on vertices, then this parameter has no
+            effect. If the data is on cells and this parameter is set to ``True``, then data will be interpolated
+            to the vertices.
+        coord_scope : str, optional
+            The coordinate scope to return the data in. Options are:
+
+            - ``"global"``: returns data in global coordinates (i.e. the original coordinate system of the mesh).
+            - ``"local"``: returns data in local coordinates. For cartesian coordinates, the origin (0, 0) is shifted
+              to the centre of the mesh bounding box. For geographic coordinates, the local coordinates are
+              the coordinates converted into a projected system.
+        time_index : int, optional
+            The time index to return the data for. This value will take precedence over the ``time``
+            parameter if a value greater than ``-1`` is provided.
+
+        Returns
+        -------
+        tuple[np.ndarray, np.ndarray]
+            A tuple containing the data array and a mask array containing information on whether the vertex/cell is wet.
+        """
+        with self.extractor.open():
+            if self.is_static(data_type):
+                time_index = -1
+            else:
+                time_index = time_index if time_index >= 0 else self._find_time_index(data_type, time)
+
+            if self.on_vertex(data_type):
+                on_vertex = True
+            if not self.is_3d(data_type):
+                depth_averaging = None
+
+            if self.cache.contains('surface', data_type, time_index, depth_averaging, on_vertex):
+                return self.cache.get('surface', data_type, time_index, depth_averaging, on_vertex)
+
+            if self.on_vertex(data_type):
+                data, mask = self.vertex_data(data_type, time_index, self._map_wet_dry_to_verts)
+            else:
+                data, mask = self.cell_data(data_type, time_index, depth_averaging, None)
+
+            if on_vertex:
+                pos = self.geom.vertex_position(slice(None), scope=coord_scope, get_z=True)
+            else:
+                pos = self.geom.cell_position(slice(None), scope=coord_scope)
+
+            data = np.column_stack((pos[:, :2], data.flatten() if not self.is_vector(data_type) else data.reshape(-1, 2)))
+
+            self.cache.set((data, mask), 'surface', data_type, time_index, depth_averaging, on_vertex)
+            return data, mask
 
     def data_point(self,
                    point: PointLike,
@@ -768,18 +843,6 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
         df['wd'] = False
         df.loc[ind, 'wd'] = True
         return df['wd'].to_numpy()
-
-    def map_cell_data_to_vertexes(self, cell_data: np.ndarray, mapping_func: str) -> np.ndarray:
-        if self._cells_4_mapping is None:
-            self._cells_4_mapping = self.geom.cells_df.copy()
-        cells = self._cells_4_mapping
-        cells['cell_data'] = cell_data
-        m = cells.melt(id_vars=['cell_data'], value_vars=['n1', 'n2', 'n3', 'n4'])
-        ind = m[m['value'] != -1][['cell_data', 'value']]
-        if mapping_func == 'max':
-            return ind.groupby(by='value').max().to_numpy().reshape((-1,))
-        elif mapping_func == 'mean':
-            return ind.groupby(by='value').mean().to_numpy().reshape((-1,))
 
     def _2d_to_3d_data_types(self, data_type: str) -> tuple[str, str]:
         """Return the bed elevation and water level data types for the given 2d data type so that the 3D profile

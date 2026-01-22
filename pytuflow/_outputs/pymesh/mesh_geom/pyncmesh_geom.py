@@ -29,6 +29,8 @@ class PyNCMeshGeometry(PyMeshGeometry, GeometryLazyLoadMixin, VTKGeometryMixin):
     def __init__(self, fpath: str | Path):
         self._init_lazy_load()
         self._spherical = False
+        self._cell_position = None
+        self._cell_position_local = None
         super().__init__(fpath)
 
     @property
@@ -43,6 +45,23 @@ class PyNCMeshGeometry(PyMeshGeometry, GeometryLazyLoadMixin, VTKGeometryMixin):
     def load(self):
         if not self._loaded:
             self._load()
+
+    def cell_position(self, cell_id: int | typing.Iterable[int] | slice, scope: str = 'global') -> np.ndarray:
+        self.load()
+        if self._cell_position is None:
+            with self._open() as nc:
+                cell_x = self._data(nc, 'cell_X')
+                cell_y = self._data(nc, 'cell_Y')
+                cell_z = self._data(nc, 'cell_Zb')
+                self._cell_position = np.column_stack((cell_x, cell_y, cell_z))
+                local_pos = self._trans.transform(self._cell_position[:, :2])
+                self._cell_position_local = np.column_stack((local_pos, cell_z))
+        if scope == 'global':
+            return self._cell_position[cell_id]
+        elif scope == 'local':
+            return self._cell_position_local[cell_id]
+        else:
+            raise ValueError("scope must be either 'global' or 'local'")
 
     def _load(self):
         with self._open() as nc:
@@ -106,15 +125,15 @@ class PyNCMeshGeometry(PyMeshGeometry, GeometryLazyLoadMixin, VTKGeometryMixin):
     @staticmethod
     def _data(nc: File | dict, variable_name: str) -> np.ndarray:
         if File is not None:
-            return nc[variable_name][:]
+            a = nc[variable_name][:]
         else:
             a = nc[variable_name][:]
-            if np.ma.isMaskedArray(a):
-                if np.ma.is_masked(a):
-                    return a.filled(np.nan)
-                else:
-                    return np.array(a)
-            return a
+        if np.ma.isMaskedArray(a):
+            if np.ma.is_masked(a):
+                return a.filled(np.nan)
+            else:
+                return np.array(a)
+        return a
 
     @contextlib.contextmanager
     def _open(self) -> typing.Generator[File | dict, None, None]:

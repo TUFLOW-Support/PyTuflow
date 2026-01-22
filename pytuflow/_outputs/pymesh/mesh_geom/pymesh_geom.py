@@ -211,6 +211,23 @@ class PyMeshGeometry(PointMixin, LineStringMixin):
         else:
             return self.vertices_local[vertex_id]
 
+    def cell_position(self, cell_id: int | typing.Iterable[int] | slice, scope: str = 'global') -> np.ndarray:
+        """Returns the centroid position of the cell ID(s).
+
+        Parameters
+        ----------
+        cell_id : int | typing.Iterable[int]
+            The cell ID(s) to return the position for.
+        scope : str, optional
+            The coordinate scope to return the position in. Options are ``"global"`` or ``"local"``.
+
+        Returns
+        -------
+        pd.DataFrame
+            The x,y,z centroid positions of the cell IDs.
+        """
+        raise NotImplementedError("cell_position method not implemented yet.")
+
     def triangle_vertices(self, triangle_id: int) -> np.ndarray:
         """Returns the vertex ids connected to the given triangle.
 

@@ -75,6 +75,30 @@ class TestXMDF(unittest.TestCase):
         self.assertEqual((3, 1), mn.shape)
         self.assertTrue(np.isclose([35.9343795, 0., 0.], mn.to_numpy().flatten()).all())
 
+    def test_surface(self):
+        xmdf = './tests/xmdf/run.xmdf'
+        res = XMDF(xmdf)
+        df = res.surface('h', 0.)
+        self.assertEqual((25, 4), df.shape)
+
+    def test_surface_max(self):
+        xmdf = './tests/xmdf/run.xmdf'
+        res = XMDF(xmdf)
+        df = res.surface('max h', 0.)
+        self.assertEqual((25, 4), df.shape)
+
+    def test_surface_vector(self):
+        xmdf = './tests/xmdf/run.xmdf'
+        res = XMDF(xmdf)
+        df = res.surface('vector vel', 0.)
+        self.assertEqual((25, 5), df.shape)
+
+    def test_surface_vector_max(self):
+        xmdf = './tests/xmdf/run.xmdf'
+        res = XMDF(xmdf)
+        df = res.surface('max vector vel', 0.)
+        self.assertEqual((25, 5), df.shape)
+
 
 class TestDAT(unittest.TestCase):
 
@@ -218,6 +242,18 @@ class TestNCMesh(unittest.TestCase):
         res = NCMesh(nc)
         mn = res.minimum('sal', averaging_method=None)
         self.assertTrue(np.isclose(mn, 0., atol=0.0001).all())
+
+    def test_surface(self):
+        nc = './tests/nc_mesh/EST000_3D_001.nc'
+        res = NCMesh(nc)
+        df = res.surface('h', 186972, coord_scope='local')
+        self.assertEqual(df.shape, (1375, 4))
+
+    def test_surface_vector(self):
+        nc = './tests/nc_mesh/EST000_3D_001.nc'
+        res = NCMesh(nc)
+        df = res.surface('v', 186972)
+        self.assertEqual(df.shape, (1375, 5))
 
 
 class TestCATCHJson(unittest.TestCase):

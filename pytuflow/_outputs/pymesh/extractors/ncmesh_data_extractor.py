@@ -104,7 +104,10 @@ class PyNCMeshDataExtractor(PyDataExtractor):
             except AttributeError:
                 return False
         else:
-            return self.engine.get_property('cell_X', 'units').lower() == 'decimal degrees'
+            try:
+                return self.engine.get_property('', 'spherical').lower() == 'true'
+            except AttributeError:
+                return False
 
     def data(self, data_type: str, index: PyDataExtractor.SliceType | PyDataExtractor.MultiSliceType) -> np.ndarray:
         return self.engine.data(data_type, index)

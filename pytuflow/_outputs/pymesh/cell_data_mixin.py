@@ -14,6 +14,7 @@ class CellDataMixin:
                   data_type: str,
                   time_index: int | slice,
                   depth_averaging_method: str,
+                  cell_to_vertex_mapper: typing.Callable[[np.ndarray], np.ndarray] | None
                   ) -> tuple[np.ndarray, np.ndarray]:
         data_types = self.translate_data_type(data_type)
         is_3d = self.is_3d(data_types[0])
@@ -25,7 +26,7 @@ class CellDataMixin:
         if is_3d and depth_averaging_method is not None:
             nlevels = self.zlevel_count(slice(None))
             max_nlevels = nlevels.max()
-            zlevels = self.zlevels(slice(None), nlevels, np.arange(nlevels.shape[0]), self.cell_index(slice(None), data_types[0]))
+            zlevels = self.zlevels(time_index, nlevels, np.arange(nlevels.shape[0]), self.cell_index(slice(None), data_types[0]))
             a_padded = np.full((nlevels.shape[0], max_nlevels), np.nan)
             b_padded = np.full((nlevels.shape[0], max_nlevels + 1), np.nan)
 
@@ -48,7 +49,7 @@ class CellDataMixin:
                             k2 += nlevel + 1
                         return depth_averaging.get_method_func(depth_averaging_method)(b_padded, a_padded)
 
-                    if is_static:
+                    if data.ndim == 1:
                         data = depth_average(data, zlevels)
                     else:
                         data_avg = np.full((data.shape[0], nlevels.shape[0]), np.nan)

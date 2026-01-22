@@ -62,6 +62,8 @@ class H5Engine(DatasetEngine):
             path = self._case_correct_path(data_path)
             if path:
                 prop = self.hnd[path].attrs[property_name]
+            else:
+                prop = self.hnd.attrs[property_name]
             if isinstance(prop, np.ndarray):
                 if prop.dtype.type is np.bytes_:
                     ret = tuple([p.decode('utf-8') for p in prop])
