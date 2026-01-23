@@ -4,6 +4,8 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+from numpy.ma.core import masked
+
 try:
     import pyvista as pv
 except ImportError:
@@ -31,6 +33,7 @@ class PyNCMeshGeometry(PyMeshGeometry, GeometryLazyLoadMixin, VTKGeometryMixin):
         self._spherical = False
         self._cell_position = None
         self._cell_position_local = None
+        self._weights = None
         super().__init__(fpath)
 
     @property
@@ -62,6 +65,42 @@ class PyNCMeshGeometry(PyMeshGeometry, GeometryLazyLoadMixin, VTKGeometryMixin):
             return self._cell_position_local[cell_id]
         else:
             raise ValueError("scope must be either 'global' or 'local'")
+
+    def cell_to_vertex_weights(self) -> np.ndarray:
+        self.load()
+        if self._weights is None:
+            is_tri = self._cells_df['n4'].values == -1
+
+            # Index nx, ny for each for 5 edges (4 angles)
+            ii = [3, 0, 1, 2, 3, 0]
+            idx = self.cell_nodes[:, ii]
+            nx = self._vertices[idx, 0]
+            ny = self._vertices[idx, 1]
+
+            # For triangle cells, set last corner to be _first corner
+            nx[is_tri, 4:6] = nx[is_tri, 1:3]
+            ny[is_tri, 4:6] = ny[is_tri, 1:3]
+
+            # Calculate angles
+            dx = nx[:, 1:] - nx[:, :-1]
+            dy = ny[:, 1:] - ny[:, :-1]
+            ds = np.sqrt(dx * dx + dy * dy)
+
+            mask = ds == 0
+            if np.any(mask):
+                ds[mask] = 1  # prevent division by zero
+
+            ang = np.arccos(-(dx[:, 1:] * dx[:, 0:-1] + dy[:, 1:] * dy[:, 0:-1]) / (ds[:, 1:] * ds[:, 0:-1]))
+            ang[mask[:,:4]] = 0
+
+            # Set angle of repeated corner to 0
+            ang[is_tri, 3] = 0
+
+            # Sum angles for each node & divide by total angle
+            ang_sum = np.bincount(self.cell_nodes.flatten(), weights=ang.flatten())
+            self._weights = ang / ang_sum[self.cell_nodes]
+
+        return self._weights
 
     def _load(self):
         with self._open() as nc:

@@ -255,6 +255,12 @@ class TestNCMesh(unittest.TestCase):
         df = res.surface('v', 186972)
         self.assertEqual(df.shape, (1375, 5))
 
+    def test_surface_to_vertex(self):
+        nc = './tests/nc_mesh/EST000_3D_001.nc'
+        res = NCMesh(nc)
+        df = res.surface('H', 186972, averaging_method='sigma&0&1', coord_scope='local', to_vertex=True)
+        self.assertEqual(df.shape, (1419, 4))
+
 
 class TestCATCHJson(unittest.TestCase):
 

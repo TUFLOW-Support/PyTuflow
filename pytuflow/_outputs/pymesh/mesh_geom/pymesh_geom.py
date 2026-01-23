@@ -29,6 +29,8 @@ class PyMeshGeometry(PointMixin, LineStringMixin):
         self.cells = np.array([])
         #: pd.DataFrame: Cell information kept in a DataFrame for easy access (Nx5 - cell_id, v1, v2, v3, v4, where v4 is -1 for triangles)
         self.cells_df = pd.DataFrame()
+        #: np.ndarray: Cell to vertex mapping (NxM array of vertex IDs connected to each cell)
+        self.cell_nodes = np.array([])
         #: np.ndarray: Triangle IDs connected to each cell (Nx2 array of triangle IDs, the second ID is -1 if the cell is a triangle)
         self.cell2triangle = np.array([])
         #: np.ndarray: Mesh triangle information (Nx4 array of cell_id, n1, n2, n3). This is a triangle representation of the mesh, where quads are converted if needed.
@@ -227,6 +229,16 @@ class PyMeshGeometry(PointMixin, LineStringMixin):
             The x,y,z centroid positions of the cell IDs.
         """
         raise NotImplementedError("cell_position method not implemented yet.")
+
+    def cell_to_vertex_weights(self) -> np.ndarray:
+        """Returns the weights used to interpolate from cell centers to vertex values.
+
+        Returns
+        -------
+        np.ndarray
+            The weights used to interpolate from cell centers to vertex values.
+        """
+        raise NotImplementedError
 
     def triangle_vertices(self, triangle_id: int) -> np.ndarray:
         """Returns the vertex ids connected to the given triangle.

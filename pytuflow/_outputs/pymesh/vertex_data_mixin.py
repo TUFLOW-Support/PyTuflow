@@ -12,8 +12,7 @@ class VertexDataMixin:
 
     def vertex_data(self: 'PyMesh',
                     data_type: str,
-                    time_index: int | slice,
-                    cell_to_vertex_mapper: typing.Callable[[np.ndarray], np.ndarray]
+                    time_index: int | slice
                     ) -> tuple[np.ndarray, np.ndarray]:
         """Returns data values and active mask for all vertices in the mesh for a given time slice."""
         data_type = self.translate_data_type(data_type)[0]
@@ -25,11 +24,11 @@ class VertexDataMixin:
         wd = self.extractor.wd_flag(data_type, index).astype(bool)
         data = self.extractor.data(data_type, index)
         if wd.ndim == 1:
-            wd_vert = cell_to_vertex_mapper(wd)
+            wd_vert = self._map_wet_dry_to_verts(wd)
         else:
             wd_vert = np.empty(data.shape[:2], dtype=bool)
             for t in range(wd.shape[0]):
-                wd_vert[t] = cell_to_vertex_mapper(wd[t])
+                wd_vert[t] = self._map_wet_dry_to_verts(wd[t])
         return data, wd_vert
 
     def data_point_from_vertex_data(self: 'PyMesh',

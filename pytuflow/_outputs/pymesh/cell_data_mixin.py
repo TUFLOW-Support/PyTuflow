@@ -14,14 +14,28 @@ class CellDataMixin:
                   data_type: str,
                   time_index: int | slice,
                   depth_averaging_method: str,
-                  cell_to_vertex_mapper: typing.Callable[[np.ndarray], np.ndarray] | None
+                  to_vertex: bool = False
                   ) -> tuple[np.ndarray, np.ndarray]:
+        def cell2node(data_: np.ndarray, dry_mask: np.ndarray, wts_: np.ndarray | None) -> tuple[np.ndarray, np.ndarray]:
+            if wts_ is None:
+                wts_ = self.geom.cell_to_vertex_weights().copy()
+                wts_[dry_mask, :] = 0
+                wts_sum = np.bincount(self.geom.cell_nodes.flatten(), wts_.flatten())
+                mask = wts_sum == 0
+                wts_sum[mask] = -999
+                wts_ = wts_ / wts_sum[self.geom.cell_nodes]
+            data_tiled = np.tile(data_, (4, 1)).transpose() * wts_
+            return np.bincount(self.geom.cell_nodes.flatten(), data_tiled.flatten()), wts_
+
         data_types = self.translate_data_type(data_type)
         is_3d = self.is_3d(data_types[0])
         is_vector = self.is_vector(data_types[0])
         is_static = self.is_static(data_types[0])
 
         index = slice(None) if is_static else (time_index, slice(None))
+
+        wd = self.extractor.wd_flag(data_types[0], index)
+        wts = None
 
         if is_3d and depth_averaging_method is not None:
             nlevels = self.zlevel_count(slice(None))
@@ -51,22 +65,32 @@ class CellDataMixin:
 
                     if data.ndim == 1:
                         data = depth_average(data, zlevels)
+                        if to_vertex:
+                            data, wts = cell2node(data, ~wd, wts)
                     else:
-                        data_avg = np.full((data.shape[0], nlevels.shape[0]), np.nan)
+                        shape = (data.shape[0], self.geom.vertices.shape[0]) if to_vertex else (data.shape[0], nlevels.shape[0])
+                        data_avg = np.full(shape, np.nan)
                         for t in range(data.shape[0]):
-                            data_avg[t, :] = depth_average(data[t, :], zlevels[t, :])
+                            if to_vertex:
+                                depth_avg = depth_average(data[t, :], zlevels)
+                                data_avg[t, :], wts = cell2node(depth_avg, ~wd[t, :], wts)
+                            else:
+                                data_avg[t, :] = depth_average(data[t, :], zlevels[t, :])
                         data = data_avg
+
+                elif to_vertex:
+                    data, wts = cell2node(data, ~wd, wts)
 
                 if is_vector:
                     data = data.reshape(data.shape[0], -1, 1)
                 values.append(data)
+
         if len(values) > 1:
             if is_static:
                 data = np.column_stack(values).reshape((-1, 2) if is_vector else (-1, 1))
             else:
                 data = np.concatenate(values, axis=2 if is_vector else 1)
 
-        wd = self.extractor.wd_flag(data_types[0], index)
         if is_3d and depth_averaging_method is None:
             wd3d_index = self.extractor.data('idx2', slice(None)) - 1
             if is_static:
@@ -76,6 +100,8 @@ class CellDataMixin:
                 for t in range(wd.shape[0]):
                     wd3d[t, :] = wd[t, wd3d_index]
                 wd = wd3d
+        elif to_vertex:
+            wd = self._map_wet_dry_to_verts(wd)
 
         return data, wd
 

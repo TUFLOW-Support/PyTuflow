@@ -22,6 +22,7 @@ class GeometryLazyLoadMixin:
         self._cells_df = pd.DataFrame()
         self._cell2triangle = np.array([])
         self._triangles = np.array([])
+        self._cell_nodes = np.array([])
         self._mesh = None
         self._global_bbox = Bbox2D()
         self._local_bbox = Bbox2D()
@@ -76,6 +77,18 @@ class GeometryLazyLoadMixin:
     @cells_df.setter
     def cells_df(self, df: pd.DataFrame):
         self._cells_df = df
+
+    @property
+    def cell_nodes(self) -> np.ndarray:
+        if self._cell_nodes.size == 0:
+            self._cell_nodes = self.cells_df[['n1', 'n2', 'n3', 'n4']].to_numpy()
+            is_tri = self._cell_nodes[:, 3] == -1
+            self._cell_nodes[is_tri, 3] = self._cell_nodes[is_tri, 2]
+        return self._cell_nodes
+
+    @cell_nodes.setter
+    def cell_nodes(self, cn: np.ndarray):
+        self._cell_nodes = cn
 
     @property
     def cell2triangle(self) -> np.ndarray:
