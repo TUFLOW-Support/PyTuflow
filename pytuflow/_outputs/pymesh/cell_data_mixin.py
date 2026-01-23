@@ -20,6 +20,7 @@ class CellDataMixin:
             if wts_ is None:
                 wts_ = self.geom.cell_to_vertex_weights().copy()
                 wts_[dry_mask, :] = 0
+                data_[dry_mask] = 0
                 wts_sum = np.bincount(self.geom.cell_nodes.flatten(), wts_.flatten())
                 mask = wts_sum == 0
                 wts_sum[mask] = -999

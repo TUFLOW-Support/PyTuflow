@@ -891,6 +891,17 @@ class TestPyMeshRegression(unittest.TestCase):
         self.assertTrue(is_close_offset3.all())
         self.assertTrue(is_close_val3.all())
 
+        # test surface
+        a = res.surface('h', 186972, to_vertex=True)['value'].to_numpy()
+        b = load_comparison_data(f'{comp}_surface_vertex_h.data')  # created using tfv FVExtractor.get_sheet_node()
+        is_close = np.isclose(a, b)
+        self.assertTrue(is_close.all())
+
+        a = res.surface('sal', 186972, to_vertex=True)['value'].to_numpy()
+        b = load_comparison_data(f'{comp}_surface_vertex_salinity.data')  # created using tfv FVExtractor.get_sheet_node()
+        is_close = np.isclose(a, b)
+        self.assertTrue(is_close.all())
+
     def test_pymesh_quadtree(self):
         p = './tests/quadtree/EG13_001.xmdf'
         point = './tests/quadtree/qdt_point.shp'
