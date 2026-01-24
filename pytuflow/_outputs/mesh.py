@@ -304,6 +304,77 @@ class Mesh(MapOutput):
 
     def surface(self, data_type: str, time: TimeLike, averaging_method: str = 'sigma&0&1',
                 to_vertex: bool = False, coord_scope: str = 'global') -> pd.DataFrame:
+        """Returns the value for every cell/vertex at the specified time. A depth averaging method
+        is required for 3D datasets (defaults to sigma averaging from 0 to 1).
+
+        Parameters
+        ----------
+        data_type : str
+            The data type to extract the surface data for.
+        time : TimeLike
+            The time to extract the surface data for.
+        averaging_method : str, optional
+            The depth-averaging method to use. Only applicable for 3D results.
+
+            The averaging methods are:
+
+            * ``singlelevel``
+            * ``multilevel``
+            * ``depth``
+            * ``height``
+            * ``elevation``
+            * ``sigma``
+
+            The averaging method parameters can be adjusted by building them into the method string in a URI style
+            format. The format is as follows:
+
+            ``<method>?dir=<dir>&<value1>&<value2>``
+
+            Where
+
+            * ``<method>`` is the averaging method name
+            * ``<dir>`` is the direction, ``top`` or ``bottom`` (i.e. from top or from bottom) - only used by certain
+              averaging methods
+            * ``<value1>``, ``<value2>``... are the values to be used in the averaging method (the number required to be
+              passed depends on the averaging method)
+
+            e.g. ``'singlelevel?dir=top&1'`` uses the single level averaging method and takes the first vertical layer
+            from the top. Or ``'sigma&0.1&0.9'`` uses the sigma averaging method and averages values located between
+            the 10th and 90th water column depth.
+
+        to_vertex : bool, optional
+            Whether to interpolate the cell data to vertex data. Only applicable for cell-based datasets (e.g. NCMesh).
+            For vertex-based datasets (e.g. XMDF), this parameter has no effect.
+        coord_scope : str, optional
+            The coordinate scope for the output coordinates. Options are:
+
+            - ``"global"`` (default) - coordinates are unchanged from the input data (i.e. easting/northing or lon/lat)
+            - ``"local"`` - coordinates are transformed to a local Cartesian coordinate system and the origin is moved
+              to the centre of the mesh extent. This can be useful for visualisation purposes, especially when converting
+              into 3D formats for viewing in programs like Blender, Unreal Engine, etc
+
+        Returns
+        -------
+        pd.DataFrame
+            The surface data as a DataFrame with columns for the coordinates, value(s), and active mask.
+
+        Examples
+        --------
+        >>> mesh = ... # Assume mesh is a loaded Mesh result
+        >>> df = mesh.surface('water level', 1.5)
+                       x            y      value  active
+        0     292946.050  6177594.102  53.490948   False
+        1     292943.773  6177584.365  53.665874   False
+        2     292934.036  6177586.643  53.753918   False
+        3     292936.313  6177596.380  53.582664   False
+        4     292948.328  6177603.839  53.198586   False
+        ...          ...          ...        ...     ...
+        5356  293571.392  6178423.468  43.893784   False
+        5357  293581.129  6178421.190  44.085411   False
+        5358  293590.866  6178418.913  44.279270   False
+        5359  293600.603  6178416.635  44.473816   False
+        5360  293610.340  6178414.357  44.671116   False
+        """
         self._load()
         data_type = self._figure_out_data_types(data_type, None)[0]
         if self._driver.DRIVER_SOURCE != 'python':
