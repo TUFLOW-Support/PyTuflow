@@ -1,3 +1,4 @@
+import warnings
 from abc import abstractmethod
 from datetime import datetime
 from typing import Union
@@ -171,6 +172,54 @@ class Grid(MapOutput, LineStringMixin, PointMixin):
                 return float(mx)
             df_ = pd.DataFrame([mx], columns=['minimum'], index=[dtype])
             df = pd.concat([df, df_], axis=0) if not df.empty else df_
+        return df
+
+    def surface(self, data_type: str, time: TimeLike, to_vertex: bool, coord_scope: str = 'global') -> pd.DataFrame:
+        data_type = self._figure_out_data_types(data_type, None)[0]
+        if self._is_static(data_type):
+            idx = slice(None)
+        else:
+            times = self.times(data_type, fmt='absolute') if isinstance(time, datetime) else self.times(data_type)
+            time_index = self._closest_time_index(times, time)
+            idx = (time_index,)
+
+        dx, dy, ox, oy, ncol, nrow, ndv = self._grid_info(data_type)
+        data = self._surface(data_type, idx)
+        mask = (~np.isnan(data)) | (data == ndv)
+        data[~mask] = np.nan
+        if to_vertex:
+            x = ox + np.arange(ncol + 1) * dx
+            y = oy + np.arange(nrow + 1) * dy
+
+            # average values to vertices (from cell centres, this is the same as bilinear interpolation)
+            # pad the data with the edge values to handle the boundaries
+            vertices = np.full((nrow + 2, ncol + 2), np.nan)
+            vertices[1:-1, 1:-1] = data
+            vertices[0, 1:-1] = data[0, :]
+            vertices[-1, 1:-1] = data[-1, :]
+            vertices[:, 0] = vertices[:, 1]
+            vertices[:, -1] = vertices[:, -2]
+            with warnings.catch_warnings():
+                # if all surrounding cells are NaN, then the return is NaN and runtime warning is given
+                # this is the correct behaviour, so we can ignore the warning
+                warnings.simplefilter("ignore", category=RuntimeWarning)
+                vertices = np.nanmean(
+                    np.stack([
+                        vertices[:-1, :-1],
+                        vertices[:-1, 1:],
+                        vertices[1:, :-1],
+                        vertices[1:, 1:]
+                    ]),
+                    axis=0
+                )
+            mask = ~np.isnan(vertices)
+            data = vertices
+        else:
+            x = (ox + dx / 2.) + np.arange(ncol) * dx
+            y = (oy + dy / 2.) + np.arange(nrow) * dy
+
+        xx, yy = np.meshgrid(x, y)
+        df = pd.DataFrame({'x': xx.flatten(), 'y': yy.flatten(), 'value': data.flatten(), 'active': mask.flatten()})
         return df
 
     def data_point(self, locations: PointLocation, data_types: str | list[str],

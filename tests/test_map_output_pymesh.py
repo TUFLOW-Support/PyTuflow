@@ -4,7 +4,7 @@ from datetime import datetime
 import numpy as np
 import pandas as pd
 
-from pytuflow import XMDF, NCMesh, CATCHJson, DAT
+from pytuflow import XMDF, NCMesh, CATCHJson, DAT, NCGrid
 
 
 def load_comparison_data(path):
@@ -459,6 +459,21 @@ class TestQuadtree(unittest.TestCase):
         res = XMDF(p)
         df = res.section(line, 'water level', 1.)
         self.assertEqual((4, 2), df.shape)
+
+
+class TestNCGrid(unittest.TestCase):
+
+    def test_surface(self):
+        p = './tests/nc_grid/small_model_001.nc'
+        res = NCGrid(p)
+        df = res.surface('h', 0, to_vertex=False, coord_scope='global')
+        self.assertEqual((25, 4), df.shape)
+
+    def test_surface_vertex(self):
+        p = './tests/nc_grid/small_model_001.nc'
+        res = NCGrid(p)
+        df = res.surface('h', 0, to_vertex=True, coord_scope='global')
+        self.assertEqual((36, 4), df.shape)
 
 
 class TestPyMeshRegression(unittest.TestCase):
