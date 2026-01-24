@@ -56,11 +56,6 @@ class Mesh3DMixin:
             z[~wd] = pos[~wd, 2] - 0.01  # set dry cells to bed elevation minus small value
             pos[:, 2] = z.flatten()
 
-        # move the origin to the centroid of the mesh bbox
-        translation = np.array(self.geom.local_bbox.size) * -0.5
-        trans = Transform2D(translate=translation)
-        pos = trans.transform(pos)
-
         if convention in [FormatConvention.OpenGL, FormatConvention.OpenGL_2]:
             return (pos[:, [0, 2, 1]] * [1, 1, -1]).flatten().astype('f4')
         elif convention == FormatConvention.Unreal:

@@ -36,15 +36,12 @@ class CellDataMixin:
         index = slice(None) if is_static else (time_index, slice(None))
 
         wd = self.extractor.wd_flag(data_types[0], index)
-        if is_3d:
+        if is_3d and depth_averaging_method is None:
+            # be careful here - QGIS data extractor won't work here, but it should not get here anyway
+            # as when depth averaging is None and 3D, the QGIS providers have a maximum() call which is used instead
+            # this is only needed if a depth averaging method is specified which is not provided in QGIS call
             wd3d_index = self.extractor.data('idx2', slice(None)) - 1
             wd3d = wd[wd3d_index] if wd.ndim == 1 else wd[:, wd3d_index]
-            # if wd.ndim == 1:
-            #     wd3d = wd[wd3d_index]
-            # else:
-                # wd3d = np.full((wd.shape[0], wd3d_index.shape[0]), False, dtype=bool)
-                # for t in range(wd.shape[0]):
-                #     wd3d[t, :] = wd[t, wd3d_index]
 
         wts = None
         if is_3d and depth_averaging_method is not None:

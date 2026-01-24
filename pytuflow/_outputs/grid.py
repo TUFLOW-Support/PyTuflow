@@ -10,7 +10,7 @@ from .helpers.grid_line import GridLine
 from .map_output import MapOutput, PointLocation, Point, LineStringLocation
 from .._pytuflow_types import PathLike, TimeLike
 
-from .pymesh import Cache, LineStringMixin, PointMixin
+from .pymesh import Cache, LineStringMixin, PointMixin, Bbox2D, Transform2D
 
 
 GRIDLINE_METHOD = 'optimised'  # 'legacy' or 'optimised'
@@ -175,6 +175,46 @@ class Grid(MapOutput, LineStringMixin, PointMixin):
         return df
 
     def surface(self, data_type: str, time: TimeLike, to_vertex: bool, coord_scope: str = 'global') -> pd.DataFrame:
+        """Returns the value for every cell/vertex at the specified time.
+
+        Parameters
+        ----------
+        data_type : str
+            The data type to extract the surface data for.
+        time : TimeLike
+            The time to extract the surface data for.
+        to_vertex : bool, optional
+            Whether to interpolate the cell data to vertex data. Values are interpolated using a bilnear approach.
+        coord_scope : str, optional
+            The coordinate scope for the output coordinates. Options are:
+
+            - ``"global"`` (default) - coordinates are unchanged from the input data (i.e. easting/northing or lon/lat)
+            - ``"local"`` - coordinates are transformed to a local Cartesian coordinate system and the origin is moved
+              to the centre of the grid extent. This can be useful for visualisation purposes, especially when converting
+              into 3D formats for viewing in programs like Blender, Unreal Engine, etc
+
+        Returns
+        -------
+        pd.DataFrame
+            The surface data as a DataFrame with columns for the coordinates, value(s), and active mask.
+
+        Examples
+        --------
+        >>> grid = ... # Assume grid is a loaded Grid result
+        >>> df = mesh.surface('water level', 1.5)
+                       x            y      value  active
+        0     292946.050  6177594.102  53.490948   False
+        1     292943.773  6177584.365  53.665874   False
+        2     292934.036  6177586.643  53.753918   False
+        3     292936.313  6177596.380  53.582664   False
+        4     292948.328  6177603.839  53.198586   False
+        ...          ...          ...        ...     ...
+        5356  293571.392  6178423.468  43.893784   False
+        5357  293581.129  6178421.190  44.085411   False
+        5358  293590.866  6178418.913  44.279270   False
+        5359  293600.603  6178416.635  44.473816   False
+        5360  293610.340  6178414.357  44.671116   False
+        """
         data_type = self._figure_out_data_types(data_type, None)[0]
         if self._is_static(data_type):
             idx = slice(None)
@@ -218,7 +258,19 @@ class Grid(MapOutput, LineStringMixin, PointMixin):
             x = (ox + dx / 2.) + np.arange(ncol) * dx
             y = (oy + dy / 2.) + np.arange(nrow) * dy
 
+
+        if coord_scope == 'local':
+            xy = np.column_stack((x, y))
+            bbox = Bbox2D(xy)
+            shift = (
+                -bbox.x.min - bbox.width / 2,
+                -bbox.y.min - bbox.height / 2
+            )
+            trans = Transform2D(translate=shift)
+            x, y = trans.transform(xy).T
+
         xx, yy = np.meshgrid(x, y)
+
         df = pd.DataFrame({'x': xx.flatten(), 'y': yy.flatten(), 'value': data.flatten(), 'active': mask.flatten()})
         return df
 

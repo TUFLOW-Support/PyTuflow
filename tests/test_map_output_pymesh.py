@@ -475,6 +475,13 @@ class TestNCGrid(unittest.TestCase):
         df = res.surface('h', 0, to_vertex=True, coord_scope='global')
         self.assertEqual((36, 4), df.shape)
 
+    def test_surface_local(self):
+        p = './tests/nc_grid/small_model_001.nc'
+        res = NCGrid(p)
+        df = res.surface('h', 0, to_vertex=False, coord_scope='local')
+        self.assertEqual((25, 4), df.shape)
+        self.assertEqual(-2, df.x.min())
+
 
 class TestPyMeshRegression(unittest.TestCase):
 

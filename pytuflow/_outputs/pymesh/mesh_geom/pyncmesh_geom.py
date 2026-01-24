@@ -145,7 +145,11 @@ class PyNCMeshGeometry(PyMeshGeometry, GeometryLazyLoadMixin, VTKGeometryMixin):
                 cartesian_transformer, inverse = proj_transformer(self._vertices[:, 0:2])
                 self._trans = Transform2D(proj_transformer=cartesian_transformer, proj_transformer_inverse=inverse, order='P')
             else:
-                self._trans = Transform2D(translate=(-self._global_bbox.x.min, -self._global_bbox.y.min))
+                shift = (
+                    -self._global_bbox.x.min - self._global_bbox.width / 2,
+                    -self._global_bbox.y.min - self._global_bbox.height / 2
+                )
+                self._trans = Transform2D(translate=shift)
 
             self._local_bbox = self._global_bbox.transform(self._trans)
             self._vertices_local = np.append(

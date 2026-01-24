@@ -1016,7 +1016,7 @@ class CATCHJson(MapOutput):
         df2_ = df2[mask2]  # the dataframe with the desired section to be inserted
 
         # Get the part of the first dataframe that will be before the inserted section
-        mask = df1.iloc[:, 0] <= start_loc
+        mask = df1.iloc[:, 0] <= start_loc + atol
         # check for duplicate "offset" values
         inds = np.where(~mask)
         i = inds[0][0] if inds[0].size else df1.shape[0]

@@ -170,7 +170,7 @@ class QgisDataExtractor(PyDataExtractor):
         return self.lyr.datasetGroupMetadata(QgsMeshDatasetIndex(idx)).maximum()
 
     def minimum(self, data_type: str, depth_averaging: str = None) -> float:
-        if self._is_dat:  # not guaranteed to consider inactive cells or depth averaging, let it be calculated
+        if self._is_dat or depth_averaging is not None:  # not guaranteed to consider inactive cells or depth averaging, let it be calculated
             raise NotImplementedError
         idx = self.find_group_index(data_type)
         if idx == -1:

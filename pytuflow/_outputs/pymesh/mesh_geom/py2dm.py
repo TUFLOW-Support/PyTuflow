@@ -164,7 +164,11 @@ class Py2dm(PyMeshGeometry, GeometryLazyLoadMixin, VTKGeometryMixin):
         self._triangles, self._cell2triangle = self.create_triangles(quads, tris)
 
         self._global_bbox.update_extents(self._vertices)
-        self._trans = Transform2D(translate=(-self._global_bbox.x.min, -self._global_bbox.y.min))
+        shift = (
+            -self._global_bbox.x.min - self._global_bbox.width / 2,
+            -self._global_bbox.y.min - self._global_bbox.height / 2
+        )
+        self._trans = Transform2D(translate=shift)
         self._local_bbox = self._global_bbox.transform(self._trans)
         self._vertices_local = np.append(
             self._trans.translate(self._vertices[:, 0:2]).astype(self.dtype),
