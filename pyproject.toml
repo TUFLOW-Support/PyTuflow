@@ -15,6 +15,7 @@ dependencies = [
     "pyvista>=0.46.5",
     "geopandas>=1.0.1",
     "netcdf4>=1.7.2",
+    "rasterio>=1.4.3",
 ]
 requires-python = ">= 3.9"
 authors = [

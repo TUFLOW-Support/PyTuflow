@@ -102,7 +102,6 @@ class NCGrid(Grid):
     """
 
     def __init__(self, fpath: PathLike):
-        super().__init__(fpath)
         self.fpath = Path(fpath)
         self._loaded = False
         self._stnd2var = {}
@@ -114,16 +113,13 @@ class NCGrid(Grid):
         if not has_nc:
             raise ImportError('netCDF4 is not installed.')
 
-        if not self.fpath.exists():
-            raise FileNotFoundError(self.fpath)
-
         if not self._looks_like_this(self.fpath):
             raise ResultTypeError(f'{self.fpath} does not look like a netCDF grid file or could be empty or locked by another program.')
 
         if not has_nc:
             raise ImportError('NetCDF4 library is required to read NCGrid files.')
 
-        self._initial_load()
+        super().__init__(fpath)
 
     @staticmethod
     def _looks_like_this(fpath: PathLike) -> bool:

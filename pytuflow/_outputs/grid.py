@@ -8,7 +8,7 @@ import pandas as pd
 
 from .helpers.grid_line import GridLine
 from .map_output import MapOutput, PointLocation, Point, LineStringLocation
-from .._pytuflow_types import PathLike, TimeLike
+from .._pytuflow_types import PathLike, TimeLike, TuflowPath
 
 from .pymesh import Cache, LineStringMixin, PointMixin, Bbox2D, Transform2D
 
@@ -19,16 +19,140 @@ GRIDLINE_METHOD = 'optimised'  # 'legacy' or 'optimised'
 class Grid(MapOutput, LineStringMixin, PointMixin):
     """Abstract class for grid/raster outputs."""
 
-    def __init__(self, fpath: PathLike):
-        super().__init__(fpath)
+    def __init__(self, fpath: PathLike | dict):
+        d = None
+        if isinstance(fpath, dict):
+            d, fpath = fpath, None
+        else:
+            fpath = TuflowPath(fpath)
+        super(Grid, self).__init__(fpath)
+        self.fpath = fpath
         self._info = pd.DataFrame()
         self.cache = Cache()
         self._cached_timesteps = {}
         self._cached_data = {}
+        self._data = None
 
-    @abstractmethod
+        if d is None:
+            if not TuflowPath(fpath).exists():
+                raise FileNotFoundError(self.fpath)
+            self._initial_load()
+        else:
+            dx = d.get('dx', None)
+            dy = d.get('dy',    dx)
+            ox = d.get('ox', 0.)
+            oy = d.get('oy', 0.)
+            ncol = d.get('ncol', None)
+            nrow = d.get('nrow', None)
+            if dx is None or   ncol is None or nrow is None:
+                raise ValueError("Insufficient grid information provided.")
+            data = d.get('data', None)
+            if data is None:
+                raise ValueError("No grid data provided.")
+            data_type = d.get('data_type', 'arraydata').lower()
+            timesteps = d.get('timesteps', -1)
+            dtype = d.get('dtype', 'scalar')
+            static = timesteps == -1 or (isinstance(timesteps, (list, tuple)) and len(timesteps) == 0)
+            if not static:
+                if dtype == 'scalar' and data.ndim == 3 and data.shape[0] == len(timesteps):
+                    pass  # all good
+                elif dtype == 'vector' and data.ndim == 4 and data.shape[0] == len(timesteps):
+                    pass  # all good
+                else:
+                    raise ValueError("Data shape does not match number of timesteps.")
+            else:
+                if dtype == 'scalar' and data.ndim == 2:
+                    pass  # all good
+                elif dtype == 'vector' and data.ndim == 3:
+                    pass  # all good
+                else:
+                    raise ValueError("Data shape does not match static data format.")
+            self._cached_timesteps[data_type] = set(range(timesteps) if timesteps != -1 else -1)
+            self._cached_data[data_type] = data
+
+            self._info = pd.DataFrame(
+                {
+                    'data_type': [data_type],
+                    'type': [dtype],
+                    'is_max': [False],
+                    'is_min': [False],
+                    'static': static,
+                    'start': [0 if static else timesteps[0]],
+                    'end': [0 if static else timesteps[-1]],
+                    'dt': [0 if static else self._calculate_time_step(np.array(timesteps))],
+                    'dx': [dx],
+                    'dy': [dy],
+                    'ox': [ox],
+                    'oy': [oy],
+                    'ncol': [ncol],
+                    'nrow': [nrow],
+                    'nodatavalue': [d.get('nodatavalue', np.nan)],
+                }
+            )
+
+    @property
+    def dx(self) -> float:
+        """The grid cell size in the x-direction."""
+        return float(self._info.iloc[0]['dx'])
+
+    @property
+    def dy(self) -> float:
+        """The grid cell size in the y-direction."""
+        return float(self._info.iloc[0]['dy'])
+
+    @property
+    def ox(self) -> float:
+        """The x-origin of the grid."""
+        return float(self._info.iloc[0]['ox'])
+
+    @property
+    def oy(self) -> float:
+        """The y-origin of the grid."""
+        return float(self._info.iloc[0]['oy'])
+
+    @property
+    def ncol(self) -> int:
+        """The number of columns in the grid."""
+        return int(self._info.iloc[0]['ncol'])
+
+    @property
+    def nrow(self) -> int:
+        """The number of rows in the grid."""
+        return int(self._info.iloc[0]['nrow'])
+
+    @property
+    def no_data_value(self) -> float:
+        """The no data value for the grid."""
+        return float(self._info.iloc[0]['nodatavalue'])
+
+    def _initial_load(self):
+        self.name = self.fpath.stem
+        with TuflowPath(self.fpath).open_grid() as grid:
+            self._info = pd.DataFrame(
+                {
+                    'data_type': [self.name],
+                    'type': ['scalar'],
+                    'is_max': [False],
+                    'is_min': [False],
+                    'static': [True],
+                    'start': [0],
+                    'end': [0],
+                    'dt': [0],
+                    'dx': [grid.dx],
+                    'dy': [grid.dy],
+                    'ox': [grid.ox],
+                    'oy': [grid.oy],
+                    'ncol': [grid.ncol],
+                    'nrow': [grid.nrow],
+                    'nodatavalue': [grid.no_data_value],
+                }
+            )
+
     def _value(self, dtype: str, idx: tuple | int | np.ndarray | slice) -> float | np.ndarray:
-        pass
+        if self._data is None:
+            with TuflowPath(self.fpath).open_grid() as grid:
+                self._data = grid.as_array()
+        return self._data[idx]
 
     def _surface(self, dtype: str, time_index: int | np.ndarray | slice) -> np.ndarray:
         is_static = self._is_static(dtype)
@@ -174,7 +298,7 @@ class Grid(MapOutput, LineStringMixin, PointMixin):
             df = pd.concat([df, df_], axis=0) if not df.empty else df_
         return df
 
-    def surface(self, data_type: str, time: TimeLike, to_vertex: bool, coord_scope: str = 'global') -> pd.DataFrame:
+    def surface(self, data_type: str = None, time: TimeLike = -1, to_vertex: bool = False, coord_scope: str = 'global') -> pd.DataFrame:
         """Returns the value for every cell/vertex at the specified time.
 
         Parameters
@@ -215,9 +339,12 @@ class Grid(MapOutput, LineStringMixin, PointMixin):
         5359  293600.603  6178416.635  44.473816   False
         5360  293610.340  6178414.357  44.671116   False
         """
-        data_type = self._figure_out_data_types(data_type, None)[0]
+        if data_type is None:
+            data_type = self._info.iloc[0]['data_type']
+        else:
+            data_type = self._figure_out_data_types(data_type, None)[0]
         if self._is_static(data_type):
-            idx = slice(None)
+            idx = -1
         else:
             times = self.times(data_type, fmt='absolute') if isinstance(time, datetime) else self.times(data_type)
             time_index = self._closest_time_index(times, time)
@@ -225,7 +352,7 @@ class Grid(MapOutput, LineStringMixin, PointMixin):
 
         dx, dy, ox, oy, ncol, nrow, ndv = self._grid_info(data_type)
         data = self._surface(data_type, idx)
-        mask = (~np.isnan(data)) | (data == ndv)
+        mask = (~np.isnan(data)) & (data != ndv)
         data[~mask] = np.nan
         if to_vertex:
             x = ox + np.arange(ncol + 1) * dx
@@ -274,8 +401,8 @@ class Grid(MapOutput, LineStringMixin, PointMixin):
         df = pd.DataFrame({'x': xx.flatten(), 'y': yy.flatten(), 'value': data.flatten(), 'active': mask.flatten()})
         return df
 
-    def data_point(self, locations: PointLocation, data_types: str | list[str],
-                   time: TimeLike) -> float | tuple[float, float] | pd.DataFrame:
+    def data_point(self, locations: PointLocation, data_types: str | list[str] | None = None,
+                   time: TimeLike = -1) -> float | tuple[float, float] | pd.DataFrame:
         """Extracts the data value for the given point locations and data types at the specified time.
 
         The ``locations`` can be a single point in the form of a tuple ``(x, y)`` or in the Well Known Text (WKT)
@@ -322,7 +449,10 @@ class Grid(MapOutput, LineStringMixin, PointMixin):
         pnt2        43.221862   3.450053
         """
         pnts = self._translate_point_location(locations)
-        data_types = self._figure_out_data_types(data_types, None)
+        if data_types is None:
+            data_types = [self._info.iloc[0]['data_type']]
+        else:
+            data_types = self._figure_out_data_types(data_types, None)
         rows = []
         values1 = []
         for name, pnt in pnts.items():
@@ -416,8 +546,8 @@ class Grid(MapOutput, LineStringMixin, PointMixin):
 
         return df
 
-    def section(self, locations: LineStringLocation, data_types: Union[str, list[str]],
-                time: TimeLike, **kwargs) -> pd.DataFrame:
+    def section(self, locations: LineStringLocation, data_types: Union[str, list[str], None] = None,
+                time: TimeLike = -1, **kwargs) -> pd.DataFrame:
         """Extracts section data for the given locations and data types.
 
         The ``locations`` can be a list of ``x, y`` tuple points, or a Well Known Text (WKT) line string. It can also
@@ -468,7 +598,10 @@ class Grid(MapOutput, LineStringMixin, PointMixin):
         """
         df = pd.DataFrame()
         lines = self._translate_line_string_location(locations)
-        data_types = self._figure_out_data_types(data_types, None)
+        if data_types is None:
+            data_types = [self._info.iloc[0]['data_type']]
+        else:
+            data_types = self._figure_out_data_types(data_types, None)
         for name, line in lines.items():
             df1 = pd.DataFrame()
             wkt = self._linestring_as_wkt(self._coerce_into_line(line))
@@ -504,6 +637,16 @@ class Grid(MapOutput, LineStringMixin, PointMixin):
             df = self._merge_line_dataframe(df, df1, name, reset_index=True)
 
         return df
+
+    def curtain(self, locations: LineStringLocation, data_types: Union[str, list[str]],
+                time: TimeLike) -> pd.DataFrame:
+        """Not supported for ``Grid`` results. Raises a :code:`NotImplementedError`."""
+        raise NotImplementedError(f'{__class__.__name__} does not support curtain plotting.')
+
+    def profile(self, locations: PointLocation, data_types: Union[str, list[str]],
+                time: TimeLike, **kwargs) -> pd.DataFrame:
+        """Not supported for ``Grid`` results. Raises a :code:`NotImplementedError`."""
+        raise NotImplementedError(f'{__class__.__name__} does not support vertical profile plotting.')
 
     @staticmethod
     def _get_xy_index(pnt: Point, dx: float, dy: float, ox: float, oy: float, ncol: int, nrow: int):
