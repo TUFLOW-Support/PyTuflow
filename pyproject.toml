@@ -10,6 +10,11 @@ dependencies = [
     "pandas",
     "packaging",
     "dbfread",
+    "pyproj>=3.6.1",
+    "h5py>=3.14.0",
+    "pyvista>=0.46.5",
+    "geopandas>=1.0.1",
+    "netcdf4>=1.7.2",
 ]
 requires-python = ">= 3.9"
 authors = [
