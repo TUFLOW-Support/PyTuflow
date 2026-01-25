@@ -81,35 +81,26 @@ def open_gis(fpath):
 def point_gis_file_to_dict(fpath: PathLike):
     d = {}
     i = 0
-    with open_gis(fpath) as lyr:
-        if ogr_basic_geom_type(lyr.GetGeomType()) != ogr.wkbPoint:
-            raise ValueError(f'Layer {lyr.GetName()} is not a point layer.')
+    with TuflowPath(fpath).open_gis() as lyr:
+        geom_types = lyr.geometry_types()
+        if 'Point' not in geom_types and 'MultiPoint' not in geom_types:
+            raise ValueError(f'File {fpath} does not contain point geometries.')
         id_fields = ['Id', 'Label', 'Name']
         for feature in lyr:
-            geom = feature.GetGeometryRef()
             fi = -1
             for id_field in id_fields:
-                fi = feature.GetFieldIndex(id_field)
-                if fi != -1:
-                    break
-                fi = feature.GetFieldIndex(id_field.upper())
-                if fi != -1:
-                    break
-                fi = feature.GetFieldIndex(id_field.lower())
-                if fi != -1:
-                    break
+                fi = feature.field_index(id_field)
             name = feature[fi] if fi != -1 else f'pnt{i+1}'
             i += 1
-            try:
-                d[name] = geom.GetPoints()[0]
-            except RuntimeError:
-                for j, p in enumerate(geom):
-                    if fi == -1:
-                        key = f'pnt{i+1}'
-                        i += 1
-                    else:
-                        key = f'{name}_{j+1}'
-                    d[key] = p.GetPoints()[0]
+
+            points = feature.geom.points()
+            if len(points) == 1:
+                d[name] = points[0]
+                continue
+
+            for j, pnt in enumerate(points):
+                # name the point parts as a, b, c, ...
+                d[f'{name}_{chr(97 + j)}'] = pnt
 
     return d
 
@@ -117,29 +108,24 @@ def point_gis_file_to_dict(fpath: PathLike):
 def line_gis_file_to_dict(fpath: PathLike):
     d = {}
     i = 0
-    with open_gis(fpath) as lyr:
-        if ogr_basic_geom_type(lyr.GetGeomType()) != ogr.wkbLineString:
+    with TuflowPath(fpath).open_gis() as lyr:
+        geom_types = lyr.geometry_types()
+        if 'LineString' not in geom_types and 'MultiLineString' not in geom_types:
             raise ValueError(f'Layer {lyr.GetName()} is not a line-string layer.')
+        id_fields = ['Id', 'Label', 'Name']
         for feature in lyr:
-            geom = feature.GetGeometryRef()
-            fi = feature.GetFieldIndex('Name')
-            if fi == -1:
-                fi = feature.GetFieldIndex('name')
-            if fi == -1:
-                fi = feature.GetFieldIndex('Label')
-            if fi == -1:
-                fi = feature.GetFieldIndex('label')
+            fi = -1
+            for id_field in id_fields:
+                fi = feature.field_index(id_field)
             name = feature[fi] if fi != -1 else f'line{i + 1}'
             i += 1
-            try:
-                d[name] = geom.GetPoints()
-            except RuntimeError:  # multi-line
-                for j, line in enumerate(geom):
-                    if fi == -1:
-                        key = f'line{i+1}'
-                        i += 1
-                    else:
-                        key = f'{name}_{j+1}'
-                    d[key] = line.GetPoints()
+            lines = feature.geom.lines()
+            if len(lines) == 1:
+                d[name] = lines[0]
+                continue
+
+            for j, line in enumerate(lines):
+                # name the point parts as a, b, c, ...
+                d[f'{name}_{chr(97 + j)}'] = line
 
     return d

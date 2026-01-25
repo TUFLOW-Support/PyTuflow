@@ -135,8 +135,8 @@ class XMDF(Mesh):
     """
 
     def __init__(self, fpath: PathLike, twodm: PathLike = None, driver: str = 'v1.1'):
-        if not has_nc and not has_qgis:
-            raise ImportError('XMDF requires QGIS python libraries or some data can be accessed with netCDF4.')
+        # if not has_nc and not has_qgis:
+        #     raise ImportError('XMDF requires QGIS python libraries or some data can be accessed with netCDF4.')
 
         if not Path(fpath).exists():
             raise FileNotFoundError(f'XMDF file does not exist: {fpath}')
