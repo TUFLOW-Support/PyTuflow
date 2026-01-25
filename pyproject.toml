@@ -6,16 +6,19 @@ build-backend = "hatchling.build"
 name = "pytuflow"
 dynamic = ["version"]
 dependencies = [
-    "numpy",
-    "pandas",
-    "packaging",
-    "dbfread",
+    "numpy>=1.26.0",
+    "pandas>=2.2.2",
+    "packaging>=25.0",
+    "dbfread>=2.0.7",
     "pyproj>=3.6.1",
     "h5py>=3.14.0",
     "pyvista>=0.46.5",
     "geopandas>=1.0.1",
+    "shapely>=2.0.7",
     "netcdf4>=1.7.2",
     "rasterio>=1.4.3",
+    "sphinx>=7.4.7",
+    "sphinx-book-theme>=1.1.4",
 ]
 requires-python = ">= 3.9"
 authors = [

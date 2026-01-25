@@ -248,13 +248,13 @@ class NCGrid(Grid):
         with self._open():
             return super().maximum(data_types)
 
-    def surface(self, data_type: str, time: TimeLike, to_vertex: bool = False, coord_scope: str = 'global') -> pd.DataFrame:
+    def surface(self, data_type: str = None, time: TimeLike = 0, to_vertex: bool = False, coord_scope: str = 'global') -> pd.DataFrame:
         self._load()
         with self._open():
             return super().surface(data_type, time, to_vertex, coord_scope)
 
-    def data_point(self, locations: PointLocation, data_types: str | list[str],
-                   time: TimeLike) -> float | tuple[float, float] | pd.DataFrame:
+    def data_point(self, locations: PointLocation, data_types: str | list[str] = (),
+                   time: TimeLike = 0) -> float | tuple[float, float] | pd.DataFrame:
         self._load()
         with self._open():
             return super().data_point(locations, data_types, time)
@@ -265,8 +265,8 @@ class NCGrid(Grid):
         with self._open():
             return super().time_series(locations, data_types, time_fmt)
 
-    def section(self, locations: LineStringLocation, data_types: Union[str, list[str]],
-                time: TimeLike, **kwargs) -> pd.DataFrame:
+    def section(self, locations: LineStringLocation, data_types: Union[str, list[str]] = (),
+                time: TimeLike = 0, **kwargs) -> pd.DataFrame:
         self._load()
         with self._open():
             return super().section(locations, data_types, time)

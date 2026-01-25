@@ -17,7 +17,54 @@ GRIDLINE_METHOD = 'optimised'  # 'legacy' or 'optimised'
 
 
 class Grid(MapOutput, LineStringMixin, PointMixin):
-    """Abstract class for grid/raster outputs."""
+    """Generic Grid result class. Can be used to load raster files that are supported by GDAL or rasterio.
+    The raster data extracted from an input file is assumed to be static (i.e. no time dimension). Alternatively,
+    it is possible to initialise the Grid class with a dictionary containing already extracted grid data in the form of
+    an array. The dictionary should include metadata about the grid such as cell size, origin, and
+    number of rows/columns. The data can be either static or temporal.
+
+    Parameters
+    ----------
+    fpath : PathLike | dict
+        The file path to the grid file to load, or a dictionary containing grid data and metadata. The dictionary
+        should contain the following keys:
+
+        - ``dx`` : float
+        - ``dy`` : float
+        - ``ncol`` : int
+        - ``nrow`` : int
+        - ``ox`` : float : optional, default is 0.0
+        - ``oy`` : float : optional, default is 0.0
+        - ``nodatavalue`` : float, optional, default is np.nan
+        - ``data`` : np.ndarray. Array can be 2D (static scalar, NRow,NCol), 3D (temporal scalar, ``NTime,NRow,NCol``),
+          3D (static vector, ``NRow,NCol,2``), or 4D (temporal vector, ``NTime,NRow,NCol,2``). If data represents vector
+          data, then the ``dtype`` key must also be set to ``"vector"``. If data is temporal, then the ``timesteps``
+          key must also be provided.
+        - ``data_type`` : str, optional data type (result type) identifier
+        - ``timesteps`` : list[float] | int, optional. If data is temporal, this should be a list of time values.
+        - ``dtype`` : str, optional. Either ``"scalar"`` (default) or ``"vector"``.
+
+    Examples
+    --------
+    Load a static grid from a GeoTIFF file:
+
+    >>> grid = Grid('path/to/static_grid.tif')
+    >>> grid.dx
+    10.0
+    >>> df = grid.surface()
+                    x           y  value  active
+    0       292723.75  6177421.25    NaN   False
+    1       292726.25  6177421.25    NaN   False
+    2       292728.75  6177421.25    NaN   False
+    3       292731.25  6177421.25    NaN   False
+    4       292733.75  6177421.25    NaN   False
+    ...           ...         ...    ...     ...
+    197536  293768.75  6178586.25    NaN   False
+    197537  293771.25  6178586.25    NaN   False
+    197538  293773.75  6178586.25    NaN   False
+    197539  293776.25  6178586.25    NaN   False
+    197540  293778.75  6178586.25    NaN   False
+    """
 
     def __init__(self, fpath: PathLike | dict):
         d = None
@@ -298,14 +345,14 @@ class Grid(MapOutput, LineStringMixin, PointMixin):
             df = pd.concat([df, df_], axis=0) if not df.empty else df_
         return df
 
-    def surface(self, data_type: str = None, time: TimeLike = -1, to_vertex: bool = False, coord_scope: str = 'global') -> pd.DataFrame:
+    def surface(self, data_type: str = None, time: TimeLike = 0, to_vertex: bool = False, coord_scope: str = 'global') -> pd.DataFrame:
         """Returns the value for every cell/vertex at the specified time.
 
         Parameters
         ----------
-        data_type : str
+        data_type : str, optional
             The data type to extract the surface data for.
-        time : TimeLike
+        time : TimeLike, optional
             The time to extract the surface data for.
         to_vertex : bool, optional
             Whether to interpolate the cell data to vertex data. Values are interpolated using a bilnear approach.
@@ -340,7 +387,10 @@ class Grid(MapOutput, LineStringMixin, PointMixin):
         5360  293610.340  6178414.357  44.671116   False
         """
         if data_type is None:
-            data_type = self._info.iloc[0]['data_type']
+            if 'water level' in self._info['data_type'].values:
+                data_type = 'water level'
+            else:
+                data_type = self._info.iloc[0]['data_type']
         else:
             data_type = self._figure_out_data_types(data_type, None)[0]
         if self._is_static(data_type):
@@ -401,8 +451,8 @@ class Grid(MapOutput, LineStringMixin, PointMixin):
         df = pd.DataFrame({'x': xx.flatten(), 'y': yy.flatten(), 'value': data.flatten(), 'active': mask.flatten()})
         return df
 
-    def data_point(self, locations: PointLocation, data_types: str | list[str] | None = None,
-                   time: TimeLike = -1) -> float | tuple[float, float] | pd.DataFrame:
+    def data_point(self, locations: PointLocation, data_types: str | list[str] = (),
+                   time: TimeLike = 0) -> float | tuple[float, float] | pd.DataFrame:
         """Extracts the data value for the given point locations and data types at the specified time.
 
         The ``locations`` can be a single point in the form of a tuple ``(x, y)`` or in the Well Known Text (WKT)
@@ -422,9 +472,10 @@ class Grid(MapOutput, LineStringMixin, PointMixin):
         ----------
         locations : Point | list[Point] | dict[str, Point] | PathLike
             The location to extract the data for.
-        data_types : str | list[str]
-            The data types to extract the data for.
-        time : TimeLike
+        data_types : str | list[str], optional
+            The data types to extract the data for. If left blank, water level will be used if it exists, otherwise
+            the first data type found in the result will be used.
+        time : TimeLike, optional
             The time to extract the data for.
 
         Returns
@@ -449,8 +500,11 @@ class Grid(MapOutput, LineStringMixin, PointMixin):
         pnt2        43.221862   3.450053
         """
         pnts = self._translate_point_location(locations)
-        if data_types is None:
-            data_types = [self._info.iloc[0]['data_type']]
+        if not data_types:
+            if 'water level' in self._info['data_type'].values:
+                data_types = ['water level']
+            else:
+                data_types = [self._info.iloc[0]['data_type']]
         else:
             data_types = self._figure_out_data_types(data_types, None)
         rows = []
@@ -546,8 +600,8 @@ class Grid(MapOutput, LineStringMixin, PointMixin):
 
         return df
 
-    def section(self, locations: LineStringLocation, data_types: Union[str, list[str], None] = None,
-                time: TimeLike = -1, **kwargs) -> pd.DataFrame:
+    def section(self, locations: LineStringLocation, data_types: Union[str, list[str], None] = (),
+                time: TimeLike = 0, **kwargs) -> pd.DataFrame:
         """Extracts section data for the given locations and data types.
 
         The ``locations`` can be a list of ``x, y`` tuple points, or a Well Known Text (WKT) line string. It can also
@@ -567,9 +621,9 @@ class Grid(MapOutput, LineStringMixin, PointMixin):
         ----------
         locations : list[Point] | str | PathLike
             The location to extract the section data for.
-        data_types : str | list[str]
+        data_types : str | list[str], optional
             The data types to extract the section data for.
-        time : TimeLike
+        time : TimeLike, optional
             The time to extract the section data for.
 
         Returns
@@ -598,8 +652,11 @@ class Grid(MapOutput, LineStringMixin, PointMixin):
         """
         df = pd.DataFrame()
         lines = self._translate_line_string_location(locations)
-        if data_types is None:
-            data_types = [self._info.iloc[0]['data_type']]
+        if not data_types:
+            if 'water level' in self._info['data_type'].values:
+                data_types = ['water level']
+            else:
+                data_types = [self._info.iloc[0]['data_type']]
         else:
             data_types = self._figure_out_data_types(data_types, None)
         for name, line in lines.items():
