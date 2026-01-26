@@ -1,0 +1,26 @@
+import typing
+
+from .mesh import Mesh
+from .._pytuflow_types import PathLike
+from .pymesh import PyGridMesh
+
+if typing.TYPE_CHECKING:
+    from .grid import Grid
+
+
+class GridMesh(Mesh):
+
+    def __init__(self, fpath: PathLike, grid: 'Grid | None' = None, topology_ref: 'Grid | None' = None):
+        super().__init__(fpath)
+        if grid is None:
+            from .grid import Grid
+            self._grid = Grid(fpath)
+        else:
+            self._grid = grid
+        self._driver = PyGridMesh(self._grid, topology_ref)
+        self._soft_load_driver = self._driver
+        self._initial_load()
+
+    def _initial_load(self):
+        self.name = self._grid.name
+        self._info = self._grid._info

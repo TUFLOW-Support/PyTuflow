@@ -483,6 +483,21 @@ class TestNCGrid(unittest.TestCase):
         self.assertEqual((25, 4), df.shape)
         self.assertEqual(-2, df.x.min())
 
+    def test_to_mesh(self):
+        p = './tests/nc_grid/EG00_001.nc'
+        res = NCGrid(p)
+        mesh = res.to_mesh('max water level')
+        df = mesh.surface('water level', 0.5)
+        self.assertEqual((6871, 4), df.shape)
+
+    def test_to_mesh_time_series(self):
+        p = './tests/nc_grid/EG00_001.nc'
+        point = './tests/xmdf/xmdf_point.shp'
+        res = NCGrid(p)
+        mesh = res.to_mesh('max water level')
+        df = mesh.time_series(point, 'h')
+        self.assetEqual(df.shape, (13, 1))
+
 
 class TestGrid(unittest.TestCase):
 

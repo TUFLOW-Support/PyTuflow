@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 
 from .helpers.grid_line import GridLine
+from .grid_mesh import GridMesh
 from .map_output import MapOutput, PointLocation, Point, LineStringLocation
 from .._pytuflow_types import PathLike, TimeLike, TuflowPath
 
@@ -245,11 +246,19 @@ class Grid(MapOutput, LineStringMixin, PointMixin):
                 self._cached_timesteps[dtype.lower()].add(time_index)
             else:
                 val = self._cached_data[dtype.lower()][ti] if not is_static else self._cached_data[dtype.lower()]
-            data.append(val)
+            data.append(val.copy())
 
         if len(data) == 1:
             return data[0]
         return np.array(data).reshape(len(time_indexes), *data[0].shape)
+
+    def to_mesh(self, topology_ref: 'str | Grid | None' = None) -> GridMesh:
+        if isinstance(topology_ref, str):
+            d = {'dx': self.dx, 'dy': self.dy, 'ncol': self.ncol, 'nrow': self.nrow, 'ox': self.ox, 'oy': self.oy,
+                 'nodatavalue': self.no_data_value, 'data_type': topology_ref, 'timesteps': -1, 'dtype': 'scalar',
+                 'data': self.surface(topology_ref)['value'].to_numpy().reshape(self.nrow, self.ncol)}
+            topology_ref = Grid(d)
+        return GridMesh(self.fpath, self, topology_ref)
 
     def maximum(self, data_types: str | list[str]) -> float | pd.DataFrame:
         """Returns the maximum values for the given data types.

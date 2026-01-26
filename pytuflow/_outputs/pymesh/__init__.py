@@ -8,8 +8,9 @@ from .bbox import Bbox2D
 from . import depth_averaging
 
 from .engines import DatasetEngine, NCEngine, H5Engine
-from .extractors import PyDataExtractor, PyXMDFDataExtractor, PyNCMeshDataExtractor, PyDATDataExtractor, QgisDataExtractor
-from .mesh_geom import PyMeshGeometry, PyNCMeshGeometry, Py2dm, QgisMeshGeometry
+from .extractors import (PyDataExtractor, PyXMDFDataExtractor, PyNCMeshDataExtractor, PyDATDataExtractor,
+                         QgisDataExtractor, GridMeshDataExtractor)
+from .mesh_geom import PyMeshGeometry, PyNCMeshGeometry, Py2dm, QgisMeshGeometry, GridMeshGeometry
 from .soft_load_mixin import SoftLoadMixin
 
 from .cell_data_mixin import CellDataMixin
@@ -18,5 +19,6 @@ from .pymesh import PyMesh
 from .pyxmdf import PyXMDF
 from .pyncmesh import PyNCMesh
 from .pydat import PyDAT
+from .pygridmesh import PyGridMesh
 
 from .mesh3d import FormatConvention
