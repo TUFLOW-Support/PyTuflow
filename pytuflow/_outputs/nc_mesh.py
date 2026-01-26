@@ -25,30 +25,35 @@ from .pymesh import PyNCMesh
 class NCMesh(Mesh):
     """Class for handling TUFLOW FV style output files.
 
-    The ``NCMesh`` class will only load header information from the NetCDF file on initialisation, this makes the class
-    cheap to initialise. The class can be initialised and the methods :meth:`times` and
-    :meth:`data_types` can be used without requiring QGIS libraries. However, extracting spatial data requires
-    QGIS libraries to be available and QGIS to be initialised. The class will automatically load the full mesh
-    the first time a spatial method is called which can cause the first time a spatial method is called to be slow.
+    The ``NCMesh`` class supports both QGIS and Python drivers. The drivers are also split between geometry handling and
+    data extraction.
+
+    If using Python libraries, the ``NCMesh`` class is initialised without loading the mesh geometry data. This
+    makes the class cheap to initialise and allows querying of available data types and times without requiring
+    mesh loading. The mesh geometry data is only loaded when required for spatial data extraction.
+
+    QGIS libraries can be used for geometry handling and Python libraries can be used for data extraction, this also
+    allows for the cheap initialisation of the class. If QGIS libraries are used for both geometry and data extraction,
+    the mesh geometry data is loaded at initialisation.
 
     Parameters
     ----------
     fpath : PathLike
         Path to the NetCDF file.
     driver: str, optional
-       The driver to use for reading the NcMesh file. Options are:
+       The driver to use for reading the NCMesh file. Options are:
 
-       - ``"v1.0"``: Use PyTUFLOW v1.0 NcMesh reader (legacy). This uses old QGIS geometry and extraction methods.
-         This option is exclusive and can't be used with other options.
-       - ``"v1.1"``: Use PyTUFLOW v1.1 NcMesh reader (default). Uses ``vtk`` geometry if available, otherwise uses
-         ``QGIS`` geometry. In order of preference, uses ``h5py``, ``netcdf4``, or ``QGIS`` engine for extracting data.
-         This option is exclusive and can't be used with other options.
-       - ``"qgis [geometry] | [engine]"``: Use QGIS libraries for geometry (``"qgis geometry"``) and/or use QGIS libraries
-          for extracting data (``"qgis engine"``). Both can be passed together as ``"qgis geometry engine"``. This option
-          can be used in conjunctionwith other extracting data options e.g. ``"qgis geometry netcdf4"``. The QGIS engine
-          must be used with QGIS geometry.
-       - ``"netcdf4"``: Use NetCDF4 library for extracting data. Exclusive with other extraction options.
-       - ``"h5py"``: Use h5py library for extracting data. Exclusive with other extraction options.
+       - ``"v1.0"``: Use PyTUFLOW v1.0 NCMesh reader (legacy). This uses old QGIS geometry and extraction methods.
+       - ``"v1.1"``: Use PyTUFLOW v1.1 NCMesh reader (default). Uses Python geometry handling if available, otherwise uses
+         ``QGIS`` geometry. For data extraction, the order of preference is ``h5py``, ``netcdf4``, then ``QGIS``.
+       - ``"qgis geometry [data extractor]"``: Use QGIS libraries for geometry (``"qgis geometry"``) and the optional
+         use of QGIS for data extraction as well (``"qgis geometry data extractor"``). If only ``"qgis geometry"`` is
+         provided, the data extraction can also use Python libraries if available e.g. ``"qgis geometry netcdf4"`` or
+         ``"qgis geometry h5py"``. Using NetCDF4 or h5py for data extraction allows for cheap initialisation of the class.
+       - ``"netcdf4"``: Use NetCDF4 library for extracting data. Can be used with ``"qgis geometry"`` otherwise
+          uses Python libraries for geometry handling.
+       - ``"h5py"``: Use h5py library for extracting data. Can be used with ``"qgis geometry"`` otherwise
+         uses Python libraries for geometry handling.
 
     Examples
     --------
@@ -161,7 +166,7 @@ class NCMesh(Mesh):
             engine = None
         else:
             geom_driver = 'qgis' if 'qgis geometry' in driver.lower() else None
-            engine = 'qgis' if 'qgis engine' in driver.lower() or 'qgis geometry engine' in driver.lower() else None
+            engine = 'qgis' if 'qgis data extractor' in driver.lower() or 'qgis geometry data extractor' in driver.lower() else None
             if 'h5py' in driver.lower():
                 engine = 'h5py'
             elif 'netcdf4' in driver.lower():

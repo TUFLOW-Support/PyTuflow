@@ -24,15 +24,14 @@ class DAT(Mesh):
     driver: str, optional
        The driver to use for reading the DAT file. Options are:
 
-       - ``"v1.0"``: Use PyTUFLOW v1.0 DAT reader (legacy). This is the equivalent of using ``"qgis geometry engine"``.
-         This option is exclusive and can't be used with other options.
-       - ``"v1.1"``: Use PyTUFLOW v1.1 DAT reader (default). Uses ``vtk`` geometry if available, otherwise uses
-         ``QGIS`` geometry. In order of preference, uses ``h5py``, ``netcdf4``, or ``QGIS`` engine for extracting data.
-         This option is exclusive and can't be used with other options.
-       - ``"qgis [geometry] | [engine]"``: Use QGIS libraries for geometry (``"qgis geometry"``) and/or use QGIS libraries
-          for extracting data (``"qgis engine"``). Both can be passed together as ``"qgis geometry engine"``. This option
-          can be used in conjunctionwith other extracting data options e.g. ``"qgis geometry netcdf4"``.
-       - ``"python"``: Use Python library for extracting data
+       - ``"v1.0"``: Use PyTUFLOW v1.0 DAT reader (legacy). This uses old QGIS geometry and extraction methods.
+       - ``"v1.1"``: Use PyTUFLOW v1.1 DAT reader (default). Uses Python geometry handling if available, otherwise uses
+         ``QGIS`` geometry. For data extraction, the order of preference is Python then QGIS.
+       - ``"qgis geometry [data extractor]"``: Use QGIS libraries for geometry (``"qgis geometry"``) and the optional
+         use of QGIS for data extraction as well (``"qgis geometry data extractor"``). If only ``"qgis geometry"`` is
+         provided, the data extraction can also use Python libraries if available e.g. ``"qgis geometry python"``.
+       - ``"python"``: Use Python for extracting data. Can be used with ``"qgis geometry"`` otherwise
+         uses Python libraries for geometry handling.
 
     Examples
     --------
@@ -168,7 +167,7 @@ class DAT(Mesh):
             engine = None
         else:
             geom_driver = 'qgis' if 'qgis geometry' in driver.lower() else None
-            engine = 'qgis' if 'qgis engine' in driver.lower() or 'qgis geometry engine' in driver.lower() else None
+            engine = 'qgis' if 'qgis data extractor' in driver.lower() or 'qgis geometry data extractor' in driver.lower() else None
             if 'python' in driver.lower():
                 engine = 'python'
 

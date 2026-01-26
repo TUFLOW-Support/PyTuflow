@@ -37,7 +37,7 @@ class TestXMDF(unittest.TestCase):
     def test_load_qgis_driver(self):
         xmdf = './tests/xmdf/run.xmdf'
         with pyqgis():
-            res = XMDF(xmdf, driver='qgis geometry engine')
+            res = XMDF(xmdf, driver='qgis geometry data extractor')
             self.assertEqual(res.name, 'run')
             self.assertFalse(res.has_reference_time)
 
@@ -51,7 +51,7 @@ class TestXMDF(unittest.TestCase):
     def test_times_qgis_driver(self):
         xmdf = './tests/xmdf/run.xmdf'
         with pyqgis():
-            res = XMDF(xmdf, driver='qgis geometry engine')
+            res = XMDF(xmdf, driver='qgis geometry data extractor')
             times = res.times()
             self.assertEqual(7, len(times))
 
@@ -65,7 +65,7 @@ class TestXMDF(unittest.TestCase):
     def test_times_filter_qgis_driver(self):
         xmdf = './tests/xmdf/run.xmdf'
         with pyqgis():
-            res = XMDF(xmdf, driver='qgis geometry engine')
+            res = XMDF(xmdf, driver='qgis geometry data extractor')
             times = res.times('depth')
             self.assertEqual(7, len(times))
 
@@ -79,7 +79,7 @@ class TestXMDF(unittest.TestCase):
     def test_data_types_qgis_driver(self):
         xmdf = './tests/xmdf/run.xmdf'
         with pyqgis():
-            res = XMDF(xmdf, driver='qgis geometry engine')
+            res = XMDF(xmdf, driver='qgis geometry data extractor')
             dtypes = res.data_types()
             self.assertEqual(10, len(dtypes))
 
@@ -97,7 +97,7 @@ class TestXMDF(unittest.TestCase):
     def test_data_types_filter_qgis_driver(self):
         xmdf = './tests/xmdf/run.xmdf'
         with pyqgis():
-            res = XMDF(xmdf, driver='qgis geometry engine')
+            res = XMDF(xmdf, driver='qgis geometry data extractor')
             dtypes = res.data_types('max')
             self.assertEqual(4, len(dtypes))
             dtypes = res.data_types('temporal')
@@ -132,7 +132,7 @@ class TestXMDF(unittest.TestCase):
     def test_data_point_qgis_driver(self):
         xmdf = './tests/xmdf/run.xmdf'
         with pyqgis():
-            res = XMDF(xmdf, driver='qgis geometry engine')
+            res = XMDF(xmdf, driver='qgis geometry data extractor')
             point = (1.0, 1.0)
             df = res.data_point(point, 'max h', 0)
             self.assertTrue(isinstance(df, float))
@@ -153,7 +153,7 @@ class TestXMDF(unittest.TestCase):
     def test_data_point_datetime_qgis_driver(self):
         xmdf = './tests/xmdf/EG00_001.xmdf'
         with pyqgis():
-            res = XMDF(xmdf, driver='qgis geometry engine')
+            res = XMDF(xmdf, driver='qgis geometry data extractor')
             point = './tests/xmdf/xmdf_point.shp'
             time = datetime(1990, 1, 1, 1)
             val = res.data_point(point, 'h', time)
@@ -169,7 +169,7 @@ class TestXMDF(unittest.TestCase):
     def test_time_series_qgis_driver(self):
         xmdf = './tests/xmdf/run.xmdf'
         with pyqgis():
-            res = XMDF(xmdf, driver='qgis geometry engine')
+            res = XMDF(xmdf, driver='qgis geometry data extractor')
             df = res.time_series((1, 1), 'water level')
             self.assertEqual((7, 1), df.shape)
 
@@ -183,7 +183,7 @@ class TestXMDF(unittest.TestCase):
     def test_time_series_2_qgis_driver(self):
         xmdf = './tests/xmdf/run.xmdf'
         with pyqgis():
-            res = XMDF(xmdf, driver='qgis geometry engine')
+            res = XMDF(xmdf, driver='qgis geometry data extractor')
             df = res.time_series({'test name': 'POINT (1.5 3.2)'}, 'water level')
             self.assertEqual((7, 1), df.shape)
 
@@ -199,7 +199,7 @@ class TestXMDF(unittest.TestCase):
         xmdf = './tests/xmdf/run.xmdf'
         shp = './tests/xmdf/time_series_point.shp'
         with pyqgis():
-            res = XMDF(xmdf, driver='qgis geometry engine')
+            res = XMDF(xmdf, driver='qgis geometry data extractor')
             df = res.time_series(shp, 'vel')
             self.assertEqual((7, 1), df.shape)
 
@@ -215,7 +215,7 @@ class TestXMDF(unittest.TestCase):
         xmdf = './tests/xmdf/run.xmdf'
         shp = './tests/xmdf/time_series_multi_point.shp'
         with pyqgis():
-            res = XMDF(xmdf, driver='qgis geometry engine')
+            res = XMDF(xmdf, driver='qgis geometry data extractor')
             df = res.time_series(shp, 'vel')
             self.assertEqual((7, 2), df.shape)
 
@@ -231,7 +231,7 @@ class TestXMDF(unittest.TestCase):
         xmdf = './tests/xmdf/run.xmdf'
         shp = './tests/xmdf/time_series_multi_point.shp'
         with pyqgis():
-            res = XMDF(xmdf, driver='qgis geometry engine')
+            res = XMDF(xmdf, driver='qgis geometry data extractor')
             df = res.time_series(shp, 'vector velocity')
             self.assertEqual((7, 2), df.shape)
 
@@ -247,7 +247,7 @@ class TestXMDF(unittest.TestCase):
         xmdf = './tests/xmdf/run.xmdf'
         shp = './tests/xmdf/section_line.shp'
         with pyqgis():
-            res = XMDF(xmdf, driver='qgis geometry engine')
+            res = XMDF(xmdf, driver='qgis geometry data extractor')
             df = res.section(shp, 'h', 0)
             self.assertEqual((9, 2), df.shape)
 
@@ -262,7 +262,7 @@ class TestXMDF(unittest.TestCase):
     def test_section_2_qgis_driver(self):
         xmdf = './tests/xmdf/run.xmdf'
         with pyqgis():
-            res = XMDF(xmdf, driver='qgis geometry engine')
+            res = XMDF(xmdf, driver='qgis geometry data extractor')
             line = 'LINESTRING (0.697468354430381 0.633670886075949,3.27063291139241 3.34506329113924)'
             df = res.section(line, 'h', 0)
             self.assertEqual((9, 2), df.shape)
@@ -279,7 +279,7 @@ class TestXMDF(unittest.TestCase):
         xmdf = './tests/xmdf/run.xmdf'
         shp = './tests/xmdf/section_multi_line.shp'
         with pyqgis():
-            res = XMDF(xmdf, driver='qgis geometry engine')
+            res = XMDF(xmdf, driver='qgis geometry data extractor')
             df = res.section(shp, 'h', 0)
             self.assertEqual((9, 4), df.shape)
 
@@ -311,7 +311,7 @@ class TestXMDF(unittest.TestCase):
         xmdf = './tests/xmdf/run.xmdf'
         shp = './tests/xmdf/section_multi_line.shp'
         with pyqgis():
-            res = XMDF(xmdf, driver='qgis geometry engine')
+            res = XMDF(xmdf, driver='qgis geometry data extractor')
             df = res.section(shp, ['h', 'v'], 0)
             self.assertEqual((9, 6), df.shape)
 
@@ -327,7 +327,7 @@ class TestXMDF(unittest.TestCase):
         xmdf = './tests/xmdf/run.xmdf'
         shp = './tests/xmdf/section_line.shp'
         with pyqgis():
-            res = XMDF(xmdf, driver='qgis geometry engine')
+            res = XMDF(xmdf, driver='qgis geometry data extractor')
             df = res.section(shp, ['bed level', 'h'], 0)
             self.assertEqual((9, 3), df.shape)
 
@@ -342,7 +342,7 @@ class TestXMDF(unittest.TestCase):
     def test_section_7_qgis_driver(self):
         xmdf = './tests/xmdf/run.xmdf'
         with pyqgis():
-            res = XMDF(xmdf, driver='qgis geometry engine')
+            res = XMDF(xmdf, driver='qgis geometry data extractor')
             line = [(0.5, 0.5), (1.5, 1.5)]
             df = res.section(line, 'max h', 0)
             self.assertEqual((4, 2), df.shape)
@@ -358,7 +358,7 @@ class TestXMDF(unittest.TestCase):
     def test_section_vec_qgis_driver(self):
         xmdf = './tests/xmdf/run.xmdf'
         with pyqgis():
-            res = XMDF(xmdf, driver='qgis geometry engine')
+            res = XMDF(xmdf, driver='qgis geometry data extractor')
             line = [(0.5, 0.5), (1.5, 1.5)]
             df = res.section(line, 'vector velocity', 0)
             self.assertEqual((4, 2), df.shape)
@@ -375,7 +375,7 @@ class TestXMDF(unittest.TestCase):
         xmdf = './tests/xmdf/run.xmdf'
         shp = './tests/xmdf/section_line_long.shp'
         with pyqgis():
-            res = XMDF(xmdf, driver='qgis geometry engine')
+            res = XMDF(xmdf, driver='qgis geometry data extractor')
             df = res.section(shp, 'max h', 0)
             self.assertEqual((8, 2), df.shape)
 
@@ -391,7 +391,7 @@ class TestXMDF(unittest.TestCase):
         xmdf = './tests/quadtree/EG13_001.xmdf'
         shp = './tests/quadtree/simple_line_3.shp'
         with pyqgis():
-            res = XMDF(xmdf, driver='qgis geometry engine')
+            res = XMDF(xmdf, driver='qgis geometry data extractor')
             df = res.section(shp, 'h', 1.)
             self.assertEqual((6, 2), df.shape)
 
@@ -407,7 +407,7 @@ class TestXMDF(unittest.TestCase):
         xmdf = './tests/xmdf/run.xmdf'
         shp = './tests/xmdf/section_line.shp'
         with pyqgis():
-            res = XMDF(xmdf, driver='qgis geometry engine')
+            res = XMDF(xmdf, driver='qgis geometry data extractor')
             df = res.curtain(shp, 'vel', 0)
             self.assertEqual((28, 4), df.shape)
 
@@ -423,7 +423,7 @@ class TestXMDF(unittest.TestCase):
         xmdf = './tests/xmdf/run.xmdf'
         shp = './tests/xmdf/section_multi_line.shp'
         with pyqgis():
-            res = XMDF(xmdf, driver='qgis geometry engine')
+            res = XMDF(xmdf, driver='qgis geometry data extractor')
             df = res.curtain(shp, 'vel', 0)
             self.assertEqual((28, 8), df.shape)
 
@@ -439,7 +439,7 @@ class TestXMDF(unittest.TestCase):
         xmdf = './tests/xmdf/run.xmdf'
         shp = './tests/xmdf/section_line.shp'
         with pyqgis():
-            res = XMDF(xmdf, driver='qgis geometry engine')
+            res = XMDF(xmdf, driver='qgis geometry data extractor')
             df = res.curtain(shp, ['vel', 'depth'], 0)
             self.assertEqual((28, 5), df.shape)
 
@@ -455,7 +455,7 @@ class TestXMDF(unittest.TestCase):
         xmdf = './tests/xmdf/run.xmdf'
         shp = './tests/xmdf/section_line.shp'
         with pyqgis():
-            res = XMDF(xmdf, driver='qgis geometry engine')
+            res = XMDF(xmdf, driver='qgis geometry data extractor')
             df = res.curtain(shp, 'vector velocity', 0)
             self.assertEqual((28, 4), df.shape)
 
@@ -471,7 +471,7 @@ class TestXMDF(unittest.TestCase):
         xmdf = './tests/xmdf/run.xmdf'
         shp = './tests/xmdf/section_line_long.shp'
         with pyqgis():
-            res = XMDF(xmdf, driver='qgis geometry engine')
+            res = XMDF(xmdf, driver='qgis geometry data extractor')
             df = res.curtain(shp, 'vel', 0)
             self.assertEqual((16, 4), df.shape)
 
@@ -487,7 +487,7 @@ class TestXMDF(unittest.TestCase):
         xmdf = './tests/xmdf/run.xmdf'
         shp = './tests/xmdf/section_line.shp'
         with pyqgis():
-            res = XMDF(xmdf, driver='qgis geometry engine')
+            res = XMDF(xmdf, driver='qgis geometry data extractor')
             df = res.curtain(shp, 'max vel', 0)
             self.assertEqual((28, 4), df.shape)
 
@@ -503,7 +503,7 @@ class TestXMDF(unittest.TestCase):
         xmdf = './tests/xmdf/run.xmdf'
         shp = './tests/xmdf/section_line.shp'
         with pyqgis():
-            res = XMDF(xmdf, driver='qgis geometry engine')
+            res = XMDF(xmdf, driver='qgis geometry data extractor')
             df = res.curtain(shp, 'max depth', 0)
             self.assertEqual((28, 3), df.shape)
 
@@ -519,7 +519,7 @@ class TestXMDF(unittest.TestCase):
         xmdf = './tests/xmdf/run.xmdf'
         shp = './tests/xmdf/time_series_point.shp'
         with pyqgis():
-            res = XMDF(xmdf, driver='qgis geometry engine')
+            res = XMDF(xmdf, driver='qgis geometry data extractor')
             df = res.profile(shp, 'vel', 0)
             self.assertEqual((2, 2), df.shape)
 
@@ -535,7 +535,7 @@ class TestXMDF(unittest.TestCase):
         xmdf = './tests/xmdf/run.xmdf'
         shp = './tests/xmdf/time_series_point.shp'
         with pyqgis():
-            res = XMDF(xmdf, driver='qgis geometry engine')
+            res = XMDF(xmdf, driver='qgis geometry data extractor')
             df = res.profile(shp, 'vector velocity', 0)
             self.assertEqual((2, 2), df.shape)
 
@@ -549,7 +549,7 @@ class TestXMDF(unittest.TestCase):
     def test_maximum_level_qgis_driver(self):
         xmdf = './tests/xmdf/EG00_001.xmdf'
         with pyqgis():
-            res = XMDF(xmdf, driver='qgis geometry engine')
+            res = XMDF(xmdf, driver='qgis geometry data extractor')
             mx = res.maximum('h')
             self.assertTrue(np.isclose(50.42428207, mx).all())
 
@@ -564,7 +564,7 @@ class TestXMDF(unittest.TestCase):
     def test_maximum_multiple_result_types_qgis_driver(self):
         xmdf = './tests/xmdf/EG00_001.xmdf'
         with pyqgis():
-            res = XMDF(xmdf, driver='qgis geometry engine')
+            res = XMDF(xmdf, driver='qgis geometry data extractor')
             mx = res.maximum(['h', 'd', 'v'])
             self.assertEqual((3, 1), mx.shape)
             self.assertTrue(np.isclose([50.42428, 3.03354, 3.03524], mx.to_numpy().flatten()).all())
@@ -579,7 +579,7 @@ class TestXMDF(unittest.TestCase):
     def test_minimum_level_qgis_driver(self):
         xmdf = './tests/xmdf/EG00_001.xmdf'
         with pyqgis():
-            res = XMDF(xmdf, driver='qgis geometry engine')
+            res = XMDF(xmdf, driver='qgis geometry data extractor')
             mn = res.minimum('h')
             self.assertTrue(np.isclose(35.9343795, mn).all())
 
@@ -594,7 +594,7 @@ class TestXMDF(unittest.TestCase):
     def test_minimum_multiple_result_types_qgis_driver(self):
         xmdf = './tests/xmdf/EG00_001.xmdf'
         with pyqgis():
-            res = XMDF(xmdf, driver='qgis geometry engine')
+            res = XMDF(xmdf, driver='qgis geometry data extractor')
             mn = res.minimum(['h', 'd', 'v'])
             self.assertEqual((3, 1), mn.shape)
             self.assertTrue(np.isclose([35.9343795, 0., 0.], mn.to_numpy().flatten()).all())
@@ -612,7 +612,7 @@ class TestNCMesh(unittest.TestCase):
     def test_load_qgis_driver(self):
         nc = './tests/nc_mesh/fv_res.nc'
         with pyqgis():
-            res = NCMesh(nc, driver='qgis geometry engine')
+            res = NCMesh(nc, driver='qgis geometry data extractor')
             self.assertEqual('fv_res', res.name)
             self.assertTrue(res.has_reference_time)  # different from above - QGIS seems to assume 1990-01-01 if none is set
 
@@ -626,7 +626,7 @@ class TestNCMesh(unittest.TestCase):
     def test_times_qgis_driver(self):
         nc = './tests/nc_mesh/fv_res.nc'
         with pyqgis():
-            res = NCMesh(nc, driver='qgis geometry engine')
+            res = NCMesh(nc, driver='qgis geometry data extractor')
             times = res.times()
             self.assertEqual(7, len(times))
 
@@ -640,7 +640,7 @@ class TestNCMesh(unittest.TestCase):
     def test_data_types_qgis_driver(self):
         nc = './tests/nc_mesh/fv_res.nc'
         with pyqgis():
-            res = NCMesh(nc, driver='qgis geometry engine')
+            res = NCMesh(nc, driver='qgis geometry data extractor')
             dtypes = res.data_types()
             self.assertEqual(3, len(dtypes))
 
@@ -654,7 +654,7 @@ class TestNCMesh(unittest.TestCase):
     def test_data_types_filter_qgis_driver(self):
         nc = './tests/nc_mesh/fv_res.nc'
         with pyqgis():
-            res = NCMesh(nc, driver='qgis geometry engine')
+            res = NCMesh(nc, driver='qgis geometry data extractor')
             dtypes = res.data_types('static')
             self.assertEqual(1, len(dtypes))
 
@@ -668,7 +668,7 @@ class TestNCMesh(unittest.TestCase):
     def test_time_series_qgis_driver(self):
         nc = './tests/nc_mesh/fv_res.nc'
         with pyqgis():
-            res = NCMesh(nc, driver='qgis geometry engine')
+            res = NCMesh(nc, driver='qgis geometry data extractor')
             df = res.time_series((1.5, 4.5), 'water level')
             self.assertEqual((7, 1), df.shape)
 
@@ -682,7 +682,7 @@ class TestNCMesh(unittest.TestCase):
     def test_time_series_averaging_qgis_driver(self):
         nc = './tests/nc_mesh/fv_res.nc'
         with pyqgis():
-            res = NCMesh(nc, driver='qgis geometry engine')
+            res = NCMesh(nc, driver='qgis geometry data extractor')
             df = res.time_series((1.5, 4.5), 'vel', averaging_method='singlelevel?dir=top&1')
             self.assertEqual((7, 1), df.shape)
 
@@ -697,7 +697,7 @@ class TestNCMesh(unittest.TestCase):
     def test_section_qgis_driver(self):
         nc = './tests/nc_mesh/fv_res.nc'
         with pyqgis():
-            res = NCMesh(nc, driver='qgis geometry engine')
+            res = NCMesh(nc, driver='qgis geometry data extractor')
             line = [(1.4, 4.5), (3.6, 4.2)]
             df = res.section(line, 'h', 0)
             self.assertEqual((6, 2), df.shape)
@@ -713,7 +713,7 @@ class TestNCMesh(unittest.TestCase):
     def test_section_averaging_qgis_driver(self):
         nc = './tests/nc_mesh/fv_res.nc'
         with pyqgis():
-            res = NCMesh(nc, driver='qgis geometry engine')
+            res = NCMesh(nc, driver='qgis geometry data extractor')
             line = [(1.4, 4.5), (3.6, 4.2)]
             df = res.section(line, 'v', 0, averaging_method='sigma&0.1&0.9')
             self.assertEqual((6, 2), df.shape)
@@ -729,7 +729,7 @@ class TestNCMesh(unittest.TestCase):
     def test_section_long_lat_qgis_driver(self):
         nc = './tests/nc_mesh/EST001_3D_002.nc'
         with pyqgis():
-            res = NCMesh(nc, driver='qgis geometry engine')
+            res = NCMesh(nc, driver='qgis geometry data extractor')
             res.spherical = True
             line = [(159.07617177, -31.36419353), (159.07704259, -31.36703514), (159.07855506, -31.36937259)]
             df = res.section(line, 'salinity', 186961)
@@ -746,7 +746,7 @@ class TestNCMesh(unittest.TestCase):
     def test_curtain_qgis_driver(self):
         nc = './tests/nc_mesh/fv_res.nc'
         with pyqgis():
-            res = NCMesh(nc, driver='qgis geometry engine')
+            res = NCMesh(nc, driver='qgis geometry data extractor')
             line = [(1.4, 4.5), (3.6, 4.2)]
             df = res.curtain(line, 'v', 0)
             self.assertEqual((24, 4), df.shape)
@@ -761,7 +761,7 @@ class TestNCMesh(unittest.TestCase):
     def test_profile_qgis_driver(self):
         nc = './tests/nc_mesh/fv_res.nc'
         with pyqgis():
-            res = NCMesh(nc, driver='qgis geometry engine')
+            res = NCMesh(nc, driver='qgis geometry data extractor')
             df = res.profile((1.5, 4.5), 'v', 0)
             self.assertEqual((4, 2), df.shape)
 
@@ -775,7 +775,7 @@ class TestNCMesh(unittest.TestCase):
     def test_maximum_water_level_qgis_driver(self):
         nc = './tests/nc_mesh/EST000_3D_001.nc'
         with pyqgis():
-            res = NCMesh(nc, driver='qgis geometry engine')
+            res = NCMesh(nc, driver='qgis geometry data extractor')
             mx = res.maximum('h')
             self.assertTrue(np.isclose(mx, 0.185768127).all())
 
@@ -789,7 +789,7 @@ class TestNCMesh(unittest.TestCase):
     def test_maximum_salinity_qgis_driver(self):
         nc = './tests/nc_mesh/EST000_3D_001.nc'
         with pyqgis():
-            res = NCMesh(nc, driver='qgis geometry engine')
+            res = NCMesh(nc, driver='qgis geometry data extractor')
             mx = res.maximum('sal', averaging_method=None)
             self.assertTrue(np.isclose(mx, 34.9937744).all())
 
@@ -803,14 +803,14 @@ class TestNCMesh(unittest.TestCase):
     def test_maximum_velocity_qgis_driver(self):
         nc = './tests/nc_mesh/EST000_3D_001.nc'
         with pyqgis():
-            res = NCMesh(nc, driver='qgis geometry engine')
+            res = NCMesh(nc, driver='qgis geometry data extractor')
             mx = res.maximum('V', averaging_method=None)
             self.assertTrue(np.isclose(mx, 0.42056167).all())
 
     def test_maximum_salinity_depth_averaged_qgis_driver(self):
         nc = './tests/nc_mesh/EST000_3D_001.nc'
         with pyqgis():
-            res = NCMesh(nc, driver='qgis geometry engine')
+            res = NCMesh(nc, driver='qgis geometry data extractor')
             mx = res.maximum('sal', averaging_method='sigma&0.0&1.0')
             self.assertTrue(np.isclose(mx, 34.9360265569985).all())
             mx = res.maximum('sal', averaging_method='singlelevel?dir=top&1')
@@ -828,7 +828,7 @@ class TestNCMesh(unittest.TestCase):
     def test_maximum_velocity_depth_averaged_qgis_driver(self):
         nc = './tests/nc_mesh/EST000_3D_001.nc'
         with pyqgis():
-            res = NCMesh(nc, driver='qgis geometry engine')
+            res = NCMesh(nc, driver='qgis geometry data extractor')
             mx = res.maximum('V', averaging_method='sigma&0.0&1.0')
             self.assertTrue(np.isclose(mx, 0.419554057591823).all())
             mx = res.maximum('V', averaging_method='singlelevel?dir=bottom&1')
@@ -844,7 +844,7 @@ class TestNCMesh(unittest.TestCase):
     def test_minimum_salinity_qgis_driver(self):
         nc = './tests/nc_mesh/EST000_3D_001.nc'
         with pyqgis():
-            res = NCMesh(nc, driver='qgis geometry engine')
+            res = NCMesh(nc, driver='qgis geometry data extractor')
             mn = res.minimum('sal', averaging_method=None)
             self.assertTrue(np.isclose(mn, 0., atol=0.0001).all())
 
@@ -860,7 +860,7 @@ class TestCATCHJson(unittest.TestCase):
     def test_load_qgis_driver(self):
         p = './tests/catch_json/res.tuflow.json'
         with pyqgis():
-            res = CATCHJson(p, driver='qgis geometry engine')
+            res = CATCHJson(p, driver='qgis geometry data extractor')
             self.assertEqual('res', res.name)
             self.assertTrue(res.has_reference_time)
 
@@ -873,7 +873,7 @@ class TestCATCHJson(unittest.TestCase):
     def test_times_qgis_driver(self):
         p = './tests/catch_json/res.tuflow.json'
         with pyqgis():
-            res = CATCHJson(p, driver='qgis geometry engine')
+            res = CATCHJson(p, driver='qgis geometry data extractor')
             times = res.times()
             self.assertEqual(7, len(times))
 
@@ -886,7 +886,7 @@ class TestCATCHJson(unittest.TestCase):
     def test_data_types_qgis_driver(self):
         p = './tests/catch_json/res.tuflow.json'
         with pyqgis():
-            res = CATCHJson(p, driver='qgis geometry engine')
+            res = CATCHJson(p, driver='qgis geometry data extractor')
             dtypes = res.data_types()
             self.assertEqual(10, len(dtypes))
 
@@ -902,7 +902,7 @@ class TestCATCHJson(unittest.TestCase):
         p = './tests/catch_json/res.tuflow.json'
         with pyqgis():
             point = (1.5, 4.5)
-            res = CATCHJson(p, driver='qgis geometry engine')
+            res = CATCHJson(p, driver='qgis geometry data extractor')
             df = res.data_point(point, 'water level', 0.)
             self.assertTrue(isinstance(df, float))
 
@@ -918,7 +918,7 @@ class TestCATCHJson(unittest.TestCase):
         p = './tests/catch_json/res.tuflow.json'
         with pyqgis():
             point = (1.5, 3.5)
-            res = CATCHJson(p, driver='qgis geometry engine')
+            res = CATCHJson(p, driver='qgis geometry data extractor')
             df = res.data_point(point, 'vector velocity', 0.)
             self.assertTrue(isinstance(df, tuple))
 
@@ -936,7 +936,7 @@ class TestCATCHJson(unittest.TestCase):
         p = './tests/catch_json/res.tuflow.json'
         points = [(1.5, 4.5), (1.5, 3.5)]
         with pyqgis():
-            res = CATCHJson(p, driver='qgis geometry engine')
+            res = CATCHJson(p, driver='qgis geometry data extractor')
             df = res.data_point(points, ['h', 'v'], 0.)
             self.assertTrue(isinstance(df, pd.DataFrame))
             self.assertEqual((2, 2), df.shape)
@@ -954,7 +954,7 @@ class TestCATCHJson(unittest.TestCase):
         p = './tests/catch_json/res.tuflow.json'
         point = (1.5, 4.5)
         with pyqgis():
-            res = CATCHJson(p, driver='qgis geometry engine')
+            res = CATCHJson(p, driver='qgis geometry data extractor')
             df = res.time_series(point, 'water level')
             self.assertEqual((7, 1), df.shape)
 
@@ -970,7 +970,7 @@ class TestCATCHJson(unittest.TestCase):
         p = './tests/catch_json/res.tuflow.json'
         point = (1.5, 4.5)
         with pyqgis():
-            res = CATCHJson(p, driver='qgis geometry engine')
+            res = CATCHJson(p, driver='qgis geometry data extractor')
             df = res.time_series(point, 'water level', time_fmt='absolute')
             self.assertEqual((7, 1), df.shape)
 
@@ -986,7 +986,7 @@ class TestCATCHJson(unittest.TestCase):
         p = './tests/catch_json/res.tuflow.json'
         line = './tests/catch_json/section_line.shp'
         with pyqgis():
-            res = CATCHJson(p, driver='qgis geometry engine')
+            res = CATCHJson(p, driver='qgis geometry data extractor')
             df = res.section(line, 'water level', 0.)
             self.assertEqual((9, 2), df.shape)
 
@@ -1002,7 +1002,7 @@ class TestCATCHJson(unittest.TestCase):
         p = './tests/catch_json/res.tuflow.json'
         line = './tests/catch_json/section_line.shp'
         with pyqgis():
-            res = CATCHJson(p, driver='qgis geometry engine')
+            res = CATCHJson(p, driver='qgis geometry data extractor')
             df = res.section(line, ['water level', 'velocity'], 0.)
             self.assertEqual((9, 3), df.shape)
 
@@ -1018,7 +1018,7 @@ class TestCATCHJson(unittest.TestCase):
         p = './tests/catch_json/res_reversed.tuflow.json'
         line = './tests/catch_json/section_line.shp'
         with pyqgis():
-            res = CATCHJson(p, driver='qgis geometry engine')
+            res = CATCHJson(p, driver='qgis geometry data extractor')
             df = res.section(line, ['water level'], 0.)
             self.assertEqual((9, 2), df.shape)
 
@@ -1034,7 +1034,7 @@ class TestCATCHJson(unittest.TestCase):
         p = './tests/catch_json/res.tuflow.json'
         line = './tests/catch_json/section_line_reversed.shp'
         with pyqgis():
-            res = CATCHJson(p, driver='qgis geometry engine')
+            res = CATCHJson(p, driver='qgis geometry data extractor')
             df = res.section(line, ['water level'], 0.)
             self.assertEqual((9, 2), df.shape)
 
@@ -1050,7 +1050,7 @@ class TestCATCHJson(unittest.TestCase):
         p = './tests/catch_json/res_reversed.tuflow.json'
         line = './tests/catch_json/section_line_reversed.shp'
         with pyqgis():
-            res = CATCHJson(p, driver='qgis geometry engine')
+            res = CATCHJson(p, driver='qgis geometry data extractor')
             df = res.section(line, ['water level'], 0.)
             self.assertEqual((9, 2), df.shape)
 
@@ -1066,7 +1066,7 @@ class TestCATCHJson(unittest.TestCase):
         p = './tests/catch_json/res.tuflow.json'
         line = './tests/catch_json/section_line_hook.shp'
         with pyqgis():
-            res = CATCHJson(p, driver='qgis geometry engine')
+            res = CATCHJson(p, driver='qgis geometry data extractor')
             df = res.section(line, ['water level'], 0.)
             self.assertEqual((12, 2), df.shape)
 
@@ -1082,7 +1082,7 @@ class TestCATCHJson(unittest.TestCase):
         p = './tests/catch_json/res.tuflow.json'
         line = './tests/catch_json/section_line_hook_reversed.shp'
         with pyqgis():
-            res = CATCHJson(p, driver='qgis geometry engine')
+            res = CATCHJson(p, driver='qgis geometry data extractor')
             df = res.section(line, ['water level'], 0.)
             self.assertEqual((8, 2), df.shape)
 
@@ -1098,7 +1098,7 @@ class TestCATCHJson(unittest.TestCase):
         p = './tests/catch_json/res_shifted.tuflow.json'
         line = './tests/xmdf/section_line_long.shp'
         with pyqgis():
-            res = CATCHJson(p, driver='qgis geometry engine')
+            res = CATCHJson(p, driver='qgis geometry data extractor')
             df = res.section(line, ['water level'], 0.)
             self.assertEqual((9, 2), df.shape)
 
@@ -1114,7 +1114,7 @@ class TestCATCHJson(unittest.TestCase):
         p = './tests/catch_json/res_shifted.tuflow.json'
         line = './tests/catch_json/section_line_ugly.shp'
         with pyqgis():
-            res = CATCHJson(p, driver='qgis geometry engine')
+            res = CATCHJson(p, driver='qgis geometry data extractor')
             df = res.section(line, ['water level'], 0.)
             self.assertEqual((16, 2), df.shape)
 
@@ -1130,7 +1130,7 @@ class TestCATCHJson(unittest.TestCase):
         p = './tests/catch_json/res.tuflow.json'
         line = './tests/catch_json/section_line.shp'
         with pyqgis():
-            res = CATCHJson(p, driver='qgis geometry engine')
+            res = CATCHJson(p, driver='qgis geometry data extractor')
             df = res.curtain(line, 'velocity', 0.)
             self.assertEqual((24, 4), df.shape)
 
@@ -1146,7 +1146,7 @@ class TestCATCHJson(unittest.TestCase):
         p = './tests/catch_json/res.tuflow.json'
         line = './tests/catch_json/section_line_hook.shp'
         with pyqgis():
-            res = CATCHJson(p, driver='qgis geometry engine')
+            res = CATCHJson(p, driver='qgis geometry data extractor')
             df = res.curtain(line, 'velocity', 0.)
             self.assertEqual((40, 4), df.shape)
 
@@ -1162,7 +1162,7 @@ class TestCATCHJson(unittest.TestCase):
         p = './tests/catch_json/res.tuflow.json'
         line = './tests/catch_json/section_line_hook_reversed.shp'
         with pyqgis():
-            res = CATCHJson(p, driver='qgis geometry engine')
+            res = CATCHJson(p, driver='qgis geometry data extractor')
             df = res.curtain(line, 'velocity', 0.)
             self.assertEqual((32, 4), df.shape)
 
@@ -1178,7 +1178,7 @@ class TestCATCHJson(unittest.TestCase):
         p = './tests/catch_json/res_shifted.tuflow.json'
         line = './tests/xmdf/section_line_long.shp'
         with pyqgis():
-            res = CATCHJson(p, driver='qgis geometry engine')
+            res = CATCHJson(p, driver='qgis geometry data extractor')
             df = res.curtain(line, 'velocity', 0.)
             self.assertEqual((24, 4), df.shape)
 
@@ -1194,7 +1194,7 @@ class TestCATCHJson(unittest.TestCase):
         p = './tests/catch_json/res_shifted.tuflow.json'
         line = './tests/catch_json/section_line_ugly.shp'
         with pyqgis():
-            res = CATCHJson(p, driver='qgis geometry engine')
+            res = CATCHJson(p, driver='qgis geometry data extractor')
             df = res.curtain(line, 'velocity', 0.)
             self.assertEqual((64, 4), df.shape)
 
@@ -1210,7 +1210,7 @@ class TestCATCHJson(unittest.TestCase):
         p = './tests/catch_json/res.tuflow.json'
         point = (1.5, 4.5)
         with pyqgis():
-            res = CATCHJson(p, driver='qgis geometry engine')
+            res = CATCHJson(p, driver='qgis geometry data extractor')
             df = res.profile(point, 'v', 0)
             self.assertEqual((4, 2), df.shape)
 
@@ -1226,7 +1226,7 @@ class TestCATCHJson(unittest.TestCase):
         p = './tests/catch_json/res.tuflow.json'
         shp = './tests/xmdf/time_series_point.shp'
         with pyqgis():
-            res = CATCHJson(p, driver='qgis geometry engine')
+            res = CATCHJson(p, driver='qgis geometry data extractor')
             df = res.profile(shp, 'v', 0)
             self.assertEqual((2, 2), df.shape)
             
@@ -1240,7 +1240,7 @@ class TestCATCHJson(unittest.TestCase):
     def test_maximum_qgis_driver(self):
         p = './tests/catch_json/res.tuflow.json'
         with pyqgis():
-            res = CATCHJson(p, driver='qgis geometry engine')
+            res = CATCHJson(p, driver='qgis geometry data extractor')
             mx = res.maximum('h')
             self.assertTrue(np.isclose(mx, 1.0).all())
 
@@ -1254,7 +1254,7 @@ class TestCATCHJson(unittest.TestCase):
     def test_minimum_qgis_driver(self):
         p = './tests/catch_json/res.tuflow.json'
         with pyqgis():
-            res = CATCHJson(p, driver='qgis geometry engine')
+            res = CATCHJson(p, driver='qgis geometry data extractor')
             mn = res.minimum('h')
             self.assertTrue(np.isclose(mn, 0.).all())
 
@@ -1271,7 +1271,7 @@ class TestDAT(unittest.TestCase):
     def test_load_qgis_driver(self):
         p = './tests/dat/small_model_001.ALL.sup'
         with pyqgis():
-            res = DAT(p, driver='qgis geometry engine')
+            res = DAT(p, driver='qgis geometry data extractor')
             self.assertEqual('small_model_001', res.name)
             self.assertFalse(res.has_reference_time)
 
@@ -1288,7 +1288,7 @@ class TestDAT(unittest.TestCase):
              './tests/dat/small_model_001_h.dat', './tests/dat/small_model_001_q.dat',
              './tests/dat/small_model_001_Times.dat']
         with pyqgis():
-            res = DAT(p, driver='qgis geometry engine')
+            res = DAT(p, driver='qgis geometry data extractor')
             self.assertEqual('small_model_001', res.name)
 
     def test_times_python_driver(self):
@@ -1301,7 +1301,7 @@ class TestDAT(unittest.TestCase):
     def test_times_qgis_driver(self):
         p = './tests/dat/small_model_001.ALL.sup'
         with pyqgis():
-            res = DAT(p, driver='qgis geometry engine')
+            res = DAT(p, driver='qgis geometry data extractor')
             times = res.times()
             self.assertEqual(13, len(times))
 
@@ -1315,7 +1315,7 @@ class TestDAT(unittest.TestCase):
     def test_data_types_qgis_driver(self):
         p = './tests/dat/small_model_001.ALL.sup'
         with pyqgis():
-            res = DAT(p, driver='qgis geometry engine')
+            res = DAT(p, driver='qgis geometry data extractor')
             dtypes = res.data_types()
             self.assertEqual(8, len(dtypes))
 
@@ -1329,7 +1329,7 @@ class TestDAT(unittest.TestCase):
     def test_newer_format_qgis_driver(self):
         p = './tests/dat/small_model_002_h.dat'  # model name is now 80 characters long rather than 40
         with pyqgis():
-            res = DAT(p, driver='qgis geometry engine')
+            res = DAT(p, driver='qgis geometry data extractor')
             dtypes = res.data_types()
             self.assertEqual(sorted(['bed level', 'water level', 'max water level']), sorted(dtypes))
 
@@ -1343,7 +1343,7 @@ class TestDAT(unittest.TestCase):
     def test_time_series_qgis_driver(self):
         p = './tests/dat/small_model_002_h.dat'
         with pyqgis():
-            res = DAT(p, driver='qgis geometry engine')
+            res = DAT(p, driver='qgis geometry data extractor')
             df = res.time_series((1.0, 1.0), 'water level')
             self.assertEqual((13, 1), df.shape)
 
@@ -1357,7 +1357,7 @@ class TestDAT(unittest.TestCase):
     def test_section_qgis_driver(self):
         p = './tests/dat/small_model_002_h.dat'
         with pyqgis():
-            res = DAT(p, driver='qgis geometry engine')
+            res = DAT(p, driver='qgis geometry data extractor')
             df = res.section([(1.5, 1.2), (2.5, 1.2)], 'water level', 1.0)
             self.assertEqual((4, 2), df.shape)
 
@@ -1371,7 +1371,7 @@ class TestDAT(unittest.TestCase):
     def test_maximum_level_qgis_driver(self):
         p = './tests/dat/EG00_001_h.dat'
         with pyqgis():
-            res = DAT(p, driver='qgis geometry engine')
+            res = DAT(p, driver='qgis geometry data extractor')
             mx = res.maximum('water level')
             self.assertTrue(np.isclose(mx, 50.4242821).all())
 
@@ -1385,7 +1385,7 @@ class TestDAT(unittest.TestCase):
     def test_maximum_velocity_vector_qgis_driver(self):
         p = './tests/dat/EG00_001_V.dat'
         with pyqgis():
-            res = DAT(p, driver='qgis geometry engine')
+            res = DAT(p, driver='qgis geometry data extractor')
             mx = res.maximum('velocity')
             self.assertTrue(np.isclose(mx, 3.03523898).all())
 
@@ -1399,7 +1399,7 @@ class TestDAT(unittest.TestCase):
     def test_maximum_max_level_qgis_driver(self):
         p = './tests/dat/EG00_001_h.dat'
         with pyqgis():
-            res = DAT(p, driver='qgis geometry engine')
+            res = DAT(p, driver='qgis geometry data extractor')
             mx = res.maximum('max water level')
             self.assertTrue(np.isclose(mx, 50.42952346801758).all())
 
@@ -1413,7 +1413,7 @@ class TestDAT(unittest.TestCase):
     def test_maximum_bed_level_qgis_driver(self):
         p = './tests/dat/EG00_001_h.dat'
         with pyqgis():
-            res = DAT(p, driver='qgis geometry engine')
+            res = DAT(p, driver='qgis geometry data extractor')
             mx = res.maximum('bed level')
             self.assertTrue(np.isclose(mx, 100.).all())
 
@@ -1427,7 +1427,7 @@ class TestDAT(unittest.TestCase):
     def test_minimum_level_qgis_driver(self):
         p = './tests/dat/EG00_001_h.dat'
         with pyqgis():
-            res = DAT(p, driver='qgis geometry engine')
+            res = DAT(p, driver='qgis geometry data extractor')
             mn = res.minimum('water level')
             self.assertTrue(np.isclose(mn, 35.9343795).all())
 
@@ -1441,7 +1441,7 @@ class TestDAT(unittest.TestCase):
     def test_minimum_bed_level_qgis_driver(self):
         p = './tests/dat/EG00_001_h.dat'
         with pyqgis():
-            res = DAT(p, driver='qgis geometry engine')
+            res = DAT(p, driver='qgis geometry data extractor')
             mn = res.minimum('bed level')
             self.assertTrue(np.isclose(mn, 36.01).all())
 
@@ -1693,7 +1693,7 @@ class TestMeshRegression(unittest.TestCase):
         line_outside_mesh = './tests/xmdf/xmdf_line_outside_mesh.shp'
         comp = './tests/regression_test_comparisons/test_qgis_vertex_mesh'
         with pyqgis():
-            res = XMDF(p, driver='qgis geometry engine')
+            res = XMDF(p, driver='qgis geometry data extractor')
 
             # data point
             a = res.data_point(point, 'water level', 1.)
@@ -1852,7 +1852,7 @@ class TestMeshRegression(unittest.TestCase):
         line = './tests/xmdf/xmdf_line.shp'
         comp = './tests/regression_test_comparisons/test_qgis_dat_mesh'
         with pyqgis():
-            res = DAT(p, driver='qgis geometry engine')
+            res = DAT(p, driver='qgis geometry data extractor')
 
             # data point
             a = res.data_point(point, 'water level', 1.)
@@ -2222,7 +2222,7 @@ class TestMeshRegression(unittest.TestCase):
         line_outside_mesh_2 = './tests/nc_mesh/ncmesh_line_longlat_outside_mesh_2.shp'
         comp = './tests/regression_test_comparisons/test_qgis_cell_mesh_latlong'
         with pyqgis():
-            res = NCMesh(p, driver='qgis geometry engine')
+            res = NCMesh(p, driver='qgis geometry data extractor')
             res.spherical = True
 
             # data point
@@ -2605,7 +2605,7 @@ class TestMeshRegression(unittest.TestCase):
         point_outside = './tests/quadtree/qdt_point_outside.shp'
         comp = './tests/regression_test_comparisons/test_qgis_quadtree'
         with pyqgis():
-            res = XMDF(p, driver='qgis geometry engine')
+            res = XMDF(p, driver='qgis geometry data extractor')
 
             # time series
             a = res.time_series(point, 'water level').reset_index().to_numpy()
