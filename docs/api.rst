@@ -102,6 +102,7 @@ This page gives an overview of the public modules, classes, and functions within
    HydTablesCheck
    BCTablesCheck
    CrossSections
+   DATCrossSections
 
 .. rubric:: Utilities
 

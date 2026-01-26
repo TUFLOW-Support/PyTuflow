@@ -40,19 +40,16 @@ Release date: XX XXX 2026
 Removed QGIS Dependency Requirement
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-QGIS is no longer required for extracting data from mesh outputs. Prior to ``v1.1``, PyTUFLOW required a QGIS environment to be able to extract data from mesh outputs (e.g. :meth:`XMDF.time_series()<pytuflow.XMDF.time_series>`, :meth:`XMDF.section()<pytuflow.XMDF.section>` etc). In place of QGIS, PyTUFLOW will use `PyVista <https://docs.pyvista.org>`_ for mesh geometry operations and either ``NetCDF4`` or ``h5py`` for extracting the dataset values (``h5py`` is typically a little faster, so it is recommended to install both libraries and PyTUFLOW will use ``h5py`` if it is available).
-
-To install PyVista and h5py:
-
-.. code-block:: bash
-
-    pip install pyvista
-
-.. code-block:: bash
-
-    pip install h5py
+QGIS is no longer required for extracting data from mesh outputs. Prior to ``v1.1``, PyTUFLOW required a QGIS environment to be able to extract data from mesh outputs (e.g. :meth:`XMDF.time_series()<pytuflow.XMDF.time_series>`, :meth:`XMDF.section()<pytuflow.XMDF.section>` etc). In place of QGIS, PyTUFLOW will use `PyVista <https://docs.pyvista.org>`_ for mesh geometry operations and either `NetCDF4 <https://unidata.github.io/netcdf4-python/>`_ or `h5py <https://www.h5py.org/>`_ for extracting the dataset values (h5py is typically a little faster and will be preferred by PyTUFLOW).
 
 This change comes with speed improvements for loading mesh outputs as well as significant speed improvements when extracting data along a linestring (e.g. for :meth:`XMDF.section()<pytuflow.XMDF.section>` and :meth:`XMDF.curtain()<pytuflow.XMDF.curtain>` methods). See the :ref:`Optimised Mesh Outputs<v1.1_optimisations>` section for more details.
+
+Removed GDAL Dependency Requirement
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+GDAL is no longer required for GIS operations or data extraction. PyTUFLOW now uses `GeoPandas <https://geopandas.org>`_ for vector datasets and `Rasterio <https://rasterio.readthedocs.io>`_ for raster datasets. This change simplifies the installation process for PyTUFLOW.
+
+GDAL can still be used in lieu of GeoPandas and Rasterio, however GeoPandas and Rasterio will be preferred by PyTUFLOW if they are available in the Python environment.
 
 New Methods for Map Output Classes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -62,28 +59,24 @@ New methods have been added to the map output classes (:meth:`XMDF<pytuflow.XMDF
 - :meth:`data_point()<pytuflow.XMDF.data_point>`: Extract a single data point at a given time and location.
 - :meth:`maximum()<pytuflow.XMDF.maximum>`: Extract the maximum value over the entire simulation for a given location or set of locations.
 - :meth:`minimum()<pytuflow.XMDF.minimum>`: Extract the minimum value over the entire simulation for a given location or set of locations.
+- :meth:`surface()<pytuflow.XMDF.surface>`: Extract a 2D surface at a given time and data type.
 
 .. _v1.1_optimisations:
 
 Optimised Mesh Outputs
 ^^^^^^^^^^^^^^^^^^^^^^
 
-New mesh drivers have been added for handling mesh outputs with, or without QGIS. The new drivers are split into two categories which can then be split into either QGIS and non-QGIS drivers (nominally called "Python drivers", although the QGIS drivers use Python bindings, the non-QGIS drivers are just more Python friendly):
+New mesh drivers have been added for handling mesh outputs with QGIS libraries (nominally called "QGIS drivers") and without QGIS libraries (nominally called "Python drivers").
 
-1. Drivers for handling mesh geometry (e.g. the ``.2dm``)
-2. Drivers for handling mesh results (e.g. the ``.xmdf``)
-
-The geometry and result drivers can be mixed and matched with the exception of the QGIS result driver which requires the QGIS geometry driver. The benefit of mixing the drivers is that Python result drivers don't require the geometry to be loaded for non-spatial related operations (e.g. querying the result types), which makes it faster to initialise the output class and the geometry is only loaded if, and when, it is required.
-
-The best drivers will be chosen automatically based on the available libraries in your Python environment, but it is also possible to specify which drivers to use when initialising the output class. It is recommended to use the Python drivers where possible for speed improvements and to reduce the complexity of the Python environment.
+The best drivers will be chosen automatically based on the available libraries in your Python environment, but it is also possible to specify which drivers to use when initialising the output class. It is recommended to use the Python drivers where possible for speed improvements and to reduce the complexity of the Python environment. Python drivers also offer faster initialisation times since the mesh geometry is not loaded until it is required for data extraction.
 
 The tables below summarise benchmarking results for the different drivers. The table is for comparison purposes only and the actual times will depend on the model size, computer hardware, and Python environment.
 
-`Note`, "New QGIS Drivers" in the last table refers to optimisations made to the Python code in PyTUFLOW for using QGIS and does not refer to any changes in QGIS itself.
-
-.. csv-table:: Benchmarking dataset and extraction information
+.. csv-table:: Benchmarking information
   :file: assets/tables/v1.1_benchmarking_specs.csv
   :header-rows: 1
+
+\* Section() line cell count relates to the last table
 
 .. csv-table:: Load times (XMDF) - including loading mesh geometry and generating spatial indexing (seconds)
   :file: assets/tables/v1.1_benchmarking_loading.csv
@@ -103,6 +96,8 @@ The tables below summarise benchmarking results for the different drivers. The t
 
 \* Did not finish within 30 minutes.
 
+\*\* "New QGIS Drivers" refers to optimisations made to the Python code in PyTUFLOW for using QGIS and does not refer to any changes in QGIS itself.
+
 Optimised NetCDF Grid Output
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -118,7 +113,7 @@ Significant speed up for loading TPC results from a model that contains a lot of
 Minor New Features
 ^^^^^^^^^^^^^^^^^^
 
-- Added Flood Modeller DAT cross-section output class - :class:`DATCrossSections<pytuflow.DATCrossSections>`. This is essentially a wrapper around the :class:`FmCrossSectionDatabaseDriver<pytuflow.FmCrossSectionDatabaseDriver>` class and allows users to interact with Flood Modeller DAT files in an easier way via the ``Output`` class methods - e.g. :meth:`ids()<pytuflow.DATCrossSections.ids>`, :meth:`data_types()<pytuflow.DATCrossSections.data_types>`, :meth:`section()<pytuflow.DATCrossSections.section>`.
+- Added Flood Modeller DAT cross-section output class - :class:`DATCrossSections<pytuflow.DATCrossSections>`. This is essentially a wrapper around the ``FmCrossSectionDatabaseDriver`` class and allows users to interact with Flood Modeller DAT files in an easier way via the ``Output`` class methods - e.g. :meth:`ids()<pytuflow.DATCrossSections.ids>`, :meth:`data_types()<pytuflow.DATCrossSections.data_types>`, :meth:`section()<pytuflow.DATCrossSections.section>`.
 - Added :attr:`has_reference_time<pytuflow.XMDF.has_reference_time>` property to all output classes. This property holds whether the loaded output contains an explicit reference time. The :attr:`reference_time<pytuflow.XMDF.reference_time>` property will always return a value and as a consequence cannot be used for this purpose.
 - Curtain plots will now return a fourth column for vector results that contain the vector projected onto the direction of the input linestring.
 - ``direction_of_velocity`` and ``direction_of_unit_flow`` are now recognised as separate scalar datasets. Previously, these would be assumed to be combined with the velocity and unit flow magnitude datasets respectively and then treated as a vector dataset. This change allows the datasets to be treated separately and the available datasets align more closely with what is in the NCGrid format. This also allows users to plot the direction datasets as scalar datasets.

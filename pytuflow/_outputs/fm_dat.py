@@ -31,7 +31,22 @@ class DATCrossSections(TabularOutput):
     Load a cross-section layer:
 
     >>> from pytuflow import DATCrossSections
-    >>> xs = DATCrossSections('path/to/1d_xs.shp')
+    >>> xs = DATCrossSections('path/to/model.dat')
+
+    Access the cross-section IDs:
+
+    >>> xs.ids()
+    ['US_1', 'US_2', 'US_3', 'DS_1', 'DS_2', 'DS_3', 'DS_4']
+
+    Access the cross-section data for a given location:
+
+    >>> xs.section('US_1', 'xz')
+      US_1
+         x     z
+    0  0.0  99.0
+    1  0.0  98.0
+    2  5.0  98.0
+    3  5.0  99.0
     """
     DOMAIN_TYPES = {}
     GEOMETRY_TYPES = {}
