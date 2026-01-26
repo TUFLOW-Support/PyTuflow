@@ -40,13 +40,13 @@ class DATCrossSections(TabularOutput):
 
     Access the cross-section data for a given location:
 
-    >>> xs.section('US_1', 'xz')
+    >>> xs.section('US_1', ['xz', 'n'])
       US_1
-         x     z
-    0  0.0  99.0
-    1  0.0  98.0
-    2  5.0  98.0
-    3  5.0  99.0
+         x     z manning n
+    0  0.0  99.0     0.001
+    1  0.0  98.0     0.001
+    2  5.0  98.0     0.001
+    3  5.0  99.0     0.001
     """
     DOMAIN_TYPES = {}
     GEOMETRY_TYPES = {}
@@ -218,17 +218,18 @@ class DATCrossSections(TabularOutput):
             return pd.DataFrame()
 
         df1 = pd.DataFrame()
-        for idx, row in df.iterrows():
+        for idx in df.index.unique():
             uid = str(idx)
-            name = row['name']
+            name = df.loc[idx, 'name'].iloc[0]
+            dtypes = df.loc[idx, 'type'].unique().tolist()
             xs = self._driver.unit(uid, return_only_one=True)
             df = xs.df.loc[:,['x', 'y', 'n']]
             df.columns = ['x', 'z', 'manning n']
             cols = []
-            if 'xz' in data_types:
+            if 'xz' in dtypes:
                 cols = ['x', 'z']
-            if 'manning n' in data_types:
-                cols = ['x', 'z', 'manning n'] if 'xz' in data_types else ['x', 'manning n']
+            if 'manning n' in dtypes:
+                cols = ['x', 'z', 'manning n'] if 'xz' in dtypes else ['x', 'manning n']
             df2 = df.loc[:,cols]
             orig_name = uid if uid.lower() in [x.lower() for x in locs_original] else name
             df2.columns = pd.MultiIndex.from_product([[orig_name], df2.columns])
