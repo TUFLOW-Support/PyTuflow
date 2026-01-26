@@ -3,8 +3,9 @@ from datetime import datetime
 
 import numpy as np
 import pandas as pd
+import rasterio
 
-from pytuflow import XMDF, NCMesh, CATCHJson, DAT, NCGrid
+from pytuflow import XMDF, NCMesh, CATCHJson, DAT, NCGrid, Grid
 
 
 def load_comparison_data(path):
@@ -483,6 +484,59 @@ class TestNCGrid(unittest.TestCase):
         self.assertEqual(-2, df.x.min())
 
 
+class TestGrid(unittest.TestCase):
+
+    def test_grid_file(self):
+        p = 'NETCDF:"./tests/nc_grid/small_model_001.nc":maximum_water_level'
+        res = Grid(p)
+        self.assertEqual(1., res.dx)
+        self.assertEqual(1., res.dy)
+        self.assertEqual(5, res.ncol)
+        self.assertEqual(5, res.nrow)
+        self.assertEqual(0., res.ox)
+        self.assertEqual(0., res.oy)
+        a = res.surface()
+        self.assertEqual((25, 4), a.shape)
+
+    def test_preloaded_array(self):
+        p = 'NETCDF:"./tests/nc_grid/small_model_001.nc":maximum_water_level'
+        ds = rasterio.open(p)
+        a = ds.read(1)
+        ds.close()
+        d = {
+            'dx': 1.,
+            'dy': 1.,
+            'ncol': 5,
+            'nrow': 5,
+            'ox': 0.,
+            'oy': 0.,
+            'nodatavalue': -9999,
+            'data_type': 'maximum_water_level',
+            'timesteps': -1,
+            'data': a,
+        }
+        res = Grid(d)
+        self.assertEqual(1., res.dx)
+        self.assertEqual(1., res.dy)
+        self.assertEqual(5, res.ncol)
+        self.assertEqual(5, res.nrow)
+        self.assertEqual(0., res.ox)
+        self.assertEqual(0., res.oy)
+        a = res.surface()
+        self.assertEqual((25, 4), a.shape)
+
+        # test temporal dataset
+        p = 'NETCDF:"./tests/nc_grid/small_model_001.nc":water_level'
+        ds = rasterio.open(p)
+        a = ds.read()
+        d['timesteps'] = np.arange(ds.count) * 0.25
+        d['data_type'] = 'water level'
+        d['data'] = a
+        ds.close()
+        res = Grid(d)
+        self.assertEqual(13, len(res.times()))
+
+
 class TestPyMeshRegression(unittest.TestCase):
 
     def test_pymesh_vertex_mesh(self):
@@ -572,7 +626,7 @@ class TestPyMeshRegression(unittest.TestCase):
         df = pd.DataFrame(a)
         df1 = df.loc[:, :3].copy()
 
-        m = df.loc[:, 3].astype(str) != 'nan'
+        m = ~df.loc[:, 3].isna()
         df1[3] = np.nan
         df1[4] = np.nan
         df1[5] = np.nan
@@ -582,7 +636,7 @@ class TestPyMeshRegression(unittest.TestCase):
         df1[7] = a[:, 5]
         df1[8] = a[:, 6]
 
-        m = df.loc[:, 7].astype(str) != 'nan'
+        m = ~df.loc[:, 7].isna()
         df1[9] = np.nan
         df1[10] = np.nan
         df1[11] = np.nan
@@ -592,7 +646,7 @@ class TestPyMeshRegression(unittest.TestCase):
         df1[13] = a[:, 9]
         df1[14] = a[:, 10]
 
-        m = df.loc[:, 11].astype(str) != 'nan'
+        m = ~df.loc[:, 11].isna()
         df1[15] = np.nan
         df1[16] = np.nan
         df1[17] = np.nan

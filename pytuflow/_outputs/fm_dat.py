@@ -220,8 +220,14 @@ class DATCrossSections(TabularOutput):
         df1 = pd.DataFrame()
         for idx in df.index.unique():
             uid = str(idx)
-            name = df.loc[idx, 'name'].iloc[0]
-            dtypes = df.loc[idx, 'type'].unique().tolist()
+            name = df.loc[idx, 'name']
+            if isinstance(name, pd.Series):
+                name = name.iloc[0]
+            dtypes = df.loc[idx, 'type']
+            if isinstance(dtypes, pd.Series):
+                dtypes = dtypes.tolist()
+            else:
+                dtypes = [dtypes]
             xs = self._driver.unit(uid, return_only_one=True)
             df = xs.df.loc[:,['x', 'y', 'n']]
             df.columns = ['x', 'z', 'manning n']

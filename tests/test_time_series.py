@@ -1762,3 +1762,9 @@ class TestDatCrossSections(unittest.TestCase):
         res = DATCrossSections(p)
         df = res.section('FC01.08', 'manning n')
         self.assertEqual((21, 2), df.shape)
+
+    def test_section_3(self):
+        p = './tests/fm/zzn/FMT_M01_001.dat'
+        res = DATCrossSections(p)
+        df = res.section('FC01.08', ['xz', 'manning n'])
+        self.assertEqual((21, 3), df.shape)

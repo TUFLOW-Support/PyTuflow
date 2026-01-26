@@ -69,7 +69,7 @@ class Grid(MapOutput, LineStringMixin, PointMixin):
     def __init__(self, fpath: PathLike | dict):
         d = None
         if isinstance(fpath, dict):
-            d, fpath = fpath, None
+            d, fpath = fpath, 'memory'
         else:
             fpath = TuflowPath(fpath)
         super(Grid, self).__init__(fpath)
@@ -85,6 +85,7 @@ class Grid(MapOutput, LineStringMixin, PointMixin):
                 raise FileNotFoundError(self.fpath)
             self._initial_load()
         else:
+            self.name = 'memory'
             dx = d.get('dx', None)
             dy = d.get('dy',    dx)
             ox = d.get('ox', 0.)
@@ -96,10 +97,13 @@ class Grid(MapOutput, LineStringMixin, PointMixin):
             data = d.get('data', None)
             if data is None:
                 raise ValueError("No grid data provided.")
-            data_type = d.get('data_type', 'arraydata').lower()
+            data_type = self._get_standard_data_type_name(d.get('data_type', 'arraydata').lower())
             timesteps = d.get('timesteps', -1)
             dtype = d.get('dtype', 'scalar')
-            static = timesteps == -1 or (isinstance(timesteps, (list, tuple)) and len(timesteps) == 0)
+            static = (
+                    (isinstance(timesteps, (int, np.int32, np.int64)) and timesteps == -1) or
+                    (isinstance(timesteps, (list, tuple, np.ndarray, pd.Series)) and len(timesteps) == 0)
+            )
             if not static:
                 if dtype == 'scalar' and data.ndim == 3 and data.shape[0] == len(timesteps):
                     pass  # all good
@@ -114,7 +118,7 @@ class Grid(MapOutput, LineStringMixin, PointMixin):
                     pass  # all good
                 else:
                     raise ValueError("Data shape does not match static data format.")
-            self._cached_timesteps[data_type] = set(range(timesteps) if timesteps != -1 else -1)
+            self._cached_timesteps[data_type] = set(range(len(timesteps)) if isinstance(timesteps, (list, tuple, np.ndarray, pd.Series)) else [timesteps])
             self._cached_data[data_type] = data
 
             self._info = pd.DataFrame(
@@ -126,7 +130,7 @@ class Grid(MapOutput, LineStringMixin, PointMixin):
                     'static': static,
                     'start': [0 if static else timesteps[0]],
                     'end': [0 if static else timesteps[-1]],
-                    'dt': [0 if static else self._calculate_time_step(np.array(timesteps))],
+                    'dt': [0 if static else self._calculate_time_step(np.array(timesteps)) * 3600.],
                     'dx': [dx],
                     'dy': [dy],
                     'ox': [ox],

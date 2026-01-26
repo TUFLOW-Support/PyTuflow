@@ -81,7 +81,7 @@ class GeometryLazyLoadMixin:
     @property
     def cell_nodes(self) -> np.ndarray:
         if self._cell_nodes.size == 0:
-            self._cell_nodes = self.cells_df[['n1', 'n2', 'n3', 'n4']].to_numpy()
+            self._cell_nodes = self.cells_df[['n1', 'n2', 'n3', 'n4']].to_numpy().copy()
             is_tri = self._cell_nodes[:, 3] == -1
             self._cell_nodes[is_tri, 3] = self._cell_nodes[is_tri, 2]
         return self._cell_nodes

@@ -1651,7 +1651,7 @@ class TestMeshRegression(unittest.TestCase):
             df = pd.DataFrame(a)
             df1 = df.loc[:, :3].copy()
 
-            m = df.loc[:, 3].astype(str) != 'nan'
+            m = ~df.loc[:, 3].isna()
             df1[3] = np.nan
             df1[4] = np.nan
             df1[5] = np.nan
@@ -1661,7 +1661,7 @@ class TestMeshRegression(unittest.TestCase):
             df1[7] = a[:, 5]
             df1[8] = a[:, 6]
 
-            m = df.loc[:, 7].astype(str) != 'nan'
+            m = ~df.loc[:, 7].isna()
             df1[9] = np.nan
             df1[10] = np.nan
             df1[11] = np.nan
@@ -1671,7 +1671,7 @@ class TestMeshRegression(unittest.TestCase):
             df1[13] = a[:, 9]
             df1[14] = a[:, 10]
 
-            m = df.loc[:, 11].astype(str) != 'nan'
+            m = ~df.loc[:, 11].isna()
             df1[15] = np.nan
             df1[16] = np.nan
             df1[17] = np.nan
@@ -1781,7 +1781,7 @@ class TestMeshRegression(unittest.TestCase):
             df = pd.DataFrame(a)
             df1 = df.loc[:, :3].copy()
 
-            m = df.loc[:, 3].astype(str) != 'nan'
+            m = ~df.loc[:, 3].isna()
             df1[3] = np.nan
             df1[4] = np.nan
             df1[5] = np.nan
@@ -1791,7 +1791,7 @@ class TestMeshRegression(unittest.TestCase):
             df1[7] = a[:, 5]
             df1[8] = a[:, 6]
 
-            m = df.loc[:, 7].astype(str) != 'nan'
+            m = ~df.loc[:, 7].isna()
             df1[9] = np.nan
             df1[10] = np.nan
             df1[11] = np.nan
@@ -1801,7 +1801,7 @@ class TestMeshRegression(unittest.TestCase):
             df1[13] = a[:, 9]
             df1[14] = a[:, 10]
 
-            m = df.loc[:, 11].astype(str) != 'nan'
+            m = ~df.loc[:, 11].isna()
             df1[15] = np.nan
             df1[16] = np.nan
             df1[17] = np.nan
