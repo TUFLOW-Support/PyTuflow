@@ -476,6 +476,18 @@ class TestNCGrid(unittest.TestCase):
         df = res.surface('h', 0, to_vertex=True, coord_scope='global')
         self.assertEqual((36, 4), df.shape)
 
+    def test_surface_vector_direction(self):
+        p = './tests/nc_grid/small_model_001.nc'
+        res = NCGrid(p)
+        df = res.surface('velocity direction', 1.5, direction_to_vector=True)
+        self.assertEqual((25, 5), df.shape)
+
+    def test_surface_vertex_vector_direction(self):
+        p = './tests/nc_grid/small_model_001.nc'
+        res = NCGrid(p)
+        df = res.surface('velocity direction', 1.5, to_vertex=True, direction_to_vector=True)
+        self.assertEqual((36, 5), df.shape)
+
     def test_surface_local(self):
         p = './tests/nc_grid/small_model_001.nc'
         res = NCGrid(p)

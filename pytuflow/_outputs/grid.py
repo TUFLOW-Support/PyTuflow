@@ -358,7 +358,8 @@ class Grid(MapOutput, LineStringMixin, PointMixin):
             df = pd.concat([df, df_], axis=0) if not df.empty else df_
         return df
 
-    def surface(self, data_type: str = None, time: TimeLike = 0, to_vertex: bool = False, coord_scope: str = 'global') -> pd.DataFrame:
+    def surface(self, data_type: str = None, time: TimeLike = 0, to_vertex: bool = False, coord_scope: str = 'global',
+                direction_to_vector: bool = False, direction_convention = 'arithmetic') -> pd.DataFrame:
         """Returns the value for every cell/vertex at the specified time.
 
         Parameters
@@ -376,6 +377,15 @@ class Grid(MapOutput, LineStringMixin, PointMixin):
             - ``"local"`` - coordinates are transformed to a local Cartesian coordinate system and the origin is moved
               to the centre of the grid extent. This can be useful for visualisation purposes, especially when converting
               into 3D formats for viewing in programs like Blender, Unreal Engine, etc
+        direction_to_vector : bool, optional
+            Whether to convert direction data to vector data. Only applicable if the data type is a direction type,
+            e.g. ``"velocity direction"``.
+        direction_convention : str, optional
+            The convention used for direction data. Only required converting direction to vector or
+            interpolating direction to vertices. Options are:
+
+            - ``"arithmetic"`` (default) - direction is measured anticlockwise from the positive x-axis (east)
+            - ``"nautical"`` - direction is measured clockwise from the positive y-axis (north)
 
         Returns
         -------
@@ -414,7 +424,26 @@ class Grid(MapOutput, LineStringMixin, PointMixin):
             idx = (time_index,)
 
         dx, dy, ox, oy, ncol, nrow, ndv = self._grid_info(data_type)
+
         data = self._surface(data_type, idx)
+        vec = None
+        vx = vy = None
+        # convert direction data to vector data
+        if data_type.endswith(' direction') and (direction_to_vector or to_vertex):
+            mag_dtype, _ = data_type.rsplit(' ', 1)
+            mag_data = self._surface(mag_dtype, idx)
+            if direction_convention == 'arithmetic':
+                vx = mag_data * np.cos(np.radians(data))
+                vy = mag_data * np.sin(np.radians(data))
+            elif direction_convention == 'nautical':
+                vx = mag_data * np.sin(np.radians(data))
+                vy = mag_data * np.cos(np.radians(data))
+            else:
+                raise ValueError(f"Invalid direction convention: {direction_convention}")
+            vec = np.concatenate((vx[:,:,None], vy[:,:,None]), axis=2)
+
+        is_vector = vec is not None and direction_to_vector
+
         mask = (~np.isnan(data)) & (data != ndv)
         data[~mask] = np.nan
         if to_vertex:
@@ -423,31 +452,41 @@ class Grid(MapOutput, LineStringMixin, PointMixin):
 
             # average values to vertices (from cell centres, this is the same as bilinear interpolation)
             # pad the data with the edge values to handle the boundaries
-            vertices = np.full((nrow + 2, ncol + 2), np.nan)
-            vertices[1:-1, 1:-1] = data
-            vertices[0, 1:-1] = data[0, :]
-            vertices[-1, 1:-1] = data[-1, :]
-            vertices[:, 0] = vertices[:, 1]
-            vertices[:, -1] = vertices[:, -2]
-            with warnings.catch_warnings():
-                # if all surrounding cells are NaN, then the return is NaN and runtime warning is given
-                # this is the correct behaviour, so we can ignore the warning
-                warnings.simplefilter("ignore", category=RuntimeWarning)
-                vertices = np.nanmean(
-                    np.stack([
-                        vertices[:-1, :-1],
-                        vertices[:-1, 1:],
-                        vertices[1:, :-1],
-                        vertices[1:, 1:]
-                    ]),
-                    axis=0
-                )
-            mask = ~np.isnan(vertices)
-            data = vertices
+            vals = []
+            data_ = [vx, vy] if vec is not None else [data]
+            for dat in data_:
+                vertices = np.full((nrow + 2, ncol + 2), np.nan)
+                vertices[1:-1, 1:-1] = dat
+                vertices[0, 1:-1] = data[0, :]
+                vertices[-1, 1:-1] = data[-1, :]
+                vertices[:, 0] = vertices[:, 1]
+                vertices[:, -1] = vertices[:, -2]
+                with warnings.catch_warnings():
+                    # if all surrounding cells are NaN, then the return is NaN and runtime warning is given
+                    # this is the correct behaviour, so we can ignore the warning
+                    warnings.simplefilter("ignore", category=RuntimeWarning)
+                    vertices = np.nanmean(
+                        np.stack([
+                            vertices[:-1, :-1],
+                            vertices[:-1, 1:],
+                            vertices[1:, :-1],
+                            vertices[1:, 1:]
+                        ]),
+                        axis=0
+                    )
+                mask = ~np.isnan(vertices)
+                vals.append(vertices)
+            if is_vector:
+                data = np.stack(vals, axis=2)
+            elif vec is not None:  # convert back to direction
+                data = np.degrees(np.arctan2(vals[1], vals[0])) % 360
+            else:
+                data = vals[0]
         else:
             x = (ox + dx / 2.) + np.arange(ncol) * dx
             y = (oy + dy / 2.) + np.arange(nrow) * dy
-
+            if vec is not None:
+                data = vec
 
         if coord_scope == 'local':
             xy = np.column_stack((x, y))
@@ -461,7 +500,13 @@ class Grid(MapOutput, LineStringMixin, PointMixin):
 
         xx, yy = np.meshgrid(x, y)
 
-        df = pd.DataFrame({'x': xx.flatten(), 'y': yy.flatten(), 'value': data.flatten(), 'active': mask.flatten()})
+        if is_vector:
+            df = pd.DataFrame(
+                {'x': xx.flatten(), 'y': yy.flatten(), 'value-x': data[...,0].flatten(),
+                 'value-y': data[...,1].flatten(), 'active': mask.flatten()}
+            )
+        else:
+            df = pd.DataFrame({'x': xx.flatten(), 'y': yy.flatten(), 'value': data.flatten(), 'active': mask.flatten()})
         return df
 
     def data_point(self, locations: PointLocation, data_types: str | list[str] = (),
