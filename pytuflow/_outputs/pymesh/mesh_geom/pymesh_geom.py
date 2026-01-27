@@ -51,6 +51,8 @@ class PyMeshGeometry(PointMixin, LineStringMixin):
         self.locator = vtk.vtkStaticCellLocator()
         #: np.dtype: the data type used for coordinates
         self.dtype = np.float64
+        #: str: data type name of the mesh
+        self.data_type = 'Bed Elevation'
 
     def load(self):
         pass

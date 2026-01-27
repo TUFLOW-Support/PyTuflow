@@ -10,14 +10,14 @@ if typing.TYPE_CHECKING:
 
 class GridMesh(Mesh):
 
-    def __init__(self, fpath: PathLike, grid: 'Grid | None' = None, topology_ref: 'Grid | None' = None):
+    def __init__(self, fpath: PathLike, grid: 'Grid | None' = None, base_topology: 'Grid | None' = None):
         super().__init__(fpath)
         if grid is None:
             from .grid import Grid
             self._grid = Grid(fpath)
         else:
             self._grid = grid
-        self._driver = PyGridMesh(self._grid, topology_ref)
+        self._driver = PyGridMesh(self._grid, base_topology)
         self._soft_load_driver = self._driver
         self._initial_load()
 

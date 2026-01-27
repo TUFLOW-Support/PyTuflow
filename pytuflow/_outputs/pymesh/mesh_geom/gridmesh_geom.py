@@ -24,7 +24,7 @@ class GridMeshGeometry(PyMeshGeometry, GeometryLazyLoadMixin, VTKGeometryMixin):
         self.vertex_reindex = None
         self.cell_reindex = None
         self._cell_pos = None
-        self._data_type_ref = None
+        self.data_type = None
         self._weights = None
         self._loaded = False
 
@@ -35,14 +35,14 @@ class GridMeshGeometry(PyMeshGeometry, GeometryLazyLoadMixin, VTKGeometryMixin):
         data_types = self._grid.data_types('static')
         if 'bed elevation' in data_types or 'bed level' in data_types:
             self.has_z = True
-            self._data_type_ref = 'bed elevation' if 'bed elevation' in data_types else 'bed level'
+            self.data_type = 'bed elevation' if 'bed elevation' in data_types else 'bed level'
         elif data_types:
-            self._data_type_ref = data_types[0]
+            self.data_type = data_types[0]
         else:
-            self._data_type_ref = self._grid.data_types()[0]
+            self.data_type = self._grid.data_types()[0]
 
-        surf = self._grid.surface(self._data_type_ref, to_vertex=True)
-        cell_surf = self._grid.surface(self._data_type_ref)
+        surf = self._grid.surface(self.data_type, to_vertex=True)
+        cell_surf = self._grid.surface(self.data_type)
         self.cell_reindex = cell_surf['active'].to_numpy()
         self._vertices = surf[['x', 'y', 'value']].to_numpy()
         inds = np.arange(surf['x'].size).reshape(self._grid.nrow + 1, self._grid.ncol + 1)

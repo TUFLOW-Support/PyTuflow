@@ -21,8 +21,14 @@ class VertexDataMixin:
             index = slice(None)
         else:
             index = (time_index, slice(None))
-        wd = self.extractor.wd_flag(data_type, index).astype(bool)
+
+        if data_type == self.geom.data_type:
+            data = self.geom.vertex_position(slice(None), get_z=True)[:, 2]
+            wd = np.full(data.shape[0], True, dtype=bool)
+            return data, wd
+
         data = self.extractor.data(data_type, index)
+        wd = self.extractor.wd_flag(data_type, index).astype(bool)
         if wd.ndim == 1:
             wd_vert = self._map_wet_dry_to_verts(wd)
         else:

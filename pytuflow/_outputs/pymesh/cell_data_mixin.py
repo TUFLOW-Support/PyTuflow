@@ -54,6 +54,15 @@ class CellDataMixin:
         data = np.array([])
         values = []
         for dtype in data_types:
+            if dtype == self.geom.data_type:
+                if to_vertex:
+                    a = self.geom.vertex_position(slice(None))[:, 2]
+                    wd = np.full((a.shape[0],), True)
+                else:
+                    a = self.geom.cell_position(slice(None))[:, 2]
+                    wd = np.full((a.shape[0],), True)
+                return a, wd
+
             a = self.extractor.data(dtype, index)
             extracted = [a[..., 0], a[..., 1]] if a.ndim == 3 else [a]
             for data in extracted:

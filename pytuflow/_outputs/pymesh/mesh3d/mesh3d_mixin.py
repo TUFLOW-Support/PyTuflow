@@ -1,7 +1,7 @@
 import typing
+from datetime import datetime
 
 import numpy as np
-import pandas as pd
 
 from . import SceneMesh, FormatConvention
 
@@ -12,19 +12,19 @@ if typing.TYPE_CHECKING:
 class Mesh3DMixin:
 
     def mesh3d(self,
-               time: float = -1,
-               time_index: int = -1,
-               data_types: typing.Iterable[str] = ('Depth', 'Vector Velocity-x', 'Vector Velocity-y'),
-               uv_projection_extent: 'typing.Iterable[float] | Bbox2D' = (),
-               convention: FormatConvention = FormatConvention.OpenGL,
-               reverse_winding_order: bool = False,
+               mesh_geometry: str,
+               time: float,
+               vertex_colour: list[str],
+               uv_projection_extent: 'list[float] | tuple[float] | np.ndarray | Bbox2D',
+               convention: FormatConvention,
+               reverse_winding_order: bool,
                ) -> SceneMesh:
         """Return the mesh as a 3D SceneMesh object."""
         mesh3d = SceneMesh()
         mesh3d.inds = self.indices(reverse_winding_order)
-        mesh3d.pos = self.positions(data_types, time, time_index, convention)
+        mesh3d.pos = self.positions(time, mesh_geometry, convention)
         mesh3d.face_counts = np.full((mesh3d.inds.count() // 3,), 3, dtype='u4')
-        mesh3d.cd = self.vertex_colors(time, time_index, data_types)
+        mesh3d.cd = self.vertex_colors(time, vertex_colour)
         mesh3d.uv = self.uvs(uv_projection_extent, convention)
         mesh3d.norms = self.normals(convention)
         return mesh3d
@@ -38,23 +38,19 @@ class Mesh3DMixin:
         return a.astype('u4').flatten()
 
     def positions(self: 'PyMesh',
-                  data_types: typing.Iterable[str] = ('Depth', 'Vector Velocity-x', 'Vector Velocity-y'),
-                  time: float = -1,
-                  time_index: int = -1,
+                  time: float,
+                  mesh_geometry: str,
                   convention: FormatConvention = FormatConvention.OpenGL,
                   ) -> np.ndarray:
         """Return the mesh vertex positions at time (or the time_index) as a flat array of floats."""
-        from .. import Transform2D
-        data_type = 'Bed Elevation' if time == -1 and time_index == -1 else 'Water Level'
-        time_index = self._find_time_index(data_type, time) if time_index == -1 else time_index
-
-        pos = np.array(self.geom.vertices_local)
-        if data_types[0].lower() != 'bed elevation':
-            z = self.extractor.data(data_type, (time_index, slice(None))).astype('f4')
-            wd = self.extractor.wd_flag(data_type, (time_index, slice(None)))
-            wd = self._map_wet_dry_to_verts(wd)
-            z[~wd] = pos[~wd, 2] - 0.01  # set dry cells to bed elevation minus small value
-            pos[:, 2] = z.flatten()
+        pos = self.geom.vertices_local
+        if mesh_geometry:
+            pos -= 0.05  # avoid z-fighting
+            val, mask = self.surface(mesh_geometry, time, coord_scope='local', to_vertex=True)
+            if val.shape[1] == 4:  # vector - convert to magnitude
+                pos[mask, 2] = np.linalg.norm(val[mask, 2:], axis=1)
+            else:
+                pos[mask, 2] = val[mask, 2].flatten()
 
         if convention in [FormatConvention.OpenGL, FormatConvention.OpenGL_2]:
             return (pos[:, [0, 2, 1]] * [1, 1, -1]).flatten().astype('f4')
@@ -66,12 +62,15 @@ class Mesh3DMixin:
             return pos.flatten().astype('f4')
 
     def vertex_colors(self: 'PyMesh',
-                      time: float = -1,
-                      time_index: int = -1,
-                      data_types: typing.Iterable[str] = ('Depth', 'Vector Velocity-x', 'Vector Velocity-y')
+                      time: float,
+                      vertex_colour: list[str],
                       ) -> np.ndarray:
         """Return the mesh vertex colors at time (or the time_index) as a flat array of floats."""
         results = {}  # cache results
+        colours = np.zeros((self.geom.vertices.shape[0], 3), dtype='f4')  # rgb
+        if not vertex_colour:
+            return colours.flatten()
+
         def get_data_type(data_type_name) -> tuple[str, str]:
             if data_type_name.endswith('-x'):
                 data_type_name = data_type_name[:-2]
@@ -85,12 +84,14 @@ class Mesh3DMixin:
             lower = [x.lower() for x in self.data_types()]
             return self.data_types()[lower.index(data_type_.lower())], typ
 
-        def pack_data(data_type_name: str, typ: str, time_index: int) -> np.ndarray:
+        def pack_data(data_type_name: str, typ: str, time: float | datetime) -> np.ndarray:
             if data_type_name not in results:
-                if data_type_name == 'Bed Elevation':
+                if data_type_name == self.geom.data_type:
                     data = self.geom.vertices[:, 2]
                 else:
-                    data = self.extractor.data(data_type_name, (time_index, slice(None)))
+                    data, mask = self.surface(data_type_name, time, to_vertex=True)
+                    data[~mask, 2] = 0.
+                    data = data[:, 2]
                 data_max = self.maximum(data_type_name)
                 data_min = self.minimum(data_type_name)
                 results[data_type_name] = (data, data_max, data_min)
@@ -101,14 +102,11 @@ class Mesh3DMixin:
             idx = 0 if typ == 'vecx' else 1
             return (((data[..., idx] - data_min) / (data_max - data_min)).astype('f4') + 1) / 2 if data_max > 0 else data[..., idx].astype('f4')
 
-        time_index = self._find_time_index(data_types[0], time) if time_index == -1 else time_index
-
-        colours = np.zeros((self.geom.vertices.shape[0], 3), dtype='f4')  # rgb
-        for i, dtype in enumerate(data_types):
+        for i, dtype in enumerate(vertex_colour):
             if i > colours.shape[1] - 1:
                 raise ValueError('Only three data types can be used for vertex colors (R, G, B).')
             dtype_name, dtype_dtype = get_data_type(dtype)
-            col = pack_data(dtype_name, dtype_dtype, time_index)
+            col = pack_data(dtype_name, dtype_dtype, time)
             colours[:, i] = col
 
         return colours.flatten()

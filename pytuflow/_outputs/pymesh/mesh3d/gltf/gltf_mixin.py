@@ -1,6 +1,8 @@
 import typing
 from pathlib import Path
 
+import numpy as np
+
 from . import GLTF
 
 if typing.TYPE_CHECKING:
@@ -12,19 +14,19 @@ class GLTFMixin:
 
     def to_gltf(self: 'Mesh3DMixin',
                 output_path: Path | str,
+                mesh_geometry: str = '',
                 time: float = -1,
-                time_index: int = -1,
-                data_types: typing.Iterable[str] = ('Depth', 'Vector Velocity-x', 'Vector Velocity-y'),
-                uv_projection_extent: 'typing.Iterable[float] | Bbox2D' = (),
+                vertex_colour: list[str] = (),
+                uv_projection_extent: 'list[float] | tuple[float] | np.ndarray | Bbox2D' = (),
                 ):
         from .. import FormatConvention
         p = Path(output_path)
         if not p.parent.exists():
             p.mkdir(parents=True)
         mesh3d = self.mesh3d(
+            mesh_geometry,
             time,
-            time_index,
-            data_types,
+            vertex_colour,
             uv_projection_extent,
             FormatConvention.OpenGL,
             reverse_winding_order=False

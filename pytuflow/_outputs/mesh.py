@@ -925,9 +925,10 @@ class Mesh(MapOutput):
 
     def to_gltf(self,
                 output_path: Path | str,
-                time: TimeLike,
-                data_types: typing.Iterable[str] = ('Depth', 'Vector Velocity-x', 'Vector Velocity-y'),
-                uv_projection_extent: typing.Iterable[float] | Bbox2D = (),
+                mesh_geometry: str = '',
+                time: TimeLike = -1,
+                vertex_colour: list[str] = (),
+                uv_projection_extent: list[float] | tuple[float] | np.ndarray | Bbox2D = (),
                 ):
         """Exports the mesh to a glTF 2.0 file for visualisation in compatible software.
         Both ``.gltf`` and ``.glb`` formats are supported.
@@ -960,19 +961,15 @@ class Mesh(MapOutput):
             raise NotImplementedError('The current driver does not support exporting to glTF format.')
         self._load()
 
-        data_types = self._figure_out_data_types_game_mesh(data_types, None)
-
-        dtype = self.data_types('temporal')
-        if not dtype:
-            time_index = -1  # assume static datasets
-        else:
-            time_index = self._driver._find_time_index(dtype[0], time)
+        mesh_geometry = self._figure_out_data_types(mesh_geometry, None)[0]
+        vertex_colour = self._figure_out_data_types_game_mesh(vertex_colour, None)
 
         self._driver.to_gltf(
             output_path,
-            time_index=time_index,
-            data_types=data_types,
-            uv_projection_extent=uv_projection_extent
+            mesh_geometry,
+            time,
+            vertex_colour,
+            uv_projection_extent
         )
 
     def to_alembic(self,

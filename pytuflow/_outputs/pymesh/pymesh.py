@@ -139,7 +139,7 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
         """
         if not self._data_types:
             from ..map_output import MapOutput
-            self._data_types = ['Bed Elevation'] + self.extractor.data_types() if self.geom.has_z else self.extractor.data_types()
+            self._data_types = ([self.geom.data_type] if self.geom.data_type else []) + self.extractor.data_types()
             self._standardised_data_types = [MapOutput._get_standard_data_type_name(x) for x in self._data_types]
         return self._data_types
 
@@ -449,6 +449,7 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
                 pos = self.geom.cell_position(slice(None), scope=coord_scope)
 
             data = np.column_stack((pos[:, :2], data.flatten() if not self.is_vector(data_type) else data.reshape(-1, 2)))
+            mask = mask.flatten()
 
             self.cache.set((data, mask), 'surface', data_type, time_index, depth_averaging, to_vertex)
             return data, mask

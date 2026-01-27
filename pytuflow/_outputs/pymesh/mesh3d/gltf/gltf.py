@@ -15,6 +15,8 @@ class GLTF:
 
     def __init__(self):
         self.meshes: list['SceneMesh'] = []
+        if '.stubs' in pygltflib.__name__:
+            raise ImportError('pygltflib is required to use GLTF output. Please install it via "pip install pygltflib".')
 
     def add_mesh(self, mesh: 'SceneMesh'):
         pos = 0

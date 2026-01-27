@@ -252,13 +252,13 @@ class Grid(MapOutput, LineStringMixin, PointMixin):
             return data[0]
         return np.array(data).reshape(len(time_indexes), *data[0].shape)
 
-    def to_mesh(self, topology_ref: 'str | Grid | None' = None) -> GridMesh:
-        if isinstance(topology_ref, str):
+    def to_mesh(self, base_topology: 'str | Grid | None' = None) -> GridMesh:
+        if isinstance(base_topology, str):
             d = {'dx': self.dx, 'dy': self.dy, 'ncol': self.ncol, 'nrow': self.nrow, 'ox': self.ox, 'oy': self.oy,
-                 'nodatavalue': self.no_data_value, 'data_type': topology_ref, 'timesteps': -1, 'dtype': 'scalar',
-                 'data': self.surface(topology_ref)['value'].to_numpy().reshape(self.nrow, self.ncol)}
-            topology_ref = Grid(d)
-        return GridMesh(self.fpath, self, topology_ref)
+                 'nodatavalue': self.no_data_value, 'data_type': base_topology, 'timesteps': -1, 'dtype': 'scalar',
+                 'data': self.surface(base_topology)['value'].to_numpy().reshape(self.nrow, self.ncol)}
+            base_topology = Grid(d)
+        return GridMesh(self.fpath, self, base_topology)
 
     def maximum(self, data_types: str | list[str]) -> float | pd.DataFrame:
         """Returns the maximum values for the given data types.
