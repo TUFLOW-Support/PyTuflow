@@ -23,4 +23,7 @@ class GridMesh(Mesh):
 
     def _initial_load(self):
         self.name = self._grid.name
-        self._info = self._grid._info
+        self._info = self._grid._info.copy()
+        self._info['data_type'] = self._driver.data_types()
+        mask = self._info['data_type'].str.contains('vector ')
+        self._info.loc[mask, 'type'] = 'vector'

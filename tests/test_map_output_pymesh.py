@@ -537,6 +537,20 @@ class TestNCGrid(unittest.TestCase):
         is_close = np.isclose(a, b, atol=0.0001, equal_nan=True)
         self.assertTrue(is_close.all())
 
+    def test_to_mesh_surface_vector(self):
+        p = './tests/nc_grid/EG00_001.nc'
+        res = NCGrid(p)
+        mesh = res.to_mesh('max water level')
+        df = mesh.surface('vector velocity', 1.5)
+        self.assertEqual((6530, 5), df.shape)
+
+    def test_to_mesh_surface_vertex_vector(self):
+        p = './tests/nc_grid/EG00_001.nc'
+        res = NCGrid(p)
+        mesh = res.to_mesh('max water level')
+        df = mesh.surface('vector velocity', 1.5, to_vertex=True)
+        self.assertEqual((6871, 5), df.shape)
+
 
 class TestGrid(unittest.TestCase):
 

@@ -57,6 +57,8 @@ class CellDataMixin:
             a = self.extractor.data(dtype, index)
             extracted = [a[..., 0], a[..., 1]] if a.ndim == 3 else [a]
             for data in extracted:
+                if data.ndim == 2 and data.shape[0] == 1:
+                    data = data.flatten()
                 if is_3d and depth_averaging_method is not None:
                     def depth_average(data_: np.ndarray, zlevels_: np.ndarray) -> np.ndarray:
                         a_padded[:] = np.nan
@@ -102,7 +104,7 @@ class CellDataMixin:
                 data = np.column_stack(values).reshape((-1, 2) if is_vector else (-1, 1))
             else:
                 data = np.concatenate(values, axis=2 if is_vector else 1)
-        elif to_vertex:
+        if to_vertex:
             wd = self._map_wet_dry_to_verts(wd)
 
         if is_3d and depth_averaging_method is None:

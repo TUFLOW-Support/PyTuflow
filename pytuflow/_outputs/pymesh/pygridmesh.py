@@ -25,3 +25,16 @@ class PyGridMesh(PyMesh):
         super().load()
         self.extractor.cell_reindex = self.geom.cell_reindex
         self.extractor.vertex_reindex = self.geom.vertex_reindex
+
+    def translate_data_type(self, data_type: str) -> tuple[str, ...]:
+        if 'vector ' in data_type:
+            dtype = data_type.replace('vector ', '')
+            prefix = ''
+            if dtype.startswith('max '):
+                dtype = dtype[4:]
+                prefix = 'max '
+            elif dtype.startswith('min '):
+                dtype = dtype[4:]
+                prefix = 'min '
+            data_type = f'{prefix}{dtype} direction'
+        return super().translate_data_type(data_type)
