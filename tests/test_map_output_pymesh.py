@@ -488,7 +488,7 @@ class TestNCGrid(unittest.TestCase):
         res = NCGrid(p)
         mesh = res.to_mesh('max water level')
         df = mesh.surface('water level', 0.5)
-        self.assertEqual((6871, 4), df.shape)
+        self.assertEqual((6530, 4), df.shape)
 
     def test_to_mesh_time_series(self):
         p = './tests/nc_grid/EG00_001.nc'
@@ -496,7 +496,34 @@ class TestNCGrid(unittest.TestCase):
         res = NCGrid(p)
         mesh = res.to_mesh('max water level')
         df = mesh.time_series(point, 'h')
-        self.assetEqual(df.shape, (13, 1))
+        df_grid = res.time_series(point, 'h')
+        self.assertEqual(df_grid.shape, df.shape)
+        is_close = np.isclose(df.to_numpy(), df_grid.to_numpy(), equal_nan=True)
+        self.assertTrue(is_close.all())
+
+    def test_to_mesh_section(self):
+        p = './tests/nc_grid/EG00_001.nc'
+        line = './tests/xmdf/xmdf_line.shp'
+        res = NCGrid(p)
+        mesh = res.to_mesh('max water level')
+        df = mesh.section(line, 'h', 1.5)
+        df_grid = res.section(line, 'h', 1.5)
+        self.assertEqual(df_grid.shape, df.shape)
+        is_close = np.isclose(df.to_numpy(), df_grid.to_numpy(), atol=0.0001, equal_nan=True)
+        self.assertTrue(is_close.all())
+
+    def test_to_mesh_surface(self):
+        p = './tests/nc_grid/EG00_001.nc'
+        res = NCGrid(p)
+        mesh = res.to_mesh('max water level')
+        df = mesh.surface('max water level', -1, to_vertex=True)
+        df_grid = res.surface('max water level', -1, to_vertex=True)
+
+        a = df.loc[df['active'], ['x', 'y', 'value']].to_numpy()
+        b = df_grid.loc[df_grid['active'], ['x', 'y', 'value']].to_numpy()
+        self.assertEqual(b.shape, a.shape)
+        is_close = np.isclose(a, b, atol=0.0001, equal_nan=True)
+        self.assertTrue(is_close.all())
 
 
 class TestGrid(unittest.TestCase):

@@ -35,17 +35,22 @@ class GridMeshDataExtractor(PyDataExtractor):
     def is_static(self, data_type: str) -> bool:
         return self._grid._is_static(data_type)
 
+    def on_vertex(self, data_type: str) -> bool:
+        return False
+
     def data(self, data_type: str, index: PyDataExtractor.SliceType | PyDataExtractor.MultiSliceType) -> np.ndarray:
         if self.is_static(data_type):
-            data = self._grid.surface(data_type, to_vertex=True)['value'].to_numpy()
-            data = data[self.vertex_reindex].flatten()
+            data = self._grid.surface(data_type)['value'].to_numpy()
+            data = data[self.cell_reindex].flatten()
         else:
             vals = []
             for timestep in self._time_index(data_type, index):
-                val = self._grid.surface(data_type, timestep, to_vertex=True)['value'].to_numpy()
+                val = self._grid.surface(data_type, timestep)['value'].to_numpy()
                 vals.append(val)
             data = np.hstack(vals).reshape(len(vals), -1)
-            data = data[:, self.vertex_reindex] if data.ndim > 1 else data[self.vertex_reindex].flatten()
+            data = data[:, self.cell_reindex]
+            if not self._is_multi_time_index(index):
+                data = data.flatten()
             index = self._time_index_leftover(index)
         return data[index]
 
@@ -59,9 +64,16 @@ class GridMeshDataExtractor(PyDataExtractor):
                 val = self._grid.surface(data_type, timestep)['active'].to_numpy()
                 vals.append(val)
             data = np.hstack(vals).reshape(len(vals), -1)
-            data = data[:, self.cell_reindex] if data.ndim > 1 else data[self.cell_reindex].flatten()
+            data = data[:, self.cell_reindex]
+            if not self._is_multi_time_index(index):
+                data = data.flatten()
             index = self._time_index_leftover(index)
         return data[index]
+
+    def zlevel_count(self, cell_idx2: int | np.ndarray | list[int]) -> int | np.ndarray | list[int]:
+        if isinstance(cell_idx2, (int, np.int32, np.int64)):
+            return np.array([0])
+        return np.full(len(cell_idx2), 0)
 
     def _time_index(self, data_type: str, index: PyDataExtractor.SliceType | PyDataExtractor.MultiSliceType) -> list[int]:
         times = self.times(data_type)
@@ -76,7 +88,19 @@ class GridMeshDataExtractor(PyDataExtractor):
                 return times[index[0]].tolist()
         return times[index].tolist()
 
+    def _is_multi_time_index(self, index: PyDataExtractor.SliceType | PyDataExtractor.MultiSliceType) -> bool:
+        if isinstance(index, (int, np.int32, np.int64)):
+            return False
+        elif isinstance(index, slice):
+            return True
+        elif isinstance(index, tuple):
+            if isinstance(index[0], (int, np.int32, np.int64)):
+                return False
+        return True
+
     def _time_index_leftover(self, index: PyDataExtractor.SliceType | PyDataExtractor.MultiSliceType) -> PyDataExtractor.SliceType | PyDataExtractor.MultiSliceType:
         if isinstance(index, tuple):
-            return tuple([slice(None)] + list(index[1:]))
+            if self._is_multi_time_index(index):
+                return tuple([slice(None)] + list(index[1:]))
+            return tuple(index[1:])
         return slice(None)

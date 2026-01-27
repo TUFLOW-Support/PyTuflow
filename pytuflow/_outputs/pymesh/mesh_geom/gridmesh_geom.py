@@ -23,6 +23,9 @@ class GridMeshGeometry(PyMeshGeometry, GeometryLazyLoadMixin, VTKGeometryMixin):
         self.has_z = False
         self.vertex_reindex = None
         self.cell_reindex = None
+        self._cell_pos = None
+        self._data_type_ref = None
+        self._weights = None
         self._loaded = False
 
     def load(self):
@@ -32,14 +35,15 @@ class GridMeshGeometry(PyMeshGeometry, GeometryLazyLoadMixin, VTKGeometryMixin):
         data_types = self._grid.data_types('static')
         if 'bed elevation' in data_types or 'bed level' in data_types:
             self.has_z = True
-            data_type = 'bed elevation' if 'bed elevation' in data_types else 'bed level'
+            self._data_type_ref = 'bed elevation' if 'bed elevation' in data_types else 'bed level'
         elif data_types:
-            data_type = data_types[0]
+            self._data_type_ref = data_types[0]
         else:
-            data_type = self._grid.data_types()[0]
+            self._data_type_ref = self._grid.data_types()[0]
 
-        surf = self._grid.surface(data_type, to_vertex=True)
-        self.cell_reindex = self._grid.surface(data_type)['active'].to_numpy()
+        surf = self._grid.surface(self._data_type_ref, to_vertex=True)
+        cell_surf = self._grid.surface(self._data_type_ref)
+        self.cell_reindex = cell_surf['active'].to_numpy()
         self._vertices = surf[['x', 'y', 'value']].to_numpy()
         inds = np.arange(surf['x'].size).reshape(self._grid.nrow + 1, self._grid.ncol + 1)
         cells = [np.concatenate((inds[i,j:j+2], inds[i+1,j+1::-1][:2])) for i in range(inds.shape[0] - 1) for j in range(inds.shape[1] - 1)]
@@ -51,6 +55,8 @@ class GridMeshGeometry(PyMeshGeometry, GeometryLazyLoadMixin, VTKGeometryMixin):
         self.vertex_reindex, new_indices = np.unique(self._cells_df[['n1', 'n2', 'n3', 'n4']].to_numpy().flatten(), return_inverse=True)
         self._vertices = self._vertices[self.vertex_reindex]
         self._cells_df[['n1', 'n2', 'n3', 'n4']] = new_indices.reshape(self._cells_df[['n1', 'n2', 'n3', 'n4']].shape)
+
+        self._cell_pos = cell_surf[['x', 'y', 'value']].to_numpy()[self.cell_reindex]
 
         quads = self._cells_df.loc[self._cells_df['n4'] != -1, ['n1', 'n2', 'n3', 'n4']].reset_index().to_numpy()
         tris = self._cells_df.loc[self._cells_df['n4'] == -1, ['n1', 'n2', 'n3']].reset_index().to_numpy()
@@ -77,3 +83,15 @@ class GridMeshGeometry(PyMeshGeometry, GeometryLazyLoadMixin, VTKGeometryMixin):
         self._locator = self._build_locator(self._mesh)
 
         self._loaded = True
+
+    def cell_position(self, cell_id: int | typing.Iterable[int] | slice, scope: str = 'global') -> np.ndarray:
+        self.load()
+        if scope == 'local':
+            return self._trans.transform(self._cell_pos[cell_id])
+        return self._cell_pos[cell_id]
+
+    def cell_to_vertex_weights(self) -> np.ndarray:
+        self.load()
+        if self._weights is None:
+            self._weights = np.full((self._cells_df.shape[0], 4), 1.)
+        return self._weights
