@@ -2,9 +2,10 @@ import typing
 from pathlib import Path
 
 from . import PyMesh, PyNCMeshGeometry, PyNCMeshDataExtractor, QgisMeshGeometry, QgisDataExtractor
+from .mesh3d import Mesh3DMixin, GLTFMixin
 
 
-class PyNCMesh(PyMesh):
+class PyNCMesh(PyMesh, Mesh3DMixin, GLTFMixin):
 
     def __init__(self, fpath: str | Path, geom_driver: str = None, engine: str = None, mesh: typing.Any = None):
         super().__init__()

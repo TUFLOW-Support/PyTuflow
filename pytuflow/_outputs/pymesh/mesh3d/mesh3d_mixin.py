@@ -81,6 +81,8 @@ class Mesh3DMixin:
             else:
                 typ = 'scalar'
             data_type_ = self.translate_data_type(data_type_name)[0]
+            if '_x' in data_type_ or '_y' in data_type_:
+                data_type_ = data_type_.rsplit('_', 1)[0]
             lower = [x.lower() for x in self.data_types()]
             return self.data_types()[lower.index(data_type_.lower())], typ
 

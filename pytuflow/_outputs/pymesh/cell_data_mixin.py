@@ -17,10 +17,10 @@ class CellDataMixin:
                   to_vertex: bool = False
                   ) -> tuple[np.ndarray, np.ndarray]:
         def cell2node(data_: np.ndarray, dry_mask: np.ndarray, wts_: np.ndarray | None) -> tuple[np.ndarray, np.ndarray]:
+            data_[dry_mask] = 0
             if wts_ is None:
                 wts_ = self.geom.cell_to_vertex_weights().copy()
                 wts_[dry_mask, :] = 0
-                data_[dry_mask] = 0
                 wts_sum = np.bincount(self.geom.cell_nodes.flatten(), wts_.flatten())
                 mask = wts_sum == 0
                 wts_sum[mask] = -999

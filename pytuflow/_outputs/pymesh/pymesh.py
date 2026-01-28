@@ -251,7 +251,7 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
             if self.on_vertex(data_type):
                 data, mask = self.vertex_data(data_type, slice(None))
             else:
-                data, mask = self.cell_data(data_type, slice(None), depth_averaging, split_vector_components)
+                data, mask = self.cell_data(data_type, slice(None), depth_averaging)
             if self.is_vector(data_type) and not split_vector_components:
                 data = np.linalg.norm(data, axis=1 if data.ndim == 2 else 2)
 
