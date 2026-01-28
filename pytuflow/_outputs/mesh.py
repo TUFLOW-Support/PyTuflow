@@ -973,8 +973,13 @@ class Mesh(MapOutput):
             raise NotImplementedError('The current driver does not support exporting to glTF format.')
         self._load()
 
-        mesh_geometry = self._figure_out_data_types(mesh_geometry, None)[0]
-        vertex_colour = self._figure_out_data_types_game_mesh(vertex_colour, None)
+        if mesh_geometry:
+            mesh_geometry = self._figure_out_data_types(mesh_geometry, None)[0]
+
+        if vertex_colour:
+            vertex_colour = self._figure_out_data_types_game_mesh(vertex_colour, None)
+        else:
+            vertex_colour = (mesh_geometry or self._driver.geom.data_type,)
 
         self._driver.to_gltf(
             output_path,

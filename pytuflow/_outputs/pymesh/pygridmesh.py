@@ -2,12 +2,13 @@ import typing
 from pathlib import Path
 
 from . import PyMesh, GridMeshGeometry, GridMeshDataExtractor
+from .mesh3d import Mesh3DMixin, GLTFMixin
 
 if typing.TYPE_CHECKING:
     from ..grid import Grid
 
 
-class PyGridMesh(PyMesh):
+class PyGridMesh(PyMesh, Mesh3DMixin, GLTFMixin):
 
     def __init__(self, grid: 'str | Path | Grid', topology_ref: 'Grid | None' = None):
         super().__init__()

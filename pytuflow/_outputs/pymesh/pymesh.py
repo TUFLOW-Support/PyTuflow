@@ -205,7 +205,7 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
             if self.is_vector(data_type) and not split_vector_components:
                 data = np.linalg.norm(data, axis=1 if data.ndim == 2 else 2)
 
-            if self.is_vector(data_type):
+            if self.is_vector(data_type) and split_vector_components:
                 mx = (float(data[mask].max(axis=0)[0]), float(data[mask].max(axis=0)[1]))
             else:
                 mx = float(data[mask].max())

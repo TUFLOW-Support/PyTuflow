@@ -53,6 +53,8 @@ class PyMeshGeometry(PointMixin, LineStringMixin):
         self.dtype = np.float64
         #: str: data type name of the mesh
         self.data_type = 'Bed Elevation'
+        #: bool: whether to reverse the winding order of triangles
+        self.winding_order = 'CCW'
 
     def load(self):
         pass

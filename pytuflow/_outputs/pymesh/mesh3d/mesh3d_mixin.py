@@ -83,31 +83,36 @@ class Mesh3DMixin:
             data_type_ = self.translate_data_type(data_type_name)[0]
             if '_x' in data_type_ or '_y' in data_type_:
                 data_type_ = data_type_.rsplit('_', 1)[0]
+            if typ != 'scalar' and not self.is_vector(data_type_):
+                raise ValueError(f'Data type "{data_type_}" is not a vector, cannot use suffix "-x" or "-y".')
             lower = [x.lower() for x in self.data_types()]
             return self.data_types()[lower.index(data_type_.lower())], typ
 
         def pack_data(data_type_name: str, typ: str, time: float | datetime) -> np.ndarray:
             if data_type_name not in results:
-                if data_type_name == self.geom.data_type:
-                    data = self.geom.vertices[:, 2]
-                else:
-                    data, mask = self.surface(data_type_name, time, to_vertex=True)
-                    data[~mask, 2:] = 0.
-                    data = data[:, 2:]
                 data_max = self.maximum(data_type_name, split_vector_components=True)
                 data_min = self.minimum(data_type_name, split_vector_components=True)
                 if typ == 'scalar':
                     data_max = (data_max,)
                     data_min = (data_min,)
-                results[data_type_name] = (data, data_max, data_min)
+                if data_type_name == self.geom.data_type:
+                    data = self.geom.vertices[:, 2]
+                    mask = np.full((data.shape[0],), True, dtype=bool)
+                else:
+                    data, mask = self.surface(data_type_name, time, to_vertex=True)
+                    data[~mask, 2:] = 0.
+                    data = data[:, 2:]
+                results[data_type_name] = (data, data_max, data_min, mask)
             else:
-                data, data_max, data_min = results[data_type_name]
+                data, data_max, data_min, mask = results[data_type_name]
             if data.ndim == 1:
-                data = data[np.newaxis, :]
+                data = data[:, np.newaxis]
             idx = 1 if typ == 'vecy' else 0
             if data_max[idx] - data_min[idx] == 0:
                 data[..., idx].astype('f4')
-            return ((data[..., idx] - data_min[idx]) / (data_max[idx] - data_min[idx])).astype('f4')
+            data = ((data[..., idx] - data_min[idx]) / (data_max[idx] - data_min[idx])).astype('f4')
+            data[~mask] = 0.
+            return data
 
         for i, dtype in enumerate(vertex_colour):
             if i > colours.shape[1] - 1:

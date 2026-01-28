@@ -124,7 +124,7 @@ class Grid(MapOutput, LineStringMixin, PointMixin):
 
             self._info = pd.DataFrame(
                 {
-                    'data_type': [data_type],
+                    'data_type': [data_type.lower()],
                     'type': [dtype],
                     'is_max': [False],
                     'is_min': [False],
@@ -182,7 +182,7 @@ class Grid(MapOutput, LineStringMixin, PointMixin):
         with TuflowPath(self.fpath).open_grid() as grid:
             self._info = pd.DataFrame(
                 {
-                    'data_type': [self.name],
+                    'data_type': [self.name.lower()],
                     'type': ['scalar'],
                     'is_max': [False],
                     'is_min': [False],

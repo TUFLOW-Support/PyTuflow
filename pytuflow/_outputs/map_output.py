@@ -50,14 +50,20 @@ class MapOutput(Output, ABC):
         if re.findall(r'(max|peak)', name, re.IGNORECASE):
             if stnd_name.startswith('maximum_'):
                 stnd_name = stnd_name[8:]
-            return 'max ' + stnd_name
+            new_name = 'max ' + stnd_name
+            if len(re.findall(r'max', new_name, re.IGNORECASE)) > 1 and 'tmax' not in new_name:
+                return stnd_name
+            return new_name
 
         if re.findall(r'(tmin|time[\s_-]+of[\s_-]+min)', name, re.IGNORECASE):
             if stnd_name.startswith('minimum_'):
                 stnd_name = stnd_name[8:]
             return 'tmin ' + stnd_name
 
-        return 'min ' + stnd_name
+        new_name = 'min ' + stnd_name
+        if len(re.findall(r'min', new_name, re.IGNORECASE)) > 1 and 'tmin' not in new_name:
+            return stnd_name
+        return new_name
 
     def _overview_dataframe(self) -> pd.DataFrame:
         return self._info.copy()
@@ -119,9 +125,7 @@ class MapOutput(Output, ABC):
         data_types = [data_types] if not isinstance(data_types, list) else data_types
 
         valid_dtypes = self.data_types(filter_by)
-        # if filter_by != 'temporal':
-        #     valid_dtypes.extend(['max ' + x for x in self.data_types('max') if not x.startswith('max')])
-        #     valid_dtypes.extend(['min ' + x for x in self.data_types('min') if not x.startswith('min')])
+
         dtypes1 = []
         for dtype in data_types:
             stnd = self._get_standard_data_type_name(dtype)

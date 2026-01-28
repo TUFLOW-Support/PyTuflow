@@ -6,13 +6,12 @@ import numpy as np
 from . import GLTF
 
 if typing.TYPE_CHECKING:
-    from .. import Mesh3DMixin
-    from ... import Bbox2D
+    from ... import PyMesh, Bbox2D
 
 
 class GLTFMixin:
 
-    def to_gltf(self: 'Mesh3DMixin',
+    def to_gltf(self: 'PyMesh',
                 output_path: Path | str,
                 mesh_geometry: str = '',
                 time: float = -1,
@@ -29,7 +28,7 @@ class GLTFMixin:
             vertex_colour,
             uv_projection_extent,
             FormatConvention.OpenGL,
-            reverse_winding_order=False
+            self.geom.winding_order == 'CW',
         )
         gltf = GLTF()
         gltf.add_mesh(mesh3d)
