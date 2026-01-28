@@ -90,17 +90,22 @@ class Mesh3DMixin:
                     data = self.geom.vertices[:, 2]
                 else:
                     data, mask = self.surface(data_type_name, time, to_vertex=True)
-                    data[~mask, 2] = 0.
-                    data = data[:, 2]
-                data_max = self.maximum(data_type_name)
-                data_min = self.minimum(data_type_name)
+                    data[~mask, 2:] = 0.
+                    data = data[:, 2:]
+                data_max = self.maximum(data_type_name, split_vector_components=True)
+                data_min = self.minimum(data_type_name, split_vector_components=True)
+                if typ == 'scalar':
+                    data_max = (data_max,)
+                    data_min = (data_min,)
                 results[data_type_name] = (data, data_max, data_min)
             else:
                 data, data_max, data_min = results[data_type_name]
-            if typ == 'scalar':
-                return ((data - data_min) / (data_max - data_min)).astype('f4') if data_max > 0 else data.astype('f4')
-            idx = 0 if typ == 'vecx' else 1
-            return (((data[..., idx] - data_min) / (data_max - data_min)).astype('f4') + 1) / 2 if data_max > 0 else data[..., idx].astype('f4')
+            if data.ndim == 1:
+                data = data[np.newaxis, :]
+            idx = 1 if typ == 'vecy' else 0
+            if data_max[idx] - data_min[idx] == 0:
+                data[..., idx].astype('f4')
+            return ((data[..., idx] - data_min[idx]) / (data_max[idx] - data_min[idx])).astype('f4')
 
         for i, dtype in enumerate(vertex_colour):
             if i > colours.shape[1] - 1:

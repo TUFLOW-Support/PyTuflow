@@ -126,7 +126,8 @@ class Mesh(MapOutput):
         """
         return super().data_types(filter_by)
 
-    def maximum(self, data_types: str | list[str], averaging_method: str = None) -> float | pd.DataFrame:
+    def maximum(self, data_types: str | list[str], averaging_method: str = None,
+                split_vector_components: bool = False) -> float | tuple[float, float] | pd.DataFrame:
         """Returns the maximum values for the given data types.
 
         Some formats store maximum values in the metadata (e.g. XMDF), if this is the case, the maximum values
@@ -179,10 +180,15 @@ class Mesh(MapOutput):
             e.g. ``'singlelevel?dir=top&1'`` uses the single level averaging method and takes the first vertical layer
             from the top. Or ``'sigma&0.1&0.9'`` uses the sigma averaging method and averages values located between
             the 10th and 90th water column depth.
+        split_vector_components : bool, optional
+            Whether to split vector components into separate x and y values and calculate maximums for each
+            component separately. Only applicable for vector data types. Components are calculated separately
+            and do not necessarily represent a single point in space and time and magnitudes should not be
+            calculated from the returned values. Components will be returned as a tuple i.e. ``[vec-x, vec-y]``.
 
         Returns
         -------
-        float | pd.DataFrame
+        float | tuple[float, float] | pd.DataFrame
             The maximum value(s) for the given data type(s).
 
         Examples
@@ -205,7 +211,7 @@ class Mesh(MapOutput):
         df = pd.DataFrame()
         if self._driver.DRIVER_SOURCE == 'python':
             for dtype in data_types:
-                mx = self._driver.maximum(dtype, averaging_method)
+                mx = self._driver.maximum(dtype, averaging_method, split_vector_components)
                 if len(data_types) == 1:
                     return mx
                 df_ = pd.DataFrame([mx], columns=['maximum'], index=[dtype])
@@ -214,7 +220,8 @@ class Mesh(MapOutput):
         else:
             raise NotImplementedError('v1.0 driver does not support maximum data extraction.')
 
-    def minimum(self, data_types: str | list[str], averaging_method: str = None) -> float | pd.DataFrame:
+    def minimum(self, data_types: str | list[str], averaging_method: str = None,
+                split_vector_components: bool = False) -> float | tuple[float, float] | pd.DataFrame:
         """Returns the minimum values for the given data types.
 
         Some formats store minimum values in the metadata (e.g. XMDF), if this is the case, the minimum values
@@ -267,10 +274,15 @@ class Mesh(MapOutput):
             e.g. ``'singlelevel?dir=top&1'`` uses the single level averaging method and takes the first vertical layer
             from the top. Or ``'sigma&0.1&0.9'`` uses the sigma averaging method and averages values located between
             the 10th and 90th water column depth.
+        split_vector_components : bool, optional
+            Whether to split vector components into separate x and y values and calculate minimums for each
+            component separately. Only applicable for vector data types. Components are calculated separately
+            and do not necessarily represent a single point in space and time and magnitudes should not be
+            calculated from the returned values. Components will be returned as a tuple i.e. ``[vec-x, vec-y]``.
 
         Returns
         -------
-        float | pd.DataFrame
+        float | tuple[float, float] | pd.DataFrame
             The minimum value(s) for the given data type(s).
 
         Examples
@@ -293,7 +305,7 @@ class Mesh(MapOutput):
         df = pd.DataFrame()
         if self._driver.DRIVER_SOURCE == 'python':
             for dtype in data_types:
-                mx = self._driver.minimum(dtype, averaging_method)
+                mx = self._driver.minimum(dtype, averaging_method, split_vector_components)
                 if len(data_types) == 1:
                     return mx
                 df_ = pd.DataFrame([mx], columns=['minimum'], index=[dtype])

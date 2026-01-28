@@ -163,7 +163,8 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
         self.cache.set(ref_time, 'reference_time', data_type)
         return ref_time
 
-    def maximum(self, data_type: str, depth_averaging: str = None) -> float:
+    def maximum(self, data_type: str, depth_averaging: str = None,
+                split_vector_components: bool = False) -> float | tuple[float, float]:
         """Returns the maximum value for the specified result type. The full path the result type must be specified,
         for example, "depth" will return the maximum for the temporal depth results. If searching for the absolute
         maximum (the maximum value in the maximum output surface) then "depth/maximums" must be used (if applicable).
@@ -174,37 +175,46 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
             The type of result to return the maximum value for.
         depth_averaging : str, optional
             The depth averaging method to use when extracting 3D data.
+        split_vector_components : bool, optional
+            Returns the maximum of the vector components separately rather than the magnitude.
 
         Returns
         -------
-        float
+        float | tuple[float, float]
             The maximum value for the specified result type.
         """
         if not self.is_3d(data_type):
             depth_averaging = None
+        if not self.is_vector(data_type):
+            split_vector_components = False
 
-        if self.cache.contains('maximum', data_type, depth_averaging):
-            return self.cache.get('maximum', data_type, depth_averaging)
+        if self.cache.contains('maximum', data_type, depth_averaging, split_vector_components):
+            return self.cache.get('maximum', data_type, depth_averaging, split_vector_components)
         if data_type.lower() in ['bed elevation', 'bed level']:
             mx = float(np.max(self.geom.vertex_position(slice(None), get_z=True)[:, 2]))
             self.cache.set('maximum', data_type, mx)
             return mx
 
         try:  # some formats store maximums/minimums in the metadata
-            mx = self.extractor.maximum(self.translate_data_type(data_type)[0], depth_averaging)
+            mx = self.extractor.maximum(self.translate_data_type(data_type)[0], depth_averaging, split_vector_components)
         except NotImplementedError:  # need to extract full data to find maximum
             if self.on_vertex(data_type):
                 data, mask = self.vertex_data(data_type, slice(None))
             else:
                 data, mask = self.cell_data(data_type, slice(None), depth_averaging)
-            if self.is_vector(data_type):
+            if self.is_vector(data_type) and not split_vector_components:
                 data = np.linalg.norm(data, axis=1 if data.ndim == 2 else 2)
-            mx = float(data[mask].max())
 
-        self.cache.set(mx, 'maximum', data_type, depth_averaging)
+            if self.is_vector(data_type):
+                mx = (float(data[mask].max(axis=0)[0]), float(data[mask].max(axis=0)[1]))
+            else:
+                mx = float(data[mask].max())
+
+        self.cache.set(mx, 'maximum', data_type, depth_averaging, split_vector_components)
         return mx
 
-    def minimum(self, data_type: str, depth_averaging: str = None) -> float:
+    def minimum(self, data_type: str, depth_averaging: str = None,
+                split_vector_components: bool = False) -> float | tuple[float, float]:
         """Returns the minimum value for the specified result type. The full path the result type must be specified,
         for example, "depth" will return the minimum for the temporal depth results. If searching for the absolute
         minimum (the minimum value in the minimum output surface) then "minimums/depth" must be used (if applicable).
@@ -215,34 +225,42 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
             The type of result to return the maximum value for.
         depth_averaging : str, optional
             The depth averaging method to use when extracting 3D data.
+        split_vector_components : bool, optional
+            Returns the minimum of the vector components separately rather than the magnitude.
 
         Returns
         -------
-        float
+        float | tuple[float, float]
             The maximum value for the specified result type.
         """
         if not self.is_3d(data_type):
             depth_averaging = None
+        if not self.is_vector(data_type):
+            split_vector_components = False
 
-        if self.cache.contains('minimum', data_type, depth_averaging):
-            return self.cache.get('minimum', data_type, depth_averaging)
+        if self.cache.contains('minimum', data_type, depth_averaging, split_vector_components):
+            return self.cache.get('minimum', data_type, depth_averaging, split_vector_components)
         if data_type.lower() in ['bed elevation', 'bed level']:
             mn = float(np.min(self.geom.vertex_position(slice(None), get_z=True)[:, 2]))
             self.cache.set('minimum', data_type, mn)
             return mn
 
         try:  # some formats store maximums/minimums in the metadata
-            mn = self.extractor.minimum(self.translate_data_type(data_type)[0], depth_averaging)
+            mn = self.extractor.minimum(self.translate_data_type(data_type)[0], depth_averaging, split_vector_components)
         except NotImplementedError:  # need to extract full data to find maximum
             if self.on_vertex(data_type):
                 data, mask = self.vertex_data(data_type, slice(None))
             else:
-                data, mask = self.cell_data(data_type, slice(None), depth_averaging)
-            if self.is_vector(data_type):
+                data, mask = self.cell_data(data_type, slice(None), depth_averaging, split_vector_components)
+            if self.is_vector(data_type) and not split_vector_components:
                 data = np.linalg.norm(data, axis=1 if data.ndim == 2 else 2)
-            mn = float(data[mask].min())
 
-        self.cache.set(mn, 'minimum', data_type, depth_averaging)
+            if self.is_vector(data_type):
+                mn = (float(data[mask].min(axis=0)[0]), float(data[mask].min(axis=0)[1]))
+            else:
+                mn = float(data[mask].min())
+
+        self.cache.set(mn, 'minimum', data_type, depth_averaging, split_vector_components)
         return mn
 
     def is_vector(self, data_type: str) -> bool:
