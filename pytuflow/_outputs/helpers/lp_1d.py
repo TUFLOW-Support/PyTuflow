@@ -2,6 +2,7 @@ import typing
 from typing import Union, Generator
 
 import pandas as pd
+from packaging.version import Version
 
 
 class LP1D:
@@ -208,7 +209,10 @@ class Connectivity:
     def _downstream_channels(self, id_: str) -> Generator[str, None, None]:
         """Yield downstream channels given a channel ID."""
         nd = self.chan_info.loc[id_, 'ds_node']
-        channels = list(self.node_info.loc[nd, 'channels']) if self.node_info.loc[nd, 'nchannel'] > 1 else [self.node_info.loc[nd, 'channels']]
+        if Version(pd.__version__) >= Version('3') and self.node_info['channels'].dtype == 'str':
+            channels = self.node_info.loc[nd, 'channels'].split(',')
+        else:
+            channels = list(self.node_info.loc[nd, 'channels']) if self.node_info.loc[nd, 'nchannel'] > 1 else [self.node_info.loc[nd, 'channels']]
         for chan in sorted(channels, key=lambda x: {True: 0, False: 1}[self.chan_info.loc[id_, 'ds_channel'] == x if 'ds_channel' in self.chan_info else 0]):
             us_node = self.chan_info.loc[chan, 'us_node']
             if us_node == nd:
