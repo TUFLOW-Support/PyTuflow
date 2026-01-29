@@ -643,7 +643,10 @@ class GPKG1D(GPKGBase, INFO):
                 else:
                     self._node_info.at[node, 'channels'] = ds[0]
             else:
-                self._node_info.at[node, 'channels'] = us + ds
+                if Version(pd.__version__) >= Version('3'):
+                    self._node_info.at[node, "channels"] = ','.join(us + ds)
+                else:
+                    self._node_info.at[node, "channels"] = us + ds
 
     def _get_pits(self, dfconn: pd.DataFrame) -> np.ndarray:
         if self._is_swmm:

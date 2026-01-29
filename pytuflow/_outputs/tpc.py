@@ -1,6 +1,7 @@
 from pathlib import Path
 import re
 from typing import Union
+from packaging.version import Version
 
 import numpy as np
 import pandas as pd
@@ -892,7 +893,12 @@ class TPC(INFO, ITimeSeries2D):
 
         if self._time_series_data_2d:
             plot_objs = self._gis_plot_objects()
-            if plot_objs is None or plot_objs.geom.dtype != np.dtype('O'):
+
+            if Version(pd.__version__) >= Version('3'):
+                geom_col_is_str = plot_objs.geom.dtype == 'str'
+            else:
+                geom_col_is_str = plot_objs.geom.dtype == np.dtype('O')
+            if plot_objs is None or not geom_col_is_str:
                 logger.warning('TPC._load_po_info(): Missing or invalid PLOT.csv. Using TPC to guess PO geometry.')
                 plot_objs = self._geom_from_tpc()  # derive geometry from tpc rather than the gis/[...]_PLOT.csv
 

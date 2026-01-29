@@ -32,6 +32,19 @@ Check out the :doc:`usage` section for further information, including how to :re
 Changelog
 ---------
 
+1.0.4
+"""""
+
+Release date: 29 Jan 2026
+
+- Fixed a bug when loading a TCF file that contained a ``"Set Variable == <Windows file path>"`` command where the value was set to a Windows file path that contained special character sequences (e.g. ``\U``). This caused a Python error when the variable value was inserted into other commands. The value is now correctly escaped.
+- Fixed several bugs and behaviour changes when using Pandas 3.x. These include:
+
+  - Loading a TUFLOW ``1d_xs.shp`` as a cross-section database and trying to retrieve a value which would cause a Python error.
+  - Behavioural change when loading a ``material.csv`` databases that returned additional 'Unnamed' columns.
+  - Loading a :class:`TPC<pytuflow.TPC>` output class and call methods such as :meth:`data_types()<pytuflow.TPC.data_types>` which would cause a Python error.
+  - Loading a :class:`GPKG1D<pytuflow.GPKG1D>` output class which would cause a Python error.
+
 1.1
 """
 
@@ -138,7 +151,6 @@ Bug Fixes
 Release date: 13 Jan 2026
 
 - Fixed a bug when reading a TCF file and the command ``Write Check Files ==`` was used and the file path did not have a trailing slash. Previously, this could cause a Python error.
-
 
 1.0.2
 """""
