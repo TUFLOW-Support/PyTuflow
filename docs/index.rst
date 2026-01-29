@@ -32,19 +32,6 @@ Check out the :doc:`usage` section for further information, including how to :re
 Changelog
 ---------
 
-1.0.4
-"""""
-
-Release date: 29 Jan 2026
-
-- Fixed a bug when loading a TCF file that contained a ``"Set Variable == <Windows file path>"`` command where the value was set to a Windows file path that contained special character sequences (e.g. ``\U``). This caused a Python error when the variable value was inserted into other commands. The value is now correctly escaped.
-- Fixed several bugs and behaviour changes when using Pandas 3.x. These include:
-
-  - Loading a TUFLOW ``1d_xs.shp`` as a cross-section database and trying to retrieve a value which would cause a Python error.
-  - Behavioural change when loading a ``material.csv`` databases that returned additional 'Unnamed' columns.
-  - Loading a :class:`TPC<pytuflow.TPC>` output class and call methods such as :meth:`data_types()<pytuflow.TPC.data_types>` which would cause a Python error.
-  - Loading a :class:`GPKG1D<pytuflow.GPKG1D>` output class which would cause a Python error.
-
 1.1
 """
 
@@ -144,6 +131,19 @@ Bug Fixes
 - Fixed a bug for Quadtree results prior to the TUFLOW ``2026.0.0`` release. There was a bug in TUFLOW (fixed in ``2026.0.0``) where Quadtree hardcoded PO geometry types to "R" (region/polygon) in the ``plot/GIS/PLOT.csv`` file. This resulted in a downstream bug in PyTUFLOW when using any geometry filters in methods such as :meth:`data_types()<pytuflow.TPC.data_types>`. PyTUFLOW has been updated to double check the geometry types on load if encountering "R" geometries so results from TUFLOW versions prior to ``2026.0.0`` can still be used.
 - Fixed a bug for :class:`GPKG2D<pytuflow.GPKG2D>` and :class:`GPKGRL<pytuflow.GPKGRL>` classes where using a ``"polygon"`` filter in either the :meth:`data_types()<pytuflow.GPKG2D.data_types>` or :meth:`ids()<pytuflow.GPKG2D.ids>` methods would return an empty list even if there were PO or RL polygons in the results.
 - Fixed a bug for :meth:`section()<pytuflow.XMDF.section>` and :meth:`curtain()<pytuflow.XMDF.curtain>` methods for Quadtree results when the line intersected transition zones which could cause additional points to be added to the resulting DataFrame with ``NaN`` values.
+
+1.0.4
+"""""
+
+Release date: 29 Jan 2026
+
+- Fixed a bug when loading a TCF file that contained a ``"Set Variable == <Windows file path>"`` command where the value was set to a Windows file path that contained special character sequences (e.g. ``\U``). This caused a Python error when the variable value was inserted into other commands. The value is now correctly escaped.
+- Fixed several bugs and behaviour changes when using Pandas 3.x. These include:
+
+  - Loading a TUFLOW ``1d_xs.shp`` as a cross-section database and trying to retrieve a value which would cause a Python error.
+  - Behavioural change when loading a ``material.csv`` databases that returned additional 'Unnamed' columns.
+  - Loading a :class:`TPC<pytuflow.TPC>` output class and call methods such as :meth:`data_types()<pytuflow.TPC.data_types>` which would cause a Python error.
+  - Loading a :class:`GPKG1D<pytuflow.GPKG1D>` output class which would cause a Python error.
 
 1.0.3
 """""
