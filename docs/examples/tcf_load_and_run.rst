@@ -158,8 +158,7 @@ With the ``tcf_run`` instance, we can also get the output folder and output name
     >>> xmdf_path = tcf_run.output_folder_2d() / f'{tcf_run.output_name()}.xmdf'
     >>> xmdf = XMDF(xmdf_path)
 
-Currently, the XMDF class requires QGIS Python libraries to extract results (e.g. time series). However,
-if the ``netCDF4`` package is installed, we can query some of the header information without QGIS:
+We can extract metadata about the results, such as the result data types and time steps. Metadata can be queried in XMDF files without loading the mesh geometry, which makes it very quick to access. The mesh geometry is only loaded when required, such as when extracting spatial results.
 
 .. code-block:: pycon
 
@@ -190,7 +189,29 @@ if the ``netCDF4`` package is installed, we can query some of the header informa
     2.9166666666666665,
     3.0]
 
-We added the ``NC`` map output format to the TCF, so that we could easily query the results in Python using the
+Time-series can be extracted from point locations using a coordinate tuple(s) or a GIS point file.
+
+.. code-block:: pycon
+
+    >>> point_shp = 'path/to/2d_po_EG02_010_P.shp'
+    >>> df = xmdf.time_series(point_shp, 'water level')
+    >>> df
+    time       pnt1/water level   pnt2/water level
+    0.000000                NaN          36.500000
+    0.083333                NaN          36.483509
+    0.166667                NaN          36.457958
+    0.250000                NaN          36.441391
+    0.333333                NaN          36.431271
+    0.416667                NaN          36.426140
+    0.500000                NaN          36.423336
+    0.583333                NaN          36.421467
+    0.666667          40.110428          36.420143
+    ...                  ...                   ...
+    2.833333          42.804726          38.509300
+    2.916667          42.793350          38.429859
+    3.000000          42.781895          38.342941
+
+We added the ``NC`` map output format to the TCF, so that we also query the results in Python using the
 :class:`NCGrid<pytuflow.NCGrid>` class.
 
 .. code-block:: pycon
@@ -208,32 +229,99 @@ We added the ``NC`` map output format to the TCF, so that we could easily query 
      'max velocity',
      'max z0',
      'tmax water level']
+    >>> df = ncgrid.time_series(shp, 'velocity')
+    >>> df
+              pnt1/velocity  pnt2/velocity
+    time
+    0.000000            NaN       0.000000
+    0.083333            NaN       0.022336
+    0.166667            NaN       0.021051
+    0.250000            NaN       0.016629
+    0.333333            NaN       0.012689
+    ...               ...              ...
+    2.666667       0.083554       0.447158
+    2.750000       0.075304       0.427859
+    2.833333       0.066849       0.409600
+    2.916667       0.058833       0.393870
+    3.000000       0.051204       0.376173
 
-We can extract a time series of water level results by using a point location, either in the form of a coordinate tuple
-``(x, y)`` (or list of coordinates), or a GIS point file. You will need GDAL Python bindings installed to use the latter
-approach. For simplicity, we will use a list of coordinate tuples that match the location of the features in the
-``2d_po_EG02_010_P.shp`` file that is included as part of the example model dataset. If you have GDAL installed, you
-can use a file path reference to the ``TUFLOW/model/gis/2d_po_EG02_010_P.shp`` file instead.
+It's also possible to extract the 2D surface from either the XMDF or NC grid results at a given time step. With the surface data, it's possible to perform all sorts of custom analyses such as differences between results (at maximum or any given timestep), statistics, or even visualise the data using packages such as PyVista (which is installed with PyTUFLOW).
 
-Note, ``pnt1`` starts dry and gets wet later in the simulation, so the first time steps are ``NaN`` to indicate that
-the cell is dry.
+An example extracting the maximum water level surface:
 
 .. code-block:: pycon
 
-    >>> points = [(293259.140, 6178013.725), (293337.612, 6178286.193)]
-    >>> df = ncgrid.time_series(points, 'water level')
+    >>> df = xmdf.surface('max velocity', time=-1)  # time value can be any value for static datasets such as maximums
     >>> df
-    time       water level/pnt1   water level/pnt2
-    0.000000                NaN          36.500000
-    0.083333                NaN          36.483509
-    0.166667                NaN          36.457958
-    0.250000                NaN          36.441391
-    0.333333                NaN          36.431271
-    0.416667                NaN          36.426140
-    0.500000                NaN          36.423336
-    0.583333                NaN          36.421467
-    0.666667          40.110428          36.420143
-    ...                  ...                   ...
-    2.833333          42.804726          38.509300
-    2.916667          42.793350          38.429859
-    3.000000          42.781895          38.342941
+                   x            y  value  active
+    0      292940.043  6177590.372    0.0   False
+    1      292938.904  6177585.504    0.0   False
+    2      292934.036  6177586.643    0.0   False
+    3      292935.174  6177591.511    0.0   False
+    4      292944.912  6177589.234    0.0   False
+    ...           ...          ...    ...     ...
+    20944  293595.735  6178417.774    0.0   False
+    20945  293590.866  6178418.913    0.0   False
+    20946  293600.603  6178416.635    0.0   False
+    20947  293605.472  6178415.496    0.0   False
+    20948  293610.340  6178414.357    0.0   False
+
+We can count the number of cells in each velocity range as defined by the user:
+
+.. code-block:: pycon
+
+    >>> import numpy as np
+    >>> bins = [0, 0.5, 1.0, 2.5, 5.0, 20.]
+    >>> mask = df['active']  # the active (wet) mask
+    >>> counts, _ = np.histogram(df.loc[mask, 'value'], bins)
+    >>> counts
+    array([4368, 1820, 2030,    5,    0])
+
+The above calculation tells us that there are 5 cells with a maximum velocity between 2.5 m/s and 5.0 m/s and no cells with a maximum velocity above 5.0 m/s.
+
+A similar calculation could be performed on a difference surface to see how many cells exceed certain thresholds. As an example, using results from the example model dataset ``EG16_~s1~_001.tcf`` which contains two scenarios - "EXG" and "D01". It is assumed that both scenarios have been run and the results are available.
+
+First load the results and extract the maximum water level surfaces for both scenarios:
+
+.. code-block:: pycon
+
+    >>> ... # it is assumed you have run both scenarios and the results are available
+    >>> exg = XMDF('/path/to/EG16_EXG_001.xmdf')
+    >>> d01 = XMDF('/path/to/EG16_D01_001.xmdf')
+    >>> exg_wl = exg.surface('max water level', time=-1)
+    >>> d01_wl = d01.surface('max water level', time=-1)
+
+We also need to consider inactive cells in either scenario. In this case, we will treat inactive cells as having the same elevation as the bed level. So for this, we also need to extract the surface for the bed level and then set the inactive cells to the bed level:
+
+.. code-block:: pycon
+
+    >>> exg_z = exg.surface('bed level', time=-1)
+    >>> d01_z = d01.surface('bed level', time=-1)
+    >>> exg_wl.loc[~exg_wl['active'], 'value'] = exg_z.loc[~exg_wl['active'], 'value']
+    >>> d01_wl.loc[~d01_wl['active'], 'value'] = d01_z.loc[~d01_wl['active'], 'value']
+
+Now we perform the difference and then count the number of cells that exceed certain thresholds. We will exclude every cell that is inactive in both scenarios so that we are only comparing wet cells in at least one scenario.
+
+.. code-block:: pycon
+
+    >>> mask = exg_wl['active'] | d01_wl['active']
+    >>> diff_wl = d01_wl.loc[mask, 'value'] - exg_wl.loc[mask, 'value']
+    >>> bins = [min(diff_wl.min() - 0.1, -5), -2.5, -1.0, -0.5, -0.25, -0.1, 0, 0.1, 0.25, 0.5, 1.0, 2.5, max(diff_wl.max(), 5)]
+    >>> counts, _ = np.histogram(diff_wl, bins)
+    >>> counts
+    array([   0,    3,    5,   62,  110,  915, 3580, 2425,    6,   13,    0,
+        975])
+
+It's also possible to visualise this with matplotlib:
+
+.. code-block:: pycon
+
+    >>> import matplotlib.pyplot as plt
+    >>> plt.hist(diff_wl, bins)
+    >>> plt.show()
+
+.. image:: ../assets/images/simple_histogram_example.png
+    :alt: Histogram of water level differences
+    :align: center
+
+
