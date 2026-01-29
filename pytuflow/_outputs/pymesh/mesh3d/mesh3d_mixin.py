@@ -6,7 +6,7 @@ import numpy as np
 from . import SceneMesh, FormatConvention
 
 if typing.TYPE_CHECKING:
-    from .. import PyMesh, Bbox2D
+    from .. import PyMesh, Bbox2D, Transform2D
 
 
 class Mesh3DMixin:
@@ -18,11 +18,12 @@ class Mesh3DMixin:
                uv_projection_extent: 'list[float] | tuple[float] | np.ndarray | Bbox2D',
                convention: FormatConvention,
                reverse_winding_order: bool,
+               transform: 'Transform2D' = None,
                ) -> SceneMesh:
         """Return the mesh as a 3D SceneMesh object."""
         mesh3d = SceneMesh()
         mesh3d.inds = self.indices(reverse_winding_order)
-        mesh3d.pos = self.positions(time, mesh_geometry, convention)
+        mesh3d.pos = self.positions(time, mesh_geometry, convention, transform)
         mesh3d.face_counts = np.full((mesh3d.inds.count() // 3,), 3, dtype='u4')
         mesh3d.cd = self.vertex_colors(time, vertex_colour)
         mesh3d.uv = self.uvs(uv_projection_extent, convention)
@@ -41,9 +42,13 @@ class Mesh3DMixin:
                   time: float,
                   mesh_geometry: str,
                   convention: FormatConvention = FormatConvention.OpenGL,
+                  transform: 'Transform2D' = None,
                   ) -> np.ndarray:
         """Return the mesh vertex positions at time (or the time_index) as a flat array of floats."""
-        pos = self.geom.vertices_local
+        if transform is not None:
+            pos = transform.transform(self.geom.vertices)
+        else:
+            pos = self.geom.vertices_local
         if mesh_geometry:
             pos -= 0.05  # avoid z-fighting
             val, mask = self.surface(mesh_geometry, time, coord_scope='local', to_vertex=True)

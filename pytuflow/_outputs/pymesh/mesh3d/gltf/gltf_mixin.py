@@ -6,7 +6,7 @@ import numpy as np
 from . import GLTF
 
 if typing.TYPE_CHECKING:
-    from ... import PyMesh, Bbox2D
+    from ... import PyMesh, Bbox2D, Transform2D
 
 
 class GLTFMixin:
@@ -17,6 +17,7 @@ class GLTFMixin:
                 time: float = -1,
                 vertex_colour: list[str] = (),
                 uv_projection_extent: 'list[float] | tuple[float] | np.ndarray | Bbox2D' = (),
+                transform: 'Transform2D' = None,
                 ):
         from .. import FormatConvention
         p = Path(output_path)
@@ -29,6 +30,7 @@ class GLTFMixin:
             uv_projection_extent,
             FormatConvention.OpenGL,
             self.geom.winding_order == 'CW',
+            transform,
         )
         gltf = GLTF()
         gltf.add_mesh(mesh3d)

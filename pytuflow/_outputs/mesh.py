@@ -941,6 +941,7 @@ class Mesh(MapOutput):
                 time: TimeLike = -1,
                 vertex_colour: list[str] = (),
                 uv_projection_extent: list[float] | tuple[float] | np.ndarray | Bbox2D = (),
+                location_ref: 'Mesh' = None,
                 ):
         """Exports the mesh to a glTF 2.0 file for visualisation in compatible software.
         Both ``.gltf`` and ``.glb`` formats are supported.
@@ -955,9 +956,12 @@ class Mesh(MapOutput):
         ----------
         output_path : Path | str
             The output file path for the glTF file.
-        time : float
+        mesh_geometry : str, optional
+            The data type to use for the mesh geometry, e.g. ``"water level"``. If not provided,
+            the mesh geometry will be used e.g. this will be the ``"Bed Elevation"`` for XMDF results.
+        time : float | datetime
             The time to export the data for.
-        data_types : Array[str], optional
+        vertex_colour : Array[str], optional
             The provided data types will be exported into the mesh vertex colour (i.e. the RGB channels). The
             data types will be re-mapped to the 0-1 range for the colour channels by using the maximum value as
             returned by the ``maximum()`` method. The default data types are ``Depth``, ``Vector Velocity-x``,
@@ -968,6 +972,11 @@ class Mesh(MapOutput):
             ``(min_x, min_y, max_x, max_y)``. If not provided, the mesh bounding box will be used except for
             TUFLOW HPC/Classic XMDF results which will use the model domain extent as defined in the ``.2dm``.
             For HPC/Classic models, this matches the output grid setting ``Grid Output Origin == MODEL ORIGIN``.
+        location_ref : Mesh, optional
+            The location reference to use when setting the geometry origin. By default, the mesh bounding box is
+            used to set the geometry origin (it uses the centre of the bounding box). Another mesh result can be used
+            to define the origin instead, which is useful when exporting multiple meshes that need to be aligned
+            in 3D space.
         """
         if not hasattr(self._driver, 'to_gltf'):
             raise NotImplementedError('The current driver does not support exporting to glTF format.')
@@ -981,12 +990,16 @@ class Mesh(MapOutput):
         else:
             vertex_colour = (mesh_geometry or self._driver.geom.data_type,)
 
+        # the other mesh can provide a transform to align the geometry in 3D space
+        transform = location_ref._driver.geom.trans if location_ref is not None else None
+
         self._driver.to_gltf(
             output_path,
             mesh_geometry,
             time,
             vertex_colour,
-            uv_projection_extent
+            uv_projection_extent,
+            transform,
         )
 
     def to_alembic(self,
