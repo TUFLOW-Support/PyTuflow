@@ -87,6 +87,8 @@ class AlembicMesh:
 class Alembic:
 
     def __init__(self):
+        if '.stubs' in OArchive.__module__:
+            raise ImportError('pyalembic is required to use Alembic output."')
         self.oarch = None
         self.fpath = None
         self.mesh_objs = {}

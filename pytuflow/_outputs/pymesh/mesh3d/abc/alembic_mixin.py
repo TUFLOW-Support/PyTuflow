@@ -1,21 +1,24 @@
 import typing
 from pathlib import Path
 
+import numpy as np
 from .alembic import Alembic
 
 if typing.TYPE_CHECKING:
     from ..import Mesh3DMixin
     from .. import FormatConvention
-    from ... import PyMesh
+    from ... import PyMesh, Bbox2D, Transform2D
 
 
 class AlembicMixin:
 
     def to_alembic(self: 'Mesh3DMixin | PyMesh',
                    output_path: Path | str,
+                   mesh_geometry: str = '',
+                   vertex_colour: list[str] = (),
+                   uv_projection_extent: 'list[float] | tuple[float] | np.ndarray | Bbox2D' = (),
+                   transform: 'Transform2D' = None,
                    time_sample_frequency: float = 1,
-                   data_types: typing.Iterable[str] = ('Depth', 'Vector Velocity-x', 'Vector Velocity-y'),
-                   uv_projection_extent: 'typing.Iterable[float] | Bbox2D' = (),
                    time_sampling: float = 1 / 24,
                    format_convention: 'FormatConvention' = 1  # FormatConvention.Blender
                    ):
@@ -31,5 +34,13 @@ class AlembicMixin:
             for i, time in enumerate(self.times('Water Level')):
                 if i % time_sample_frequency:
                     continue
-                mesh3d = self.mesh3d(-1, i, data_types, uv_projection_extent, format_convention, reverse_winding_order=True)
+                mesh3d = self.mesh3d(
+                    mesh_geometry,
+                    time,
+                    vertex_colour,
+                    uv_projection_extent,
+                    format_convention,
+                    self.geom.winding_order == 'CW',
+                    transform,
+                )
                 mesh.add_mesh_sample(mesh3d)

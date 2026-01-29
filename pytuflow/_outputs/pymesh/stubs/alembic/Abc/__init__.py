@@ -1,1 +1,2 @@
-OArchive = 'OArchive'  # type: ignore
+class OArchive:
+    pass
