@@ -43,18 +43,25 @@ class AlembicMesh:
         if not self._arrays_initialised:
             self._init_arrays(mesh)
 
-        for i in range(mesh.inds.count()):
-            self._inds[i] = int(mesh.inds.data[i])
-            self._inds_idx[i] = int(mesh.inds.data[i])
-        for i in range(mesh.face_counts.count()):
-            self._face_counts[i] = int(mesh.face_counts.data[i])
+        if self._inds is None:
+            self._inds = IntArray(mesh.inds.count())
+            self._inds_idx = UnsignedIntArray(mesh.inds.count())
+            for i in range(mesh.inds.count()):
+                self._inds[i] = int(mesh.inds.data[i])
+                self._inds_idx[i] = int(mesh.inds.data[i])
+        if self._face_counts is None:
+            self._face_counts = IntArray(mesh.face_counts.count())
+            for i in range(mesh.face_counts.count()):
+                self._face_counts[i] = int(mesh.face_counts.data[i])
+        if self._uv is None:
+            self._uv = V2fArray(mesh.uv.count())
+            for i in range(0, mesh.uv.size(), mesh.uv.n):
+                j = i // mesh.uv.n
+                self._uv[j] = V2f(*mesh.uv.data[i:i+mesh.uv.n].tolist())
         for i in range(0, mesh.pos.size(), mesh.pos.n):
             j = i // mesh.pos.n
             self._pos[j] = V3f(*mesh.pos.data[i:i+mesh.pos.n].tolist())
             self._norm[j] = V3f(*mesh.norms.data[i:i+mesh.pos.n].tolist())
-        for i in range(0, mesh.uv.size(), mesh.uv.n):
-            j = i // mesh.uv.n
-            self._uv[j] = V2f(*mesh.uv.data[i:i+mesh.uv.n].tolist())
         for i in range(0, mesh.cd.size(), mesh.cd.n):
             j = i // mesh.cd.n
             self._cd[j] = Color3f(*mesh.cd.data[i:i+mesh.cd.n].tolist())
@@ -74,11 +81,7 @@ class AlembicMesh:
         self.cd.set(col_sample)
 
     def _init_arrays(self, mesh: 'SceneMesh'):
-        self._inds = IntArray(mesh.inds.count())
-        self._inds_idx = UnsignedIntArray(mesh.inds.count())
-        self._face_counts = IntArray(mesh.face_counts.count())
         self._pos = V3fArray(mesh.pos.count())
-        self._uv = V2fArray(mesh.uv.count())
         self._norm = V3fArray(mesh.pos.count())
         self._cd = C3fArray(mesh.cd.count())
         self._arrays_initialised = True
