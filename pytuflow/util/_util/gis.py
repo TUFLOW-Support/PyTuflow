@@ -90,6 +90,8 @@ def point_gis_file_to_dict(fpath: PathLike):
             fi = -1
             for id_field in id_fields:
                 fi = feature.field_index(id_field)
+                if fi != -1:
+                    break
             name = feature[fi] if fi != -1 else f'pnt{i+1}'
             i += 1
 
@@ -117,6 +119,8 @@ def line_gis_file_to_dict(fpath: PathLike):
             fi = -1
             for id_field in id_fields:
                 fi = feature.field_index(id_field)
+                if fi != -1:
+                    break
             name = feature[fi] if fi != -1 else f'line{i + 1}'
             i += 1
             lines = feature.geom.lines()
