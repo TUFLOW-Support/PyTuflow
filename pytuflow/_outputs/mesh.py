@@ -949,8 +949,8 @@ class Mesh(MapOutput):
         .. admonition:: Experimental Feature
             :class: warning
 
-            gLTF export is an experimental feature and may not work for all formats and drivers.
-            It requires the ``pygltf`` library to be installed.
+            gLTF export is an experimental feature and may not work for all formats and drivers. It may also be
+            modified without warning in future releases.
 
         Parameters
         ----------
@@ -962,11 +962,14 @@ class Mesh(MapOutput):
         time : float | datetime
             The time to export the data for.
         vertex_colour : Array[str], optional
-            The provided data types will be exported into the mesh vertex colour (i.e. the RGB channels). The
-            data types will be re-mapped to the 0-1 range for the colour channels by using the maximum value as
-            returned by the ``maximum()`` method. The default data types are ``Depth``, ``Vector Velocity-x``,
-            and ``Vector Velocity-y`` (i.e. depth will be packed into the red channel, velocity x into green,
-            and velocity y into blue).
+            The provided data types will be exported into the mesh vertex colours. This allows a maximum of 3 data types
+            only, one in the red channel, blue channel, and green channel. Vector types require 2 channels and should
+            use a suffix with either ``"-x"`` or ``"-y"`` (e.g. ``"Vector Velocity-x"`` for the x vector component). The
+            data types will be re-mapped to the 0-1 range for the colour channels by using the following
+            formula ``packed_value = (value - value_min) / (value_max - value_min)``. The ``value_min`` and `value_max``
+            are obtained using the :meth:`minimum()<pytuflow.XMDF.minimum>` and :meth:`maximum()<pytuflow.XMDF.maximum>`
+            methods. An example usage would be ``["Depth", "Vector Velocity-x", "Vector Velocity-y"]`` to pack depth
+            into the red channel, velocity x into green, and velocity y into blue.
         uv_projection_extent : Array[float], optional
             The extent to use for UV projection of textures onto the mesh. The format is
             ``(min_x, min_y, max_x, max_y)``. If not provided, the mesh bounding box will be used except for
@@ -1010,15 +1013,15 @@ class Mesh(MapOutput):
                    location_ref: 'Mesh' = None,
                    time_sample_frequency: int = 1,
                    time_sampling: float = 1 / 24,
-                   format_convention: FormatConvention = FormatConvention.OpenGL
+                   export_for: str = 'opengl'
                    ):
         """Exports the mesh to an Alembic file for visualisation in compatible software.
 
         .. admonition:: Experimental Feature
             :class: warning
 
-            Alembic export is an experimental feature and may not work for all formats and drivers.
-            It requires the ``pyalembic`` library to be installed.
+            Alembic export is an experimental feature and may not work for all formats and drivers. It may also be
+            modified without warning in future releases. It requires the ``pyalembic`` library to be installed.
 
         Parameters
         ----------
@@ -1028,11 +1031,14 @@ class Mesh(MapOutput):
             The data type to use for the mesh geometry, e.g. ``"water level"``. If not provided,
             the mesh geometry will be used e.g. this will be the ``"Bed Elevation"`` for XMDF results.
         vertex_colour : Array[str], optional
-            The provided data types will be exported into the mesh vertex colour (i.e. the RGB channels). The
-            data types will be re-mapped to the 0-1 range for the colour channels by using the maximum value as
-            returned by the ``maximum()`` method. The default data types are ``Depth``, ``Vector Velocity-x``,
-            and ``Vector Velocity-y`` (i.e. depth will be packed into the red channel, velocity x into green,
-            and velocity y into blue).
+            The provided data types will be exported into the mesh vertex colours. This allows a maximum of 3 data types
+            only, one in the red channel, blue channel, and green channel. Vector types require 2 channels and should
+            use a suffix with either ``"-x"`` or ``"-y"`` (e.g. ``"Vector Velocity-x"`` for the x vector component). The
+            data types will be re-mapped to the 0-1 range for the colour channels by using the following
+            formula ``packed_value = (value - value_min) / (value_max - value_min)``. The ``value_min`` and `value_max``
+            are obtained using the :meth:`minimum()<pytuflow.XMDF.minimum>` and :meth:`maximum()<pytuflow.XMDF.maximum>`
+            methods. An example usage would be ``["Depth", "Vector Velocity-x", "Vector Velocity-y"]`` to pack depth
+            into the red channel, velocity x into green, and velocity y into blue.
         uv_projection_extent : Array[float], optional
             The extent to use for UV projection of textures onto the mesh. The format is
             ``(min_x, min_y, max_x, max_y)``. If not provided, the mesh bounding box will be used except for
@@ -1049,8 +1055,24 @@ class Mesh(MapOutput):
         time_sampling : float, optional
             The time sampling interval in seconds. Default is 1/24 (i.e. each output time step represents a separate
             frame in a 24 fps sequence).
-        format_convention : FormatConvention, optional
-            The format convention to use for the Alembic file. Default is ``FormatConvention.Blender``.
+        export_for : str, optional
+            An optional argument that will adjust the data to be more in keeping with certain software package
+            conventions E.g. ``"unreal"`` will export the data with a Z-up coordinate system, left-hand rule,
+            and in centimetres, whereas ``"opengl"`` will use a Y-up coordinate system, right-hand rule,
+            and metres. Default is ``"opengl"``.
+
+            Typically, the end software package can manipulate the data (automatically or manually by the user)
+            to suit its own requirements, however this option is provided to make the import process easier.
+
+            The options are:
+
+            - ``"opengl"``
+            - ``"unreal"``
+            - ``"blender"``
+
+        Examples
+        --------
+        Export
         """
         if not hasattr(self._driver, 'to_alembic'):
             raise NotImplementedError('The current driver does not support exporting to Alembic format.')
@@ -1066,6 +1088,12 @@ class Mesh(MapOutput):
 
         # the other mesh can provide a transform to align the geometry in 3D space
         transform = location_ref._driver.geom.trans if location_ref is not None else None
+
+        # convention for exporting
+        d = {'opengl': FormatConvention.OpenGL, 'unreal': FormatConvention.Unreal, 'blender': FormatConvention.OpenGL_2}
+        format_convention = d.get(export_for.lower())
+        if format_convention is None:
+            raise ValueError(f'Unsupported export_for value: {export_for}. Supported values are: {list(d.keys())}')
 
         self._driver.to_alembic(
             output_path,
