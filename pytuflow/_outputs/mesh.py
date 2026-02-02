@@ -958,28 +958,97 @@ class Mesh(MapOutput):
             The output file path for the glTF file.
         mesh_geometry : str, optional
             The data type to use for the mesh geometry, e.g. ``"water level"``. If not provided,
-            the mesh geometry will be used e.g. this will be the ``"Bed Elevation"`` for XMDF results.
+            the base mesh geometry will be used e.g. this will be the ``"Bed Elevation"`` for XMDF results.
         time : float | datetime
             The time to export the data for.
         vertex_colour : Array[str], optional
             The provided data types will be exported into the mesh vertex colours. This allows a maximum of 3 data types
             only, one in the red channel, blue channel, and green channel. Vector types require 2 channels and should
-            use a suffix with either ``"-x"`` or ``"-y"`` (e.g. ``"Vector Velocity-x"`` for the x vector component). The
-            data types will be re-mapped to the 0-1 range for the colour channels by using the following
-            formula ``packed_value = (value - value_min) / (value_max - value_min)``. The ``value_min`` and `value_max``
-            are obtained using the :meth:`minimum()<pytuflow.XMDF.minimum>` and :meth:`maximum()<pytuflow.XMDF.maximum>`
-            methods. An example usage would be ``["Depth", "Vector Velocity-x", "Vector Velocity-y"]`` to pack depth
-            into the red channel, velocity x into green, and velocity y into blue.
+            use a suffix with either ``"-x"`` or ``"-y"`` (e.g. ``"Vector Velocity-x"`` for the x vector component).
+
+            | The data types will be re-mapped to the 0-1 range for the colour channels by using the following formula
+
+            | ``packed_value = (value - value_min) / (value_max - value_min)``.
+
+            | The ``value_min`` and ``value_max`` are obtained using the :meth:`minimum()<pytuflow.XMDF.minimum>`
+              and :meth:`maximum()<pytuflow.XMDF.maximum>` methods.
+
+            | An example usage would be ``["Depth", "Vector Velocity-x", "Vector Velocity-y"]`` to pack depth into
+              the red channel, velocity x into green, and velocity y into blue.
         uv_projection_extent : Array[float], optional
             The extent to use for UV projection of textures onto the mesh. The format is
             ``(min_x, min_y, max_x, max_y)``. If not provided, the mesh bounding box will be used except for
             TUFLOW HPC/Classic XMDF results which will use the model domain extent as defined in the ``.2dm``.
-            For HPC/Classic models, this matches the output grid setting ``Grid Output Origin == MODEL ORIGIN``.
         location_ref : Mesh, optional
             The location reference to use when setting the geometry origin. By default, the mesh bounding box is
             used to set the geometry origin (it uses the centre of the bounding box). Another mesh result can be used
             to define the origin instead, which is useful when exporting multiple meshes that need to be aligned
             in 3D space.
+
+        Examples
+        --------
+        The examples below show images of importing the exported glTF files into `Blender <https://www.blender.org/>`_
+        for visualisation.
+
+        Export an XMDF bed elevation:
+
+        >>> from pytuflow import XMDF
+        >>> xmdf = XMDF('/path/to/result.xmdf')
+        >>> xmdf.to_gltf('/path/to/output/bed_elevation.glb')
+
+        .. image:: ../assets/images/xmdf_bed_elevation_gltf_blender.png
+            :alt: XMDF Bed Elevation in Blender
+            :align: center
+            :width: 720px
+
+        | In the above example, we don't need to specify the ``mesh_geometry`` argument since the bed elevation is
+          the mesh geometry, which is the default data type used when exporting. The vertex colours will also default
+          to the mesh geometry if not specified. In the above example, the red channel of the vertex colours will
+          represent the bed elevation values in a 0-1 range. The blue and green channels will be empty (i.e. zeros).
+
+        Export the maximum water level with depth as vertex colours:
+
+        >>> xmdf.to_gltf(
+            output_path='/path/to/output/max_water_level.glb',
+            mesh_geometry='max water level',
+            vertex_colour=['max depth']
+        )
+
+        .. image:: ../assets/images/xmdf_max_water_level_gltf_blender.png
+            :alt: XMDF Max Water Level in Blender
+            :align: center
+            :width: 720px
+
+        | In the above example, the depth values will be packed into the red channel of the vertex colours in a 0-1 range.
+          They can be unpacked in the visualisation software by reversing the formula used to pack the values. In most
+          instances for depth, this will be ``value = packed_value * max_depth`` where ``max_depth`` is the value returned
+          from ``xmdf.maximum('max depth')``.
+
+        We could also use the bed elevation from the ``DEM_Z`` check file since this will have a higher resolution
+        than the mesh geometry.
+
+        >>> from pytuflow import Grid
+        >>> dem_z = Grid('/path/to/check/DEM_Z.tif')
+        >>> dem_z.to_mesh().to_gltf(
+            output_path='/path/to/check/dem_z.glb',
+            location_ref=xmdf
+        )
+
+        .. image:: ../assets/images/xmdf_dem_z_gltf_blender.png
+            :alt: XMDF DEM_Z and Max Water Level in Blender
+            :align: center
+            :width: 720px
+
+        .. image:: ../assets/images/xmdf_combined_dem_z_water_level_gltf_blender.png
+            :alt: XMDF DEM_Z and Max Water Level in Blender
+            :align: center
+            :width: 720px
+
+        | In the above example, we convert the ``DEM_Z`` grid to a mesh, then export it to a glTF file. We provide
+          the ``location_ref`` argument so that the exported location matches the XMDF mesh location in 3D space. This
+          is required as the origin (0, 0) of the output geometry is moved to the centre of the bounding box by default.
+          Since the DEM_Z grid is not guaranteed to have the same extent as the XMDF mesh, we need to provide the
+          ``location_ref`` argument to ensure the geometry is aligned correctly.
         """
         if not hasattr(self._driver, 'to_gltf'):
             raise NotImplementedError('The current driver does not support exporting to glTF format.')
@@ -1033,12 +1102,17 @@ class Mesh(MapOutput):
         vertex_colour : Array[str], optional
             The provided data types will be exported into the mesh vertex colours. This allows a maximum of 3 data types
             only, one in the red channel, blue channel, and green channel. Vector types require 2 channels and should
-            use a suffix with either ``"-x"`` or ``"-y"`` (e.g. ``"Vector Velocity-x"`` for the x vector component). The
-            data types will be re-mapped to the 0-1 range for the colour channels by using the following
-            formula ``packed_value = (value - value_min) / (value_max - value_min)``. The ``value_min`` and `value_max``
-            are obtained using the :meth:`minimum()<pytuflow.XMDF.minimum>` and :meth:`maximum()<pytuflow.XMDF.maximum>`
-            methods. An example usage would be ``["Depth", "Vector Velocity-x", "Vector Velocity-y"]`` to pack depth
-            into the red channel, velocity x into green, and velocity y into blue.
+            use a suffix with either ``"-x"`` or ``"-y"`` (e.g. ``"Vector Velocity-x"`` for the x vector component).
+
+            | The data types will be re-mapped to the 0-1 range for the colour channels by using the following formula
+
+            | ``packed_value = (value - value_min) / (value_max - value_min)``.
+
+            | The ``value_min`` and ``value_max`` are obtained using the :meth:`minimum()<pytuflow.XMDF.minimum>`
+              and :meth:`maximum()<pytuflow.XMDF.maximum>` methods.
+
+            | An example usage would be ``["Depth", "Vector Velocity-x", "Vector Velocity-y"]`` to pack depth into
+              the red channel, velocity x into green, and velocity y into blue.
         uv_projection_extent : Array[float], optional
             The extent to use for UV projection of textures onto the mesh. The format is
             ``(min_x, min_y, max_x, max_y)``. If not provided, the mesh bounding box will be used except for
@@ -1072,7 +1146,30 @@ class Mesh(MapOutput):
 
         Examples
         --------
-        Export
+        The examples below show videos of the exported Alembic files in `Blender <https://www.blender.org/>`_
+        for visualisation.
+
+        Export the water level from an XMDF result with depth and vector velocity as vertex colours:
+
+        >>> from pytuflow import XMDF
+        >>> xmdf = XMDF('/path/to/result.xmdf')
+        >>> xmdf.to_alembic(
+            output_path='/path/to/output/water_level.abc',
+            mesh_geometry='water level',
+            vertex_colour=['depth', 'vector velocity-x', 'vector velocity-y'],
+            time_sampling=0.5,  # 0.5 second intervals
+            export_for='blender'
+        )
+
+        .. video:: ../_static/videos/xmdf_water_level_alembic_blender.mp4
+            :alt: XMDF Water Level Alembic in Blender
+            :align: center
+            :width: 720
+
+        .. image:: ../assets/images/depth_velocity_blender_material.png
+            :alt: Material setup for depth and velocity unpacking in Blender
+            :align: center
+            :width: 720px
         """
         if not hasattr(self._driver, 'to_alembic'):
             raise NotImplementedError('The current driver does not support exporting to Alembic format.')

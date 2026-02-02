@@ -40,6 +40,7 @@ extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.autosummary',
     'sphinx.ext.napoleon',
+    'sphinxcontrib.video',
     'tuflowlexer',
 ]
 autosummary_generate = True

@@ -27,8 +27,9 @@ class Grid(MapOutput, LineStringMixin, PointMixin):
     Parameters
     ----------
     fpath : PathLike | dict
-        The file path to the grid file to load, or a dictionary containing grid data and metadata. The dictionary
-        should contain the following keys:
+        The file path to the grid file to load, or a dictionary containing grid data (as a ``np.ndarray``) and metadata.
+
+        If using a dictionary, the following keys should be present:
 
         - ``dx`` : float
         - ``dy`` : float
@@ -253,6 +254,45 @@ class Grid(MapOutput, LineStringMixin, PointMixin):
         return np.array(data).reshape(len(time_indexes), *data[0].shape)
 
     def to_mesh(self, base_topology: 'str | Grid | None' = None) -> GridMesh:
+        """Converts the grid to a :class:`GridMesh<pytuflow.GridMesh>` object, essentially converting the grid
+        data structure into a mesh data structure. This can be useful for exporting into other formats that can
+        only be done via a mesh class e.g. to a ``glTF`` file.
+
+        Parameters
+        ----------
+        base_topology : str | Grid | None, optional
+            The base topology to use for the mesh. It's a good idea to specify a base topology if the grid is
+            temporal or has multiple data types. If left as ``None``, the first static dataset found in the grid
+            will be used as the base topology.
+
+            If a string is provided, it is assumed to be a data type contained in the grid. For example, in a NetCDF
+            grid, this might be ``"max water level"``.
+
+            If another :class:`Grid<pytuflow.Grid>` object is provided, it will be used as the base topology. The
+            other grid should match the grid dimensions of the current grid. For example, the ``DEM_Z`` check file
+            from TUFLOW can be used as a base topology for a NetCDF grid output file to provide the static ground
+            elevation data and be used as the base mesh topology.
+
+        Returns
+        -------
+        GridMesh
+            The grid converted to a GridMesh object.
+
+        Examples
+        --------
+        Convert a maximum water level grid to a mesh:
+
+        >>> from pytuflow import Grid
+        >>> grid = Grid('/path/to/results/grid/Model_Max_h.tif')
+        >>> mesh = grid.to_mesh()
+
+        Convert a temporal NetCDF grid to a mesh using the DEM_Z check file as the base topology:
+
+        >>> from pytuflow import NCGrid, Grid
+        >>> res = NCGrid('/path/to/results/model_output.nc')
+        >>> grid = Grid('/path/to/check/DEM_Z.tif')
+        >>> mesh = res.to_mesh(base_topology=grid)
+        """
         if isinstance(base_topology, str):
             d = {'dx': self.dx, 'dy': self.dy, 'ncol': self.ncol, 'nrow': self.nrow, 'ox': self.ox, 'oy': self.oy,
                  'nodatavalue': self.no_data_value, 'data_type': base_topology, 'timesteps': -1, 'dtype': 'scalar',
@@ -755,12 +795,12 @@ class Grid(MapOutput, LineStringMixin, PointMixin):
 
     def curtain(self, locations: LineStringLocation, data_types: Union[str, list[str]],
                 time: TimeLike) -> pd.DataFrame:
-        """Not supported for ``Grid`` results. Raises a :code:`NotImplementedError`."""
+        """no-doc"""
         raise NotImplementedError(f'{__class__.__name__} does not support curtain plotting.')
 
     def profile(self, locations: PointLocation, data_types: Union[str, list[str]],
                 time: TimeLike, **kwargs) -> pd.DataFrame:
-        """Not supported for ``Grid`` results. Raises a :code:`NotImplementedError`."""
+        """no-doc"""
         raise NotImplementedError(f'{__class__.__name__} does not support vertical profile plotting.')
 
     @staticmethod
@@ -788,6 +828,7 @@ class Grid(MapOutput, LineStringMixin, PointMixin):
                  ncol: int,
                  *args, **kwargs
                  ) -> tuple[np.ndarray, np.ndarray]:
+        """no-doc"""
         cells = np.array([])
         intersections = np.array([])
         line = LineStringMixin._coerce_into_line(line)
@@ -816,6 +857,7 @@ class Grid(MapOutput, LineStringMixin, PointMixin):
                          nrow: int,
                          ncol: int,
                          ) -> tuple[np.ndarray, np.ndarray]:
+        """no-doc"""
         def clip_segment_to_aabb(x0_, y0_, x1_, y1_, xmin_, xmax_, ymin_, ymax_):
             dx = x1_ - x0_
             dy = y1_ - y0_

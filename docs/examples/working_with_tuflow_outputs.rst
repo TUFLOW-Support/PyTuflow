@@ -307,15 +307,18 @@ We can count the number of cells in each velocity range as defined by the user:
 
 The above calculation tells us that there are 5 cells with a maximum velocity between 2.5 m/s and 5.0 m/s and no cells with a maximum velocity above 5.0 m/s.
 
-A similar calculation could be performed on a difference surface to see how many cells exceed certain thresholds. As an example, using results from the example model dataset ``EG16_~s1~_001.tcf`` which contains two scenarios - "EXG" and "D01". It is assumed that both scenarios have been run and the results are available.
+Surface Differences
+^^^^^^^^^^^^^^^^^^^
 
-First load the results and extract the maximum water level surfaces for both scenarios:
+A similar calculation could be performed on a difference surface to see how many cells exceed certain thresholds. As an example, using results from the example model dataset ``EG16_~s1~_001.tcf`` which contains two scenarios - ``EXG`` and ``D01``. It is assumed that both scenarios have been run and the results are available.
+
+First load the results and extract the maximum water level surfaces for both scenarios. Because we are working with maximum water level, which is a static result, we can use any time value when extracting the surface. Here we use ``time=-1`` to indicate that it is a static result.
 
 .. code-block:: pycon
 
-    >>> ... # it is assumed you have run both scenarios and the results are available
     >>> exg = XMDF('/path/to/EG16_EXG_001.xmdf')
     >>> d01 = XMDF('/path/to/EG16_D01_001.xmdf')
+
     >>> exg_wl = exg.surface('max water level', time=-1)
     >>> d01_wl = d01.surface('max water level', time=-1)
 
@@ -325,6 +328,7 @@ We also need to consider inactive cells in either scenario. In this case, we wil
 
     >>> exg_z = exg.surface('bed level', time=-1)
     >>> d01_z = d01.surface('bed level', time=-1)
+
     >>> exg_wl.loc[~exg_wl['active'], 'value'] = exg_z.loc[~exg_wl['active'], 'value']
     >>> d01_wl.loc[~d01_wl['active'], 'value'] = d01_z.loc[~d01_wl['active'], 'value']
 
@@ -332,9 +336,16 @@ Now we perform the difference and then count the number of cells that exceed cer
 
 .. code-block:: pycon
 
-    >>> mask = exg_wl['active'] | d01_wl['active']
-    >>> diff_wl = d01_wl.loc[mask, 'value'] - exg_wl.loc[mask, 'value']
-    >>> bins = [min(diff_wl.min() - 0.1, -5), -2.5, -1.0, -0.5, -0.25, -0.1, 0, 0.1, 0.25, 0.5, 1.0, 2.5, max(diff_wl.max(), 5)]
+    >>> mask = exg_wl['active'] | d01_wl['active'] # combined mask
+
+    >>> diff_wl = d01_wl.loc[mask, 'value'] - exg_wl.loc[mask, 'value'] # difference
+
+    >>> bins = [
+          min(diff_wl.min() - 0.1, -5),
+          -2.5, -1.0, -0.5, -0.25, -0.1, 0, 0.1, 0.25, 0.5, 1.0, 2.5,
+          max(diff_wl.max(), 5)
+    ]
+
     >>> counts, _ = np.histogram(diff_wl, bins)
     >>> counts
     array([   0,    3,    5,   62,  110,  915, 3580, 2425,    6,   13,    0,
@@ -357,7 +368,10 @@ In the above histogram, we can see that there are a significant number of cells 
 .. code-block:: pycon
 
     >>> import geopandas as gpd
-    >>> gdf = gpd.GeoDataFrame(diff_wl, geometry=gpd.points_from_xy(exg_wl.loc[mask, 'x'], exg_wl.loc[mask, 'y']))
+    >>> gdf = gpd.GeoDataFrame(
+          diff_wl,
+          geometry=gpd.points_from_xy(exg_wl.loc[mask, 'x'], exg_wl.loc[mask, 'y'])
+    )
     >>> shp = gpd.read_file('/path/to/site_boundary.shp')
     >>> inters = gdf.geometry.interesects(shp.geometry.iloc[0])  # assuming only one polygon in shapefile
     >>> masked_diff = diff_wl.loc[~inters]

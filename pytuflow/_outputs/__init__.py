@@ -22,6 +22,7 @@ from .time_series import TimeSeries
 from .tabular_output import TabularOutput
 from .mesh import Mesh
 from .grid import Grid
+from .grid_mesh import GridMesh
 from .output import Output
 
 from .pymesh import FormatConvention

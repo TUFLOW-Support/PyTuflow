@@ -272,16 +272,6 @@ class NCGrid(Grid):
         with self._open():
             return super().section(locations, data_types, time)
 
-    def curtain(self, locations: LineStringLocation, data_types: Union[str, list[str]],
-                time: TimeLike) -> pd.DataFrame:
-        """Not supported for ``NCGrid`` results. Raises a :code:`NotImplementedError`."""
-        raise NotImplementedError(f'{__class__.__name__} does not support curtain plotting.')
-
-    def profile(self, locations: PointLocation, data_types: Union[str, list[str]],
-                time: TimeLike, **kwargs) -> pd.DataFrame:
-        """Not supported for ``NCGrid`` results. Raises a :code:`NotImplementedError`."""
-        raise NotImplementedError(f'{__class__.__name__} does not support vertical profile plotting.')
-
     @contextmanager
     def _open(self):
         if self._nc is not None:
