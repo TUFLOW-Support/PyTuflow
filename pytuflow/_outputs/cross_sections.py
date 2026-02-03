@@ -224,9 +224,9 @@ class CrossSections(TabularOutput):
         28      44.40290  37.7324
         """
         def loc(x: str) -> str:
-            if os.name != 'nt' and args and '\\' in str(x):
+            if os.name != 'nt' and '\\' in str(x):
                 x = x.replace('\\', '/')
-            elif os.name == 'nt' and args and '/' in str(x):
+            elif os.name == 'nt' and '/' in str(x):
                 x = x.replace('/', '\\')
             if '.csv:' in x.lower():
                 df_ = self.objs[self.objs['uid'].str.lower() == x.lower()][['id']]
