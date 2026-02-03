@@ -1,3 +1,4 @@
+import os
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Union
@@ -223,6 +224,10 @@ class CrossSections(TabularOutput):
         28      44.40290  37.7324
         """
         def loc(x: str) -> str:
+            if os.name != 'nt' and args and '\\' in str(x):
+                x = x.replace('\\', '/')
+            elif os.name == 'nt' and args and '/' in str(x):
+                x = x.replace('/', '\\')
             if '.csv:' in x.lower():
                 df_ = self.objs[self.objs['uid'].str.lower() == x.lower()][['id']]
                 if not df_.empty:

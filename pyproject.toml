@@ -17,8 +17,6 @@ dependencies = [
     "shapely>=2.0.7",
     "netcdf4>=1.7.2",
     "rasterio>=1.4.3",
-    "sphinx>=7.4.7",
-    "sphinx-book-theme>=1.1.4",
     "pygltflib>=1.16.5",
 ]
 requires-python = ">= 3.9"
