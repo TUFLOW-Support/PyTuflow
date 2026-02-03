@@ -109,10 +109,12 @@ class FVBCTideGISProvider:
                 linestring = shapely.MultiLineString(feat.geom.lines())
             else:
                 raise ValueError(f'Geometry type not supported for FV BC Tide GIS provider: {feat.geometry_type}')
+
             try:
                 is_projected = self._fo.crs().is_projected
             except Exception:
                 is_projected = self._fo.crs().IsProjected()
+
             if is_projected:
                 length = self.get_length(label)
                 chainages = chainages / length
@@ -141,14 +143,13 @@ class FVBCTideGISProvider:
         if self.is_empty():
             return b''
         feat = None
-        for f in self._lyr:
-            if f.GetField('ID').lower() == label.lower():
+        for f in self._fo:
+            if f['ID'].lower() == label.lower():
                 feat = f
                 break
         if feat is None:
             return b''
-        geom = feat.GetGeometryRef()
-        return bytes(geom.ExportToWkb())
+        return feat.geom.to_wkb()
 
     def get_length(self, label: str) -> float:
         """Returns the length of the GIS line in meters.
@@ -165,22 +166,33 @@ class FVBCTideGISProvider:
         if self.is_empty():
             return 0.
         feat = None
-        for f in self._lyr:
-            if f.GetField('ID').lower() == label.lower():
+        for f in self._fo:
+            if f['ID'].lower() == label.lower():
                 feat = f
                 break
         if feat is None:
             return 0.
-        geom = feat.GetGeometryRef()
-        linestring = shapely.from_wkb(bytes(geom.ExportToWkb()))
-        if not self._lyr.GetSpatialRef().IsProjected():
+
+        if feat.geometry_type == 'LineString':
+            linestring = shapely.LineString(feat.geom.lines()[0])
+        elif feat.geometry_type == 'MultiLineString':
+            linestring = shapely.MultiLineString(feat.geom.lines())
+        else:
+            raise ValueError(f'Geometry type not supported for FV BC Tide GIS provider: {feat.geometry_type}')
+
+        try:
+            is_projected = self._fo.crs().is_projected
+        except Exception:
+            is_projected = self._fo.crs().IsProjected()
+
+        if not is_projected:
             x, y = linestring.xy
             points = list(zip(x.tolist(), y.tolist()))
             return geom_util.calc_spherical_length(points)
         return linestring.length
 
-    def _geometry_type(self) -> int:
-        geom_type = self._lyr.GetGeomType()
-        while geom_type > 1000:
-            geom_type -= 1000
-        return geom_type
+    # def _geometry_type(self) -> int:
+    #     geom_type = self._fo.geometry_type
+    #     while geom_type > 1000:
+    #         geom_type -= 1000
+    #     return geom_type
