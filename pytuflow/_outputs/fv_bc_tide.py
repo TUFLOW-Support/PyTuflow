@@ -123,8 +123,6 @@ class FVBCTide(TimeSeries):
             raise FileNotFoundError(f'File not found: {self.nc_fpath}')
         if not self.node_string_gis_fpath.exists():
             raise FileNotFoundError(f'File not found: {self.node_string_gis_fpath}')
-        if not has_gdal:
-            raise ImportError('GDAL is required for FVBCTideProvider')
 
         # call before tpc_reader is initialised to give a clear error message if it isn't actually a .info time series file
         if not self._looks_like_this(self.nc_fpath):

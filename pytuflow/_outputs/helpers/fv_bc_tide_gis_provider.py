@@ -15,7 +15,6 @@ except ImportError:
     has_gdal = False
 
 from ..._pytuflow_types import PathLike, TuflowPath
-from ...gis import get_driver_name_from_extension
 from ...util import geom as geom_util
 
 
@@ -31,14 +30,11 @@ class FVBCTideGISProvider:
         """
         if not has_shapely:
             raise ImportError('Shapely is not installed, unable to initialise FVBCTideGISProvider class.')
-        if not has_gdal:
-            raise ImportError('GDAL is not installed, unable to initialise FVBCTideGISProvider class.')
         #: Path: Path to the GIS file.
         self.path = path
         #: str: Name of the GIS layer.
         self.name = None
-        self._ds = None
-        self._lyr = None
+        self._fo = None
         self._points = {}
 
     def __repr__(self) -> str:
@@ -48,13 +44,13 @@ class FVBCTideGISProvider:
         """Open the GIS Node String file."""
         p = TuflowPath(self.path)
         self.name = p.lyrname
-        driver_name = get_driver_name_from_extension('vector', p.dbpath.suffix)
-        self._ds = ogr.GetDriverByName(driver_name).Open(str(p.dbpath))
-        self._lyr = self._ds.GetLayer(self.name)
+        self._fo = p.open_gis()
 
     def close(self) -> None:
         """Closes the GIS Node String file."""
-        self._ds, self._lyr = None, None
+        if self._fo is not None:
+            self._fo.close()
+            self._fo = None
 
     def is_empty(self) -> bool:
         """Returns True if the GIS file is empty.
@@ -63,7 +59,7 @@ class FVBCTideGISProvider:
         -------
         bool
         """
-        return self._lyr.GetFeatureCount() == 0
+        return self._fo.feature_count() == 0
 
     def is_fv_tide_bc(self) -> bool:
         """Returns True if the GIS file looks like a FV node string boundary layer.
@@ -72,7 +68,7 @@ class FVBCTideGISProvider:
         -------
         bool
         """
-        return self._geometry_type() in [ogr.wkbLineString, ogr.wkbMultiLineString]
+        return self._fo.geometry_type in ['LineString', 'MultiLineString']
 
     def get_crs(self) -> str:
         """Returns the CRS of the GIS file in the form of AUTHORITY:CODE.
@@ -81,8 +77,7 @@ class FVBCTideGISProvider:
         -------
         str
         """
-        sr = self._lyr.GetSpatialRef()
-        return f'{sr.GetAuthorityName(None)}:{sr.GetAuthorityCode(None)}'
+        return self._fo.crs_auth()
 
     def get_ch_points(self, label: str, chainages: np.ndarray) -> np.ndarray:
         """Returns the chainage points for the given label.
@@ -102,15 +97,23 @@ class FVBCTideGISProvider:
             return np.array([])
         if self._points.get(label.lower()) is None:
             feat = None
-            for f in self._lyr:
-                if f.GetField('ID').lower() == label.lower():
+            for f in self._fo:
+                if f['ID'].lower() == label.lower():
                     feat = f
                     break
             if feat is None:
                 return np.array([])
-            geom = feat.GetGeometryRef()
-            linestring = shapely.from_wkb(bytes(geom.ExportToWkb()))
-            if not self._lyr.GetSpatialRef().IsProjected():
+            if feat.geometry_type == 'LineString':
+                linestring = shapely.LineString(feat.geom.lines()[0])
+            elif feat.geometry_type == 'MultiLineString':
+                linestring = shapely.MultiLineString(feat.geom.lines())
+            else:
+                raise ValueError(f'Geometry type not supported for FV BC Tide GIS provider: {feat.geometry_type}')
+            try:
+                is_projected = self._fo.crs().is_projected
+            except Exception:
+                is_projected = self._fo.crs().IsProjected()
+            if is_projected:
                 length = self.get_length(label)
                 chainages = chainages / length
                 points = np.array([linestring.interpolate(x, normalized=True).xy for x in chainages])

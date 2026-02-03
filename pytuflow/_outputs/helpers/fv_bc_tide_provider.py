@@ -32,8 +32,6 @@ class FVBCTideProvider:
     def __init__(self, nc_path: PathLike, gis_path: PathLike, use_local_time: bool = True) -> None:
         if not has_shapely:
             raise ImportError('Shapely is required for FVBCTideProvider')
-        if not has_gdal:
-            raise ImportError('GDAL is required for FVBCTideProvider')
         self.display_name = ''
         self.reference_time = None
         self.nc = FVBCTideNCProvider(nc_path, use_local_time)
