@@ -161,16 +161,16 @@ class QgisDataExtractor(PyDataExtractor):
                 result.append(vals)
         return np.hstack(result).reshape(shape)
 
-    def maximum(self, data_type: str, depth_averaging: str = None) -> float:
-        if self._is_dat or depth_averaging is not None:  # not guaranteed to consider inactive cells or depth averaging, let it be calculated
+    def maximum(self, data_type: str, depth_averaging: str = None, split_vector_components: bool = False) -> float:
+        if self._is_dat or depth_averaging is not None and not split_vector_components:  # not guaranteed to consider inactive cells or depth averaging, let it be calculated
             raise NotImplementedError
         idx = self.find_group_index(data_type)
         if idx == -1:
             raise ValueError(f'Data type {data_type} not found in mesh output {self.mesh.stem}')
         return self.lyr.datasetGroupMetadata(QgsMeshDatasetIndex(idx)).maximum()
 
-    def minimum(self, data_type: str, depth_averaging: str = None) -> float:
-        if self._is_dat or depth_averaging is not None:  # not guaranteed to consider inactive cells or depth averaging, let it be calculated
+    def minimum(self, data_type: str, depth_averaging: str = None, split_vector_components: bool = False) -> float:
+        if self._is_dat or depth_averaging is not None and not split_vector_components:  # not guaranteed to consider inactive cells or depth averaging, let it be calculated
             raise NotImplementedError
         idx = self.find_group_index(data_type)
         if idx == -1:
