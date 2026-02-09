@@ -7,7 +7,7 @@ from .bbox import Bbox2D
 
 from . import depth_averaging
 
-from .engines import DatasetEngine, NCEngine, H5Engine
+from .engines import DatasetEngine, NCEngine, H5Engine, TwoDMEngine
 from .extractors import (PyDataExtractor, PyXMDFDataExtractor, PyNCMeshDataExtractor, PyDATDataExtractor,
                          QgisDataExtractor, GridMeshDataExtractor)
 from .mesh_geom import PyMeshGeometry, PyNCMeshGeometry, Py2dm, QgisMeshGeometry, GridMeshGeometry

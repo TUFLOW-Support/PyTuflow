@@ -6,14 +6,16 @@ from pathlib import Path
 import numpy as np
 
 from . import PyDataExtractor
-from .. import H5Engine, NCEngine
+from .. import H5Engine, NCEngine, TwoDMEngine
 
 
 class PyXMDFDataExtractor(PyDataExtractor):
     """Class for extracting data from XMDF files."""
 
     def __init__(self, fpath: str | Path, engine: str = None):
-        if (H5Engine.available() and engine is None) or (engine and engine.lower() == 'h5py'):
+        if Path(fpath).suffix.lower() == '.2dm':
+            self.engine = TwoDMEngine(fpath)
+        elif (H5Engine.available() and engine is None) or (engine and engine.lower() == 'h5py'):
             self.engine = H5Engine(fpath)
         elif (NCEngine.available() and engine is None) or (engine and engine.lower()) == 'netcdf4':
             self.engine = NCEngine(fpath)

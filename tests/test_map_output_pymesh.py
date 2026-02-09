@@ -16,6 +16,14 @@ def load_comparison_data(path):
 
 class TestXMDF(unittest.TestCase):
 
+    def test_load_2dm_only(self):
+        twodm = './tests/xmdf/run.2dm'
+        res = XMDF(twodm)
+        self.assertEqual('run', res.name)
+        self.assertEqual(['bed level'], res.data_types())
+        df = res.section('./tests/xmdf/section_line.shp', 'bed level', 0)
+        self.assertFalse(df.empty)
+
     def test_data_point(self):
         xmdf = './tests/xmdf/run.xmdf'
         res = XMDF(xmdf)

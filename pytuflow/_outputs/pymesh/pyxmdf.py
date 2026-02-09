@@ -30,7 +30,9 @@ class PyXMDF(PyMesh, Mesh3DMixin, GLTFMixin, AlembicMixin):
         else:
             self.geom = Py2dm(twodm)
 
-        if engine == 'qgis' or (engine is None and not self.external_engine_available() and self.qgis_available()):
+        if fpath.suffix.lower() == '.2dm':  # won't use netcdf4 or h5py
+            self.extractor = PyXMDFDataExtractor(fpath, None)
+        elif engine == 'qgis' or (engine is None and not self.external_engine_available() and self.qgis_available()):
             if not self.qgis_available():
                 raise ValueError("QGIS python bindings not found.")
             if not self.qgis_initialized():

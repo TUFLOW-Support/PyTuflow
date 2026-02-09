@@ -144,7 +144,7 @@ class XMDF(Mesh):
         #     raise ImportError('XMDF requires QGIS python libraries or some data can be accessed with netCDF4.')
 
         if not Path(fpath).exists():
-            raise FileNotFoundError(f'XMDF file does not exist: {fpath}')
+            raise FileNotFoundError(f'File does not exist: {fpath}')
 
         if Path(fpath).suffix.lower() == '.sup':
             sup = SuperFile(fpath)
@@ -193,5 +193,5 @@ class XMDF(Mesh):
 
     @staticmethod
     def _looks_like_this(fpath: Path) -> bool:
-        return (fpath.suffix.lower() == '.xmdf' or
+        return (fpath.suffix.lower() == '.xmdf' or fpath.suffix.lower() == '.2dm' or
                 (fpath.suffix.lower() == '.sup' or Path(fpath.stem).suffix.lower() == '.xmdf'))

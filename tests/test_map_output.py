@@ -27,18 +27,36 @@ def pyqgis():
 
 class TestXMDF(unittest.TestCase):
 
+    def test_load_2dm_only_netcdf4_driver(self):
+        twodm = './tests/xmdf/run.2dm'
+        with pyqgis():
+            res = XMDF(twodm, driver='qgis geometry netcdf4')
+            self.assertEqual('run', res.name)
+            self.assertEqual(['bed level'], res.data_types())
+            df = res.section('./tests/xmdf/section_line.shp', 'bed level', 0)
+            self.assertFalse(df.empty)
+
+    def test_load_2dm_only_qgis_driver(self):
+        twodm = './tests/xmdf/run.2dm'
+        with pyqgis():
+            res = XMDF(twodm, driver='qgis geometry data extractor')
+            self.assertEqual('run', res.name)
+            self.assertEqual(['bed level'], res.data_types())
+            df = res.section('./tests/xmdf/section_line.shp', 'bed level', 0)
+            self.assertFalse(df.empty)
+
     def test_load_netcdf4_driver(self):
         xmdf = './tests/xmdf/run.xmdf'
         with pyqgis():
             res = XMDF(xmdf, driver='qgis geometry netcdf4')
-            self.assertEqual(res.name, 'run')
+            self.assertEqual( 'run', res.name)
             self.assertFalse(res.has_reference_time)
 
     def test_load_qgis_driver(self):
         xmdf = './tests/xmdf/run.xmdf'
         with pyqgis():
             res = XMDF(xmdf, driver='qgis geometry data extractor')
-            self.assertEqual(res.name, 'run')
+            self.assertEqual('run', res.name)
             self.assertFalse(res.has_reference_time)
 
     def test_times_netcdf4_driver(self):

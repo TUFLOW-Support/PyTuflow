@@ -26,7 +26,7 @@ class DatasetEngine:
 
     @contextlib.contextmanager
     def open(self) -> 'DatasetEngine':
-        pass
+        yield self
 
     def open_reader(self):
         pass
@@ -38,7 +38,7 @@ class DatasetEngine:
         pass
 
     def get_name(self) -> str:
-        pass
+        return self.fpath.stem
 
     def is_xmdf(self) -> bool:
         pass
