@@ -85,6 +85,7 @@ class FVBCTideNCProvider:
         self._timevar = 'local_time' if self.use_local_time else 'time'
         self._get_units()
         self.labels = [self._strip_label(k) for k, v in self._nc.variables.items() if v.ndim == 2 and v.dimensions[0] == 'time']
+        self.labels = [x for x in self.labels if x.strip()]
 
     def is_empty(self) -> bool:
         """Returns True if the NC file is empty.

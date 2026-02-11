@@ -15,6 +15,10 @@ except ImportError:
     has_shapely = False
 
 
+from ...util import pytuflow_logging
+logger = pytuflow_logging.get_logger()
+
+
 class FVBCTideProvider:
     """Class for providing FV BC tide data to the FVBCTide result class.
 
@@ -50,6 +54,13 @@ class FVBCTideProvider:
         """Loads the data from the netCDF and GIS files."""
         self.nc.open()
         self.gis.open()
+        nc_labels = set(self.nc.labels)
+        gis_labels = set(self.gis.get_labels())
+        inter = nc_labels.intersection(gis_labels)
+        if len(inter) != len(nc_labels) or len(inter) != len(gis_labels):
+            logger.warning(
+                f'Boundary labels in netCDF and GIS files do not match. netCDF labels: {nc_labels if nc_labels else "{}"}, GIS labels: {gis_labels if gis_labels else "{}"}'
+            )
         self.name = Path(self.nc.path).stem
         self.display_name = f'{self.name}[TZ:{self.nc.tz}]'
         self.reference_time = self.nc.reference_time

@@ -492,6 +492,8 @@ class FVBCTide(TimeSeries):
         dt, start, end = np.nan, np.nan, np.nan
         for dtype, vals in self._time_series_data.items():
             for df1 in vals:
+                if df1.empty:
+                    continue
                 dt = np.round((df1.index[1] - df1.index[0]) * 3600., decimals=2)
                 start = df1.index[0]
                 end = df1.index[-1]

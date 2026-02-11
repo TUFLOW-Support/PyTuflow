@@ -1633,6 +1633,14 @@ class Test_FVBCTide(unittest.TestCase):
         lp = res.section('Ocean', 'h', 12083.9795)
         self.assertEqual((12, 4), lp.shape)
 
+    def test_label_mismatch(self):
+        nc = './tests/fv_bc_tide/GoC_Nodestrings_WGS84/GoC_Tide_20221001_20221031_UTC.nc'
+        ns = './tests/fv_bc_tide/GoC_Nodestrings_WGS84/2d_ns_North_Sea_ocean_boundary_001_L.shp'
+        expected_msgs = ['Boundary labels in netCDF and GIS files do not match. netCDF labels: {}, GIS labels: {\'North_Sea\'}']
+        with custom_log_handler.with_filter(expected_msgs) as custom_logger:
+            res = FVBCTide(nc, ns, use_local_time=False)
+            self.assertEqual(1, custom_logger.msg_count)
+
 
 class Test_CrossSections(unittest.TestCase):
 

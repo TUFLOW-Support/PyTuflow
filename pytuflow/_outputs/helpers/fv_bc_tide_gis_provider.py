@@ -79,6 +79,17 @@ class FVBCTideGISProvider:
         """
         return self._fo.crs_auth()
 
+    def get_labels(self) -> list[str]:
+        """Returns the list of boundary labels in the GIS file.
+
+        Returns
+        -------
+        list[str]
+        """
+        if self.is_empty():
+            return []
+        return [f['ID'] for f in self._fo]
+
     def get_ch_points(self, label: str, chainages: np.ndarray) -> np.ndarray:
         """Returns the chainage points for the given label.
 
