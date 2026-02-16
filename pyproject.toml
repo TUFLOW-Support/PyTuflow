@@ -49,6 +49,11 @@ include = [
   "pytuflow/_outputs/data/*.json",
 ]
 
+[pytest]
+filterwarnings = [
+    'error',
+    'ignore:numpy.ndarray size changed'
+]
 
 [project.urls]
 Homepage = "https://github.com/TUFLOW-Support/PyTuflow"
