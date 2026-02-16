@@ -4,7 +4,10 @@ from typing import Union
 from packaging.version import Version
 
 import numpy as np
-import pandas as pd
+try:
+    import pandas as pd
+except ImportError:
+    from .pymesh.stubs import pandas as pd
 try:
     from netCDF4 import Dataset
     has_netcdf4 = True

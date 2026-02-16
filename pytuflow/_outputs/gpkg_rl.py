@@ -2,7 +2,10 @@ import re
 import typing
 from typing import Union
 
-import pandas as pd
+try:
+    import pandas as pd
+except ImportError:
+    from .pymesh.stubs import pandas as pd
 from packaging.version import Version
 
 from .gpkg_2d import GPKG2D

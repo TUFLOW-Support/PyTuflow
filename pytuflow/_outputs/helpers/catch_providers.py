@@ -2,7 +2,10 @@ from datetime import datetime
 from pathlib import Path
 from typing import Union
 
-import pandas as pd
+try:
+    import pandas as pd
+except ImportError:
+    from ..pymesh.stubs import pandas as pd
 
 from .mesh_driver import MeshDriver
 from ..output import Output

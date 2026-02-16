@@ -1,7 +1,10 @@
 from datetime import datetime, timezone
 
 import numpy as np
-import pandas as pd
+try:
+    import pandas as pd
+except ImportError:
+    from .stubs import pandas as pd
 
 from . import (LineStringMixin, LineStringLike, PointMixin, PointLike, VertexDataMixin, CellDataMixin, Cache,
                PyMeshGeometry, PyDataExtractor, NCEngine, H5Engine, SoftLoadMixin, QgisMeshGeometry)

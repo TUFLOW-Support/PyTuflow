@@ -5,7 +5,10 @@ from collections import OrderedDict
 from packaging.version import Version
 
 import numpy as np
-import pandas as pd
+try:
+    import pandas as pd
+except ImportError:
+    from .pymesh.stubs import pandas as pd
 
 from .gpkg_base import GPKGBase
 from .helpers.tpc_reader import TPCReader

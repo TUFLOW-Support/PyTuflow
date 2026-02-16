@@ -2,7 +2,10 @@ from abc import abstractmethod
 from datetime import timedelta, datetime
 
 import numpy as np
-import pandas as pd
+try:
+    import pandas as pd
+except ImportError:
+    from .pymesh.stubs import pandas as pd
 
 from .tabular_output import TabularOutput
 from ..util import misc

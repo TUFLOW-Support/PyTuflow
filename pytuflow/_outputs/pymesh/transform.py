@@ -1,7 +1,10 @@
 import typing
 
 import numpy as np
-import pandas as pd
+try:
+    import pandas as pd
+except ImportError:
+    from .stubs import pandas as pd
 from packaging.version import Version
 
 NUMPY_VERSION = Version(np.__version__)

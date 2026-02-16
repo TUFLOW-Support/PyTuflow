@@ -4,7 +4,10 @@ from pathlib import Path
 from typing import Union
 
 import numpy as np
-import pandas as pd
+try:
+    import pandas as pd
+except ImportError:
+    from .pymesh.stubs import pandas as pd
 
 from .helpers.mesh_driver_qgis import QgisMeshDriver
 from .helpers.mesh_driver_nc import NCMeshDriver

@@ -3,7 +3,10 @@ from pathlib import Path
 from typing import Generator
 
 import numpy as np
-import pandas as pd
+try:
+    import pandas as pd
+except ImportError:
+    from ..pymesh.stubs import pandas as pd
 
 from .mesh_driver import MeshDriver, DatasetGroup
 from ..._pytuflow_types import TimeLike

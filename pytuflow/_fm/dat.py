@@ -2,7 +2,10 @@ import typing
 from collections import OrderedDict
 from pathlib import Path
 
-import pandas as pd
+try:
+    import pandas as pd
+except ImportError:
+    from .._outputs.pymesh.stubs import pandas as pd
 
 from . import DAT, Handler
 

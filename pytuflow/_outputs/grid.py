@@ -4,7 +4,10 @@ from datetime import datetime
 from typing import Union
 
 import numpy as np
-import pandas as pd
+try:
+    import pandas as pd
+except ImportError:
+    from .pymesh.stubs import pandas as pd
 
 from .helpers.grid_line import GridLine
 from .grid_mesh import GridMesh

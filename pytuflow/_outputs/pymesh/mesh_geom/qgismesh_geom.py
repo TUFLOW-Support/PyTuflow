@@ -3,7 +3,10 @@ from collections import OrderedDict
 from pathlib import Path
 
 import numpy as np
-import pandas as pd
+try:
+    import pandas as pd
+except ImportError:
+    from ..stubs import pandas as pd
 
 try:
     from qgis.core import (QgsApplication, QgsMesh, QgsMeshLayer, QgsMeshSpatialIndex, QgsPoint,

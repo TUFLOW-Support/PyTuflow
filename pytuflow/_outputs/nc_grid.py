@@ -4,7 +4,10 @@ from pathlib import Path
 from typing import Union, Generator
 
 import numpy as np
-import pandas as pd
+try:
+    import pandas as pd
+except ImportError:
+    from .pymesh.stubs import pandas as pd
 
 from ..results import ResultTypeError
 from .map_output import PointLocation, LineStringLocation

@@ -1,5 +1,8 @@
 import numpy as np
-import pandas as pd
+try:
+    import pandas as pd
+except ImportError:
+    from ..stubs import pandas as pd
 try:
     import vtk
 except ImportError:

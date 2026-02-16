@@ -3,7 +3,10 @@ import re
 from typing import TextIO
 
 import numpy as np
-import pandas as pd
+try:
+    import pandas as pd
+except ImportError:
+    from ..pymesh.stubs import pandas as pd
 
 
 class HydTablesChannelProvider:

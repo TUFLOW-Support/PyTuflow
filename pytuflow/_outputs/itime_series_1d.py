@@ -1,7 +1,10 @@
 from abc import ABC, abstractmethod
 from typing import Union
 
-import pandas as pd
+try:
+    import pandas as pd
+except ImportError:
+    from .pymesh.stubs import pandas as pd
 
 from .helpers.lp_1d import LP1D
 

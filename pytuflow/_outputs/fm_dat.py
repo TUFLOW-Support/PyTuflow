@@ -2,7 +2,10 @@ import typing
 from datetime import datetime, timezone
 from pathlib import Path
 
-import pandas as pd
+try:
+    import pandas as pd
+except ImportError:
+    from .pymesh.stubs import pandas as pd
 
 from .tabular_output import TabularOutput
 from .._tmf import FmCrossSectionDatabaseDriver

@@ -3,8 +3,10 @@ import typing
 from pathlib import Path
 
 import numpy as np
-import pandas as pd
-from numpy.ma.core import masked
+try:
+    import pandas as pd
+except ImportError:
+    from ..stubs import pandas as pd
 
 try:
     import pyvista as pv
