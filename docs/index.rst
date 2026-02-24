@@ -110,6 +110,11 @@ Optimised TPC Output
 
 Significant speed up for loading TPC results from a model that contains a lot of channels (in the order of > 500). For example, a test was run on a model that contained approximately 5,000 pipes, and the load time went from 15 seconds to < 1 second.
 
+Installed TUFLOW Locations
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+PyTUFLOW will now automatically find installed TUFLOW versions. That is, versions of TUFLOW installed via the ``.msi`` installer on Windows or the ``.deb`` and ``.rpm`` packages on Linux. This means that users can use the :class:`TCFRunState.run()<pytuflow.TCFRunState.run>` method with installed versions of TUFLOW without needing to register the TUFLOW binary locations.
+
 Minor New Features
 ^^^^^^^^^^^^^^^^^^
 
