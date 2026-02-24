@@ -15,6 +15,9 @@ from .._pytuflow_types import PathLike, TimeLike
 from .helpers.catch_providers import CATCHProvider
 from ..results import ResultTypeError
 
+from ..util import pytuflow_logging
+logger = pytuflow_logging.get_logger()
+
 
 class CATCHJson(MapOutput):
     """Class for handling TUFLOW CATCH JSON output files.
@@ -651,17 +654,30 @@ class CATCHJson(MapOutput):
                 data_types = [data_types]
             data_types = [self._get_standard_data_type_name(x) for x in data_types]
         filter_by = '3d/timeseries' if averaging_method else 'timeseries'
+        has_data_types = []
+        share_index = True
         for provider in self._providers.values():
             if provider == self._idx_provider:
                 continue
-            if provider != list(self._providers.values())[-1]:
-                intersection = np.intersect1d(data_types, provider.data_types(filter_by)) if data_types else True
-            else:
-                intersection = True
-            if intersection:
-                df = provider.time_series(locations, data_types, time_fmt, averaging_method)
-            if not df.empty:
-                break
+            intersection = np.intersect1d(data_types, provider.data_types(filter_by)) if data_types else np.array(provider.data_types(filter_by))
+            if intersection.size:
+                has_data_types.extend(intersection.tolist())
+                df_ = provider.time_series(locations, intersection.tolist(), time_fmt, averaging_method)
+                if df.empty and not df_.empty:
+                    df = df_
+                elif not df.empty and not df_.empty:
+                    if np.intersect1d(df_.columns, df.columns).size:
+                        df_ = df_.drop(columns=np.intersect1d(df_.columns, df.columns))
+                    if not np.isclose(df.index, df_.index).all() and share_index:
+                        share_index = False
+                        df = df.reset_index()
+                    if not share_index:
+                        df_ = df_.reset_index()
+                    df = pd.concat([df, df_], axis=1)
+
+        no_data_types = [x for x in data_types if x not in has_data_types]
+        for dtype in no_data_types:
+            logger.warning(f'Invalid data type: {dtype}. Skipping.')
         return df
 
     def section(self, locations: LineStringLocation, data_types: Union[str, list[str]],
@@ -930,12 +946,24 @@ class CATCHJson(MapOutput):
         3       1.0  0.424264
         """
         df = pd.DataFrame()
+        if data_types:
+            if isinstance(data_types, str):
+                data_types = [data_types]
+            data_types = [self._get_standard_data_type_name(x) for x in data_types]
+        has_data_types = []
         for provider in self._providers.values():
             if provider == self._idx_provider:
                 continue
-            df = provider.profile(locations, data_types, time, interpolation)
-            if not df.empty:
-                break
+            intersection = np.intersect1d(data_types, provider.data_types()) if data_types else np.array(provider.data_types())
+            if intersection.size:
+                has_data_types.extend(intersection.tolist())
+                df_ = provider.profile(locations, intersection.tolist(), time, interpolation)
+                if df.empty and not df_.empty:
+                    df = df_
+                elif not df.empty and not df_.empty:
+                    if np.intersect1d(df_.columns, df.columns).size:
+                        df_ = df_.drop(columns=np.intersect1d(df_.columns, df.columns))
+                    df = pd.concat([df, df_], axis=1)
         return df
 
     def _load_json(self, fpath: PathLike | str):
