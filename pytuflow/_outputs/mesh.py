@@ -1004,12 +1004,7 @@ class Mesh(MapOutput):
             :align: center
             :width: 720px
 
-        | In the above example, we don't need to specify the ``mesh_geometry`` argument since the bed elevation is
-          the mesh geometry, which is the default data type used when exporting. The vertex colours will also default
-          to the mesh geometry if not specified. In the above example, the red channel of the vertex colours will
-          represent the bed elevation values in a 0-1 range. The blue and green channels will be empty (i.e. zeros).
-
-        Export the maximum water level with depth as vertex colours:
+        | Export the maximum water level with the depth results in the vertex colours:
 
         >>> xmdf.to_gltf(
             output_path='/path/to/output/max_water_level.glb',
@@ -1022,13 +1017,8 @@ class Mesh(MapOutput):
             :align: center
             :width: 720px
 
-        | In the above example, the depth values will be packed into the red channel of the vertex colours in a 0-1 range.
-          They can be unpacked in the visualisation software by reversing the formula used to pack the values. In most
-          instances for depth, this will be ``value = packed_value * max_depth`` where ``max_depth`` is the value returned
-          from ``xmdf.maximum('max depth')``.
-
-        We could also use the bed elevation from the ``DEM_Z`` check file since this will have a higher resolution
-        than the mesh geometry.
+        | Export ``DEM_Z`` check file and use the XMDF result as a location reference so that they will align in
+          local space.
 
         >>> from pytuflow import Grid
         >>> dem_z = Grid('/path/to/check/DEM_Z.tif')
@@ -1046,12 +1036,6 @@ class Mesh(MapOutput):
             :alt: XMDF DEM_Z and Max Water Level in Blender
             :align: center
             :width: 720px
-
-        | In the above example, we convert the ``DEM_Z`` grid to a mesh, then export it to a glTF file. We provide
-          the ``location_ref`` argument so that the exported location matches the XMDF mesh location in 3D space. This
-          is required as the origin (0, 0) of the output geometry is moved to the centre of the bounding box by default.
-          Since the DEM_Z grid is not guaranteed to have the same extent as the XMDF mesh, we need to provide the
-          ``location_ref`` argument to ensure the geometry is aligned correctly.
         """
         if not hasattr(self._driver, 'to_gltf'):
             raise NotImplementedError('The current driver does not support exporting to glTF format.')
