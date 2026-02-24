@@ -124,6 +124,7 @@ Minor New Features
 - ``direction_of_velocity`` and ``direction_of_unit_flow`` are now recognised as separate scalar datasets. Previously, these would be assumed to be combined with the velocity and unit flow magnitude datasets respectively and then treated as a vector dataset. This change allows the datasets to be treated separately and the available datasets align more closely with what is in the NCGrid format. This also allows users to plot the direction datasets as scalar datasets.
 - Calculated offsets in the :meth:`section()<pytuflow.NCMesh.section>` and :meth:`curtain()<pytuflow.NCMesh.curtain>` methods will now return ellipsoid distances if the results are using spherical coordinates.
 - Added :meth:`Mesh.data_point()<pytuflow.XMDF.data_point>` method for extracting a single data point at a given time and location for mesh outputs.
+- :meth:`CATCHJson.time_series()<pytuflow.CATCHJson.time_series>` and :meth:`CATCHJson.profile()<pytuflow.CATCHJson.profile>` methods can now return results from multiple locations if the locations fall within different result domains (e.g. one point could sit within the TUFLOW HPC catchment result and the other within the 2D receiving TUFLOW FV receiving result).
 
 Bug Fixes
 ^^^^^^^^^
@@ -136,6 +137,7 @@ Bug Fixes
 - Fixed a bug for Quadtree results prior to the TUFLOW ``2026.0.0`` release. There was a bug in TUFLOW (fixed in ``2026.0.0``) where Quadtree hardcoded PO geometry types to "R" (region/polygon) in the ``plot/GIS/PLOT.csv`` file. This resulted in a downstream bug in PyTUFLOW when using any geometry filters in methods such as :meth:`data_types()<pytuflow.TPC.data_types>`. PyTUFLOW has been updated to double check the geometry types on load if encountering "R" geometries so results from TUFLOW versions prior to ``2026.0.0`` can still be used.
 - Fixed a bug for :class:`GPKG2D<pytuflow.GPKG2D>` and :class:`GPKGRL<pytuflow.GPKGRL>` classes where using a ``"polygon"`` filter in either the :meth:`data_types()<pytuflow.GPKG2D.data_types>` or :meth:`ids()<pytuflow.GPKG2D.ids>` methods would return an empty list even if there were PO or RL polygons in the results.
 - Fixed a bug for :meth:`section()<pytuflow.XMDF.section>` and :meth:`curtain()<pytuflow.XMDF.curtain>` methods for Quadtree results when the line intersected transition zones which could cause additional points to be added to the resulting DataFrame with ``NaN`` values.
+- Fixed a bug for :meth:`CATCHJson.time_series()<pytuflow.CATCHJson.time_series>` method that incorrectly report an invalid data type if the location was not within the result domain that contained the data type (but the data type existed in another result domain). Example, ``"salinity"`` could exist within the TUFLOW FV receiving results but not in the TUFLOW HPC catchment results. If the location was within the TUFLOW HPC catchment results, then the method would incorrectly report that ``"salinity"`` was an invalid data type, even though it was a valid data type in the TUFLOW FV receiving results.
 
 1.0.4
 """""
