@@ -125,6 +125,7 @@ Minor New Features
 - Calculated offsets in the :meth:`section()<pytuflow.NCMesh.section>` and :meth:`curtain()<pytuflow.NCMesh.curtain>` methods will now return ellipsoid distances if the results are using spherical coordinates.
 - Added :meth:`Mesh.data_point()<pytuflow.XMDF.data_point>` method for extracting a single data point at a given time and location for mesh outputs.
 - :meth:`CATCHJson.time_series()<pytuflow.CATCHJson.time_series>` and :meth:`CATCHJson.profile()<pytuflow.CATCHJson.profile>` methods can now return results from multiple locations if the locations fall within different result domains (e.g. one point could sit within the TUFLOW HPC catchment result and the other within the 2D receiving TUFLOW FV receiving result).
+- Additional context can now be added when extracting results from the :class:`TPC<pytuflow.TPC>` result class. For example, when extracting :meth:`time_series()<pytuflow.TPC.time_series>` results, it's possible to add additional context such as the domain (e.g. ``"channel"`` or ``"rl"``) by adding this context to the location with a ``"/"`` delimiter e.g. ``"rl/flow_line"``.
 
 Bug Fixes
 ^^^^^^^^^
