@@ -95,7 +95,7 @@ class FVBCTide(TimeSeries):
     11          0       Ocean  29317.599609    -0.138558
     """
 
-    DOMAIN_TYPES = {}
+    DOMAIN_TYPES = {'fvbctide': ['fvbctide']}
     GEOMETRY_TYPES = {'2d': ['2d'], 'point': ['node', 'timeseries', 'point'],
                       'line': ['section', 'nodestring', 'line']}
     ATTRIBUTE_TYPES = {}
@@ -491,7 +491,7 @@ class FVBCTide(TimeSeries):
                 self._maximum_data[data_type] = pd.DataFrame({'max': max_, 'tmax': tmax})
 
     def _load_obj_df(self):
-        info = {'id': [], 'data_type': [], 'geometry': [], 'start': [], 'end': [], 'dt': []}
+        info = {'id': [], 'data_type': [], 'geometry': [], 'domain': [], 'start': [], 'end': [], 'dt': []}
         dt, start, end = np.nan, np.nan, np.nan
         for dtype, vals in self._time_series_data.items():
             for df1 in vals:
@@ -504,6 +504,7 @@ class FVBCTide(TimeSeries):
                     info['id'].append(col)
                     info['data_type'].append(dtype)
                     info['geometry'].append('point')
+                    info['domain'].append('fvbctide')
                     info['start'].append(start)
                     info['end'].append(end)
                     info['dt'].append(dt)
@@ -512,6 +513,7 @@ class FVBCTide(TimeSeries):
             info['id'].append(label)
             info['data_type'].append('water level')
             info['geometry'].append('line')
+            info['domain'].append('fvbctide')
             info['start'].append(start)
             info['end'].append(end)
             info['dt'].append(dt)

@@ -41,7 +41,7 @@ class HydTablesCheck(TabularOutput):
     >>> hyd_tables = HydTablesCheck('path/to/1d_ta_tables_check.csv')
     """
 
-    DOMAIN_TYPES = {}
+    DOMAIN_TYPES = {'hydraulictable': ['hydraulictable']}
     GEOMETRY_TYPES = {
         'xs': ['xs', 'cross-section', 'cross_section', 'cross section'],
         'processed': ['processed', 'proc'],
@@ -64,7 +64,7 @@ class HydTablesCheck(TabularOutput):
         #: :class:`HydTablesChannelProvider <pytuflow.outputs.helpers.hyd_tables_channel_provider.HydTablesChannelProvider>`: Channel data provider
         self._channels = HydTablesChannelProvider()
         #: pd.DataFrame: DataFrame with all the data combinations
-        self._objs = pd.DataFrame(columns=['id', 'uid', 'type', 'data_type', 'geometry'])
+        self._objs = pd.DataFrame(columns=['id', 'uid', 'type', 'data_type', 'geometry', 'domain'])
         #: int: Number of cross-sections
         self.cross_section_count = 0
         #: int: Number of channels
@@ -348,7 +348,7 @@ class HydTablesCheck(TabularOutput):
             d_['uid'].append(xs_.id)
             d_['type'].append(xs_.type)
 
-        d = {'id': [], 'type': [], 'uid': [], 'data_type': [], 'geometry': []}
+        d = {'id': [], 'type': [], 'uid': [], 'data_type': [], 'geometry': [], 'domain': []}
 
         # cross-sections
         for id_, xs in self._cross_sections.database.items():
@@ -365,6 +365,7 @@ class HydTablesCheck(TabularOutput):
                 add_xs_prop(d, xs)
                 d['data_type'].append(self._get_standard_data_type_name(col))
                 d['geometry'].append('processed')
+                d['domain'].append('hydraulictable')
 
         # channels
         for id_, ch in self._channels.database.items():
@@ -376,5 +377,6 @@ class HydTablesCheck(TabularOutput):
                 d['type'].append('')
                 d['data_type'].append(self._get_standard_data_type_name(col))
                 d['geometry'].append('channel')
+                d['domain'].append('hydraulictable')
 
         self._objs = pd.DataFrame(d)
