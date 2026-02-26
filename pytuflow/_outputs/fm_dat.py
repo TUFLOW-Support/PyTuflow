@@ -51,7 +51,7 @@ class DATCrossSections(TabularOutput):
     2  5.0  98.0     0.001
     3  5.0  99.0     0.001
     """
-    DOMAIN_TYPES = {}
+    DOMAIN_TYPES = {'crosssection': ['crosssection']}
     GEOMETRY_TYPES = {}
     ATTRIBUTE_TYPES = {'xz': ['xz'], 'manning n': ['manning n']}
     ID_COLUMNS = ['name']
@@ -267,7 +267,7 @@ class DATCrossSections(TabularOutput):
         self.name = self.fpath.stem
         self.objs = self._driver.load(self.fpath)
         self.objs.columns = self.objs.columns.str.lower()
-        self.objs['domain'] = '1d'
+        self.objs['domain'] = 'crosssection'
         self.objs['type'] = 'xz'
         df = pd.DataFrame(self.objs.loc[:, ['name', 'domain']].to_numpy(), index=self.objs.index, columns=['name', 'domain'])
         df['type'] = 'manning n'

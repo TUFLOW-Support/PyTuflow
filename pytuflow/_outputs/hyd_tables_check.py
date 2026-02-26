@@ -359,6 +359,7 @@ class HydTablesCheck(TabularOutput):
                     add_xs_prop(d, xs)
                     d['data_type'].append(self._get_standard_data_type_name(col))
                     d['geometry'].append('xs')
+                    d['domain'].append('hydraulictable')
             for col in xs.df_proc.columns:
                 if col in ['point', 'message']:
                     continue

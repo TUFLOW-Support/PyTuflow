@@ -47,7 +47,7 @@ class CrossSections(TabularOutput):
     >>> xs = CrossSections('path/to/1d_xs.shp')
     """
 
-    DOMAIN_TYPES = {}
+    DOMAIN_TYPES = {'crosssection': ['crosssection']}
     GEOMETRY_TYPES = {}
     ATTRIBUTE_TYPES = {'xz': ['xz'], 'hw': ['hw'], 'cs': ['cs'], 'bg': ['bg'], 'lc': ['lc'], 'na': ['na']}
     ID_COLUMNS = ['id', 'uid', 'source', 'filename', 'filepath']
@@ -295,7 +295,7 @@ class CrossSections(TabularOutput):
         return df
 
     def _load_objs(self):
-        d = {'id': [], 'filename': [], 'source': [], 'filepath': [], 'type': [], 'uid': [], 'ind': []}
+        d = {'id': [], 'filename': [], 'source': [], 'filepath': [], 'type': [], 'uid': [], 'ind': [], 'domain': []}
         df = pd.DataFrame(index=[x.source for x in self.cross_sections])
         for i, xs in enumerate(self.cross_sections):
             name = xs.col1 if xs.col1 else Path(xs.source).stem
@@ -310,4 +310,5 @@ class CrossSections(TabularOutput):
             d['type'].append(xs.type.lower())
             d['uid'].append(f'{xs.source}:{name}')
             d['ind'].append(i)
+            d['domain'].append('crosssection')
         self.objs = pd.DataFrame(d)
