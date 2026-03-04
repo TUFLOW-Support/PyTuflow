@@ -123,7 +123,7 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
         data_type = self.translate_data_type(data_type)[0]
         if self.cache.contains('times', data_type):
             return self.cache.get('times', data_type)
-        times = self.extractor.times(self.translate_data_type(data_type)[0])
+        times = self.extractor.times(data_type)
         self.cache.set(times, 'times', data_type)
         return times
 

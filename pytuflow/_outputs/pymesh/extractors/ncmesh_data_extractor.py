@@ -29,6 +29,7 @@ class PyNCMeshDataExtractor(PyDataExtractor):
     ]
 
     def __init__(self, fpath: str | Path, engine: str = None):
+        self.long_name_to_variable = {}
         if (H5Engine.available() and engine is None) or (engine and engine.lower() == 'h5py'):
             self.engine = H5Engine(fpath)
         elif (NCEngine.available() and engine is None) or (engine and engine.lower() == 'netcdf4'):
@@ -57,14 +58,18 @@ class PyNCMeshDataExtractor(PyDataExtractor):
         dtypes = []
         for variable in self.engine.iterate():
             if variable.lower() not in self.NON_RESULT_VARIABLES:
+                long_name = self.engine.get_property(variable, 'long_name')
                 if variable.lower().endswith('_x'):
-                    dtypes.append(variable[:-2])
+                    self.long_name_to_variable[long_name] = variable
+                    long_name = long_name[2:]
+                    variable = variable[:-2]
                 elif variable.lower().endswith('_y'):
+                    self.long_name_to_variable[long_name] = variable
                     continue
                 elif variable.lower() == 'zb':
                     continue
-                else:
-                    dtypes.append(variable)
+                self.long_name_to_variable[long_name] = variable
+                dtypes.append(long_name)
         return ['Bed Elevation'] + dtypes
 
     def reference_time(self, data_type: str) -> datetime | None:
