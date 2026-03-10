@@ -69,7 +69,7 @@ class HydTablesChannelProvider:
         if not self._stnd_col_names:
             self._stnd_col_names = [Output._get_standard_data_type_name(x) for x in df.columns]
         df.columns = self._stnd_col_names
-        df.drop(df.columns[df.columns.str.contains('unnamed')], axis=1, inplace=True)
+        df.drop(df.columns[df.columns.str.contains('unnamed', regex=False)], axis=1, inplace=True)
         if df.message.dtype == np.float64:
             df.message = df.message.astype(str)
             df.message = ''

@@ -49,7 +49,7 @@ class GridMesh(Mesh):
         self.name = self._grid.name
         self._info = self._grid._info.copy()
         self._info['data_type'] = self._driver.data_types()
-        mask = self._info['data_type'].str.contains('vector ')
+        mask = self._info['data_type'].str.contains('vector ', regex=False)
         self._info.loc[mask, 'type'] = 'vector'
 
     def curtain(self, *args, **kwargs):

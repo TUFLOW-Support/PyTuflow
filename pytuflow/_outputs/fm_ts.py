@@ -610,7 +610,10 @@ class FMTS(INFO):
             for res_type in driver.result_types:
                 stnd = self._get_standard_data_type_name(res_type)
                 self._nd_res_types.append(stnd)  # all results are stored on nodes in flood modeller results
-                df = driver.df.loc[:,driver.df.columns.str.contains(f'^{res_type}::')]
+                try:
+                    df = driver.df.loc[:,driver.df.columns.str.contains(f'^{res_type}::')]
+                except AttributeError:
+                    df = driver.df.loc[:, driver.df.columns.str.contains(f'{res_type}::', regex=False)]
                 df.columns = [x.split('::')[1] for x in df.columns]
                 self._time_series_data[stnd] = df
 

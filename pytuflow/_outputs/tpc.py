@@ -798,7 +798,7 @@ class TPC(INFO, ITimeSeries2D):
     @staticmethod
     def _post_process_channel_losses(df: pd.DataFrame, dtype: str) -> None | pd.DataFrame:
         d = {'Channel Entry Losses': 'Entry', 'Channel Additional Losses': 'Additional', 'Channel Exit Losses': 'Exit'}
-        cols = df.columns.str.contains(d[dtype])
+        cols = df.columns.str.contains(d[dtype], regex=False)
         if cols.any():
             df1 = df.loc[:,cols].copy()
             df1.columns = [' '.join(x.split(' ')[2:]) for x in df1.columns]
