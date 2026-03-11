@@ -595,7 +595,13 @@ class GPKG1D(GPKGBase, INFO):
                 self._channel_info['ispipe'] = (~np.isnan(self._channel_info['lbus_obvert']) & ~np.isnan(self._channel_info['lbds_obvert']))
                 self._channel_info['ispit'] = False
             else:
-                self._channel_info['ispipe'] = self._channel_info['flags'].str.match(r'.*[CR].*', False)
+                try:
+                    self._channel_info['ispipe'] = self._channel_info['flags'].str.match(r'.*[CR].*', False)
+                except AttributeError:
+                    self._channel_info['ispipe'] = (
+                        self._channel_info['flags'].str.contains('C', regex=False) |
+                        self._channel_info['flags'].str.contains('R', regex=False)
+                    )
                 self._channel_info['ispit'] = self._channel_info.index == self._channel_info['ds_node']
         else:
             self._channel_info = pd.DataFrame([], columns=columns)
