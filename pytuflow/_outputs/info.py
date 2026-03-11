@@ -701,9 +701,10 @@ class INFO(TimeSeries):
                 try:
                     self._channel_info['ispipe'] = self._channel_info['flags'].str.match(r'.*[CR].*', False)
                 except AttributeError:
-                    self._channel_info['ispipe'] = \
-                        self._channel_info['flags'].str.contains('C', regex=False) or \
+                    self._channel_info['ispipe'] = (
+                        self._channel_info['flags'].str.contains('C', regex=False) |
                         self._channel_info['flags'].str.contains('R', regex=False)
+                    )
             except Exception as e:
                 logger.warning(f'INFO._load_chan_info(): Error loading channel info: {e}')
 
