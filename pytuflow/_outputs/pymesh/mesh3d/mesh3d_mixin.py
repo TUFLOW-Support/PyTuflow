@@ -48,9 +48,9 @@ class Mesh3DMixin:
         if transform is not None:
             pos = transform.transform(self.geom.vertices)
         else:
-            pos = self.geom.vertices_local
+            pos = self.geom.vertices_local.copy()
         if mesh_geometry:
-            pos -= 0.05  # avoid z-fighting
+            pos[:,2] -= 0.05  # avoid z-fighting
             val, mask = self.surface(mesh_geometry, time, coord_scope='local', to_vertex=True)
             if val.shape[1] == 4:  # vector - convert to magnitude
                 pos[mask, 2] = np.linalg.norm(val[mask, 2:], axis=1)
