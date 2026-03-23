@@ -65,7 +65,7 @@
     "salinity": ["sal(?:\\s|_|-)?(?:levels?)?", "salinity(?:\\s|_|-)?(?:levels?)?", "salinities?"],
     "sediment fraction \\d concentration": ["sed(?:\\s|_|-)?\\d(?:\\s|_|-)?fraction(?:\\s|_|-)?concentrations?", "sed(?:\\s|_|-)?\\d(?:\\s|_|-)?fraction(?:\\s|_|-)?conc(?:s)?", "sed(?:\\s|_|-)?\\d(?:\\s|_|-)?fraction(?:\\s|_|-)?conc(?:s)?", "sed(?:\\s|_|-)?\\d(?:\\s|_|-)?fraction(?:\\s|_|-)?concs?"],
     "tracer \\d concentration": ["tracer?(?:\\s|_|-)?\\d(?:\\s|_|-)?concentrations?", "tracer?(?:\\s|_|-)?\\d(?:\\s|_|-)?conc(?:s)?", "tracer?(?:\\s|_|-)?\\d(?:\\s|_|-)?conc(?:s)?", "tracer?(?:\\s|_|-)?\\d(?:\\s|_|-)?concs?"],
-    "sediment 1 concentration": ["conc(?:\\s|_|-)?sed.*"],
+    "sediment fraction 1 concentration": ["conc(?:\\s|_|-)?sed.*"],
     "elevation": ["elevations?", "elevs?"],
     "point": ["points?", "pts?"],
     "manning n": ["mannings?(?:\\s|_|-)?n?", "n"],
