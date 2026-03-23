@@ -234,6 +234,8 @@ class VertexDataMixin:
         val = val[1:-1]
         dir_ = dir_[1:-1]
         active = ~np.isnan(ah[:,1])
+        if not active.any():
+            return np.array([])
 
         ch = np.repeat(points[:, 0], 2)[1:-1].reshape(-1, 2)[active].flatten()
         ch = ch[np.array([[i, i+1, i+1, i] for i in range(0, ch.shape[0], 2)]).flatten()]

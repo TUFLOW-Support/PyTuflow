@@ -835,6 +835,8 @@ class Mesh(MapOutput):
             for dtype in data_types:
                 if self._driver.DRIVER_SOURCE == 'python':
                     a = self._driver.curtain(line, dtype, time)
+                    if a.size == 0:
+                        continue
                     if a.shape[1] == 3:
                         df2 = pd.DataFrame(a, columns=['x', 'y', dtype])
                     else:
