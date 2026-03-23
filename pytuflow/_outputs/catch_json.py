@@ -873,6 +873,8 @@ class CATCHJson(MapOutput):
         """
         df = pd.DataFrame()
         locations = self._translate_line_string_location(locations)
+        data_types = self._figure_out_data_types(data_types, None)
+        filter_by = '/'.join(data_types)
 
         # don't want to deal with multiple locations when stitching results together
         for locname, line in locations.items():
@@ -881,6 +883,8 @@ class CATCHJson(MapOutput):
             df1 = pd.DataFrame()
             for provider in self._providers.values():
                 if provider == self._idx_provider:
+                    continue
+                if not provider.data_types(filter_by):
                     continue
                 df2 = provider.curtain(loc, data_types, time)
                 if not df2.empty:
