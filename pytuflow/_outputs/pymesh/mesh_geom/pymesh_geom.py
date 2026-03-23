@@ -555,7 +555,8 @@ class PyMeshGeometry(PointMixin, LineStringMixin):
             mask = np.flatnonzero(np.diff(np.diff((np.array(cell_ids) == -1).astype(int))) == -2)
             cell_ids[mask] = -1
             mask = np.arange(cell_ids.size) != mask + 1
-            return cell_ids[mask], points[mask], mid_cell_ids, mid_points
+            mask_mid = np.arange(mid_cell_ids.size) != outside_idx + 2
+            return cell_ids[mask], points[mask], mid_cell_ids[mask_mid], mid_points[mask_mid]
 
         # test if p1 or p2 are outside the mesh
         p1_outside = self.find_containing_cell(p1, scope='local') == -1
