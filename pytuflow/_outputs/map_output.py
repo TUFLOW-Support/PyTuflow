@@ -41,6 +41,8 @@ class MapOutput(Output, ABC):
         name1 = re.sub(r'\sMaximums$', '', name1, flags=re.IGNORECASE)
         name1 = re.sub(r'^hazard_', '', name1, flags=re.IGNORECASE)
         stnd_name = Output._get_standard_data_type_name(name1)
+        if stnd_name.startswith('conc wq_'):
+            stnd_name = stnd_name[5:]
         if re.findall(r'^(?:max\s)?vector', name, flags=re.IGNORECASE):
             stnd_name = f'vector {stnd_name}'
 
