@@ -735,20 +735,25 @@ class FMTS(INFO):
         elif self._gxy:
             for index, row in self._gxy.link_df.iterrows():
                 d['id'].append(str(index))
-                d['us_node'].append(row['ups_node'])
-                d['ds_node'].append(row['dns_node'])
-                ups_links = self._gxy.link_df[self._gxy.link_df['dns_node'] == row['ups_node']]
+                us_node = row['ups_node']
+                ds_node = row['dns_node']
+                d['us_node'].append(us_node)
+                d['ds_node'].append(ds_node)
+                ups_links = self._gxy.link_df[self._gxy.link_df['dns_node'] == us_node]
                 if not ups_links.empty:
                     d['us_chan'].append(str(ups_links.index.tolist()[0]))
                 else:
                     d['us_chan'].append('')
-                dns_links = self._gxy.link_df[self._gxy.link_df['ups_node'] == row['dns_node']]
+                dns_links = self._gxy.link_df[self._gxy.link_df['ups_node'] == ds_node]
                 if not dns_links.empty:
                     d['ds_chan'].append(str(dns_links.index.tolist()[0]))
                 else:
                     d['ds_chan'].append('')
                 d['ispipe'].append(False)
-                d['length'].append(0.)
+                us_xy = self.gxy.node_df.loc[us_node, ['x', 'y']].to_numpy()
+                ds_xy = self.gxy.node_df.loc[ds_node, ['x', 'y']].to_numpy()
+                length = np.linalg.norm(ds_xy - us_xy)
+                d['length'].append(length)
                 d['us_invert'].append(np.nan)
                 d['ds_invert'].append(np.nan)
                 d['lbus_obvert'].append(np.nan)
