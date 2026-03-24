@@ -756,8 +756,8 @@ class FMTS(INFO):
                 else:
                     d['ds_chan'].append('')
                 d['ispipe'].append(False)
-                us_xy = self.gxy.node_df.loc[us_node, ['x', 'y']].to_numpy()
-                ds_xy = self.gxy.node_df.loc[ds_node, ['x', 'y']].to_numpy()
+                us_xy = self._gxy.node_df.loc[us_node, ['x', 'y']].to_numpy()
+                ds_xy = self._gxy.node_df.loc[ds_node, ['x', 'y']].to_numpy()
                 length = np.linalg.norm(ds_xy - us_xy)
                 d['length'].append(length)
                 d['us_invert'].append(np.nan)
