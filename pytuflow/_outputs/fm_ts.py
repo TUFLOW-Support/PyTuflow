@@ -260,6 +260,8 @@ class FMTS(INFO):
                 dat_types.remove('pits')
             if 'bed level' in dat_types and not self._dat:
                 dat_types.remove('bed level')
+            if 'pipes' in dat_types and not self._dat:
+                dat_types.remove('pipes')
         return dat_types
 
     def maximum(self, locations: str | list[str] | None, data_types: str | list[str] | None,
