@@ -126,14 +126,22 @@ class FVBCTideGISProvider:
             except Exception:
                 is_projected = self._fo.crs().IsProjected()
 
-            if is_projected:
-                length = self.get_length(label)
-                chainages = chainages / length
-                points = np.array([linestring.interpolate(x, normalized=True).xy for x in chainages])
-            else:
-                points = np.array([linestring.interpolate(x).xy for x in chainages])
+            if not is_projected:
+                from ..pymesh import proj_transformer, Transform2D
+                cartesian_transformer, inverse = proj_transformer(feat.geom.lines()[0])
+                transform = Transform2D(proj_transformer=cartesian_transformer, proj_transformer_inverse=inverse, order='P')
+                linestring = shapely.LineString(transform.transform(feat.geom.lines()[0]))
+
+            length = self.get_length(label)
+            chainages = chainages / length
+            points = np.array([linestring.interpolate(x, normalized=True).xy for x in chainages])
+
             if len(points.shape) == 3:
                 points = points.reshape((points.shape[0], points.shape[1]))
+
+            if not is_projected:
+                points = transform.inverse().transform(points)
+
             chs = np.reshape(chainages, (chainages.size, 1))
             points = np.append(chs, points, axis=1)
             self._points[label.lower()] = points
