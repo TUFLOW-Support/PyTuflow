@@ -151,6 +151,8 @@ class FMTS(INFO):
 
         super().__init__(self._fpaths[0])
 
+        self._section_geom = 'node'
+
     @staticmethod
     def _looks_like_this(fpath: Path) -> bool:
         # docstring inherited

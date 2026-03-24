@@ -130,6 +130,7 @@ class INFO(TimeSeries):
         self._maximum_data = AppendDict()
         self._nd_res_types = []
         self._lp = None
+        self._section_geom = 'channel'
 
         self._loaded = False  # whether the results have been fully loaded
         self._initial_load()
@@ -299,6 +300,17 @@ class INFO(TimeSeries):
         """
         def remove_filter_part(s: str, part: str) -> str:
             return '/'.join([x for x in s.split('/') if x != part])
+
+        if self._section_geom == 'channel':
+            invalid_section_geom = ['node', 'point']
+        elif self._section_geom == 'node':
+            invalid_section_geom = ['channel', 'line']
+        else:
+            invalid_section_geom = []
+        if filter_by and 'section' in filter_by:
+            for geom in invalid_section_geom:
+                if geom in filter_by:
+                    return []
 
         self._load()
         if filter_by and ('section' in filter_by or 'static' in filter_by) and not 'timeseries' in filter_by:
