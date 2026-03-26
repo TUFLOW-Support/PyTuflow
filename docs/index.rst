@@ -35,7 +35,7 @@ Changelog
 1.1
 """
 
-Release date: XX XXX 2026
+Release date: 26 March 2026
 
 Removed QGIS Dependency Requirement
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -86,10 +86,6 @@ The tables below summarise benchmarking results for the different drivers. The t
   :file: assets/tables/v1.1_benchmarking_data_point.csv
   :header-rows: 1
 
-.. csv-table:: Time-series extraction (seconds)
-  :file: assets/tables/v1.1_benchmarking_time_series.csv
-  :header-rows: 1
-
 .. csv-table:: Section extraction (seconds)
   :file: assets/tables/v1.1_benchmarking_section.csv
   :header-rows: 1
@@ -101,7 +97,7 @@ The tables below summarise benchmarking results for the different drivers. The t
 Optimised NetCDF Grid Output
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The :class:`NCGrid<pytuflow.NCGrid>` output class has been optimised for speed when extracting data. In particular, the :meth:`NCGrid.section()<pytuflow.NCGrid.section>` has also been optimised when finding the cells along a linestring. The :meth:`NCGrid.section()<pytuflow.NCGrid.section>` method is now ~2x faster than in previous versions.
+The :class:`NCGrid<pytuflow.NCGrid>` output class has been optimised for speed when extracting data. In particular, the :meth:`NCGrid.section()<pytuflow.NCGrid.section>` has been optimised when finding the cells along a linestring. The :meth:`NCGrid.section()<pytuflow.NCGrid.section>` method is now ~2x faster than in previous versions.
 
 Some data caching has also been implemented for faster repeated calls to the same data type.
 
@@ -121,11 +117,13 @@ Minor New Features
 - Added Flood Modeller DAT cross-section output class - :class:`DATCrossSections<pytuflow.DATCrossSections>`. This is essentially a wrapper around the ``FmCrossSectionDatabaseDriver`` class and allows users to interact with Flood Modeller DAT files in an easier way via the ``Output`` class methods - e.g. :meth:`ids()<pytuflow.DATCrossSections.ids>`, :meth:`data_types()<pytuflow.DATCrossSections.data_types>`, :meth:`section()<pytuflow.DATCrossSections.section>`.
 - Added :attr:`has_reference_time<pytuflow.XMDF.has_reference_time>` property to all output classes. This property holds whether the loaded output contains an explicit reference time. The :attr:`reference_time<pytuflow.XMDF.reference_time>` property will always return a value and as a consequence cannot be used for this purpose.
 - Curtain plots will now return a fourth column for vector results that contain the vector projected onto the direction of the input linestring.
-- ``direction_of_velocity`` and ``direction_of_unit_flow`` are now recognised as separate scalar datasets. Previously, these would be assumed to be combined with the velocity and unit flow magnitude datasets respectively and then treated as a vector dataset. This change allows the datasets to be treated separately and the available datasets align more closely with what is in the NCGrid format. This also allows users to plot the direction datasets as scalar datasets.
+- ``direction_of_velocity`` and ``direction_of_unit_flow`` are now recognised as separate scalar datasets. Previously, these would be assumed to be combined with the velocity and unit flow magnitude datasets respectively and then treated as a vector dataset. This change allows the datasets to be treated separately and the available datasets align more closely with what is actually in the NetCDF file. This also allows users to plot the direction datasets as scalar datasets.
 - Calculated offsets in the :meth:`section()<pytuflow.NCMesh.section>` and :meth:`curtain()<pytuflow.NCMesh.curtain>` methods will now return ellipsoid distances if the results are using spherical coordinates.
-- Added :meth:`Mesh.data_point()<pytuflow.XMDF.data_point>` method for extracting a single data point at a given time and location for mesh outputs.
 - :meth:`CATCHJson.time_series()<pytuflow.CATCHJson.time_series>` and :meth:`CATCHJson.profile()<pytuflow.CATCHJson.profile>` methods can now return results from multiple locations if the locations fall within different result domains (e.g. one point could sit within the TUFLOW HPC catchment result and the other within the 2D receiving TUFLOW FV receiving result).
 - Additional context can now be added when extracting results from the :class:`TPC<pytuflow.TPC>` result class. For example, when extracting :meth:`time_series()<pytuflow.TPC.time_series>` results, it's possible to add additional context such as the domain (e.g. ``"channel"`` or ``"rl"``) by adding this context to the location with a ``"/"`` delimiter e.g. ``"rl/flow_line"``.
+- Comments in material files are now kept in the resulting DataFrame.
+- Adds a :attr:`line_number<pytuflow.SettingInput.line_number>` property to the :class:`Input<pytuflow.SettingInput>` class that represents the line in the control file the input command is on.
+- Adds a :meth:`Scope.pretty_print()<pytuflow.Scope.pretty_print>` method.
 
 Bug Fixes
 ^^^^^^^^^
@@ -139,6 +137,11 @@ Bug Fixes
 - Fixed a bug for :class:`GPKG2D<pytuflow.GPKG2D>` and :class:`GPKGRL<pytuflow.GPKGRL>` classes where using a ``"polygon"`` filter in either the :meth:`data_types()<pytuflow.GPKG2D.data_types>` or :meth:`ids()<pytuflow.GPKG2D.ids>` methods would return an empty list even if there were PO or RL polygons in the results.
 - Fixed a bug for :meth:`section()<pytuflow.XMDF.section>` and :meth:`curtain()<pytuflow.XMDF.curtain>` methods for Quadtree results when the line intersected transition zones which could cause additional points to be added to the resulting DataFrame with ``NaN`` values.
 - Fixed a bug for :meth:`CATCHJson.time_series()<pytuflow.CATCHJson.time_series>` method that incorrectly report an invalid data type if the location was not within the result domain that contained the data type (but the data type existed in another result domain). Example, ``"salinity"`` could exist within the TUFLOW FV receiving results but not in the TUFLOW HPC catchment results. If the location was within the TUFLOW HPC catchment results, then the method would incorrectly report that ``"salinity"`` was an invalid data type, even though it was a valid data type in the TUFLOW FV receiving results.
+- :class:`FMTS<pytuflow.FMTS>` output class no longer returns ``"bed level"`` and ``"pipes"`` from the :meth:`FMTS.data_types()<pytuflow.FMTS.data_types>` method if a ``.dat`` file is not provided.
+- Fixed instances where an integer key would cause an error or an empty return when getting a value from a database e.g. in a material file.
+- TUFLOW cross-section database values now return the cross-section offset as the index in the returned DataFrame.
+- :meth:`CATCHJson.time_series()<pytuflow.CATCHJson.time_series>` and :meth:`CATCHJson.profile()<pytuflow.CATCHJson.profile>` methods now search through all results. Previously, it would short circuit and return once it found any active results. This worked if only extracting from a single point, however if multiple points were passed in and they sat within different result domains, then the second point would return an invalid data type error since the method had already short circuited and returned the results from the first point.
+- Better handling of corrupt TUFLOW version caches.
 
 1.0.4
 """""
