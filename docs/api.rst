@@ -122,6 +122,7 @@ This page gives an overview of the public modules, classes, and functions within
    :nosignatures:
    :template: custom-class-template.rst
 
+   Scope
    TuflowBinaries
    results.ResultTypeError
 
