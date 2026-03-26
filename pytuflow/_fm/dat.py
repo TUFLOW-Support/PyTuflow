@@ -1,0 +1,47 @@
+import typing
+from collections import OrderedDict
+from pathlib import Path
+
+try:
+    import pandas as pd
+except ImportError:
+    from .._outputs.pymesh.stubs import pandas as pd
+
+from . import DAT, Handler
+
+
+class FMDAT(DAT):
+
+    def __init__(self, fpath: Path | str):
+        self._loaded = False
+        self.df = pd.DataFrame()
+        super().__init__(fpath)
+
+    def load(self, *args, **kwargs):
+        if not self._loaded:
+            super().load()
+            self._loaded = True
+            d = OrderedDict({
+                'ID': [],
+                'Name': [],
+                'Type': []
+            })
+            for xs in self.find_units('River'):
+                d['ID'].append(xs.uid)
+                d['Name'].append(xs.id)
+                d['Type'].append(xs.type)
+                xs.df = xs.xs
+                xs.name = xs.id
+                xs.sub_name = xs.sub_type
+            self.df = pd.DataFrame(d)
+            self.df.set_index('ID', inplace=True)
+        return self.df
+
+    def unit(self, id_: str, default: typing.Any = None, return_only_one: bool = False) -> Handler:
+        unit = super().unit(id_, default)
+        if return_only_one:
+            return unit[0] if isinstance(unit, list) else unit
+        return unit
+
+    def cross_sections(self) -> list[Handler]:
+        return list(self.find_units('River'))

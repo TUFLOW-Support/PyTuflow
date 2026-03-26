@@ -1,0 +1,2 @@
+class OArchive:
+    pass

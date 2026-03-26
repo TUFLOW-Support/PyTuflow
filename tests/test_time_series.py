@@ -9,7 +9,7 @@ import pytest
 
 from pytuflow.results import ResultTypeError
 from pytuflow._outputs.bc_tables_check import BCTablesCheck
-from pytuflow._fm import GXY
+from pytuflow._fm import GXY, FMDAT
 from pytuflow._outputs.hyd_tables_check import HydTablesCheck
 from pytuflow._outputs.info import INFO
 from pytuflow._outputs.tpc import TPC
@@ -19,6 +19,7 @@ from pytuflow._outputs.gpkg_rl import GPKGRL
 from pytuflow._outputs.fm_ts import FMTS
 from pytuflow._outputs.fv_bc_tide import FVBCTide
 from pytuflow._outputs.cross_sections import CrossSections
+from pytuflow._outputs.fm_dat import DATCrossSections
 from pytuflow import pytuflow_logging
 
 
@@ -70,6 +71,7 @@ class Test_Info_2013(unittest.TestCase):
         p = './tests/2013/M04_5m_001_1d.info'
         res = INFO(p)
         self.assertEqual('M04_5m_001', res.name)
+        self.assertFalse(res.has_reference_time)
 
     def test_not_info(self):
         p = './tests/2013/EG00_001_Scen_1+Scen_2.2dm.info'
@@ -184,6 +186,7 @@ class Test_TPC_2016(TestCase):
         p = './tests/2016/EG14_001.tpc'
         res = TPC(p)
         self.assertEqual('EG14_001', res.name)
+        self.assertFalse(res.has_reference_time)
 
     def test_not_tpc(self):
         p = './tests/2013/M04_5m_001_1d.info'
@@ -430,6 +433,7 @@ class Test_TPC_NC(TestCase):
         p = './tests/nc_ts/EG15_001.tpc'
         res = TPC(p)
         self.assertEqual('EG15_001', res.name)
+        self.assertFalse(res.has_reference_time)
 
     def test_times(self):
         msgs = ['TPC._load_time_series_nc(): No data found in NetCDF file for Flow Areas for domain 1D.']
@@ -501,6 +505,12 @@ class Test_TPC_2019(TestCase):
         p = './tests/2020/EG15_001.tpc'
         res = TPC(p)
         self.assertEqual('EG15_001', res.name)
+        self.assertFalse(res.has_reference_time)
+
+    def test_load_reference_time(self):
+        p = './tests/2020/EG07_1D2D_5m_001_CLA.tpc'
+        res = TPC(p)
+        self.assertTrue(res.has_reference_time)
 
     def test_load_po_same_name_diff_geom(self):
         p = './tests/tpc_same_name_diff_geom/EG02_010.tpc'
@@ -645,6 +655,7 @@ class Test_TPC_SWMM(TestCase):
         df = res.time_series('pipe1', 'flow')
         self.assertEqual((181, 1), df.shape)
 
+        self.assertTrue(res.has_reference_time)
 
 class Test_TPC_GPKG(TestCase):
 
@@ -652,6 +663,7 @@ class Test_TPC_GPKG(TestCase):
         p = './tests/tpc_gpkg/EG15_001.tpc'
         res = TPC(p)
         self.assertEqual('EG15_001', res.name)
+        self.assertTrue(res.has_reference_time)
 
     def test_times(self):
         p = './tests/tpc_gpkg/EG15_001.tpc'
@@ -756,6 +768,7 @@ class Test_TPC_Frankenmodel(TestCase):
         p = './tests/2021/frankenmodel.tpc'
         res = TPC(p)
         self.assertEqual('frankenmodel', res.name)
+        self.assertTrue(res.has_reference_time)
 
     def test_times(self):
         msgs = ['TPC._load_po_info(): Missing or invalid PLOT.csv. Using TPC to guess PO geometry.']
@@ -831,6 +844,7 @@ class Test_GPKG1D(TestCase):
         p = './tests/2023/M06_5m_003_SWMM_swmm_ts.gpkg'
         res = GPKG1D(p)
         self.assertEqual('M06_5m_003_SWMM', res.name)
+        self.assertTrue(res.has_reference_time)
 
     def test_load_2(self):
         p = './tests/2023/EG15_001_TS_1D.gpkg'
@@ -990,6 +1004,7 @@ class Test_GPKG2D(TestCase):
         p = './tests/tpc_gpkg/EG15_001_TS_2D.gpkg'
         res = GPKG2D(p)
         self.assertEqual('EG15_001', res.name)
+        self.assertTrue(res.has_reference_time)
 
     def test_times(self):
         p = './tests/tpc_gpkg/EG15_001_TS_2D.gpkg'
@@ -1027,6 +1042,7 @@ class Test_GPKGRL(TestCase):
         p = './tests/tpc_gpkg/EG15_001_TS_RL.gpkg'
         res = GPKGRL(p)
         self.assertEqual('EG15_001', res.name)
+        self.assertTrue(res.has_reference_time)
 
     def test_times(self):
         p = './tests/tpc_gpkg/EG15_001_TS_RL.gpkg'
@@ -1213,6 +1229,7 @@ class Test_HydTables(unittest.TestCase):
         p = './tests/hyd_tables/EG14_001_1d_ta_tables_check.csv'
         res = HydTablesCheck(p)
         self.assertEqual(res.name, 'EG14_001')
+        self.assertFalse(res.has_reference_time)
 
     def test_load_2(self):  # all cross-sections are in one CSV file
         p = './tests/hyd_tables/EG14_CONCAT_001_1d_ta_tables_check.csv'
@@ -1389,6 +1406,7 @@ class Test_BC_Tables(unittest.TestCase):
         p = './tests/bc_tables/EG00_001_2d_bc_tables_check.csv'
         res = BCTablesCheck(p)
         self.assertEqual('EG00_001', res.name)
+        self.assertFalse(res.has_reference_time)
 
     def test_load_1d_bc_tables(self):
         p = './tests/bc_tables/EG14_001_1d_bc_tables_check.csv'
@@ -1513,6 +1531,7 @@ class Test_FVBCTide(unittest.TestCase):
         res = FVBCTide(nc, ns)
         self.assertEqual('Cudgen_Tide', res.name)
         self.assertEqual('Cudgen_Tide[TZ:UTC]', res.name_tz)
+        self.assertTrue(res.has_reference_time)
 
     def test_not_fv_bc_tide(self):
         p = './tests/hyd_tables/EG14_001_1d_ta_tables_check.csv'
@@ -1614,6 +1633,14 @@ class Test_FVBCTide(unittest.TestCase):
         lp = res.section('Ocean', 'h', 12083.9795)
         self.assertEqual((12, 4), lp.shape)
 
+    def test_label_mismatch(self):
+        nc = './tests/fv_bc_tide/GoC_Nodestrings_WGS84/GoC_Tide_20221001_20221031_UTC.nc'
+        ns = './tests/fv_bc_tide/GoC_Nodestrings_WGS84/2d_ns_North_Sea_ocean_boundary_001_L.shp'
+        expected_msgs = ['Boundary labels in netCDF and GIS files do not match. netCDF labels: {}, GIS labels: {\'North_Sea\'}']
+        with custom_log_handler.with_filter(expected_msgs) as custom_logger:
+            res = FVBCTide(nc, ns, use_local_time=False)
+            self.assertEqual(1, custom_logger.msg_count)
+
 
 class Test_CrossSections(unittest.TestCase):
 
@@ -1622,6 +1649,7 @@ class Test_CrossSections(unittest.TestCase):
         res = CrossSections(p)
         self.assertEqual('1d_xs_EG14_001_L', res.name)
         self.assertEqual(55, res.cross_section_count)
+        self.assertFalse(res.has_reference_time)
 
     def test_ids(self):
         p = './tests/cross_sections/gis/1d_xs_EG14_001_L.shp'
@@ -1689,3 +1717,62 @@ class Test_CrossSections(unittest.TestCase):
         res = CrossSections(p)
         df = res.section(r'..\na\na_ABOVE_OLDMAN_0.0_WETLAND.csv:na_ABOVE_OLDMAN_0.0_WETLAND', 'na')
         self.assertEqual((20, 2), df.shape)
+
+
+class TestDatCrossSections(unittest.TestCase):
+
+    def test_load(self):
+        p = './tests/fm/zzn/FMT_M01_001.dat'
+        res = DATCrossSections(p)
+        self.assertEqual('FMT_M01_001', res.name)
+        self.assertEqual(51, res.cross_section_count)
+        self.assertFalse(res.has_reference_time)
+
+    def test_load_from_driver(self):
+        p = './tests/fm/zzn/FMT_M01_001.dat'
+        dat = FMDAT(p)
+        res = DATCrossSections(dat.fpath, driver=dat)
+        self.assertEqual('FMT_M01_001', res.name)
+        self.assertEqual(51, res.cross_section_count)
+        for xs in res.cross_sections:
+            has_easting_northing = 'easting' in xs.xs.columns and 'northing' in xs.xs.columns
+            self.assertTrue(has_easting_northing)
+
+    def test_ids(self):
+        p = './tests/fm/zzn/FMT_M01_001.dat'
+        res = DATCrossSections(p)
+        ids = res.ids()
+        self.assertEqual(51, len(ids))
+
+    def test_data_types(self):
+        p = './tests/fm/zzn/FMT_M01_001.dat'
+        res = DATCrossSections(p)
+        dtypes = res.data_types()
+        self.assertEqual(['xz', 'manning n'], dtypes)
+
+        dtypes = res.data_types('FC01.08')
+        self.assertEqual(['xz', 'manning n'], dtypes)
+
+        dtypes = res.data_types('section')
+        self.assertEqual(['xz', 'manning n'], dtypes)
+
+        dtypes = res.data_types('timeseries')
+        self.assertEqual([], dtypes)
+
+    def test_section(self):
+        p = './tests/fm/zzn/FMT_M01_001.dat'
+        res = DATCrossSections(p)
+        df = res.section('FC01.08', 'xz')
+        self.assertEqual((21, 2), df.shape)
+
+    def test_section_2(self):
+        p = './tests/fm/zzn/FMT_M01_001.dat'
+        res = DATCrossSections(p)
+        df = res.section('FC01.08', 'manning n')
+        self.assertEqual((21, 2), df.shape)
+
+    def test_section_3(self):
+        p = './tests/fm/zzn/FMT_M01_001.dat'
+        res = DATCrossSections(p)
+        df = res.section('FC01.08', ['xz', 'manning n'])
+        self.assertEqual((21, 3), df.shape)

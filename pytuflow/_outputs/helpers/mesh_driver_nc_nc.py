@@ -1,5 +1,3 @@
-import re
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Generator
 try:
@@ -20,6 +18,7 @@ class NCMeshDriverNC(NCMeshDriver):
         if self.valid:
             with Dataset(self.mesh) as nc:
                 self.has_inherent_reference_time, self.units, self.reference_time = self.parse_reference_time(nc['ResTime'].units)
+                self.spherical = hasattr(nc, 'spherical') and nc.spherical.lower() == 'true'
 
     def data_groups(self) -> Generator[DatasetGroup, None, None]:
         if not has_nc:
@@ -54,37 +53,3 @@ class NCMeshDriverNC(NCMeshDriver):
                 vert_lyr_count = 2 if 'NumCells3D' in var.dimensions else 1
 
                 yield DatasetGroup(name, type_, times, vert_lyr_count)
-
-    @staticmethod
-    def parse_reference_time(string):
-        if 'hour' in string:
-            units = 'h'
-        elif 'second' in string:
-            units = 's'
-        else:
-            units = string.split(' ')[0]
-
-        rt_string = string.split('since')[-1].strip() if 'since' in string else string
-        if parser != 'parser':
-            try:
-                rt = parser.parse(rt_string)
-                if rt.tzinfo is None:
-                    rt = rt.replace(tzinfo=timezone.utc)
-                return True, units, rt
-            except parser.ParserError:
-                pass
-
-        rt = None
-        if re.findall(r'\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}', string):
-            rt = datetime.strptime(re.findall(r'\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}', string)[0],
-                                                  '%Y-%m-%d %H:%M:%S')
-        elif re.findall(r'\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}', string):
-            rt = datetime.strptime(re.findall(r'\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}', string)[0],
-                                                  '%Y-%m-%dT%H:%M:%S')
-
-        if rt is not None:
-            if rt.tzinfo is None:
-                rt = rt.replace(tzinfo=timezone.utc)
-            return True, units, rt
-
-        return False, units, datetime(1990, 1, 1)  # a default value

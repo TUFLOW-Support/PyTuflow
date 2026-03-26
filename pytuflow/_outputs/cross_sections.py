@@ -1,8 +1,12 @@
+import os
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Union
 
-import pandas as pd
+try:
+    import pandas as pd
+except ImportError:
+    from .pymesh.stubs import pandas as pd
 
 from .tabular_output import TabularOutput
 from .._tmf import TuflowCrossSection
@@ -43,7 +47,7 @@ class CrossSections(TabularOutput):
     >>> xs = CrossSections('path/to/1d_xs.shp')
     """
 
-    DOMAIN_TYPES = {}
+    DOMAIN_TYPES = {'crosssection': ['crosssection']}
     GEOMETRY_TYPES = {}
     ATTRIBUTE_TYPES = {'xz': ['xz'], 'hw': ['hw'], 'cs': ['cs'], 'bg': ['bg'], 'lc': ['lc'], 'na': ['na']}
     ID_COLUMNS = ['id', 'uid', 'source', 'filename', 'filepath']
@@ -51,7 +55,7 @@ class CrossSections(TabularOutput):
     def __init__(self, fpath: PathLike):
         super().__init__(fpath)
 
-        self.reference_time = datetime(2000, 1, 1, tzinfo=timezone.utc)
+        self.reference_time = datetime(1990, 1, 1, tzinfo=timezone.utc)
         self.units = ''
         #: TuflowPath: The path to the source output file.
         self.fpath = TuflowPath(fpath)
@@ -173,10 +177,12 @@ class CrossSections(TabularOutput):
         >>> xs.data_types('/path/to/1d_CrossSection.csv')
         ['xz']
         """
-        if filter_by is not None and 'section' in filter_by:
-            filter_by = filter_by.replace('section', '').strip('/')
-            if not filter_by:
-                filter_by = None
+        for filt in ['section', 'line', 'static', 'na', 'point', 'static']:
+            if filter_by is not None and filt in filter_by:
+                filter_by = filter_by.replace(filt, '').strip('/')
+                if not filter_by:
+                    filter_by = None
+        filter_by = filter_by.strip('/') if filter_by is not None else None
         df, _ = self._filter(filter_by)
         return df['type'].unique().tolist()
 
@@ -221,6 +227,10 @@ class CrossSections(TabularOutput):
         28      44.40290  37.7324
         """
         def loc(x: str) -> str:
+            if os.name != 'nt' and '\\' in str(x):
+                x = x.replace('\\', '/')
+            elif os.name == 'nt' and '/' in str(x):
+                x = x.replace('/', '\\')
             if '.csv:' in x.lower():
                 df_ = self.objs[self.objs['uid'].str.lower() == x.lower()][['id']]
                 if not df_.empty:
@@ -285,7 +295,7 @@ class CrossSections(TabularOutput):
         return df
 
     def _load_objs(self):
-        d = {'id': [], 'filename': [], 'source': [], 'filepath': [], 'type': [], 'uid': [], 'ind': []}
+        d = {'id': [], 'filename': [], 'source': [], 'filepath': [], 'type': [], 'uid': [], 'ind': [], 'domain': []}
         df = pd.DataFrame(index=[x.source for x in self.cross_sections])
         for i, xs in enumerate(self.cross_sections):
             name = xs.col1 if xs.col1 else Path(xs.source).stem
@@ -300,4 +310,5 @@ class CrossSections(TabularOutput):
             d['type'].append(xs.type.lower())
             d['uid'].append(f'{xs.source}:{name}')
             d['ind'].append(i)
+            d['domain'].append('crosssection')
         self.objs = pd.DataFrame(d)

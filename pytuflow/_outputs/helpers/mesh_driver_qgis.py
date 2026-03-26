@@ -3,7 +3,10 @@ from pathlib import Path
 from typing import Generator
 
 import numpy as np
-import pandas as pd
+try:
+    import pandas as pd
+except ImportError:
+    from ..pymesh.stubs import pandas as pd
 
 from .mesh_driver import MeshDriver, DatasetGroup
 from ..._pytuflow_types import TimeLike
@@ -40,6 +43,7 @@ logger = pytuflow_logging.get_logger()
 
 
 class QgisMeshDriver(MeshDriver):
+    DRIVER_SOURCE = 'qgis'
 
     def __init__(self, mesh: Path):
         super().__init__(mesh)
@@ -52,6 +56,7 @@ class QgisMeshDriver(MeshDriver):
         self._point_results = []
         self._linestrings = []
         self._line_results = []
+        self._painter = None
 
     def __repr__(self):
         return f'<{self.__class__.__name__} {self.mesh.stem}>'
@@ -60,10 +65,16 @@ class QgisMeshDriver(MeshDriver):
         if not self.lyr:
             raise RuntimeError('Layer not loaded.')
 
-        for i in range(self.lyr.datasetGroupCount()):
+        dataset_group_count = self.lyr.datasetGroupCount()
+        i = -1
+        while dataset_group_count:
+            i += 1
             ind = QgsMeshDatasetIndex(i, 0)
             grp = self.lyr.datasetGroupMetadata(ind)
             name = grp.name()
+            if not name:
+                continue
+            dataset_group_count -= 1
             type_ = 'vector' if grp.isVector() else 'scalar'
             times = [self.lyr.datasetMetadata(QgsMeshDatasetIndex(ind.group(), i)).time() for i in range(self.lyr.datasetCount(ind))]
             vert_lyr_count = grp.maximumVerticalLevelsCount()
@@ -85,9 +96,16 @@ class QgisMeshDriver(MeshDriver):
         if not has_qgis:
             raise ImportError('QGIS python libraries are not installed or cannot be imported.')
 
-        for i in range(self.lyr.datasetGroupCount()):
+        target_dataset_count = self.lyr.datasetGroupCount()
+
+        i = -1
+        while target_dataset_count:
+            i += 1
             ind = QgsMeshDatasetIndex(i, 0)
             grp = self.lyr.datasetGroupMetadata(ind)
+            if not grp.name():
+                continue
+            target_dataset_count -= 1
             if grp.isTemporal():
                 if grp.referenceTime().isValid():
                     self.reference_time = grp.referenceTime().toPyDateTime()
@@ -126,13 +144,51 @@ class QgisMeshDriver(MeshDriver):
 
         return igrp
 
-    def time_series(self, name: str, point: Point, data_type: str, averaging_method: str | None = None) -> pd.DataFrame:
+    def maximum(self, data_type: str) -> float:
+        idx = self.group_index_from_name(data_type)
+        if idx == -1:
+            raise ValueError(f'Data type {data_type} not found in mesh output {self.mesh.stem}')
+        return self.lyr.datasetGroupMetadata(QgsMeshDatasetIndex(idx)).maximum()
+
+    def minimum(self, data_type: str) -> float:
+        idx = self.group_index_from_name(data_type)
+        if idx == -1:
+            raise ValueError(f'Data type {data_type} not found in mesh output {self.mesh.stem}')
+        return self.lyr.datasetGroupMetadata(QgsMeshDatasetIndex(idx)).minimum()
+
+    def data_point(self, point: Point, data_type: str, time: TimeLike, averaging_method: str | None = None, return_type: str = 'scalar') -> float | tuple[float, float]:
+        self.init_spatial_index()
+        igrp = self.group_index_from_name(data_type)
+
+        if isinstance(time, datetime):
+            reltime = (time - self.reference_time).total_seconds()
+        else:
+            reltime = time * 3600  # convert to seconds
+        time_interval = QgsInterval(reltime)
+        index = self.lyr.datasetIndexAtRelativeTime(time_interval, igrp)
+
+        vector = self.lyr.datasetGroupMetadata(QgsMeshDatasetIndex(igrp)).isVector()
+        if vector and return_type == 'vector':
+            res = self._vector_point_result(QgsPointXY(*point))
+        else:
+            res = self._scalar_point_result(QgsPointXY(*point))
+
+        value = res.value(index, averaging_method)
+        if vector and isinstance(value, tuple) and return_type == 'scalar':
+            value = np.sqrt(value[0] ** 2 + value[1] ** 2)
+        return value
+
+    def time_series(self, name: str, point: Point, data_type: str, averaging_method: str | None = None, return_type: str = 'scalar') -> pd.DataFrame:
         from ..map_output import MapOutput  # import here to avoid circular import
         self.init_spatial_index()
         igrp = self.group_index_from_name(data_type)
         stnd_name = MapOutput._get_standard_data_type_name(data_type)
 
-        res = self._scalar_point_result(QgsPointXY(*point))
+        vector = self.lyr.datasetGroupMetadata(QgsMeshDatasetIndex(igrp)).isVector()
+        if vector and return_type == 'vector':
+            res = self._vector_point_result(QgsPointXY(*point))
+        else:
+            res = self._scalar_point_result(QgsPointXY(*point))
 
         data = []
         valid = False
@@ -140,6 +196,8 @@ class QgisMeshDriver(MeshDriver):
             index = QgsMeshDatasetIndex(igrp, i)
             ds = self.dp.datasetMetadata(index)
             value = res.value(index, averaging_method)
+            if vector and isinstance(value, tuple) and return_type == 'scalar':
+                value = np.sqrt(value[0] ** 2 + value[1] ** 2)
             time = ds.time()
             data.append((time, value))
             if not np.isnan(value):
@@ -153,11 +211,12 @@ class QgisMeshDriver(MeshDriver):
         return df
 
     def section(self, linestring: list[Point], data_type: str, time: TimeLike,
-                averaging_method: str | None = None) -> pd.DataFrame:
+                averaging_method: str | None = None, return_type: str = 'scalar') -> pd.DataFrame:
         # noinspection DuplicatedCode
         df = pd.DataFrame()
 
-        mesh_line = MeshLine(self, linestring, data_type, time, return_magnitude=True)
+
+        mesh_line = MeshLine(self, linestring, data_type, time, self.spherical, return_magnitude=(return_type == 'scalar'))
 
         # initialise start/end locations - for TUFLOW CATCH where results need to be stamped onto each other
         self.start_end_locs.clear()
@@ -171,6 +230,8 @@ class QgisMeshDriver(MeshDriver):
         for location, mesh_result in mesh_line.results_along_line():
             # get value from mesh
             value = mesh_result.value(mesh_line.index, averaging_method)
+            if isinstance(value, tuple):
+                value = np.sqrt(value[0] ** 2 + value[1] ** 2)
             data_.append((location.dist1, value))
             if location.type == 'face':
                 data_.append((location.dist2, value))
@@ -202,7 +263,7 @@ class QgisMeshDriver(MeshDriver):
     def curtain(self, linestring: list[Point], data_type: str, time: TimeLike) -> pd.DataFrame:
         # noinspection DuplicatedCode
         df = pd.DataFrame()
-        mesh_line = MeshLine(self, linestring, data_type, time, vel_to_vec_vel=True)
+        mesh_line = MeshLine(self, linestring, data_type, time, self.spherical, vel_to_vec_vel=True)
 
         # initialise start/end locations - for TUFLOW CATCH where results need to be stamped onto each other
         self.start_end_locs.clear()
@@ -213,11 +274,17 @@ class QgisMeshDriver(MeshDriver):
         # loop through points and extract results
         data_ = []
         valid = False
+        line_vector = []
+        is_vector = False
         for i, (location, mesh_result) in enumerate(mesh_line.results_along_line()):
+            if mesh_result.DATA_TYPE == 'Vector':
+                is_vector = True
             if location.type == 'vertex' and (i == 0 or i == len(mesh_line.intersects.intersects)):  # ignore first and last points
                 continue
             order_switch = False
             for z, value in mesh_result.vertical_values(mesh_line.index, 'stepped'):
+                line_vector.append((location.intersect_vector_perp, location.intersect_vector))
+                line_vector.append((location.intersect_vector_perp, location.intersect_vector))
                 if order_switch:
                     data_.append((location.end_side, z, value))
                     data_.append((location.start_side, z, value))
@@ -249,10 +316,13 @@ class QgisMeshDriver(MeshDriver):
 
         if valid:
             df = pd.DataFrame(data_, columns=['x', 'y', data_type])
+            if is_vector:
+                line_vector = np.array(line_vector).reshape((-1, 4))
+                df[f'{data_type}_local'] = VectorMeshResult.convert_vector_to_local(df[data_type].to_numpy(), line_vector)
 
         return df
 
-    def profile(self, point: Point, data_type: str, time: TimeLike, interpolation: str) -> pd.DataFrame:
+    def profile(self, point: Point, data_type: str, time: TimeLike, interpolation: str, return_type: str = 'scalar') -> pd.DataFrame:
         self.init_spatial_index()
 
         # get dataset index based on the time
@@ -264,11 +334,17 @@ class QgisMeshDriver(MeshDriver):
         time_interval = QgsInterval(reltime)
         index = self.lyr.datasetIndexAtRelativeTime(time_interval, igrp)
 
-        res = self._scalar_point_result(QgsPointXY(*point))
+        vector = self.lyr.datasetGroupMetadata(QgsMeshDatasetIndex(igrp)).isVector()
+        if vector and return_type == 'vector':
+            res = self._vector_point_result(QgsPointXY(*point))
+        else:
+            res = self._scalar_point_result(QgsPointXY(*point))
 
         data_ = []
         valid = False
-        for z, value in res.vertical_values(index, interpolation):
+        for z, value in res.vertical_values(index, 'stepped'):
+            if isinstance(value, tuple):
+                value = np.sqrt(value[0] ** 2 + value[1] ** 2)
             data_.append((value, z))
             if not np.isnan(value):
                 valid = True
@@ -288,6 +364,14 @@ class QgisMeshDriver(MeshDriver):
             self._point_results.append(res)
         return res
 
+    def _vector_point_result(self, point: QgsPointXY) -> ScalarMeshResult:
+        res = VectorMeshResult(self.lyr, self.qgsmesh, self.dp, self.si, QgsPointXY(*point))
+        if res in self._point_results:
+            res = self._point_results[self._point_results.index(res)]
+        else:
+            self._point_results.append(res)
+        return res
+
 
 class MeshLine:
     """Class to represent extracting mesh results along a line-string. This class is used to perform
@@ -295,12 +379,13 @@ class MeshLine:
     the mesh result class.
     """
 
-    def __init__(self, driver: QgisMeshDriver, linestring: list[Point], data_type: str, time: TimeLike,
+    def __init__(self, driver: QgisMeshDriver, linestring: list[Point], data_type: str, time: TimeLike, spherical: bool,
                  return_magnitude: bool = False, **kwargs):
         self.driver = driver  # parent class
         self.linestring = QgsLineString([QgsPointXY(*pnt) for pnt in linestring])
         self.data_type = data_type
         self.time = time
+        self.spherical = spherical
         self.return_magnitude = return_magnitude
 
         self.driver.init_spatial_index()
@@ -323,7 +408,7 @@ class MeshLine:
         if linestring in self.driver._linestrings:
             self.intersects = self.driver._line_results[self.driver._linestrings.index(linestring)]
         else:
-            self.intersects = mesh_intersects(self.qgsmesh, self.si, linestring)
+            self.intersects = mesh_intersects(self.qgsmesh, self.si, linestring, self.spherical)
             self.driver._linestrings.append(linestring)
             self.driver._line_results.append(self.intersects)
 

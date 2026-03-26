@@ -3,7 +3,10 @@ from datetime import datetime
 from pathlib import Path
 from typing import Generator, Union
 
-import pandas as pd
+try:
+    import pandas as pd
+except ImportError:
+    from ..pymesh.stubs import pandas as pd
 
 from ..._fm import ZZN
 

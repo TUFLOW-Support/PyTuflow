@@ -5,7 +5,10 @@ from typing import Union
 import typing
 
 import numpy as np
-import pandas as pd
+try:
+    import pandas as pd
+except ImportError:
+    from .pymesh.stubs import pandas as pd
 from packaging.version import Version
 
 from .gpkg_base import GPKGBase
@@ -438,6 +441,7 @@ class GPKG2D(GPKGBase, TimeSeries, ITimeSeries2D):
             if reference_time is not None:
                 self.reference_time = reference_time
                 self.reference_time = self.reference_time.replace(tzinfo=timezone.utc)
+                self.has_reference_time = True
 
             if self._gis_layer_p_name:
                 cur.execute('SELECT COUNT(*) FROM Geom_P;')
@@ -492,7 +496,7 @@ class GPKG2D(GPKGBase, TimeSeries, ITimeSeries2D):
             for dtype in data_types:
                 dtype1 = 'max water level' if dtype.lower() == 'max water level' else self._get_standard_data_type_name(dtype)
                 storage[dtype1] = self._gpkg_time_series_extractor(cur, dtype, self._gis_layer_r_name)
-                self._geoms[dtype1] = 'poly'
+                self._geoms[dtype1] = 'polygon'
 
     @staticmethod
     def _load_maximums(time_series_storage: AppendDict, storage: AppendDict) -> None:
@@ -541,6 +545,6 @@ class GPKG2D(GPKGBase, TimeSeries, ITimeSeries2D):
         if self._gis_layer_r_name:
             cur.execute(f'SELECT ID FROM Geom_R WHERE ID = "{id_}";')
             if cur.fetchone():
-                return 'poly'
+                return 'polygon'
 
         return ''

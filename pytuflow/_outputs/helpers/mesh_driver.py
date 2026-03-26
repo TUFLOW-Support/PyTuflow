@@ -23,6 +23,7 @@ class MeshDriver:
         self.mesh = mesh
         self.reference_time = None
         self.has_inherent_reference_time = False
+        self.spherical = False
         self.valid = False
 
     def __repr__(self):

@@ -4,7 +4,10 @@ from pathlib import Path
 from typing import Union
 
 import numpy as np
-import pandas as pd
+try:
+    import pandas as pd
+except ImportError:
+    from .pymesh.stubs import pandas as pd
 
 from .helpers.tpc_reader import TPCReader
 from .time_series import TimeSeries
@@ -127,6 +130,7 @@ class INFO(TimeSeries):
         self._maximum_data = AppendDict()
         self._nd_res_types = []
         self._lp = None
+        self._section_geom = 'channel'
 
         self._loaded = False  # whether the results have been fully loaded
         self._initial_load()
@@ -296,6 +300,17 @@ class INFO(TimeSeries):
         """
         def remove_filter_part(s: str, part: str) -> str:
             return '/'.join([x for x in s.split('/') if x != part])
+
+        if self._section_geom == 'channel':
+            invalid_section_geom = ['node', 'point']
+        elif self._section_geom == 'node':
+            invalid_section_geom = ['channel', 'line']
+        else:
+            invalid_section_geom = []
+        if filter_by and 'section' in filter_by:
+            for geom in invalid_section_geom:
+                if geom in filter_by:
+                    return []
 
         self._load()
         if filter_by and ('section' in filter_by or 'static' in filter_by) and not 'timeseries' in filter_by:
@@ -695,7 +710,13 @@ class INFO(TimeSeries):
                     }
                 )
                 self._channel_info.drop('no', axis=1, inplace=True)
-                self._channel_info['ispipe'] = self._channel_info['flags'].str.match(r'.*[CR].*', False)
+                try:
+                    self._channel_info['ispipe'] = self._channel_info['flags'].str.match(r'.*[CR].*', False)
+                except AttributeError:
+                    self._channel_info['ispipe'] = (
+                        self._channel_info['flags'].str.contains('C', regex=False) |
+                        self._channel_info['flags'].str.contains('R', regex=False)
+                    )
             except Exception as e:
                 logger.warning(f'INFO._load_chan_info(): Error loading channel info: {e}')
 
@@ -732,11 +753,8 @@ class INFO(TimeSeries):
 
     def _load_time_series_csv(self, fpath: Path) -> pd.DataFrame:
         """Load the time-series data from the CSV file into a DataFrame."""
-        with fpath.open() as f:
-            header = f.readline()
-            index_col = patterns.csv_line_split(header)[1]
         dtype = str if fpath.stem.endswith('_1d_CF') or fpath.stem.endswith('_1d_NF') else np.float32
-        df = pd.read_csv(fpath, na_values='**********', index_col=index_col, dtype=dtype)
+        df = pd.read_csv(fpath, na_values='**********', index_col=1, dtype=dtype)
         df.index.name = 'Time (h)'
         df.drop(df.columns[0], axis=1, inplace=True)
         df.rename(columns={x: self._csv_col_name_corr(x) for x in df.columns}, inplace=True)

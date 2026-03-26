@@ -3,7 +3,10 @@ from pathlib import Path
 from typing import Union
 
 import numpy as np
-import pandas as pd
+try:
+    import pandas as pd
+except ImportError:
+    from .pymesh.stubs import pandas as pd
 
 try:
     from netCDF4 import Dataset
@@ -92,7 +95,7 @@ class FVBCTide(TimeSeries):
     11          0       Ocean  29317.599609    -0.138558
     """
 
-    DOMAIN_TYPES = {}
+    DOMAIN_TYPES = {'fvbctide': ['fvbctide']}
     GEOMETRY_TYPES = {'2d': ['2d'], 'point': ['node', 'timeseries', 'point'],
                       'line': ['section', 'nodestring', 'line']}
     ATTRIBUTE_TYPES = {}
@@ -123,8 +126,6 @@ class FVBCTide(TimeSeries):
             raise FileNotFoundError(f'File not found: {self.nc_fpath}')
         if not self.node_string_gis_fpath.exists():
             raise FileNotFoundError(f'File not found: {self.node_string_gis_fpath}')
-        if not has_gdal:
-            raise ImportError('GDAL is required for FVBCTideProvider')
 
         # call before tpc_reader is initialised to give a clear error message if it isn't actually a .info time series file
         if not self._looks_like_this(self.nc_fpath):
@@ -452,6 +453,7 @@ class FVBCTide(TimeSeries):
         self.provider = FVBCTideProvider(self.nc_fpath, self.node_string_gis_fpath, self.use_local_time)
         self.name = self.provider.name
         self.name_tz = self.provider.display_name
+        self.has_reference_time = self.provider.has_reference_time
         self.reference_time = self.provider.reference_time
         self.gis_layer_l_fpath = self.node_string_gis_fpath
         self._load_time_series()
@@ -489,10 +491,12 @@ class FVBCTide(TimeSeries):
                 self._maximum_data[data_type] = pd.DataFrame({'max': max_, 'tmax': tmax})
 
     def _load_obj_df(self):
-        info = {'id': [], 'data_type': [], 'geometry': [], 'start': [], 'end': [], 'dt': []}
+        info = {'id': [], 'data_type': [], 'geometry': [], 'domain': [], 'start': [], 'end': [], 'dt': []}
         dt, start, end = np.nan, np.nan, np.nan
         for dtype, vals in self._time_series_data.items():
             for df1 in vals:
+                if df1.empty:
+                    continue
                 dt = np.round((df1.index[1] - df1.index[0]) * 3600., decimals=2)
                 start = df1.index[0]
                 end = df1.index[-1]
@@ -500,6 +504,7 @@ class FVBCTide(TimeSeries):
                     info['id'].append(col)
                     info['data_type'].append(dtype)
                     info['geometry'].append('point')
+                    info['domain'].append('fvbctide')
                     info['start'].append(start)
                     info['end'].append(end)
                     info['dt'].append(dt)
@@ -508,6 +513,7 @@ class FVBCTide(TimeSeries):
             info['id'].append(label)
             info['data_type'].append('water level')
             info['geometry'].append('line')
+            info['domain'].append('fvbctide')
             info['start'].append(start)
             info['end'].append(end)
             info['dt'].append(dt)

@@ -5,7 +5,10 @@ from collections import OrderedDict
 from packaging.version import Version
 
 import numpy as np
-import pandas as pd
+try:
+    import pandas as pd
+except ImportError:
+    from .pymesh.stubs import pandas as pd
 
 from .gpkg_base import GPKGBase
 from .helpers.tpc_reader import TPCReader
@@ -493,6 +496,7 @@ class GPKG1D(GPKGBase, INFO):
             if reference_time is not None:
                 self.reference_time = reference_time
                 self.reference_time = self.reference_time.replace(tzinfo=timezone.utc)
+                self.has_reference_time = True
 
             self.gis_layer_p_fpath = TuflowPath(self.fpath.parent) / f'{self.fpath.name} >> {self._gis_layer_p_name}'
             self.gis_layer_l_fpath = TuflowPath(self.fpath.parent) / f'{self.fpath.name} >> {self._gis_layer_l_name}'
@@ -591,7 +595,13 @@ class GPKG1D(GPKGBase, INFO):
                 self._channel_info['ispipe'] = (~np.isnan(self._channel_info['lbus_obvert']) & ~np.isnan(self._channel_info['lbds_obvert']))
                 self._channel_info['ispit'] = False
             else:
-                self._channel_info['ispipe'] = self._channel_info['flags'].str.match(r'.*[CR].*', False)
+                try:
+                    self._channel_info['ispipe'] = self._channel_info['flags'].str.match(r'.*[CR].*', False)
+                except AttributeError:
+                    self._channel_info['ispipe'] = (
+                        self._channel_info['flags'].str.contains('C', regex=False) |
+                        self._channel_info['flags'].str.contains('R', regex=False)
+                    )
                 self._channel_info['ispit'] = self._channel_info.index == self._channel_info['ds_node']
         else:
             self._channel_info = pd.DataFrame([], columns=columns)

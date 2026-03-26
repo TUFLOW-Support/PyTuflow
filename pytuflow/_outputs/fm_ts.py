@@ -2,7 +2,10 @@ from pathlib import Path
 from typing import Union
 
 import numpy as np
-import pandas as pd
+try:
+    import pandas as pd
+except ImportError:
+    from .pymesh.stubs import pandas as pd
 
 from .helpers.tpc_reader import TPCReader
 from .info import INFO
@@ -10,7 +13,7 @@ from .._pytuflow_types import PathLike, TimeLike
 from .helpers.fm_res_driver import FMResultDriver
 from .helpers.lp_1d_fm import LP1DFM
 from .._fm import GXY
-from .._fm import DAT
+from .._fm import FMDAT
 from ..util import pytuflow_logging
 from ..results import ResultTypeError
 
@@ -148,6 +151,8 @@ class FMTS(INFO):
 
         super().__init__(self._fpaths[0])
 
+        self._section_geom = 'node'
+
     @staticmethod
     def _looks_like_this(fpath: Path) -> bool:
         # docstring inherited
@@ -255,6 +260,10 @@ class FMTS(INFO):
                 return []
             if 'pits' in dat_types:
                 dat_types.remove('pits')
+            if 'bed level' in dat_types and not self._dat:
+                dat_types.remove('bed level')
+            if 'pipes' in dat_types and not self._dat:
+                dat_types.remove('pipes')
         return dat_types
 
     def maximum(self, locations: str | list[str] | None, data_types: str | list[str] | None,
@@ -594,7 +603,7 @@ class FMTS(INFO):
 
         # Initialise DAT
         if self.dat_fpath is not None:
-            self._dat = DAT(self.dat_fpath)
+            self._dat = FMDAT(self.dat_fpath)
             self._support_section_plotting = True
 
         # Initialise GXY
@@ -607,7 +616,10 @@ class FMTS(INFO):
             for res_type in driver.result_types:
                 stnd = self._get_standard_data_type_name(res_type)
                 self._nd_res_types.append(stnd)  # all results are stored on nodes in flood modeller results
-                df = driver.df.loc[:,driver.df.columns.str.contains(f'^{res_type}::')]
+                try:
+                    df = driver.df.loc[:,driver.df.columns.str.contains(f'^{res_type}::')]
+                except AttributeError:
+                    df = driver.df.loc[:, driver.df.columns.str.contains(f'{res_type}::', regex=False)]
                 df.columns = [x.split('::')[1] for x in df.columns]
                 self._time_series_data[stnd] = df
 
@@ -729,20 +741,25 @@ class FMTS(INFO):
         elif self._gxy:
             for index, row in self._gxy.link_df.iterrows():
                 d['id'].append(str(index))
-                d['us_node'].append(row['ups_node'])
-                d['ds_node'].append(row['dns_node'])
-                ups_links = self._gxy.link_df[self._gxy.link_df['dns_node'] == row['ups_node']]
+                us_node = row['ups_node']
+                ds_node = row['dns_node']
+                d['us_node'].append(us_node)
+                d['ds_node'].append(ds_node)
+                ups_links = self._gxy.link_df[self._gxy.link_df['dns_node'] == us_node]
                 if not ups_links.empty:
                     d['us_chan'].append(str(ups_links.index.tolist()[0]))
                 else:
                     d['us_chan'].append('')
-                dns_links = self._gxy.link_df[self._gxy.link_df['ups_node'] == row['dns_node']]
+                dns_links = self._gxy.link_df[self._gxy.link_df['ups_node'] == ds_node]
                 if not dns_links.empty:
                     d['ds_chan'].append(str(dns_links.index.tolist()[0]))
                 else:
                     d['ds_chan'].append('')
                 d['ispipe'].append(False)
-                d['length'].append(0.)
+                us_xy = self._gxy.node_df.loc[us_node, ['x', 'y']].to_numpy()
+                ds_xy = self._gxy.node_df.loc[ds_node, ['x', 'y']].to_numpy()
+                length = np.linalg.norm(ds_xy - us_xy)
+                d['length'].append(length)
                 d['us_invert'].append(np.nan)
                 d['ds_invert'].append(np.nan)
                 d['lbus_obvert'].append(np.nan)

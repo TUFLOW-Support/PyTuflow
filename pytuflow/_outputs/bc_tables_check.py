@@ -4,7 +4,10 @@ from pathlib import Path
 from typing import Union
 
 import numpy as np
-import pandas as pd
+try:
+    import pandas as pd
+except ImportError:
+    from .pymesh.stubs import pandas as pd
 
 from .time_series import TimeSeries
 from .helpers.bc_check_provider import BCCheckProvider
@@ -60,7 +63,7 @@ class BCTablesCheck(TimeSeries):
     40      3.333     1.45
     """
 
-    DOMAIN_TYPES = {}
+    DOMAIN_TYPES = {'bctable': ['bctable']}
     GEOMETRY_TYPES = {}
     ATTRIBUTE_TYPES = {'qt': ['qt'], 'hq': ['hq'], 'qh': ['qh'], 'sa': ['sa'], 'rf': ['rf'], 'ht': ['ht']}
     ID_COLUMNS = ['id', 'uid']
@@ -75,7 +78,7 @@ class BCTablesCheck(TimeSeries):
         #: BCCheckProvider: BC Check Provider class
         self.provider = BCCheckProvider(self.fpath)
         #: pd.DataFrame: DataFrame with all the data combinations
-        self.objs = pd.DataFrame(columns=['id', 'uid', 'type', 'data_type'])
+        self.objs = pd.DataFrame(columns=['id', 'uid', 'type', 'data_type', 'domain'])
 
         if not self.fpath.exists():
             raise FileNotFoundError(f'File does not exist: {fpath}')
@@ -291,10 +294,11 @@ class BCTablesCheck(TimeSeries):
         >>> bndry.ids('flow')
         ['FC01', 'FC04']
         """
-        if filter_by and 'timeseries' in filter_by:
-            filter_by = filter_by.replace('timeseries', '')
-            if not filter_by:
-                filter_by = None
+        for filt in ['timeseries', 'point', 'line', 'polygon']:
+            if filter_by and filt in filter_by:
+                filter_by = filter_by.replace(filt, '')
+                if not filter_by:
+                    filter_by = None
         df, _ = self._filter(filter_by)
         if bndry_type:
             return df.type.unique().tolist()
@@ -437,10 +441,11 @@ class BCTablesCheck(TimeSeries):
         return self.objs.copy()
 
     def _load_objs(self):
-        d = {'id': [], 'type': [], 'uid': [], 'data_type': []}
+        d = {'id': [], 'type': [], 'uid': [], 'data_type': [], 'domain': []}
         for id_, bndry in self.provider.database.items():
             d['id'].append(bndry.name)
             d['type'].append(bndry.type)
             d['uid'].append(bndry.id)
             d['data_type'].append(bndry.data_type)
+            d['domain'].append('bctable')
         self.objs = pd.DataFrame(d)

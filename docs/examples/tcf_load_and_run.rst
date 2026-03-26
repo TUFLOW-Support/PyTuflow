@@ -158,8 +158,7 @@ With the ``tcf_run`` instance, we can also get the output folder and output name
     >>> xmdf_path = tcf_run.output_folder_2d() / f'{tcf_run.output_name()}.xmdf'
     >>> xmdf = XMDF(xmdf_path)
 
-Currently, the XMDF class requires QGIS Python libraries to extract results (e.g. time series). However,
-if the ``netCDF4`` package is installed, we can query some of the header information without QGIS:
+We can extract metadata about the results, such as the result data types and time steps. Metadata can be queried in XMDF files without loading the mesh geometry, which makes it very quick to access. The mesh geometry is only loaded when required, such as when extracting spatial results.
 
 .. code-block:: pycon
 
@@ -190,7 +189,29 @@ if the ``netCDF4`` package is installed, we can query some of the header informa
     2.9166666666666665,
     3.0]
 
-We added the ``NC`` map output format to the TCF, so that we could easily query the results in Python using the
+Time-series can be extracted from point locations using a coordinate tuple(s) or a GIS point file.
+
+.. code-block:: pycon
+
+    >>> point_shp = 'path/to/2d_po_EG02_010_P.shp'
+    >>> df = xmdf.time_series(point_shp, 'water level')
+    >>> df
+    time      PO_01/water level  PO_02/water level
+    0.000000                NaN          36.500000
+    0.083333                NaN          36.483509
+    0.166667                NaN          36.457958
+    0.250000                NaN          36.441391
+    0.333333                NaN          36.431271
+    0.416667                NaN          36.426140
+    0.500000                NaN          36.423336
+    0.583333                NaN          36.421467
+    0.666667          40.110428          36.420143
+    ...                  ...                   ...
+    2.833333          42.804726          38.509300
+    2.916667          42.793350          38.429859
+    3.000000          42.781895          38.342941
+
+We added the ``NC`` map output format to the TCF, so that we also query the results in Python using the
 :class:`NCGrid<pytuflow.NCGrid>` class.
 
 .. code-block:: pycon
@@ -208,32 +229,20 @@ We added the ``NC`` map output format to the TCF, so that we could easily query 
      'max velocity',
      'max z0',
      'tmax water level']
-
-We can extract a time series of water level results by using a point location, either in the form of a coordinate tuple
-``(x, y)`` (or list of coordinates), or a GIS point file. You will need GDAL Python bindings installed to use the latter
-approach. For simplicity, we will use a list of coordinate tuples that match the location of the features in the
-``2d_po_EG02_010_P.shp`` file that is included as part of the example model dataset. If you have GDAL installed, you
-can use a file path reference to the ``TUFLOW/model/gis/2d_po_EG02_010_P.shp`` file instead.
-
-Note, ``pnt1`` starts dry and gets wet later in the simulation, so the first time steps are ``NaN`` to indicate that
-the cell is dry.
-
-.. code-block:: pycon
-
-    >>> points = [(293259.140, 6178013.725), (293337.612, 6178286.193)]
-    >>> df = ncgrid.time_series(points, 'water level')
+    >>> df = ncgrid.time_series(shp, 'velocity')
     >>> df
-    time       water level/pnt1   water level/pnt2
-    0.000000                NaN          36.500000
-    0.083333                NaN          36.483509
-    0.166667                NaN          36.457958
-    0.250000                NaN          36.441391
-    0.333333                NaN          36.431271
-    0.416667                NaN          36.426140
-    0.500000                NaN          36.423336
-    0.583333                NaN          36.421467
-    0.666667          40.110428          36.420143
-    ...                  ...                   ...
-    2.833333          42.804726          38.509300
-    2.916667          42.793350          38.429859
-    3.000000          42.781895          38.342941
+              pnt1/velocity  pnt2/velocity
+    time
+    0.000000            NaN       0.000000
+    0.083333            NaN       0.022336
+    0.166667            NaN       0.021051
+    0.250000            NaN       0.016629
+    0.333333            NaN       0.012689
+    ...               ...              ...
+    2.666667       0.083554       0.447158
+    2.750000       0.075304       0.427859
+    2.833333       0.066849       0.409600
+    2.916667       0.058833       0.393870
+    3.000000       0.051204       0.376173
+
+It's also possible to extract the 2D surface from either the XMDF or NC grid results at a given time step. With the surface data, it's possible to perform all sorts of custom analyses such as differences between results (at maximum or any given timestep), statistics, or even visualise the data using packages such as PyVista (which is installed with PyTUFLOW). For more examples on working with results, see the :ref:`working_with_tuflow_outputs` examples.

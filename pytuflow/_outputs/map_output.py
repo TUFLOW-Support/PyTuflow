@@ -4,7 +4,10 @@ from collections.abc import Iterable
 from typing import Union
 
 import numpy as np
-import pandas as pd
+try:
+    import pandas as pd
+except ImportError:
+    from .pymesh.stubs import pandas as pd
 
 from .output import Output
 from .._pytuflow_types import PathLike
@@ -38,6 +41,11 @@ class MapOutput(Output, ABC):
         name1 = re.sub(r'\sMaximums$', '', name1, flags=re.IGNORECASE)
         name1 = re.sub(r'^hazard_', '', name1, flags=re.IGNORECASE)
         stnd_name = Output._get_standard_data_type_name(name1)
+        if stnd_name.startswith('conc wq_'):
+            stnd_name = stnd_name[5:]
+        if re.findall(r'^(?:max\s)?vector', name, flags=re.IGNORECASE):
+            stnd_name = f'vector {stnd_name}'
+
         if not re.findall(r'(max|peak|min)', name, re.IGNORECASE):
             return stnd_name
 
@@ -47,14 +55,20 @@ class MapOutput(Output, ABC):
         if re.findall(r'(max|peak)', name, re.IGNORECASE):
             if stnd_name.startswith('maximum_'):
                 stnd_name = stnd_name[8:]
-            return 'max ' + stnd_name
+            new_name = 'max ' + stnd_name
+            if len(re.findall(r'max', new_name, re.IGNORECASE)) > 1 and 'tmax' not in new_name:
+                return stnd_name
+            return new_name
 
         if re.findall(r'(tmin|time[\s_-]+of[\s_-]+min)', name, re.IGNORECASE):
             if stnd_name.startswith('minimum_'):
                 stnd_name = stnd_name[8:]
             return 'tmin ' + stnd_name
 
-        return 'min ' + stnd_name
+        new_name = 'min ' + stnd_name
+        if len(re.findall(r'min', new_name, re.IGNORECASE)) > 1 and 'tmin' not in new_name:
+            return stnd_name
+        return new_name
 
     def _overview_dataframe(self) -> pd.DataFrame:
         return self._info.copy()
@@ -65,6 +79,14 @@ class MapOutput(Output, ABC):
         filter_by = [x.strip().lower() for x in filter_by.split('/')] if filter_by else []
         while 'section' in filter_by:
             filter_by.remove('section')
+        while 'curtain' in filter_by:
+            filter_by.remove('curtain')
+        while 'profile' in filter_by:
+            filter_by.remove('profile')
+        while 'line' in filter_by:
+            filter_by.remove('line')
+        while 'point' in filter_by:
+            filter_by.remove('point')
         return '/'.join(filter_by)
 
     def _filter(self, filter_by: str, filtered_something: bool = False, df: pd.DataFrame = None,
@@ -108,9 +130,7 @@ class MapOutput(Output, ABC):
         data_types = [data_types] if not isinstance(data_types, list) else data_types
 
         valid_dtypes = self.data_types(filter_by)
-        if filter_by != 'temporal':
-            valid_dtypes.extend(['max ' + x for x in self.data_types('max')])
-            valid_dtypes.extend(['min ' + x for x in self.data_types('min')])
+
         dtypes1 = []
         for dtype in data_types:
             stnd = self._get_standard_data_type_name(dtype)
@@ -120,6 +140,29 @@ class MapOutput(Output, ABC):
             dtypes1.append(stnd)
 
         return dtypes1
+
+    def _figure_out_data_types_game_mesh(self, data_types: str | list[str], filter_by: str | None) -> list[str]:
+        """Allow for '-x' and '-y' suffixes to indicate vector components."""
+        if isinstance(data_types, str):
+            data_types = [data_types]
+
+        data_types_ = []
+        suffixes = []
+        for dt in data_types:
+            if dt.endswith('-x'):
+                data_type_name = dt[:-2]
+                suffix = '-x'
+            elif dt.endswith('-y'):
+                data_type_name = dt[:-2]
+                suffix = '-y'
+            else:
+                data_type_name = dt
+                suffix = ''
+            data_types_.append(data_type_name)
+            suffixes.append(suffix)
+
+        data_types = self._figure_out_data_types(list(data_types_), filter_by)
+        return [f'{dt}{sfx}' for dt, sfx in zip(data_types, suffixes)]
 
     def _translate_point_location(self, locations: PointLocation) -> dict[str, Point]:
         """Translate, as in to understand, not a spatial translation."""
@@ -223,3 +266,12 @@ class MapOutput(Output, ABC):
         else:
             dt = tuple(times)
         return dt
+
+    @staticmethod
+    def _merge_line_dataframe(df1: pd.DataFrame, df2: pd.DataFrame, name: str, reset_index: bool) -> pd.DataFrame:
+        if df2.empty:
+            return df1
+        if reset_index:
+            df2.reset_index(inplace=True, drop=False)
+        df2.columns = pd.MultiIndex.from_tuples([(name, x) for x in df2.columns])
+        return pd.concat([df1, df2], axis=1) if not df1.empty else df2

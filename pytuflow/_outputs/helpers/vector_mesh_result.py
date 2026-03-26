@@ -8,6 +8,7 @@ from .mesh_result import MeshResult
 
 
 class VectorMeshResult(MeshResult):
+    DATA_TYPE = 'Vector'
 
     # noinspection PyTypeHints
     def _value_from_weightings(self,
@@ -42,3 +43,20 @@ class VectorMeshResult(MeshResult):
 
     def _convert_vector_values(self, values: list[float]) -> list[tuple[float, float]]:
         return [(values[i], values[i + 1]) for i in range(0, len(values), 2)]
+
+    @staticmethod
+    def convert_vector_to_local(values: np.ndarray, axis: np.ndarray):
+        """Values is a Nx1 array of tuple(x,y) and axis is a Nx4 array of normalized x_axis, y_axis denoting the local
+        axis vectors."""
+        # expand (N,) of tuples → (N,2) numeric array
+        vecs = np.vstack(values)  # or: np.array(values)
+
+        # axis vectors (already normalized)
+        x_axis = axis[:, :2]  # (N,2)
+        y_axis = axis[:, 2:]  # (N,2)
+
+        # project using dot products
+        local_x = np.sum(vecs * x_axis, axis=1)
+        local_y = np.sum(vecs * y_axis, axis=1)
+
+        return [(x, y) for x, y in zip(local_x, local_y)]

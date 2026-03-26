@@ -7,7 +7,10 @@ from pathlib import Path
 from typing import Union
 
 import numpy as np
-import pandas as pd
+try:
+    import pandas as pd
+except ImportError:
+    from .pymesh.stubs import pandas as pd
 
 from .._pytuflow_types import PathLike, TimeLike, PlotExtractionLocation
 
@@ -34,6 +37,8 @@ class Output(ABC):
 
         #: str: The result name
         self.name = ''
+        #: bool: Does the result have an inherent reference time. The :attr:`reference_time` property will return a value regardless of whether the result actually has a explicit reference time.
+        self.has_reference_time = False
         #: datetime: The reference time for the output
         self.reference_time = datetime(1990, 1, 1, tzinfo=timezone.utc)
 
@@ -307,7 +312,7 @@ class Output(ABC):
             if name.lower() == key.lower():
                 return key
             for val in vals:
-                if re.match(fr'^(?:(?:t?max(?:imum)?|time[\s_-]+of[\s_-]+peak)(?:\s|_|-)?)?{val}(?:(?:\s|_|-)?t?max(?:imum)?)?$', name,
+                if re.match(fr'^(?:(?:t?(?:max|min)(?:imums?/?)?|time[\s_-]+of[\s_-]+peak)(?:\s|_|-)?)?{val}(?:(?:\s|_|-)?/?t?(?:max|min)(?:imums?)?)?$', name,
                             re.IGNORECASE):
                     if '\\d' in key:
                         n = re.findall(r'\d+', name)
@@ -375,26 +380,30 @@ class Output(ABC):
         previous or next time depending on the method.
         """
         if isinstance(time, datetime):
-            a = np.array([abs((x - time).total_seconds()) for x in timesteps])
+            if time.tzinfo is None:
+                time = time.replace(tzinfo=timezone.utc)
+            a = np.array([(x - time).total_seconds() for x in timesteps])
         else:
-            a = np.array([abs(x - time) for x in timesteps])
+            a = np.array([x - time for x in timesteps])
 
         isclose = np.isclose(a, 0, rtol=0., atol=tol)
         if isclose.any():
             return int(np.argwhere(isclose).flatten()[0])
 
         if method == 'previous':
-            prev = a[a > 0]
+            prev = a > 0
             if prev.any():
-                return int(np.argwhere(prev).flatten()[0])
-            else:
-                return 0
-        elif method == 'next':
-            next_ = a[a < 0]
-            if next_.any():
-                return int(np.argwhere(next_).flatten()[0])
+                return np.flatnonzero(prev)[0]
             else:
                 return len(timesteps) - 1
+        elif method == 'next':
+            next_ = a < 0
+            if next_.any():
+                return np.flatnonzero(next_)[-1]
+            else:
+                return 0
+        elif method == 'closest':
+            return int(np.abs(a).argmin())
 
         return 0
 

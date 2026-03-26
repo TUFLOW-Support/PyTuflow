@@ -8,6 +8,8 @@ from .mesh import Mesh
 from ..results import ResultTypeError
 from .._pytuflow_types import PathLike
 
+from .pymesh import PyDAT
+
 
 class DAT(Mesh):
     """Class for handling DAT mesh file.
@@ -19,6 +21,17 @@ class DAT(Mesh):
     twodm : PathLike, optional
         Path to the 2dm file. If not provided, the class will attempt to find the 2dm file with the same name as the
         DAT file. If an SUP file is provided in the first argument, the 2dm argument is not used.
+    driver: str, optional
+       The driver to use for reading the DAT file. Options are:
+
+       - ``"v1.0"``: Use PyTUFLOW v1.0 DAT reader (legacy). This uses old QGIS geometry and extraction methods.
+       - ``"v1.1"``: Use PyTUFLOW v1.1 DAT reader (default). Uses Python geometry handling if available, otherwise uses
+         ``QGIS`` geometry. For data extraction, the order of preference is Python then QGIS.
+       - ``"qgis geometry [data extractor]"``: Use QGIS libraries for geometry (``"qgis geometry"``) and the optional
+         use of QGIS for data extraction as well (``"qgis geometry data extractor"``). If only ``"qgis geometry"`` is
+         provided, the data extraction can also use Python libraries if available e.g. ``"qgis geometry python"``.
+       - ``"python"``: Use Python for extracting data. Can be used with ``"qgis geometry"`` otherwise
+         uses Python libraries for geometry handling.
 
     Examples
     --------
@@ -112,7 +125,7 @@ class DAT(Mesh):
     17  73.063420  42.849014       42.834780   81.926818  42.708500       42.452022
     """
 
-    def __init__(self, fpath: PathLike | list[PathLike], twodm: PathLike = None):
+    def __init__(self, fpath: PathLike | list[PathLike], twodm: PathLike = None, driver: str = 'v1.1'):
         if not isinstance(fpath, Iterable) or isinstance(fpath, str):
             fpath = [fpath]
         else:
@@ -146,7 +159,23 @@ class DAT(Mesh):
             if self._looks_empty(dat):
                 raise EOFError(f'File is empty or incomplete: {dat}')
 
-        self._driver = QgisDATMeshDriver(self.twodm, self._dats)
+        if driver.lower() == 'v1.0':
+            geom_driver = 'qgis'
+            engine = 'qgis'
+        elif driver.lower() == 'v1.1':  # PyXMDF will choose best available
+            geom_driver = None
+            engine = None
+        else:
+            geom_driver = 'qgis' if 'qgis geometry' in driver.lower() else None
+            engine = 'qgis' if 'qgis data extractor' in driver.lower() or 'qgis geometry data extractor' in driver.lower() else None
+            if 'python' in driver.lower():
+                engine = 'python'
+
+        if driver.lower() == 'v1.0':
+            self._driver = QgisDATMeshDriver(self.twodm, self.fpath)
+        else:
+            self._driver = PyDAT(self._dats, self.twodm, geom_driver, engine)
+            self._soft_load_driver = self._driver
 
         self._initial_load()
 

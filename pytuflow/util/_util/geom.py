@@ -7,7 +7,10 @@ This module contains light-weight geometry utilities that do not require GDAL. F
 from math import cos, sin, asin, sqrt, radians
 
 import numpy as np
-import pandas as pd
+try:
+    import pandas as pd
+except ImportError:
+    from ..._outputs.pymesh.stubs import pandas as pd
 from ..._fm_to_estry.fm_to_estry.helpers.geometry import Point, Line, Polygon, get_right_angle_line
 
 

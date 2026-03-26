@@ -4,7 +4,10 @@ from pathlib import Path
 from typing import Union, Generator
 
 import numpy as np
-import pandas as pd
+try:
+    import pandas as pd
+except ImportError:
+    from .pymesh.stubs import pandas as pd
 
 from ..results import ResultTypeError
 from .map_output import PointLocation, LineStringLocation
@@ -18,6 +21,13 @@ try:
 except ImportError:
     Dataset = 'Dataset'
     has_nc = False
+
+try:
+    from osgeo import gdal
+    has_gdal = True
+except ImportError:
+    gdal = None
+    has_gdal = False
 
 
 class NCGrid(Grid):
@@ -67,7 +77,7 @@ class NCGrid(Grid):
     Get the water level time-series data for a given point defined in a shapefile:
 
     >>> nc.time_series('/path/to/point.shp', 'water level')
-    time     water level/pnt1
+    time     pnt1/water level
     0.00000               NaN
     0.08333               NaN
     0.16670               NaN
@@ -80,7 +90,7 @@ class NCGrid(Grid):
     Get a water level section from a line defined in a shapefile at time 0.5 hrs:
 
     >>> nc.section('/path/to/line.shp', 'water level', 0.5)
-           offset  water level/Line 1
+           offset  Line 1/water level
     0    0.000000           45.994362
     1    1.495967           45.994362
     2    1.495967           45.636654
@@ -95,7 +105,6 @@ class NCGrid(Grid):
     """
 
     def __init__(self, fpath: PathLike):
-        super().__init__(fpath)
         self.fpath = Path(fpath)
         self._loaded = False
         self._stnd2var = {}
@@ -107,20 +116,33 @@ class NCGrid(Grid):
         if not has_nc:
             raise ImportError('netCDF4 is not installed.')
 
-        if not self.fpath.exists():
-            raise FileNotFoundError(self.fpath)
-
         if not self._looks_like_this(self.fpath):
             raise ResultTypeError(f'{self.fpath} does not look like a netCDF grid file or could be empty or locked by another program.')
 
-        self._initial_load()
+        if not has_nc:
+            raise ImportError('NetCDF4 library is required to read NCGrid files.')
+
+        super().__init__(fpath)
 
     @staticmethod
     def _looks_like_this(fpath: PathLike) -> bool:
         # noinspection PyBroadException
         try:
-            for _ in NCGrid._nc_grid_layers(fpath):
-                return True
+            if has_nc:
+                for _ in NCGrid._nc_grid_layers(fpath):
+                    return True
+            elif has_gdal:
+                ds = gdal.Open(str(fpath))
+                for subset in ds.GetSubDatasets():
+                    subds = gdal.Open(subset[0])
+                    if subds.RasterCount == 0:
+                        continue
+                    # validity check here
+                    metadata = subds.GetMetadata()
+                    if 'crs#grid_mapping_name' in metadata:
+                        return True
+                    subds = None
+                ds = None
         except Exception:
             pass
         return False
@@ -142,8 +164,21 @@ class NCGrid(Grid):
         """no-doc
         Returns True if the netCDF file is a TUFLOW output file.
         """
-        with Dataset(fpath, 'r') as nc:
-            return 'source' in nc.ncattrs() and nc.getncattr('source').startswith('TUFLOW Build:')
+        if has_nc:
+            with Dataset(fpath, 'r') as nc:
+                return 'source' in nc.ncattrs() and nc.getncattr('source').startswith('TUFLOW Build:')
+        elif has_gdal:
+            ds = gdal.Open(str(fpath))
+            attr = ds.GetMetadata()
+            source = attr.get('NC_GLOBAL#source', '')
+            ds = None
+            return source.startswith('TUFLOW Build:')
+        else:
+            with open(fpath, "rb") as f:
+                head = f.read(8192).decode("latin1", errors="ignore")
+            if "TUFLOW Build:" in head:
+                return True
+        return False
 
     def times(self, filter_by: str = None, fmt: str = 'relative') -> list[TimeLike]:
         """Returns a list of times for the given filter.
@@ -211,32 +246,52 @@ class NCGrid(Grid):
         """
         return super().data_types(filter_by)
 
+    def maximum(self, data_types: str | list[str]) -> float | pd.DataFrame:
+        self._load()
+        with self._open():
+            return super().maximum(data_types)
+
+    def surface(self, data_type: str = None, time: TimeLike = 0, to_vertex: bool = False, coord_scope: str = 'global',
+                direction_to_vector: bool = False, direction_convention = 'arithmetic') -> pd.DataFrame:
+        self._load()
+        with self._open():
+            return super().surface(data_type, time, to_vertex, coord_scope, direction_to_vector, direction_convention)
+
+    def data_point(self, locations: PointLocation, data_types: str | list[str] = (),
+                   time: TimeLike = 0) -> float | tuple[float, float] | pd.DataFrame:
+        self._load()
+        with self._open():
+            return super().data_point(locations, data_types, time)
+
     def time_series(self, locations: PointLocation, data_types: str | list[str] | None,
                     time_fmt: str = 'relative', **kwargs) -> pd.DataFrame:
         self._load()
-        with self._open() as self._nc:
+        with self._open():
             return super().time_series(locations, data_types, time_fmt)
 
-    def section(self, locations: LineStringLocation, data_types: Union[str, list[str]],
-                time: TimeLike, **kwargs) -> pd.DataFrame:
+    def section(self, locations: LineStringLocation, data_types: Union[str, list[str]] = (),
+                time: TimeLike = 0, **kwargs) -> pd.DataFrame:
         self._load()
-        with self._open() as self._nc:
+        with self._open():
             return super().section(locations, data_types, time)
-
-    def curtain(self, locations: LineStringLocation, data_types: Union[str, list[str]],
-                time: TimeLike) -> pd.DataFrame:
-        """Not supported for ``NCGrid`` results. Raises a :code:`NotImplementedError`."""
-        raise NotImplementedError(f'{__class__.__name__} does not support curtain plotting.')
-
-    def profile(self, locations: PointLocation, data_types: Union[str, list[str]],
-                time: TimeLike, **kwargs) -> pd.DataFrame:
-        """Not supported for ``NCGrid`` results. Raises a :code:`NotImplementedError`."""
-        raise NotImplementedError(f'{__class__.__name__} does not support vertical profile plotting.')
 
     @contextmanager
     def _open(self):
-        with Dataset(self.fpath) as nc:
-            yield nc
+        if self._nc is not None:
+            yield self._nc
+            return
+        with Dataset(self.fpath, 'r') as self._nc:
+            yield self._nc
+        self._nc = None
+
+    def open_reader(self):
+        if self._nc is None:
+            self._nc = Dataset(self.fpath, 'r')
+
+    def close(self):
+        if self._nc is not None:
+            self._nc.close()
+            self._nc = None
 
     def _initial_load(self):
         self.name = self.fpath.stem
@@ -255,17 +310,18 @@ class NCGrid(Grid):
         else:
             self.time_units = units.split(' ')[0]
 
+        if 'since' in units.lower():
+            self.has_reference_time = True
+
         return self._parse_time_units_string(units, r'\d{4}-\d{2}-\d{2} \d{2}:\d{2}(?:\:\d{2})?',
                                              ['%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M'])[0]
 
     def _load_info(self, nc: Dataset):
         d = {'data_type': [], 'type': [], 'is_max': [], 'is_min': [], 'static': [], 'start': [], 'end': [], 'dt': [],
-             'dx': [], 'dy': [], 'ox': [], 'oy': [], 'ncol': [], 'nrow': []}
+             'dx': [], 'dy': [], 'ox': [], 'oy': [], 'ncol': [], 'nrow': [], 'nodatavalue': []}
         for varname in nc.variables:
             var = NCGridVar(nc, varname)
             if not var.valid:
-                continue
-            if var.is_vec_dir:  # skip direction variables, recording the magnitude in the info dataframe is enough
                 continue
             stnd = self._get_standard_data_type_name(var.name)
             self._stnd2var[stnd] = varname
@@ -291,6 +347,7 @@ class NCGrid(Grid):
             d['oy'].append(var.oy)
             d['ncol'].append(var.ncol)
             d['nrow'].append(var.nrow)
+            d['nodatavalue'].append(var.fill_value)
 
         self._info = pd.DataFrame(d)
 
@@ -299,11 +356,17 @@ class NCGrid(Grid):
             return
         self._loaded = True
 
-    def _value(self, n: int, m: int, timeidx: int, dtype: str) -> float:
-        if n < 0 or m < 0:
-            return np.nan
+    def _value(self, dtype: str, idx: tuple | int | np.ndarray | slice) -> float | np.ndarray:
         varname = self._stnd2var[dtype]
-        val = self._nc.variables[varname][timeidx, m, n]
-        if np.ma.is_masked(val):
-            return np.nan
-        return float(val)
+        if self._is_static(dtype) and len(self._nc.variables[varname].shape) == 3:
+            if isinstance(idx, tuple):
+                idx = tuple([0] + list(idx))
+            elif isinstance(idx, (int, np.integer, np.ndarray, slice)):
+                idx = (0, idx)
+        val = self._nc.variables[varname][idx]
+        if np.ma.isMaskedArray(val):
+            if np.ma.is_masked(val):
+                return val.filled(np.nan)
+            else:
+                return np.array(val)
+        return val

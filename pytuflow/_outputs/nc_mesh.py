@@ -7,25 +7,53 @@ except ImportError:
     Dataset = 'Dataset'
     has_nc = False
 
+try:
+    from osgeo import gdal
+    has_gdal = True
+except ImportError:
+    gdal = None
+    has_gdal = False
+
 from .helpers.mesh_driver_qgis_nc import QgisNcMeshDriver
 from .helpers.mesh_driver_nc_nc import NCMeshDriverNC
 from .mesh import Mesh
 from .._pytuflow_types import PathLike
 
+from .pymesh import PyNCMesh
+
 
 class NCMesh(Mesh):
     """Class for handling TUFLOW FV style output files.
 
-    The ``NCMesh`` class will only load header information from the NetCDF file on initialisation, this makes the class
-    cheap to initialise. The class can be initialised and the methods :meth:`times` and
-    :meth:`data_types` can be used without requiring QGIS libraries. However, extracting spatial data requires
-    QGIS libraries to be available and QGIS to be initialised. The class will automatically load the full mesh
-    the first time a spatial method is called which can cause the first time a spatial method is called to be slow.
+    The ``NCMesh`` class supports both QGIS and Python drivers. The drivers are also split between geometry handling and
+    data extraction.
+
+    If using Python libraries, the ``NCMesh`` class is initialised without loading the mesh geometry data. This
+    makes the class cheap to initialise and allows querying of available data types and times without requiring
+    mesh loading. The mesh geometry data is only loaded when required for spatial data extraction.
+
+    QGIS libraries can be used for geometry handling and Python libraries can be used for data extraction, this also
+    allows for the cheap initialisation of the class. If QGIS libraries are used for both geometry and data extraction,
+    the mesh geometry data is loaded at initialisation.
 
     Parameters
     ----------
     fpath : PathLike
         Path to the NetCDF file.
+    driver: str, optional
+       The driver to use for reading the NCMesh file. Options are:
+
+       - ``"v1.0"``: Use PyTUFLOW v1.0 NCMesh reader (legacy). This uses old QGIS geometry and extraction methods.
+       - ``"v1.1"``: Use PyTUFLOW v1.1 NCMesh reader (default). Uses Python geometry handling if available, otherwise uses
+         ``QGIS`` geometry. For data extraction, the order of preference is ``h5py``, ``netcdf4``, then ``QGIS``.
+       - ``"qgis geometry [data extractor]"``: Use QGIS libraries for geometry (``"qgis geometry"``) and the optional
+         use of QGIS for data extraction as well (``"qgis geometry data extractor"``). If only ``"qgis geometry"`` is
+         provided, the data extraction can also use Python libraries if available e.g. ``"qgis geometry netcdf4"`` or
+         ``"qgis geometry h5py"``. Using NetCDF4 or h5py for data extraction allows for cheap initialisation of the class.
+       - ``"netcdf4"``: Use NetCDF4 library for extracting data. Can be used with ``"qgis geometry"`` otherwise
+          uses Python libraries for geometry handling.
+       - ``"h5py"``: Use h5py library for extracting data. Can be used with ``"qgis geometry"`` otherwise
+         uses Python libraries for geometry handling.
 
     Examples
     --------
@@ -127,20 +155,57 @@ class NCMesh(Mesh):
     3       1.0  0.424264
     """
 
-    def __init__(self, fpath: PathLike):
+    def __init__(self, fpath: PathLike, driver: str = 'v1.1'):
         super().__init__(fpath)
-        self._driver = QgisNcMeshDriver(self.fpath)
-        self._soft_load_driver = NCMeshDriverNC(self.fpath)
+
+        if driver.lower() == 'v1.0':
+            geom_driver = 'qgis'
+            engine = 'qgis'
+        elif driver.lower() == 'v1.1':  # PyNCMesh will choose best available
+            geom_driver = None
+            engine = None
+        else:
+            geom_driver = 'qgis' if 'qgis geometry' in driver.lower() else None
+            engine = 'qgis' if 'qgis data extractor' in driver.lower() or 'qgis geometry data extractor' in driver.lower() else None
+            if 'h5py' in driver.lower():
+                engine = 'h5py'
+            elif 'netcdf4' in driver.lower():
+                engine = 'netcdf4'
+
+        if driver.lower() == 'v1.0':
+            self._driver = QgisNcMeshDriver(self.fpath)
+            self._soft_load_driver = NCMeshDriverNC(self.fpath)
+            if self._soft_load_driver.valid:
+                self._driver.spherical = self._soft_load_driver.spherical
+        else:
+            self._driver = PyNCMesh(self.fpath, geom_driver, engine)
+            self._soft_load_driver = self._driver
+
         self._initial_load()
 
     @staticmethod
     def _looks_like_this(fpath: Path) -> bool:
         if fpath.suffix.lower() != '.nc':
             return False
-        if has_nc:
-            with Dataset(fpath, 'r') as nc:
-                if 'Type' in nc.ncattrs() and nc.getncattr('Type') == 'Cell-centred TUFLOWFV output':
+        try:
+            if has_nc:
+                with Dataset(fpath, 'r') as nc:
+                    if 'Type' in nc.ncattrs() and nc.getncattr('Type') == 'Cell-centred TUFLOWFV output':
+                        return True
+            elif has_gdal:
+                ds = gdal.Open(str(fpath))
+                attr = ds.GetMetadata()
+                type_ = attr.get('NC_GLOBAL#Type', '')
+                if type_ == 'Cell-centred TUFLOWFV output':
                     return True
+                ds = None
+            else:
+                with open(fpath, "rb") as f:
+                    head = f.read(8192).decode("latin1", errors="ignore")
+                if "Cell-centred TUFLOWFV output" in head:
+                    return True
+        except Exception:
+            return False
 
         return False
 

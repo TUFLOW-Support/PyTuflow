@@ -21,7 +21,7 @@ class CellIntersect:
 
 class GridLine:
 
-    def __init__(self, dx: float, dy: float, ox: float, oy: float, ncol: int, nrow: int):
+    def __init__(self, dx: float, dy: float, ox: float, oy: float, ncol: int, nrow: int, *args, **kwargs):
         self.dx = dx
         self.dy = dy
         self.ox = ox

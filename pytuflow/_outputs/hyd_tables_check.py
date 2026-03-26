@@ -3,7 +3,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Union
 
-import pandas as pd
+try:
+    import pandas as pd
+except ImportError:
+    from .pymesh.stubs import pandas as pd
 
 from .tabular_output import TabularOutput
 from .helpers.hyd_tables_cross_section_provider import HydTablesCrossSectionProvider
@@ -38,7 +41,7 @@ class HydTablesCheck(TabularOutput):
     >>> hyd_tables = HydTablesCheck('path/to/1d_ta_tables_check.csv')
     """
 
-    DOMAIN_TYPES = {}
+    DOMAIN_TYPES = {'hydraulictable': ['hydraulictable']}
     GEOMETRY_TYPES = {
         'xs': ['xs', 'cross-section', 'cross_section', 'cross section'],
         'processed': ['processed', 'proc'],
@@ -61,7 +64,7 @@ class HydTablesCheck(TabularOutput):
         #: :class:`HydTablesChannelProvider <pytuflow.outputs.helpers.hyd_tables_channel_provider.HydTablesChannelProvider>`: Channel data provider
         self._channels = HydTablesChannelProvider()
         #: pd.DataFrame: DataFrame with all the data combinations
-        self._objs = pd.DataFrame(columns=['id', 'uid', 'type', 'data_type', 'geometry'])
+        self._objs = pd.DataFrame(columns=['id', 'uid', 'type', 'data_type', 'geometry', 'domain'])
         #: int: Number of cross-sections
         self.cross_section_count = 0
         #: int: Number of channels
@@ -214,10 +217,11 @@ class HydTablesCheck(TabularOutput):
         ['depth', 'storage width', 'flow width', 'area', 'wetted perimeter',
         'radius', 'vertex resistance factor', 'k ']
         """
-        if filter_by is not None and 'section' in filter_by:
-            filter_by = filter_by.replace('section', '')
-            if not filter_by:
-                filter_by = None
+        for filt in ['section', 'line']:
+            if filter_by is not None and filt in filter_by:
+                filter_by = filter_by.replace(filt, '')
+                if not filter_by:
+                    filter_by = None
         df, _ = self._filter(filter_by)
         return df.data_type.unique().tolist()
 
@@ -344,7 +348,7 @@ class HydTablesCheck(TabularOutput):
             d_['uid'].append(xs_.id)
             d_['type'].append(xs_.type)
 
-        d = {'id': [], 'type': [], 'uid': [], 'data_type': [], 'geometry': []}
+        d = {'id': [], 'type': [], 'uid': [], 'data_type': [], 'geometry': [], 'domain': []}
 
         # cross-sections
         for id_, xs in self._cross_sections.database.items():
@@ -355,12 +359,14 @@ class HydTablesCheck(TabularOutput):
                     add_xs_prop(d, xs)
                     d['data_type'].append(self._get_standard_data_type_name(col))
                     d['geometry'].append('xs')
+                    d['domain'].append('hydraulictable')
             for col in xs.df_proc.columns:
                 if col in ['point', 'message']:
                     continue
                 add_xs_prop(d, xs)
                 d['data_type'].append(self._get_standard_data_type_name(col))
                 d['geometry'].append('processed')
+                d['domain'].append('hydraulictable')
 
         # channels
         for id_, ch in self._channels.database.items():
@@ -372,5 +378,6 @@ class HydTablesCheck(TabularOutput):
                 d['type'].append('')
                 d['data_type'].append(self._get_standard_data_type_name(col))
                 d['geometry'].append('channel')
+                d['domain'].append('hydraulictable')
 
         self._objs = pd.DataFrame(d)

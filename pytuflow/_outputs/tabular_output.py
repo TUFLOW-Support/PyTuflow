@@ -1,6 +1,9 @@
 from abc import abstractmethod
 
-import pandas as pd
+try:
+    import pandas as pd
+except ImportError:
+    from .pymesh.stubs import pandas as pd
 
 from .output import Output
 from .._pytuflow_types import PathLike
@@ -90,7 +93,10 @@ class TabularOutput(Output):
                 if not ids:
                     logger.warning(f'Location "{loc}" not found in the output or a valid location filter - removing.')
                 else:
+                    filters = loc.split('/') if '/' in loc else []
                     for id_ in ids:
+                        filters_ = [x for x in filters if x.lower() != id_.lower()]
+                        id_ = '/'.join([id_] + filters_)
                         if id_.lower() not in locations1:
                             locations1.append(id_)
             locations = locations1

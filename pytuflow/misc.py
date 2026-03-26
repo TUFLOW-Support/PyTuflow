@@ -1,2 +1,2 @@
 # noinspection PyUnusedImports
-from ._tmf import AppendDict
+from ._tmf import AppendDict, CaseInsDict

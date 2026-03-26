@@ -37,6 +37,8 @@ class FVBCTideNCProvider:
         self.use_local_time = use_local_time
         #: datetime: Reference time.
         self.reference_time = datetime(1990, 1, 1, tzinfo=timezone.utc)
+        #: bool: Whether the object has an explicit reference time
+        self.has_reference_time = False
         #: str: Time units.
         self.units = 'd'
         #: str: Timezone.
@@ -83,6 +85,7 @@ class FVBCTideNCProvider:
         self._timevar = 'local_time' if self.use_local_time else 'time'
         self._get_units()
         self.labels = [self._strip_label(k) for k, v in self._nc.variables.items() if v.ndim == 2 and v.dimensions[0] == 'time']
+        self.labels = [x for x in self.labels if x.strip()]
 
     def is_empty(self) -> bool:
         """Returns True if the NC file is empty.
@@ -280,6 +283,7 @@ class FVBCTideNCProvider:
         self._units = self._nc.variables[self._timevar].units
         rt = re.findall(r'\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}', self._units)
         if rt:
+            self.has_reference_time = True
             self.reference_time = datetime.strptime(rt[0], '%Y-%m-%d %H:%M:%S')
             tz = self._nc.variables[self._timevar].timezone
             if tz == 'UTC':

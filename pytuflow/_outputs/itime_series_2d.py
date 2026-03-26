@@ -1,7 +1,10 @@
 from abc import ABC, abstractmethod
 from datetime import datetime
 
-import pandas as pd
+try:
+    import pandas as pd
+except ImportError:
+    from .pymesh.stubs import pandas as pd
 
 from .._pytuflow_types import PathLike, AppendDict
 

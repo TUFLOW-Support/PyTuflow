@@ -2,7 +2,10 @@ import re
 import typing
 from typing import Union
 
-import pandas as pd
+try:
+    import pandas as pd
+except ImportError:
+    from .pymesh.stubs import pandas as pd
 from packaging.version import Version
 
 from .gpkg_2d import GPKG2D
@@ -68,7 +71,7 @@ class GPKGRL(GPKG2D):
     """
 
     DOMAIN_TYPES = {'rl': ['rl', '0d']}
-    GEOMETRY_TYPES = {'point': ['point'], 'line': ['line'], 'polygon': ['polygon', 'region']}
+    GEOMETRY_TYPES = {'point': ['point'], 'line': ['line'], 'polygon': ['polygon', 'region', 'poly']}
     ATTRIBUTE_TYPES = {}
     ID_COLUMNS = ['id']
 

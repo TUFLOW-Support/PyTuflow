@@ -1,0 +1,2 @@
+class GeoSeries:
+    pass

@@ -1,0 +1,7 @@
+OPolyMesh = 'OPolyMesh'
+OPolyMeshSchemaSample = 'OPolyMeshSchemaSample'
+GeometryScope = 'GeometryScope'
+OC3fGeomParamSample = 'OC3fGeomParamSample'
+OC3fGeomParam = 'OC3fGeomParam'
+OV2fGeomParamSample = 'OV2fGeomParamSample'
+ON3fGeomParamSample = 'ON3fGeomParamSample'

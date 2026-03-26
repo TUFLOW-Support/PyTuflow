@@ -29,6 +29,6 @@ class QgisXmdfMeshDriver(QgisMeshDriver):
 
     def group_index_from_name(self, data_type: str, **kwargs) -> int:
         vel_to_vec_vel = kwargs.get('vel_to_vec_vel', False)
-        if vel_to_vec_vel and data_type == 'velocity':
-            data_type = 'vector velocity'
+        if vel_to_vec_vel and (data_type == 'velocity' or data_type == 'max velocity'):
+            data_type = 'max vector velocity' if data_type == 'max velocity' else 'vector velocity'
         return super().group_index_from_name(data_type)

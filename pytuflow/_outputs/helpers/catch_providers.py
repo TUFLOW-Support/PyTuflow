@@ -2,7 +2,10 @@ from datetime import datetime
 from pathlib import Path
 from typing import Union
 
-import pandas as pd
+try:
+    import pandas as pd
+except ImportError:
+    from ..pymesh.stubs import pandas as pd
 
 from .mesh_driver import MeshDriver
 from ..output import Output
@@ -13,6 +16,7 @@ from ..._pytuflow_types import TimeLike
 
 
 class CATCHProvider(Output):
+    PROVIDER_NAME = ''
 
     def __init__(self, *args, **kwargs):
         self.time_offset = 0  # seconds
@@ -60,11 +64,11 @@ class CATCHProvider(Output):
         return driver.has_inherent_reference_time
 
     @staticmethod
-    def from_catch_json_output(parent_dir: Path, data: dict) -> 'CATCHProvider':
+    def from_catch_json_output(parent_dir: Path, data: dict, driver: str) -> 'CATCHProvider':
         if data.get('format').lower() == 'xmdf':
-            return CATCHProviderXMDF.from_catch_json_output(parent_dir, data)
+            return CATCHProviderXMDF.from_catch_json_output(parent_dir, data, driver)
         if data.get('format').lower() == 'netcdf mesh':
-            return CATCHProviderNCMesh.from_catch_json_output(parent_dir, data)
+            return CATCHProviderNCMesh.from_catch_json_output(parent_dir, data,driver)
         raise ValueError('Unknown format: {0}'.format(data.get('format')))
 
     def info_with_corrected_times(self) -> pd.DataFrame:
@@ -119,17 +123,19 @@ class CATCHProvider(Output):
 
 
 class CATCHProviderXMDF(CATCHProvider, XMDF):
+    PROVIDER_NAME = 'XMDF'
 
     @staticmethod
-    def from_catch_json_output(parent_dir: Path, data: dict) -> 'CATCHProviderXMDF':
+    def from_catch_json_output(parent_dir: Path, data: dict, driver: str) -> 'CATCHProviderXMDF':
         p = (parent_dir / data.get('path')).resolve()
         twodm = (parent_dir / data.get('2dm')).resolve()
-        return CATCHProviderXMDF(p, twodm=twodm)
+        return CATCHProviderXMDF(p, twodm=twodm, driver=driver)
 
 
 class CATCHProviderNCMesh(CATCHProvider, NCMesh):
+    PROVIDER_NAME = 'NCMesh'
 
     @staticmethod
-    def from_catch_json_output(parent_dir: Path, data: dict) -> 'CATCHProviderNCMesh':
+    def from_catch_json_output(parent_dir: Path, data: dict, driver: str) -> 'CATCHProviderNCMesh':
         p = (parent_dir / data.get('path')).resolve()
-        return CATCHProviderNCMesh(p)
+        return CATCHProviderNCMesh(p, driver=driver)

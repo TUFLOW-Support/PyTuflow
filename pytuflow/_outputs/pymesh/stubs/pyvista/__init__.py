@@ -1,0 +1,2 @@
+class PolyData:
+    pass

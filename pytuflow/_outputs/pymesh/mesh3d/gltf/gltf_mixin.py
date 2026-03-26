@@ -1,0 +1,37 @@
+import typing
+from pathlib import Path
+
+import numpy as np
+
+from . import GLTF
+
+if typing.TYPE_CHECKING:
+    from ... import PyMesh, Bbox2D, Transform2D
+
+
+class GLTFMixin:
+
+    def to_gltf(self: 'PyMesh',
+                output_path: Path | str,
+                mesh_geometry: str = '',
+                time: float = -1,
+                vertex_colour: list[str] = (),
+                uv_projection_extent: 'list[float] | tuple[float] | np.ndarray | Bbox2D' = (),
+                transform: 'Transform2D' = None,
+                ):
+        from .. import FormatConvention
+        p = Path(output_path)
+        if not p.parent.exists():
+            p.mkdir(parents=True)
+        mesh3d = self.mesh3d(
+            mesh_geometry,
+            time,
+            vertex_colour,
+            uv_projection_extent,
+            FormatConvention.OpenGL,
+            self.geom.winding_order == 'CW',
+            transform,
+        )
+        gltf = GLTF()
+        gltf.add_mesh(mesh3d)
+        gltf.write(str(output_path))

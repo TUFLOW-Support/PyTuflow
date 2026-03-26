@@ -5,12 +5,18 @@ from collections import OrderedDict
 from typing import Union
 
 import numpy as np
-import pandas as pd
+try:
+    import pandas as pd
+except ImportError:
+    from .pymesh.stubs import pandas as pd
 
 from .map_output import MapOutput, PointLocation, LineStringLocation
 from .._pytuflow_types import PathLike, TimeLike
 from .helpers.catch_providers import CATCHProvider
 from ..results import ResultTypeError
+
+from ..util import pytuflow_logging
+logger = pytuflow_logging.get_logger()
 
 
 class CATCHJson(MapOutput):
@@ -26,6 +32,20 @@ class CATCHJson(MapOutput):
     ----------
     fpath : PathLike
         Path to the NetCDF file.
+    driver: str, optional
+       The driver to use for reading the XMDF file. Options are:
+
+       - ``"v1.0"``: Use PyTUFLOW v1.0 XMDF reader (legacy). This uses old QGIS geometry and extraction methods.
+         This option is exclusive and can't be used with other options.
+       - ``"v1.1"``: Use PyTUFLOW v1.1 XMDF reader (default). Uses ``vtk`` geometry if available, otherwise uses
+         ``QGIS`` geometry. In order of preference, uses ``h5py``, ``netcdf4``, or ``QGIS`` engine for extracting data.
+         This option is exclusive and can't be used with other options.
+       - ``"qgis [geometry] | [engine]"``: Use QGIS libraries for geometry (``"qgis geometry"``) and/or use QGIS libraries
+          for extracting data (``"qgis engine"``). Both can be passed together as ``"qgis geometry engine"``. This option
+          can be used in conjunctionwith other extracting data options e.g. ``"qgis geometry netcdf4"``. The QGIS engine
+          must be used with QGIS geometry.
+       - ``"netcdf4"``: Use NetCDF4 library for extracting data. Exclusive with other extraction options.
+       - ``"h5py"``: Use h5py library for extracting data. Exclusive with other extraction options.
 
     Examples
     --------
@@ -120,9 +140,10 @@ class CATCHJson(MapOutput):
     3       1.0  0.424264
     """
 
-    def __init__(self, fpath: PathLike | str):
+    def __init__(self, fpath: PathLike | str, driver: str = 'v1.1'):
         super().__init__(fpath)
         self.fpath = Path(fpath)
+        self.driver = driver
         self._data = {}
         self._providers = OrderedDict()
         self._idx_provider = None
@@ -209,6 +230,319 @@ class CATCHJson(MapOutput):
         ['depth', 'vector velocity', 'velocity', 'water level']
         """
         return super().data_types(filter_by)
+
+    def maximum(self, data_types: str | list[str], averaging_method: str = None) -> float | pd.DataFrame:
+        """Returns the maximum values for the given data types.
+
+        Some formats store maximum values in the metadata (e.g. XMDF), if this is the case, the maximum values
+        will be returned directly from the metadata. If the format does not store maximum values, the maximum
+        values will be calculated from the data. In this case, the maximum and temporal datasets will be treated
+        as separate. For example, if ``"depth"`` is requested as a data type, it will be calculated
+        from the temporal depth data. If ``"max depth"`` is requested, it will be calculated from the maximum
+        depth data.
+
+        If multiple data types are requested, a DataFrame will be returned with the data types as the index
+        and the maximum values as the column. Vector results will return the magnitude of the vector.
+
+        Parameters
+        ----------
+        data_types : str | list[str]
+            The data types to return the maximum values for.
+        averaging_method : str, optional
+            The depth-averaging method to use. Only applicable for 3D results. If set to ``None`` (the default),
+            then the maximum will be calculated from all vertical levels. If a depth averaging method is used,
+            then the maximum will be calculated from the depth-averaged data.
+
+            The averaging methods are:
+
+            * ``None``
+            * ``singlelevel``
+            * ``multilevel``
+            * ``depth``
+            * ``height``
+            * ``elevation``
+            * ``sigma``
+
+            The averaging method parameters can be adjusted by building them into the method string in a URI style
+            format. The format is as follows:
+
+            ``<method>?dir=<dir>&<value1>&<value2>``
+
+            The averaging method parameters can be adjusted by building them into the method string in a URI style
+            format. The format is as follows:
+
+            ``<method>?dir=<dir>&<value1>&<value2>``
+
+            Where
+
+            * ``<method>`` is the averaging method name
+            * ``<dir>`` is the direction, ``top`` or ``bottom`` (i.e. from top or from bottom) - only used by certain
+              averaging methods
+            * ``<value1>``, ``<value2>``... are the values to be used in the averaging method (the number required to be
+              passed depends on the averaging method)
+
+            e.g. ``'singlelevel?dir=top&1'`` uses the single level averaging method and takes the first vertical layer
+            from the top. Or ``'sigma&0.1&0.9'`` uses the sigma averaging method and averages values located between
+            the 10th and 90th water column depth.
+
+        Returns
+        -------
+        float | pd.DataFrame
+            The maximum value(s) for the given data type(s).
+
+        Examples
+        --------
+        Get the maximum water level for a given mesh:
+
+        >>> mesh = ... # Assume mesh is a loaded Mesh result
+        >>> mesh.maximum('water level')
+        45.672345
+
+        Get the maximum velocity and depth for multiple data types:
+
+        >>> mesh.maximum(['vector velocity', 'depth'])
+                          maximum
+        vector velocity  1.234567
+        depth            5.678901
+        """
+        self._load()
+        data_types = self._figure_out_data_types(data_types, None)
+        df = pd.DataFrame()
+        filter_by = '/'.join(data_types)
+        for dtype in data_types:
+            max_dtype = None
+            for provider in self._providers.values():
+                if provider == self._idx_provider:
+                    continue
+                if provider != list(self._providers.values())[-1]:
+                    intersection = np.intersect1d(data_types, provider.data_types(filter_by)) if data_types else True
+                    intersection = bool(len(intersection))
+                else:
+                    intersection = True
+                if intersection:
+                    mx = provider.maximum(dtype, averaging_method)
+                    max_dtype = mx if max_dtype is None else max(max_dtype, mx)
+            max_dtype = np.nan if max_dtype is None else max_dtype
+            if len(data_types) == 1:
+                return max_dtype
+            df_ = pd.DataFrame([max_dtype], columns=['maximum'], index=[dtype])
+            df = pd.concat([df, df_], axis=0) if not df.empty else df_
+        return df
+
+    def minimum(self, data_types: str | list[str], averaging_method: str = None) -> float | pd.DataFrame:
+        """Returns the minimum values for the given data types.
+
+        Some formats store minimum values in the metadata (e.g. XMDF), if this is the case, the minimum values
+        will be returned directly from the metadata. If the format does not store minimum values, the minimum
+        values will be calculated from the data. In this case, the minimum and temporal datasets will be treated
+        as separate. For example, if ``"depth"`` is requested as a data type, it will be calculated
+        from the temporal depth data. If ``"max depth"`` is requested, it will be calculated from the minimum
+        depth data.
+
+        If multiple data types are requested, a DataFrame will be returned with the data types as the index
+        and the minimum values as the column. Vector results will return the magnitude of the vector.
+
+        Parameters
+        ----------
+        data_types : str | list[str]
+            The data types to return the minimum values for.
+        averaging_method : str, optional
+            The depth-averaging method to use. Only applicable for 3D results. If set to ``None`` (the default),
+            then the minimum will be calculated from all vertical levels. If a depth averaging method is used,
+            then the minimum will be calculated from the depth-averaged data.
+
+            The averaging methods are:
+
+            * ``None``
+            * ``singlelevel``
+            * ``multilevel``
+            * ``depth``
+            * ``height``
+            * ``elevation``
+            * ``sigma``
+
+            The averaging method parameters can be adjusted by building them into the method string in a URI style
+            format. The format is as follows:
+
+            ``<method>?dir=<dir>&<value1>&<value2>``
+
+            The averaging method parameters can be adjusted by building them into the method string in a URI style
+            format. The format is as follows:
+
+            ``<method>?dir=<dir>&<value1>&<value2>``
+
+            Where
+
+            * ``<method>`` is the averaging method name
+            * ``<dir>`` is the direction, ``top`` or ``bottom`` (i.e. from top or from bottom) - only used by certain
+              averaging methods
+            * ``<value1>``, ``<value2>``... are the values to be used in the averaging method (the number required to be
+              passed depends on the averaging method)
+
+            e.g. ``'singlelevel?dir=top&1'`` uses the single level averaging method and takes the first vertical layer
+            from the top. Or ``'sigma&0.1&0.9'`` uses the sigma averaging method and averages values located between
+            the 10th and 90th water column depth.
+
+        Returns
+        -------
+        float | pd.DataFrame
+            The minimum value(s) for the given data type(s).
+
+        Examples
+        --------
+        Get the minimum water level for a given mesh:
+
+        >>> mesh = ... # Assume mesh is a loaded Mesh result
+        >>> mesh.minimum('water level')
+        33.456789
+
+        Get the minimum velocity and depth for multiple data types:
+
+        >>> mesh.minimum(['vector velocity', 'depth'])
+                          minimum
+        vector velocity  0.
+        depth            0.
+        """
+        self._load()
+        data_types = self._figure_out_data_types(data_types, None)
+        df = pd.DataFrame()
+        filter_by = '/'.join(data_types)
+        for dtype in data_types:
+            min_dtype = None
+            for provider in self._providers.values():
+                if provider == self._idx_provider:
+                    continue
+                if provider != list(self._providers.values())[-1]:
+                    intersection = np.intersect1d(data_types, provider.data_types(filter_by)) if data_types else True
+                    intersection = bool(len(intersection))
+                else:
+                    intersection = True
+                if intersection:
+                    mn = provider.minimum(dtype, averaging_method)
+                    min_dtype = mn if min_dtype is None else min(min_dtype, mn)
+            min_dtype = np.nan if min_dtype is None else min_dtype
+            if len(data_types) == 1:
+                return min_dtype
+            df_ = pd.DataFrame([min_dtype], columns=['minimum'], index=[dtype])
+            df = pd.concat([df, df_], axis=0) if not df.empty else df_
+        return df
+
+    def data_point(self, locations: PointLocation, data_types: str | list[str] | None, time: TimeLike,
+                   averaging_method: str = None) -> float | tuple[float, float] | pd.DataFrame:
+        """Extracts the data value for the given point locations and data types at the specified time.
+
+        The ``locations`` can be a single point in the form of a tuple ``(x, y)`` or in the Well Known Text (WKT)
+        format. It can also be a list of points, or a dictionary of points where the key will be used in the column name
+        in the resulting DataFrame.
+
+        The ``locations`` argument can also be a single GIS file path e.g. Shapefile or GPKG (but any format supported
+        by GDAL is also supported). GPKG's should follow the TUFLOW convention if specifying the layer name within
+        the database ``database.gpkg >> layer``. If the GIS layer has a field called ``name``, ``label``, or ``ID``
+        then this will be used as the column name in the resulting DataFrame.
+
+        The returned value will be a single float if a single location and data type is provided, or a tuple if the
+        data type is a vector result type. If multiple locations and/or data types are provided, a DataFrame will
+        be returned with the data types as columns and the point locations as the index.
+
+        Parameters
+        ----------
+        locations : Point | list[Point] | dict[str, Point] | PathLike
+            The location to extract the data for.
+        data_types : str | list[str]
+            The data types to extract the data for.
+        time : TimeLike
+            The time to extract the data for.
+        averaging_method : str, optional
+            The depth-averaging method to use. Only applicable for 3D results.
+
+            The averaging methods are:
+
+            * ``singlelevel``
+            * ``multilevel``
+            * ``depth``
+            * ``height``
+            * ``elevation``
+            * ``sigma``
+
+            The averaging method parameters can be adjusted by building them into the method string in a URI style
+            format. The format is as follows:
+
+            ``<method>?dir=<dir>&<value1>&<value2>``
+
+            Where
+
+            * ``<method>`` is the averaging method name
+            * ``<dir>`` is the direction, ``top`` or ``bottom`` (i.e. from top or from bottom) - only used by certain
+              averaging methods
+            * ``<value1>``, ``<value2>``... are the values to be used in the averaging method (the number required to be
+              passed depends on the averaging method)
+
+            e.g. ``'singlelevel?dir=top&1'`` uses the single level averaging method and takes the first vertical layer
+            from the top. Or ``'sigma&0.1&0.9'`` uses the sigma averaging method and averages values located between
+            the 10th and 90th water column depth.
+
+        Returns
+        -------
+        float | tuple[float, float] | pd.DataFrame
+            The data value(s) for the given location(s) and data type(s).
+
+        Examples
+        --------
+        Get the water level data for a given point defined as ``(x, y)``:
+
+        >>> res = ... # Assume mesh is a loaded CATCHJson result
+        >>> res.data_point((293250, 6178030), 'water level', 1.5)
+        42.723076
+
+        Get velocity vector data for a given point defined as ``(x, y)``:
+
+        >>> res.data_point((293250, 6178030), 'vector velocity', 1.5)
+        (0.282843, 0.154213)
+
+        Get the maximum water level and depth for multiple points defined in a shapefile. Time is passed as ``-1`` since
+        it is a static dataset (it could be any time value since it won't affect the result):
+
+        >>> res.data_point('/path/to/points.shp', ['max water level', 'max depth'], -1)
+              max water level  max depth
+        pnt1        40.501997   2.785571
+        pnt2        43.221862   3.450053
+        """
+        df = pd.DataFrame()
+        pnts = self._translate_point_location(locations)
+        data_types = self._figure_out_data_types(data_types, None)
+        filter_by = '/'.join(data_types)
+        for provider in self._providers.values():
+            if provider == self._idx_provider:
+                continue
+            if provider != list(self._providers.values())[-1]:
+                intersection = np.intersect1d(data_types, provider.data_types(filter_by)) if data_types else True
+                intersection = bool(len(intersection))
+            else:
+                intersection = True
+            if intersection:
+                i, j = -1, -1
+                if 'velocity' in data_types and 'vector velocity' in provider.data_types():
+                    i = data_types.index('velocity')
+                    data_types[i] = 'vector velocity'
+                if 'max velocity' in data_types and 'max vector velocity' in provider.data_types():
+                    j = data_types.index('max velocity')
+                    data_types[j] = 'max vector velocity'
+                ret = provider.data_point(pnts, data_types, time, averaging_method)
+                if i > -1:
+                    data_types[i] = 'velocity'
+                    if isinstance(ret, pd.DataFrame):
+                        ret.rename(columns={'vector velocity': 'velocity'}, inplace=True)
+                if j > -1:
+                    data_types[j] = 'max velocity'
+                    if isinstance(ret, pd.DataFrame):
+                        ret.rename(columns={'max vector velocity': 'max velocity'}, inplace=True)
+                if len(pnts) == 1:
+                    return ret
+                if df.empty:
+                    df = ret
+                else:
+                    df[~ret.isna()] = ret[~ret.isna()]
+        return df if len(pnts) + len(data_types) > 1 else np.nan
 
     def time_series(self, locations: PointLocation, data_types: str | list[str] | None,
                     time_fmt: str = 'relative', averaging_method: str = None) -> pd.DataFrame:
@@ -320,17 +654,30 @@ class CATCHJson(MapOutput):
                 data_types = [data_types]
             data_types = [self._get_standard_data_type_name(x) for x in data_types]
         filter_by = '3d/timeseries' if averaging_method else 'timeseries'
+        has_data_types = []
+        share_index = True
         for provider in self._providers.values():
             if provider == self._idx_provider:
                 continue
-            if provider != list(self._providers.values())[-1]:
-                intersection = np.intersect1d(data_types, provider.data_types(filter_by)) if data_types else True
-            else:
-                intersection = True
-            if intersection:
-                df = provider.time_series(locations, data_types, time_fmt, averaging_method)
-            if not df.empty:
-                break
+            intersection = np.intersect1d(data_types, provider.data_types(filter_by)) if data_types else np.array(provider.data_types(filter_by))
+            if intersection.size:
+                has_data_types.extend(intersection.tolist())
+                df_ = provider.time_series(locations, intersection.tolist(), time_fmt, averaging_method)
+                if df.empty and not df_.empty:
+                    df = df_
+                elif not df.empty and not df_.empty:
+                    if np.intersect1d(df_.columns, df.columns).size:
+                        df_ = df_.drop(columns=np.intersect1d(df_.columns, df.columns))
+                    if not np.isclose(df.index, df_.index).all() and share_index:
+                        share_index = False
+                        df = df.reset_index()
+                    if not share_index:
+                        df_ = df_.reset_index()
+                    df = pd.concat([df, df_], axis=1)
+
+        no_data_types = [x for x in data_types if x not in has_data_types]
+        for dtype in no_data_types:
+            logger.warning(f'Invalid data type: {dtype}. Skipping.')
         return df
 
     def section(self, locations: LineStringLocation, data_types: Union[str, list[str]],
@@ -526,6 +873,8 @@ class CATCHJson(MapOutput):
         """
         df = pd.DataFrame()
         locations = self._translate_line_string_location(locations)
+        data_types = self._figure_out_data_types(data_types, None)
+        filter_by = '/'.join(data_types)
 
         # don't want to deal with multiple locations when stitching results together
         for locname, line in locations.items():
@@ -534,6 +883,8 @@ class CATCHJson(MapOutput):
             df1 = pd.DataFrame()
             for provider in self._providers.values():
                 if provider == self._idx_provider:
+                    continue
+                if not provider.data_types(filter_by):
                     continue
                 df2 = provider.curtain(loc, data_types, time)
                 if not df2.empty:
@@ -599,12 +950,24 @@ class CATCHJson(MapOutput):
         3       1.0  0.424264
         """
         df = pd.DataFrame()
+        if data_types:
+            if isinstance(data_types, str):
+                data_types = [data_types]
+            data_types = [self._get_standard_data_type_name(x) for x in data_types]
+        has_data_types = []
         for provider in self._providers.values():
             if provider == self._idx_provider:
                 continue
-            df = provider.profile(locations, data_types, time, interpolation)
-            if not df.empty:
-                break
+            intersection = np.intersect1d(data_types, provider.data_types()) if data_types else np.array(provider.data_types())
+            if intersection.size:
+                has_data_types.extend(intersection.tolist())
+                df_ = provider.profile(locations, intersection.tolist(), time, interpolation)
+                if df.empty and not df_.empty:
+                    df = df_
+                elif not df.empty and not df_.empty:
+                    if np.intersect1d(df_.columns, df.columns).size:
+                        df_ = df_.drop(columns=np.intersect1d(df_.columns, df.columns))
+                    df = pd.concat([df, df_], axis=1)
         return df
 
     def _load_json(self, fpath: PathLike | str):
@@ -618,6 +981,8 @@ class CATCHJson(MapOutput):
 
     def _initial_load(self):
         self.name = self._data.get('name')
+        if 'since' in self._data.get('time units'):
+            self.has_reference_time = True
         default_time_string = 'hours since 1990-01-01 00:00:00'
         self.reference_time, _ = self._parse_time_units_string(self._data.get('time units', default_time_string),
                                                         r'\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}',
@@ -630,7 +995,7 @@ class CATCHJson(MapOutput):
         index_result_name = self._data.get('index')
         for res_name in self._data.get('outputs', []):
             output = self._data.get('output data', {}).get(res_name, {})
-            provider = CATCHProvider.from_catch_json_output(self.fpath.parent, output)
+            provider = CATCHProvider.from_catch_json_output(self.fpath.parent, output, self.driver)
             if res_name == index_result_name:
                 self._idx_provider = provider
             if provider.has_inherent_reference_time:
@@ -640,6 +1005,10 @@ class CATCHJson(MapOutput):
             self._providers[res_name] = provider
 
         self._load_info()
+
+    def _load(self):
+        for provider in self._providers.values():
+            provider._load()
 
     def _load_info(self):
         self._info = pd.DataFrame(columns=['data_type', 'type', 'is_max', 'is_min', 'static', 'start', 'end', 'dt'])
@@ -662,11 +1031,14 @@ class CATCHJson(MapOutput):
 
         # the dataframe can have duplicate "offset" values, we only want the offsets "inside" the start/end locs
         # check for duplicate "offset" values at the start
+        k = 4
+        eps = np.finfo(np.float32).eps
+        atol = rtol = k * eps
         inds = np.where(mask2)
         i = 0
         if inds[0].size > 1:
             i, j = inds[0][:2]
-            if np.isclose(df2.iloc[i, 0], df2.iloc[j, 0]):
+            if np.isclose(df2.iloc[i, 0], df2.iloc[j, 0], atol=atol, rtol=rtol):
                 mask2[i] = False
                 i += 1
         # check for duplicate "offset" values at the end
@@ -674,19 +1046,19 @@ class CATCHJson(MapOutput):
         if inds[0].size:
             i += inds[0][0] - 1
             j = i - 1
-            if np.isclose(df2.iloc[i, 0], df2.iloc[j, 0]):
+            if np.isclose(df2.iloc[i, 0], df2.iloc[j, 0], atol=atol, rtol=rtol):
                 mask2[i] = False
         df2_ = df2[mask2]  # the dataframe with the desired section to be inserted
 
         # Get the part of the first dataframe that will be before the inserted section
-        mask = df1.iloc[:, 0] <= start_loc
+        mask = df1.iloc[:, 0] <= start_loc + atol
         # check for duplicate "offset" values
         inds = np.where(~mask)
         i = inds[0][0] if inds[0].size else df1.shape[0]
         if i > 2:
-            if np.isclose(df1.iloc[i - 1, 0], df1.iloc[i - 2, 0]):
+            if np.isclose(df1.iloc[i - 1, 0], df1.iloc[i - 2, 0], atol=atol, rtol=rtol):
                 i -= 1
-        df = df1.iloc[:i,:] if not np.isclose(df1.iloc[0, 0], start_loc) else pd.DataFrame()
+        df = df1.iloc[:i,:] if not np.isclose(df1.iloc[0, 0], start_loc, atol=atol, rtol=rtol) else pd.DataFrame()
 
         # combine the first part of the first dataframe with the inserted section
         df = pd.concat([df, df2_], axis=0, ignore_index=True) if not df.empty else df2_
@@ -694,16 +1066,16 @@ class CATCHJson(MapOutput):
             return df
 
         # get the part of the first dataframe that will be after the inserted section
-        mask = df1.iloc[:, 0] >= end_loc
+        mask = df1.iloc[:, 0] >= end_loc - atol
         # check for duplicate "offset" values
         inds = np.where(mask)
         i = inds[0][0] if inds[0].size else df1.shape[0]
         if inds[0].size > 1:
-            if np.isclose(df1.iloc[i,0], df1.iloc[i+1,0]):
+            if np.isclose(df1.iloc[i,0], df1.iloc[i+1,0], atol=atol, rtol=rtol):
                 i += 1
 
         # combine the last part of the first dataframe with the inserted section
-        if not np.isclose(df1.iloc[-1, 0], end_loc):
+        if not np.isclose(df1.iloc[-1, 0], end_loc, atol=atol, rtol=rtol):
             df = pd.concat([df, df1.iloc[i:, :]], axis=0, ignore_index=True)
 
         return df

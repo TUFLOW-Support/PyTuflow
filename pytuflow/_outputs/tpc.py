@@ -4,7 +4,10 @@ from typing import Union
 from packaging.version import Version
 
 import numpy as np
-import pandas as pd
+try:
+    import pandas as pd
+except ImportError:
+    from .pymesh.stubs import pandas as pd
 try:
     from netCDF4 import Dataset
     has_netcdf4 = True
@@ -91,7 +94,7 @@ class TPC(INFO, ITimeSeries2D):
     """
 
     DOMAIN_TYPES = {'1d': ['1d'], '2d': ['2d', 'po'], 'rl': ['rl', '0d']}
-    GEOMETRY_TYPES = {'point': ['point'], 'line': ['line'], 'polygon': ['polygon', 'region']}
+    GEOMETRY_TYPES = {'point': ['point'], 'line': ['line'], 'polygon': ['polygon', 'region', 'poly']}
     ATTRIBUTE_TYPES = {}
     ID_COLUMNS = ['id']
 
@@ -582,7 +585,10 @@ class TPC(INFO, ITimeSeries2D):
             self._initial_gpkg_load()
             return
 
-        self.reference_time = self._tpc_reader.get_property('Reference Time', self.reference_time)
+        reference_time = self._tpc_reader.get_property('Reference Time')
+        if reference_time is not None:
+            self.reference_time = reference_time
+            self.has_reference_time = True
 
         # rl counts - up here since it's easy to get and useful when loading time series and maximum data
         self.rl_point_count = self._tpc_reader.get_property('Number Reporting Location Points', 0)
@@ -604,6 +610,7 @@ class TPC(INFO, ITimeSeries2D):
                 self.node_count += self._gpkgswmm.node_count
                 self.channel_count += self._gpkgswmm.channel_count
                 self.reference_time = self._gpkgswmm.reference_time
+                self.has_reference_time = self._gpkgswmm.has_reference_time
 
     def _load(self):
         if self._loaded:
@@ -743,23 +750,30 @@ class TPC(INFO, ITimeSeries2D):
                 self.node_count += self._gpkg1d.node_count
                 self.channel_count += self._gpkg1d.channel_count
                 self.reference_time = self._gpkg1d.reference_time if not reference_time_set else self.reference_time
+                reference_time_set = True
             elif str(value).lower().endswith('_swmm_ts.gpkg'):
                 self._gpkgswmm = GPKG1D(self._expand_property_path(prop, value=value))
                 self.node_count += self._gpkgswmm.node_count
                 self.channel_count += self._gpkgswmm.channel_count
                 self.reference_time = self._gpkgswmm.reference_time if not reference_time_set else self.reference_time
+                reference_time_set = True
             elif str(value).lower().endswith('_2d.gpkg'):
                 self._gpkg2d = GPKG2D(self._expand_property_path(prop, value=value))
                 self.po_point_count += self._gpkg2d.po_point_count
                 self.po_line_count += self._gpkg2d.po_line_count
                 self.po_poly_count += self._gpkg2d.po_poly_count
                 self.reference_time = self._gpkg2d.reference_time if not reference_time_set else self.reference_time
+                reference_time_set = True
             elif str(value).lower().endswith('_rl.gpkg'):
                 self._gpkgrl = GPKGRL(self._expand_property_path(prop, value=value))
                 self.rl_point_count += self._gpkgrl.rl_point_count
                 self.rl_line_count += self._gpkgrl.rl_line_count
                 self.rl_poly_count += self._gpkgrl.rl_poly_count
                 self.reference_time = self._gpkgrl.reference_time if not reference_time_set else self.reference_time
+                reference_time_set = True
+
+        if reference_time_set:
+            self.has_reference_time = True
 
     # noinspection PyProtectedMember
     def _load_time_series_gpkg(self):
@@ -784,7 +798,7 @@ class TPC(INFO, ITimeSeries2D):
     @staticmethod
     def _post_process_channel_losses(df: pd.DataFrame, dtype: str) -> None | pd.DataFrame:
         d = {'Channel Entry Losses': 'Entry', 'Channel Additional Losses': 'Additional', 'Channel Exit Losses': 'Exit'}
-        cols = df.columns.str.contains(d[dtype])
+        cols = df.columns.str.contains(d[dtype], regex=False)
         if cols.any():
             df1 = df.loc[:,cols].copy()
             df1.columns = [' '.join(x.split(' ')[2:]) for x in df1.columns]
@@ -850,9 +864,7 @@ class TPC(INFO, ITimeSeries2D):
         p = self._expand_property_path(prop)
         if p:
             try:
-                with p.open() as f:
-                    index_col = patterns.csv_line_split(f.readline())[1].strip('"')
-                df = pd.read_csv(p, index_col=index_col, na_values='**********')
+                df = pd.read_csv(p, index_col=1, na_values='**********')
                 df.index.name = 'id'
                 df.drop(df.columns[0], axis=1, inplace=True)
                 return df
@@ -893,6 +905,22 @@ class TPC(INFO, ITimeSeries2D):
                 logger.warning('TPC._load_po_info(): Missing or invalid PLOT.csv. Using TPC to guess PO geometry.')
                 plot_objs = self._geom_from_tpc()  # derive geometry from tpc rather than the gis/[...]_PLOT.csv
 
+        df = self._tpc_reader._df[self._tpc_reader._df.iloc[:,0].str.startswith('2D')]
+        def geom_from_tpc_line(dtype: str) -> str | None:
+            for _, row in df.iterrows():
+                if row.iloc[0].startswith('2D Point'):
+                    geom = 'P'
+                elif row.iloc[0].startswith('2D Line'):
+                    geom = 'L'
+                elif row.iloc[0].startswith('2D Region'):
+                    geom = 'R'
+                else:
+                    return None
+                dt = re.sub(r'^2D (Point|Line|Region)', '', row.iloc[0]).split('[', 1)[0].strip()
+                if self._get_standard_data_type_name(dt) == dtype:
+                    return geom
+            return None
+
         def is_valid_plot_row(dtype: str, data_types: str) -> bool:
             # types can correspond to different geometries
             # (valid type, types that could cause incorrect return)
@@ -919,6 +947,15 @@ class TPC(INFO, ITimeSeries2D):
                     for idx, row in filtered_rows.iterrows():
                         data_types = row['data_types'] if row.size > 1 else []
                         geom = row['geom']
+                        if geom == 'R':
+                            try:
+                                # unfortunately there is a bug in Quadtree prior to 2026.0.0 where all PO outputs have
+                                # 'R' geometry type in the PLOT.csv, we need to correct for this here
+                                geom = geom_from_tpc_line(dtype.replace('max ', '').replace('min ', ''))
+                                if geom is None:
+                                    geom = 'R'
+                            except Exception:
+                                pass
                         if filtered_rows.size < 4 or is_valid_plot_row(dtype, data_types):
                             po_info['id'].append(col)
                             po_info['data_type'].append(dtype)

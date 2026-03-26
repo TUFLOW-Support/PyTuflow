@@ -18,6 +18,7 @@ if TYPE_CHECKING:
 
 class MeshResult:
     """Class for helping extract data from a mesh layer."""
+    DATA_TYPE = ''
 
     def __init__(self,
                  lyr: 'QgsMeshLayer' = None,
@@ -50,7 +51,7 @@ class MeshResult:
     def __eq__(self, other: Any) -> bool:
         """Check the layer and point are the same."""
         if isinstance(other, MeshResult):
-            return self.lyr == other.lyr and self.point is not None and self.point == other.point
+            return self.lyr == other.lyr and self.point is not None and self.point == other.point and self.DATA_TYPE == other.DATA_TYPE
         return False
 
     def _key(self, dataset_index: 'QgsMeshDatasetIndex', averaging_method: QgsMesh3dAveragingMethod) -> tuple[Any, ...]:
@@ -89,19 +90,24 @@ class MeshResult:
             # triangle point falls in
             triangle1 = vertices[:3]
             ftri1 = vertex_indices_to_polygon(self.mesh, triangle1)
-            geom = QgsGeometry()
-            geom.fromWkb(ftri1.asWkb())
-            if geom.contains(point):
+            geom1 = QgsGeometry()
+            geom1.fromWkb(ftri1.asWkb())
+            if geom1.contains(point):
                 triangles = vertices[1::-1] + vertices[2:3]  # reorder so first 2 vertexes are one after the other e.g. [10, 11, x]
             else:
                 triangle2 = vertices[2:] + vertices[0:1]
                 ftri2 = vertex_indices_to_polygon(self.mesh, triangle2)
-                geom = QgsGeometry()
-                geom.fromWkb(ftri2.asWkb())
-                if geom.contains(point):
+                geom2 = QgsGeometry()
+                geom2.fromWkb(ftri2.asWkb())
+                if geom2.contains(point):
                     triangles = triangle2
                 else:  # check if point falls exactly on a vertex
-                    return []
+                    if geom1.intersects(QgsGeometry.fromPointXY(point)):
+                        triangles = triangle1
+                    elif geom2.intersects(QgsGeometry.fromPointXY(point)):
+                        triangles = triangle2
+                    else:
+                        return []
         elif len(vertices) == 3:
             if vertices[1] + 1 == vertices[0]:
                 triangles = vertices[1::-1] + vertices[2:3]  # reorder so first 2 vertexes are one after the other e.g. [10, 11, x]
@@ -143,7 +149,7 @@ class MeshResult:
     def _interpolate_from_mesh_vertices(self,
                                         point: 'QgsPointXY',
                                         dataset_group_index: 'QgsMeshDatasetIndex',
-                                        vertices: list[int]) -> float:
+                                        vertices: list[int]) -> float | tuple[float, float]:
         """
         Returns the interpolated value from a mesh face from the surrounding vertex values.
 
@@ -162,6 +168,8 @@ class MeshResult:
                     data_block = self.dp.datasetValue(dataset_group_index, self.vertex)
                     return self._value_from_vertex(data_block)
         if not self.triangle:
+            if self.DATA_TYPE == 'Vector':
+                return (np.nan, np.nan)
             return np.nan
 
         # get data blocks
@@ -172,6 +180,8 @@ class MeshResult:
             if not self.weightings:
                 self.weightings = calculate_barycentric_weightings(self.mesh, self.triangle, point)
         except AssertionError:
+            if self.DATA_TYPE == 'Vector':
+                return (np.nan, np.nan)
             return np.nan
 
         # is_vector = self.dp.datasetGroupMetadata(dataset_group_index).isVector()
@@ -224,7 +234,14 @@ class MeshResult:
             yield y, x
 
     def _2d_elevations(self, dataset_index: 'QgsMeshDatasetIndex') -> Generator[float, None, None]:
-        yield self.result_from_name(dataset_index, ['water level', 'water surface elevation'])
+        incoming_name = self.dp.datasetGroupMetadata(dataset_index.group()).name().lower()
+        incoming_name = incoming_name.split('/', 1)[1] if len(incoming_name.split('/', 1)) == 2 else incoming_name
+        if incoming_name.startswith('max'):
+            yield self.result_from_name(dataset_index, ['water level/maximums', 'max water surface elevation', 'max h'])
+        elif incoming_name.startswith('min'):
+            yield self.result_from_name(dataset_index, ['water level/minimums', 'min water surface elevation', 'min h'])
+        else:
+            yield self.result_from_name(dataset_index, ['water level', 'water surface elevation', 'h'])
         yield self.bed_elevation()
 
     def _get_face(self, point: 'QgsPointXY') -> int:
@@ -254,7 +271,7 @@ class MeshResult:
         try:
             if not self.weightings:
                 self.weightings = calculate_barycentric_weightings(self.mesh, self.triangle, self.point)
-        except AssertionError:
+        except Exception:
             return np.nan
 
         value = 0
