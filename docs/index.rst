@@ -32,6 +32,13 @@ Check out the :doc:`usage` section for further information, including how to :re
 Changelog
 ---------
 
+1.1.1
+"""""
+
+Release date: XX XXX 2026
+
+- Fixed a bug in the :class:`TPC<pytuflow.TPC>` class when the 2D results included structure groups. The ``"u/s structure water level"`` and ``"d/s structure water level"`` data types were causing issues with PyTUFLOW's handling of the forward slash ``"/"`` character. This character has a special meaning in PyTUFLOW for separating context in the location/filter strings. This issue caused PyTUFLOW to not be able to plot from these data types. The ``"/"`` character is now replaced with a dash ``"-"`` character for these data types to avoid this issue.
+
 1.1
 """
 
