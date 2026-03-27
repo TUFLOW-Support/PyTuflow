@@ -838,6 +838,20 @@ class Test_TPC_Frankenmodel(TestCase):
             self.assertEqual((73, 1), ts.shape)
 
 
+class Test_StructureGroups(TestCase):
+
+    def test_tpc(self):
+        p = './tests/structure_groups/EG10_005.tpc'
+        res = TPC(p)
+        data_types = res.data_types()
+        self.assertTrue('u-s structure water level' in data_types)
+        self.assertTrue('d-s structure water level' in data_types)
+        df = res.time_series('bridge1', 'u-s structure water level')
+        self.assertEqual((181, 1), df.shape)
+        df = res.time_series('bridge1', 'd-s structure water level')
+        self.assertEqual((181, 1), df.shape)
+
+
 class Test_GPKG1D(TestCase):
 
     def test_load(self):
