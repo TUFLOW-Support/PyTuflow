@@ -865,6 +865,11 @@ class Test_GPKG1D(TestCase):
         res = GPKG1D(p)
         self.assertEqual('EG15_001', res.name)
 
+    def test_load_gpkg_with_all_nan(self):
+        p = './tests/gpkg_ts/OneStreet_HPC5m_SWMM_Steep_PB50_AUTO_pt19cms_001_swmm_ts.gpkg'
+        res = GPKG1D(p)
+        self.assertEqual(17, len(res.data_types()))
+
     def test_not_gpkg(self):
         p = './tests/2023/projection.gpkg'
         try:
