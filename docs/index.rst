@@ -32,6 +32,16 @@ Check out the :doc:`usage` section for further information, including how to :re
 Changelog
 ---------
 
+1.2
+"""
+
+Release date: XX XXX 2026
+
+Optimised GPKG Time Series Loading
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The :class:`GPKG1D<pytuflow.GPKG1D>`, :class:`GPKG2D<pytuflow.GPKG2D>`, and :class:`GPKGRL<pytuflow.GPKGRL>` classes has been optimised for speed when loading GPKG time series outputs. This will mainly affect large 1D GPKG result files, with one test case that had a file size of ~650MB, going from a load time of ~50sec down to only ~20s.
+
 1.1.1
 """""
 

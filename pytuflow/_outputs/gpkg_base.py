@@ -51,8 +51,12 @@ class GPKGBase:
         query = 'SELECT {0} FROM "{1}"'.format(','.join(cols), table_name)
         df = pd.read_sql_query(query, cur.connection)
         df = df.rename(columns={'Time_relative': 'time'})
+
+        # do some post-processing to make the data easier to work with
         df = df.sort_values(['ID', 'time'])
         groupby = df.groupby('ID', sort=False)
+
+        # cache data
         self._cached[table_name] = df
         self._group_cached[table_name] = groupby
 
