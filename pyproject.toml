@@ -49,10 +49,11 @@ include = [
   "pytuflow/_outputs/data/*.json",
 ]
 
-[pytest]
+[tool.pytest.ini_options]
 filterwarnings = [
     'error',
-    'ignore:numpy.ndarray size changed'
+    'ignore:numpy.ndarray size changed',
+    'ignore::pytest.PytestUnraisableExceptionWarning'
 ]
 
 [project.urls]
