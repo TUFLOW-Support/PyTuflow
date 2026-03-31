@@ -42,15 +42,6 @@ class ITimeSeries2D(ABC):
         self._time_series_data_rl = AppendDict()
 
     @staticmethod
-    def _context_refine_by_geometry(context: list[str], df: pd.DataFrame) -> pd.DataFrame:
-        df1 = df.copy()
-        if context:
-            for geom in ['point', 'line', 'poly']:
-                if geom in context:
-                    df1 = pd.concat([df1, df[df['geometry'] == geom]], axis=1, ignore_index=True)
-        return df1
-
-    @staticmethod
     def _replace_1d_aliases(filter_by: str) -> str:
         def replace_alias(filter_by_: list[str], alias: str, values: list[str]):
             if alias in filter_by_:
