@@ -842,6 +842,33 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
             self.cache.set(curtain, 'curtain', data_type, time_index, self._linestring_as_wkt(line))
             return curtain
 
+    def flux(self, line: LineStringLike, data_type: str) -> np.ndarray:
+        """Returns the flux across a line. The data_type can be "q" (unit flow), or any other scalar result type
+        and the flux will be using the velocity.
+
+        Parameters
+        ----------
+        line : LineStringLike
+            The line to extract the flux for.
+        data_type : str
+            The result type to extract the flux for. If "q" is specified, then the flux will be calculated using
+            solely the "q" data type. If a scalar data type is passed in, then the flux will be calculated
+            with help from the velocity result. Other vector data types are not supported.
+
+        Returns
+        -------
+        np.ndarray
+            An array containing the extracted flux across the line.
+        """
+        if self.is_vector(data_type):
+            raise ValueError('data type for flux calculation cannot be static')
+        if data_type not in ['q', 'unit flow'] and self.is_vector(data_type):
+            raise ValueError('data type for flux calculation must be unit flow or a scalar type')
+
+        with self.extractor.open():
+            # coerce line
+            line = self._coerce_into_line(line)
+
     def _find_time_index(self, data_type: str, time: float | datetime) -> int:
         if data_type.lower() in ['bed elevation', 'bed level']:
             return 0
