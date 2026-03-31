@@ -4,7 +4,7 @@ import typing
 from abc import ABC, abstractmethod
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
-from typing import Union
+from typing import ClassVar, Union
 
 import numpy as np
 try:
@@ -24,10 +24,10 @@ DEFAULT_REFERENCE_TIME = datetime(1990, 1, 1, tzinfo=timezone.utc)
 class Output(ABC):
     """Base class for all TUFLOW output classes. This class should not be initialised directly."""
 
-    DOMAIN_TYPES = {}
-    GEOMETRY_TYPES = {}
-    ATTRIBUTE_TYPES = {}
-    ID_COLUMNS = []
+    DOMAIN_TYPES: ClassVar[dict] = {}
+    GEOMETRY_TYPES: ClassVar[dict] = {}
+    ATTRIBUTE_TYPES: ClassVar[dict] = {}
+    ID_COLUMNS: ClassVar[list] = []
 
     @abstractmethod
     def __init__(self, *fpath: PathLike, **kwargs) -> None:
@@ -417,6 +417,10 @@ class Output(ABC):
                    possible_types: dict[typing.Any, list[str]],
                    column_name: str,
                    exclude: bool = False) -> tuple[pd.DataFrame, bool]:
+        # NOTE: `ctx` is mutated in-place. Matched tokens are removed so that
+        # the caller can detect unconsumed (excess) tokens after all filters
+        # have been applied. Callers must not rely on `ctx` being unchanged
+        # after this call.
         def remove_from_ctx(ctx1, types):
             for typ1 in types:
                 while typ1 in ctx1:

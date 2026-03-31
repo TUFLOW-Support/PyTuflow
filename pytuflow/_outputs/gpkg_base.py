@@ -14,7 +14,6 @@ if TYPE_CHECKING:
 class GPKGBase:
 
     def __init__(self, *args, **kwargs):
-        self.fpath = None
         self._cached = {}  # 'table_name': pd.DataFrame
         self._group_cached = {}  # 'table_name': df.groupby
         super().__init__(*args, **kwargs)

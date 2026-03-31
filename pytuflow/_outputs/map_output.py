@@ -90,7 +90,11 @@ class MapOutput(Output, ABC):
         return '/'.join(filter_by)
 
     def _filter(self, filter_by: str, filtered_something: bool = False, df: pd.DataFrame = None,
-                ignore_excess_filters: bool = False) -> pd.DataFrame:
+                ignore_excess_filters: bool = False) -> tuple[pd.DataFrame, dict[str, bool]]:
+        # MapOutput always rebuilds from its own _overview_dataframe; the inherited
+        # `filtered_something` and `df` parameters are intentionally not forwarded here
+        # because map outputs use a different pre-filtering strategy (max/min, static,
+        # 2d/3d) before delegating remaining tokens to the base _filter.
         filter_by = self._replace_aliases(filter_by)
         filter_by = [x.strip().lower() for x in filter_by.split('/')] if filter_by else []
 
