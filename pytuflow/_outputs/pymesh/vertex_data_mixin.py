@@ -255,7 +255,11 @@ class VertexDataMixin:
         n_segs = len(cell_ids) - 1
 
         widths = np.diff(acell[:, 0])                                           # (n_segs,)
-        normals = np.column_stack((-dir_mid[:, 1], dir_mid[:, 0]))              # (n_segs, 2)
+        # dir_mid has n_segs+2 entries: one "before start" sentinel and one "after end" sentinel.
+        # Trim both to obtain one direction per segment midpoint, matching the amid layout.
+        # The normal is a 90° CCW rotation of the line direction so that positive flux means
+        # flow crossing left-to-right when walking along the line (same convention as _project_vector).
+        normals = np.column_stack((-dir_mid[1:-1, 1], dir_mid[1:-1, 0]))       # (n_segs, 2)
         mid_xy = (acell[:-1, 1:3] + acell[1:, 1:3]) / 2.                       # (n_segs, 2) local
 
         if is_unit_flow:
