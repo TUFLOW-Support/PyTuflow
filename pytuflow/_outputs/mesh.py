@@ -940,6 +940,39 @@ class Mesh(MapOutput):
 
         return df
 
+    def flux(self, locations: LineStringLocation, data_types: str | list[str] = 'unit flow',
+             time_fmt: str = 'relative') -> pd.DataFrame:
+        # doc-string inherited
+        if self._driver.DRIVER_SOURCE != 'python':
+            raise NotImplementedError('v1.0 driver does not support flux extraction.')
+
+        self._load()
+        df = pd.DataFrame()
+        lines = self._translate_line_string_location(locations)
+        data_types = self._figure_out_data_types(data_types, None)
+
+        for name, line in lines.items():
+            df1 = pd.DataFrame()
+            for dtype in data_types:
+                a = self._driver.flux(line, dtype)
+                if a.size:
+                    df2 = pd.DataFrame(a[:,1], index=a[:,0], columns=[dtype])
+                    df2.index.name = 'time'
+                    df1 = pd.concat([df1, df2], axis=1) if not df1.empty else df2
+            if df1.empty:
+                continue
+            if not df.empty:
+                if np.isclose(df.index, df1.index, atol=0.0001, rtol=0).all():
+                    df1.index = df.index
+                else:
+                    raise ValueError('Time series index does not match between datasets.')
+            df = pd.concat([df, df1], axis=1) if not df.empty else df1
+
+        if time_fmt == 'absolute':
+            df.index = self.reference_time + pd.to_timedelta(df.index, unit='h')
+
+        return df
+
     def to_gltf(self,
                 output_path: Path | str,
                 mesh_geometry: str = '',

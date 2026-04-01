@@ -843,8 +843,12 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
             return curtain
 
     def flux(self, line: LineStringLike, data_type: str) -> np.ndarray:
-        """Returns the flux across a line. The data_type can be "q" (unit flow), or any other scalar result type
-        and the flux will be using the velocity.
+        """Returns the flux across a line. The data_type can be "q"/"unit flow" and the flux will be calculated
+        using unit flow and the flow width. It can also be any other scalar result type
+        and the flux will be calculated by multiplying data type with the depth the velocity to obtain a flux.
+        E.g. it's possible to calculate the volume of sediment or salt by passing in a sediment or salinity
+        data type. Passing in an empty string will essentially calculate the volume flux, although using 'unit flow'
+        is recommended if it is available.
 
         Parameters
         ----------
@@ -860,14 +864,55 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
         np.ndarray
             An array containing the extracted flux across the line.
         """
-        if self.is_vector(data_type):
-            raise ValueError('data type for flux calculation cannot be static')
-        if data_type not in ['q', 'unit flow'] and self.is_vector(data_type):
-            raise ValueError('data type for flux calculation must be unit flow or a scalar type')
+        # Checks
+        if data_type in ['q', 'unit flow']:
+            # check to see if this result type is available
+            if not 'unit flow' in self.data_types():
+                raise KeyError('Data type "unit flow" is not available for flux calculation.')
+        else:
+            if data_type:
+                if self.is_static(data_type):
+                    raise ValueError('data type for flux calculation cannot be static')
+                if self.is_vector(data_type):
+                    raise ValueError('data type for flux calculation must be unit flow or a scalar type')
+            # check for depth and velocities - if velocity is called Vector Velocity like in a TUFLOW HPC XMDF output,
+            # then searching for Velocity is still good enough since these are created together
+            if 'velocity' not in self.data_types():
+                raise ValueError('velocity not found in available data types')
+            elif not self.on_vertex('velocity'):
+                # don't need to check depths, the layer thickness are defined in cell centred format
+                if self.is_3d('velocity') and not self.is_3d(data_type):
+                    raise ValueError('data_type must be 3D for 3D results')
+            elif 'depth' not in self.data_types():
+                raise ValueError('depth not found in available data types')
 
         with self.extractor.open():
             # coerce line
             line = self._coerce_into_line(line)
+
+            if self.cache.contains('flux', data_type, self._linestring_as_wkt(line)):
+                return self.cache.get('flux', data_type, self._linestring_as_wkt(line))
+
+            # check cache for line intersections, otherwise calculate
+            if self.cache.contains('mesh_line', self._linestring_as_wkt(line)):
+                cell_ids, acell, dir_, mid_cell_ids, amid, dir_mid = self.cache.get('mesh_line',
+                                                                                    self._linestring_as_wkt(line))
+            else:
+                cell_ids, acell, dir_, mid_cell_ids, amid, dir_mid = self.geom.mesh_line(line)
+                self.cache.set(
+                    (cell_ids, acell, dir_, mid_cell_ids, amid, dir_mid),
+                    'mesh_line',
+                    self._linestring_as_wkt(line)
+                )
+
+            # get data
+            if self.on_vertex(data_type):
+                flux = self.flux_from_vertex_data(line, cell_ids, acell, dir_mid, data_type)
+            else:
+                flux = self.flux_from_cell_data(cell_ids, acell, dir_, data_type)
+
+            self.cache.set(flux, 'flux', data_type, self._linestring_as_wkt(line))
+            return flux
 
     def _find_time_index(self, data_type: str, time: float | datetime) -> int:
         if data_type.lower() in ['bed elevation', 'bed level']:

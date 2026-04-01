@@ -1,3 +1,4 @@
+import abc
 import re
 from abc import ABC
 from collections.abc import Iterable
@@ -9,7 +10,7 @@ try:
 except ImportError:
     from .pymesh.stubs import pandas as pd
 
-from .output import Output
+from .output import Output, PlotExtractionLocation
 from .._pytuflow_types import PathLike
 from ..util import gis
 from ..util import pytuflow_logging
@@ -33,6 +34,34 @@ class MapOutput(Output, ABC):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._info = pd.DataFrame(columns=['data_type', 'type', 'is_max', 'is_min', 'static', '3d', 'start', 'end', 'dt'])
+
+    @abc.abstractmethod
+    def flux(self, locations: LineStringLocation, data_types: str | list[str] = 'unit flow',
+             time_fmt: str = 'relative') -> pd.DataFrame:
+        """Returns the flux across a line. The data_type can be "q"/"unit flow" and the flux will be calculated
+        using unit flow and the flow width. It can also be any other scalar result type
+        and the flux will be calculated by multiplying data type with the depth the velocity to obtain a flux.
+        E.g. it's possible to calculate the volume of sediment or salt by passing in a sediment or salinity
+        data type. Passing in an empty string will essentially calculate the volume flux, although using 'unit flow'
+        is recommended if it is available.
+
+        Parameters
+        ----------
+        locations : LineStringLocation
+            The line(s) to extract the flux for.
+        data_types : str | list[str], optional
+            The result type(s) to extract the flux for. If "q" or "unit flow" is specified, then the flux will be calculated using
+            solely the "q" data type. If a scalar data type is passed in, then the flux will be calculated
+            with help from the velocity and epth result. Other vector data types are not supported.
+        time_fmt : str, optional
+            The format for the time values. Options are 'relative' or 'absolute'.
+
+        Returns
+        -------
+        np.ndarray
+            An array containing the extracted flux across the line.
+        """
+        raise NotImplementedError
 
     @staticmethod
     def _get_standard_data_type_name(name: str) -> str:
