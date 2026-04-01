@@ -214,6 +214,134 @@ class VertexDataMixin:
             return np.array([[[h, value[0], value[1]]], [[z, value[0], value[1]]]])
         return np.array([[h, value], [z, value]])
 
+    def flux_from_vertex_data(self: 'PyMesh',
+                               line: np.ndarray,
+                               cell_ids: np.ndarray,
+                               acell: np.ndarray,
+                               dir_mid: np.ndarray,
+                               data_type: str,
+                               ) -> np.ndarray:
+        """Calculate flux across a line using vertex-based data.
+
+        For 'unit flow'/'q', interpolates the unit flow vector at each segment midpoint
+        and projects it onto the line normal. For any other (scalar) data type, the flux
+        is computed as ``scalar * depth * dot(velocity, normal)`` integrated along the line.
+
+        Parameters
+        ----------
+        line : np.ndarray
+            The line in local coordinates (unused directly; retained for API symmetry
+            with the curtain equivalent).
+        cell_ids : np.ndarray
+            N cell IDs at intersection + endpoint positions returned by ``mesh_line``.
+        acell : np.ndarray
+            Nx3 ``[offset, x, y]`` intersection + endpoint positions (local coords).
+        dir_mid : np.ndarray
+            (N-1)x2 normalised direction vectors, one per segment midpoint.
+        data_type : str
+            Result type: ``'unit flow'``/``'q'`` for direct unit-flow flux, or a scalar
+            data type for ``scalar * depth * velocity`` flux.
+
+        Returns
+        -------
+        np.ndarray
+            ``(T, 2)`` array of ``[time, flux]``, or empty array if the line lies
+            entirely outside the mesh.
+        """
+        is_unit_flow = data_type in ['q', 'unit flow']
+
+        times = self.times('unit flow' if is_unit_flow else data_type)
+        T = len(times)
+        n_segs = len(cell_ids) - 1
+
+        widths = np.diff(acell[:, 0])                                           # (n_segs,)
+        normals = np.column_stack((-dir_mid[:, 1], dir_mid[:, 0]))              # (n_segs, 2)
+        mid_xy = (acell[:-1, 1:3] + acell[1:, 1:3]) / 2.                       # (n_segs, 2) local
+
+        if is_unit_flow:
+            q_dt = self.translate_data_type('unit flow')[0]
+            wd_dt = q_dt
+        else:
+            vel_dt = self.translate_data_type('velocity')[0]
+            depth_dt = self.translate_data_type('depth')[0]
+            scalar_dt = self.translate_data_type(data_type)[0] if data_type else None
+            wd_dt = vel_dt
+
+        # --- Pass 1: find containing triangle and barycentric weights per segment ---
+        seg_info = []           # (tri_cell, verts, inv, uvw) or None per segment
+        all_vert_set = set()    # all unique vertex IDs needed
+        all_tricell_list = []   # cell IDs for the triangles (for wd_flag reads)
+
+        for i in range(n_segs):
+            if cell_ids[i] == -1 and cell_ids[i + 1] == -1:
+                seg_info.append(None)
+                continue
+            hint = int(cell_ids[i]) if cell_ids[i] != -1 else int(cell_ids[i + 1])
+            tri = self.geom.find_containing_triangle(mid_xy[i], scope='local', cell_id=hint)
+            if tri == -1:
+                seg_info.append(None)
+                continue
+            uvw = self.geom.barycentric_factors(mid_xy[i], tri, scope='local')     # (1, 3)
+            verts, inv = np.unique(self.geom.triangle_vertices(tri), return_inverse=True)
+            tri_cell = int(self.geom.triangle_cell(tri))
+            seg_info.append((tri_cell, verts, inv, uvw))
+            all_vert_set.update(int(v) for v in verts)
+            all_tricell_list.append(tri_cell)
+
+        if not all_vert_set:
+            return np.array([])
+
+        # --- Pass 2: batch-read all vertex data and wd_flags in one shot each ---
+        all_verts = np.array(sorted(all_vert_set))
+
+        if is_unit_flow:
+            all_q = self.extractor.data(q_dt, (slice(None), all_verts))            # (T, N_v, 2)
+        else:
+            all_vel = self.extractor.data(vel_dt, (slice(None), all_verts))        # (T, N_v, 2)
+            all_depth = self.extractor.data(depth_dt, (slice(None), all_verts))    # (T, N_v)
+            if scalar_dt:
+                all_scalar = self.extractor.data(scalar_dt, (slice(None), all_verts))  # (T, N_v)
+
+        ucells_wd = np.unique(all_tricell_list)
+        wd_all = self.extractor.wd_flag(wd_dt, (slice(None), ucells_wd)).astype(bool)  # (T, N_uc)
+        vert_to_idx = {int(v): i for i, v in enumerate(all_verts)}
+        cell_to_wd_idx = {int(c): i for i, c in enumerate(ucells_wd)}
+
+        # --- Pass 3: accumulate flux contributions ---
+        flux_vals = np.zeros(T)
+        for i, info in enumerate(seg_info):
+            if info is None:
+                continue
+            tri_cell, verts, inv, uvw = info
+            local_idx = np.array([vert_to_idx[int(v)] for v in verts])  # indices into all_verts
+            wd = wd_all[:, cell_to_wd_idx[tri_cell]]                     # (T,)
+
+            if is_unit_flow:
+                q_seg = all_q[:, local_idx[inv], :]                         # (T, 3, 2)
+                q_mid = (q_seg * uvw.reshape(1, 3, 1)).sum(axis=1)          # (T, 2)
+                proj = (q_mid * normals[i]).sum(axis=1)                     # (T,)
+                proj[~wd] = 0.0
+                flux_vals += proj * widths[i]
+            else:
+                vel_seg = all_vel[:, local_idx[inv], :]                     # (T, 3, 2)
+                vel_mid = (vel_seg * uvw.reshape(1, 3, 1)).sum(axis=1)      # (T, 2)
+                vel_n = (vel_mid * normals[i]).sum(axis=1)                  # (T,)
+                vel_n[~wd] = 0.0
+
+                depth_seg = all_depth[:, local_idx[inv]]                    # (T, 3)
+                depth_mid = (depth_seg * uvw).sum(axis=1)                   # (T,)
+                depth_mid[~wd] = 0.0
+
+                if scalar_dt:
+                    sc_seg = all_scalar[:, local_idx[inv]]                  # (T, 3)
+                    sc_mid = (sc_seg * uvw).sum(axis=1)                     # (T,)
+                    sc_mid[~wd] = 0.0
+                    flux_vals += sc_mid * depth_mid * vel_n * widths[i]
+                else:
+                    flux_vals += depth_mid * vel_n * widths[i]
+
+        return np.column_stack((times, flux_vals))
+
     def curtain_from_vertex_data(
             self: 'Mesh',
             linestring: np.ndarray,

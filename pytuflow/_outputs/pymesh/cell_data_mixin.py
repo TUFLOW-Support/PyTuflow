@@ -296,6 +296,92 @@ class CellDataMixin:
             axis=1 if len(values) == 1 else 2
         )
 
+    def flux_from_cell_data(self: 'PyMesh',
+                             cell_ids: np.ndarray,
+                             acell: np.ndarray,
+                             dir_: np.ndarray,
+                             data_type: str,
+                             ) -> np.ndarray:
+        """Calculate flux across a line using cell-centred data.
+
+        For 'unit flow'/'q', the unit flow vector in each cell is projected onto the
+        line normal and integrated over the segment width.  For any other (scalar) data
+        type, the flux is ``scalar * depth * dot(velocity, normal)`` integrated along the
+        line (2-D only; 3-D cell-centred scalar flux is not yet implemented).
+
+        Parameters
+        ----------
+        cell_ids : np.ndarray
+            N cell IDs at intersection + endpoint positions returned by ``mesh_line``.
+        acell : np.ndarray
+            Nx3 ``[offset, x, y]`` intersection + endpoint positions.
+        dir_ : np.ndarray
+            Nx2 normalised direction vectors at each intersection point.
+        data_type : str
+            Result type: ``'unit flow'``/``'q'`` for direct unit-flow flux, or a scalar
+            data type for ``scalar * depth * velocity`` flux.
+
+        Returns
+        -------
+        np.ndarray
+            ``(T, 2)`` array of ``[time, flux]``, or empty array if the line lies
+            entirely outside the mesh.
+        """
+        is_unit_flow = data_type in ['q', 'unit flow']
+
+        times = self.times('unit flow' if is_unit_flow else data_type)
+        T = len(times)
+
+        # N-1 segments: segment i spans acell[i]→acell[i+1] and belongs to cell_ids[i]
+        seg_cells = cell_ids[:-1]
+        valid = seg_cells != -1
+        if not valid.any():
+            return np.array([])
+
+        valid_cells = seg_cells[valid]
+        widths = np.diff(acell[:, 0])[valid]                                     # (M,)
+        normals = np.column_stack((-dir_[:-1, 1], dir_[:-1, 0]))[valid]         # (M, 2)
+
+        ucells, inverse = np.unique(valid_cells, return_inverse=True)            # (n,), (M,)
+
+        if is_unit_flow:
+            dt = self.translate_data_type('unit flow')[0]
+            q = self.extractor.data(dt, (slice(None), ucells))                  # (T, n, 2)
+            wd = self.extractor.wd_flag(dt, (slice(None), ucells)).astype(bool) # (T, n)
+            q_seg = q[:, inverse, :]                                             # (T, M, 2)
+            wd_seg = wd[:, inverse]                                              # (T, M)
+            proj = (q_seg * normals).sum(axis=2)                                 # (T, M)
+            proj[~wd_seg] = 0.0
+            flux_vals = (proj * widths).sum(axis=1)                              # (T,)
+        else:
+            vel_dt = self.translate_data_type('velocity')[0]
+            if self.is_3d(vel_dt):
+                raise NotImplementedError(
+                    '3D scalar flux from cell-centred data is not yet implemented.'
+                )
+            vel = self.extractor.data(vel_dt, (slice(None), ucells))                # (T, n, 2)
+            wd = self.extractor.wd_flag(vel_dt, (slice(None), ucells)).astype(bool) # (T, n)
+            vel_seg = vel[:, inverse, :]                                             # (T, M, 2)
+            wd_seg = wd[:, inverse]                                                  # (T, M)
+            vel_n = (vel_seg * normals).sum(axis=2)                                  # (T, M)
+            vel_n[~wd_seg] = 0.0
+
+            depth_dt = self.translate_data_type('depth')[0]
+            depth = self.extractor.data(depth_dt, (slice(None), ucells))            # (T, n)
+            depth_seg = depth[:, inverse]                                            # (T, M)
+            depth_seg[~wd_seg] = 0.0
+
+            if data_type:
+                scalar_dt = self.translate_data_type(data_type)[0]
+                scalar = self.extractor.data(scalar_dt, (slice(None), ucells))      # (T, n)
+                scalar_seg = scalar[:, inverse]                                      # (T, M)
+                scalar_seg[~wd_seg] = 0.0
+                flux_vals = (scalar_seg * depth_seg * vel_n * widths).sum(axis=1)
+            else:
+                flux_vals = (depth_seg * vel_n * widths).sum(axis=1)
+
+        return np.column_stack((times, flux_vals))
+
     def profile_from_cell_data(self: 'PyMesh', point: np.ndarray, data_type: str, time_index: int) -> np.ndarray:
         cell_id = self.geom.find_containing_cell(point, scope='local')
         if cell_id == -1:
