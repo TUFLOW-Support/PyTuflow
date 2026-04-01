@@ -949,7 +949,10 @@ class Mesh(MapOutput):
         self._load()
         df = pd.DataFrame()
         lines = self._translate_line_string_location(locations)
-        data_types = self._figure_out_data_types(data_types, None)
+        if data_types:
+            data_types = self._figure_out_data_types(data_types, None)
+        else:
+            data_types = ['']
 
         for name, line in lines.items():
             df1 = pd.DataFrame()

@@ -66,6 +66,9 @@ class MapOutput(Output, ABC):
     @staticmethod
     def _get_standard_data_type_name(name: str) -> str:
         """Override base method to consider explicit calls to max, min, and time of max datasets."""
+        if name == 'q':
+            return 'unit flow'
+
         name1 = name.split('/')[0].strip()
         name1 = re.sub(r'\sMaximums$', '', name1, flags=re.IGNORECASE)
         name1 = re.sub(r'^hazard_', '', name1, flags=re.IGNORECASE)
