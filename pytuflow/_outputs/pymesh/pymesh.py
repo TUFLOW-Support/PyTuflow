@@ -864,10 +864,12 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
         np.ndarray
             An array containing the extracted flux across the line.
         """
+        _ = self.data_types()
+        data_types = self._standardised_data_types
         # Checks
         if data_type in ['q', 'unit flow']:
             # check to see if this result type is available
-            if not 'unit flow' in self.data_types():
+            if not 'unit flow' in data_types:
                 raise KeyError('Data type "unit flow" is not available for flux calculation.')
         else:
             if data_type:
@@ -877,13 +879,13 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
                     raise ValueError('data type for flux calculation must be unit flow or a scalar type')
             # check for depth and velocities - if velocity is called Vector Velocity like in a TUFLOW HPC XMDF output,
             # then searching for Velocity is still good enough since these are created together
-            if 'velocity' not in self.data_types():
+            if 'velocity' not in data_types:
                 raise ValueError('velocity not found in available data types')
             elif not self.on_vertex('velocity'):
                 # don't need to check depths, the layer thickness are defined in cell centred format
                 if self.is_3d('velocity') and not self.is_3d(data_type):
                     raise ValueError('data_type must be 3D for 3D results')
-            elif 'depth' not in self.data_types():
+            elif 'depth' not in data_types:
                 raise ValueError('depth not found in available data types')
 
         with self.extractor.open():
