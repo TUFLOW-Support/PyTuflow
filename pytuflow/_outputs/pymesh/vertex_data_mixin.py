@@ -248,9 +248,30 @@ class VertexDataMixin:
             ``(T, 2)`` array of ``[time, flux]``, or empty array if the line lies
             entirely outside the mesh.
         """
-        is_unit_flow = data_type in ['q', 'unit flow']
+        is_unit_flow_request = data_type in ['q', 'unit flow']
+        # Some formats (e.g. TUFLOW HPC XMDF) store 'unit flow' as a scalar magnitude
+        # rather than a (qx, qy) vector.  Only use it directly when it is truly a vector;
+        # otherwise fall back to velocity × depth which is mathematically equivalent.
+        use_q_vector = is_unit_flow_request and self.is_vector('unit flow')
 
-        times = self.times('unit flow' if is_unit_flow else data_type)
+        if use_q_vector:
+            q_dt = self.translate_data_type('unit flow')[0]
+            wd_dt = q_dt
+            times = self.times('unit flow')
+            vel_dt = depth_dt = scalar_dt = None
+        else:
+            # Use the vector form of velocity (e.g. TUFLOW HPC XMDF stores the scalar
+            # magnitude as 'velocity' and the (Vx, Vy) vector as 'vector velocity').
+            vel_dt = self.translate_data_type(
+                'vector velocity' if not self.is_vector('velocity') else 'velocity'
+            )[0]
+            depth_dt = self.translate_data_type('depth')[0]
+            # For a unit-flow request where unit flow is scalar, treat as volume flux
+            # (scalar_dt=None) — velocity × depth already gives the same result.
+            scalar_dt = self.translate_data_type(data_type)[0] if (data_type and not is_unit_flow_request) else None
+            wd_dt = vel_dt
+            times = self.times(data_type) if (data_type and not is_unit_flow_request) else self.times('velocity')
+
         T = len(times)
         n_segs = len(cell_ids) - 1
 
@@ -261,15 +282,6 @@ class VertexDataMixin:
         # flow crossing left-to-right when walking along the line (same convention as _project_vector).
         normals = np.column_stack((-dir_mid[1:-1, 1], dir_mid[1:-1, 0]))       # (n_segs, 2)
         mid_xy = (acell[:-1, 1:3] + acell[1:, 1:3]) / 2.                       # (n_segs, 2) local
-
-        if is_unit_flow:
-            q_dt = self.translate_data_type('unit flow')[0]
-            wd_dt = q_dt
-        else:
-            vel_dt = self.translate_data_type('velocity')[0]
-            depth_dt = self.translate_data_type('depth')[0]
-            scalar_dt = self.translate_data_type(data_type)[0] if data_type else None
-            wd_dt = vel_dt
 
         # --- Pass 1: find containing triangle and barycentric weights per segment ---
         seg_info = []           # (tri_cell, verts, inv, uvw) or None per segment
@@ -298,7 +310,7 @@ class VertexDataMixin:
         # --- Pass 2: batch-read all vertex data and wd_flags in one shot each ---
         all_verts = np.array(sorted(all_vert_set))
 
-        if is_unit_flow:
+        if use_q_vector:
             all_q = self.extractor.data(q_dt, (slice(None), all_verts))            # (T, N_v, 2)
         else:
             all_vel = self.extractor.data(vel_dt, (slice(None), all_verts))        # (T, N_v, 2)
@@ -320,7 +332,7 @@ class VertexDataMixin:
             local_idx = np.array([vert_to_idx[int(v)] for v in verts])  # indices into all_verts
             wd = wd_all[:, cell_to_wd_idx[tri_cell]]                     # (T,)
 
-            if is_unit_flow:
+            if use_q_vector:
                 q_seg = all_q[:, local_idx[inv], :]                         # (T, 3, 2)
                 q_mid = (q_seg * uvw.reshape(1, 3, 1)).sum(axis=1)          # (T, 2)
                 proj = (q_mid * normals[i]).sum(axis=1)                     # (T,)
