@@ -870,7 +870,11 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
         if data_type in ['q', 'unit flow']:
             # check to see if this result type is available
             if not 'unit flow' in data_types:
-                raise KeyError('Data type "unit flow" is not available for flux calculation.')
+                raise ValueError('Data type "unit flow" is not available for flux calculation.')
+            if not self.is_vector(data_type):
+                if f'vector {data_type}' not in data_types:
+                    raise ValueError(f'Data type "{data_type}" is not a vector and could not find a "vector {data_type}".')
+                data_type = f'vector {data_type}'
         else:
             if data_type:
                 if self.is_static(data_type):

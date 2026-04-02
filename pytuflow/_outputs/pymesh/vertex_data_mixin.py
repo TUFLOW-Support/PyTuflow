@@ -248,11 +248,11 @@ class VertexDataMixin:
             ``(T, 2)`` array of ``[time, flux]``, or empty array if the line lies
             entirely outside the mesh.
         """
-        is_unit_flow_request = data_type in ['q', 'unit flow']
+        is_unit_flow_request = data_type in ['q', 'unit flow', 'vector unit flow']
         # Some formats (e.g. TUFLOW HPC XMDF) store 'unit flow' as a scalar magnitude
         # rather than a (qx, qy) vector.  Only use it directly when it is truly a vector;
         # otherwise fall back to velocity × depth which is mathematically equivalent.
-        use_q_vector = is_unit_flow_request and self.is_vector('unit flow')
+        use_q_vector = is_unit_flow_request and self.is_vector(data_type)
 
         if use_q_vector:
             q_dt = self.translate_data_type('unit flow')[0]
