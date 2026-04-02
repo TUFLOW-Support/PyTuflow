@@ -255,9 +255,9 @@ class VertexDataMixin:
         use_q_vector = is_unit_flow_request and self.is_vector(data_type)
 
         if use_q_vector:
-            q_dt = self.translate_data_type('unit flow')[0]
+            q_dt = self.translate_data_type(data_type)[0]
             wd_dt = q_dt
-            times = self.times('unit flow')
+            times = self.times(data_type)
             vel_dt = depth_dt = scalar_dt = None
         else:
             # Use the vector form of velocity (e.g. TUFLOW HPC XMDF stores the scalar
