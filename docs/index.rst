@@ -32,6 +32,18 @@ Check out the :doc:`usage` section for further information, including how to :re
 Changelog
 ---------
 
+1.1.1
+"""""
+
+Release date: 8 April 2026
+
+- Fixed a bug in the :class:`TPC<pytuflow.TPC>` class when the 2D results included structure groups. The ``"u/s structure water level"`` and ``"d/s structure water level"`` data types were causing issues with PyTUFLOW's handling of the forward slash ``"/"`` character. This character has a special meaning in PyTUFLOW for separating context in the location/filter strings. This issue caused PyTUFLOW to not be able to plot from these data types. The ``"/"`` character is now replaced with a dash ``"-"`` character for these data types to avoid this issue.
+- Fixed a bug in the :class:`TuflowBinaries<pytuflow.TuflowBinaries>` class where binaries found from installed locations from the Window MSI installation were incorrectly pointing at the folder rather than the ``.exe`` file.
+- Fixed a bug when loading a TUFLOW-SWMM output with the :class:`GPKG1D()<pytuflow.GPKG1D>` class where the results would fail to load due to channels that contained all ``NaN`` values for a given data type. This caused a loading error when the class tried to calculate the time of maximum for that data type.
+- Fixed a regression bug in the :class:`TCF<pytuflow.TCF>` class which would cause an error when encountering an absolute file path for folder inputs (e.g. ``Write Check Files == C:\TUFLOW\Model\Check\``).
+- Fixed a regression bug in the :class:`TCF<pytuflow.TCF>`, and other control file classes, when a GPKG input contained a variable in the layer name (e.g. ``Read GIS PO == database.gpkg >> 2d_po_<<~s~>>_L``).
+- Fixed a bug when loading a :class:`TCF<pytuflow.TCF>` file that contained an ``MI Projection == CoordSys...`` style command.
+
 1.1
 """
 

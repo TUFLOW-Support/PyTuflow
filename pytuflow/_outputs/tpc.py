@@ -718,7 +718,8 @@ class TPC(INFO, ITimeSeries2D):
             if df is not None:
                 if not prop.startswith('2D Region Max Water Level'):
                     data_type = self._get_standard_data_type_name(data_type)
-                self._time_series_data_2d[data_type.lower()] = df
+                data_type = data_type.lower().replace('/', '-')
+                self._time_series_data_2d[data_type] = df
 
     def _load_time_series_from_property(self, prop: str, data_type: str, domain: str, value: str = None) -> None | pd.DataFrame:
         p = self._expand_property_path(prop, value=value)
@@ -944,6 +945,7 @@ class TPC(INFO, ITimeSeries2D):
                 end = df1.index[-1]
                 for col in df1.columns:
                     filtered_rows = plot_objs.loc[[col], ['data_types', 'geom']] if 'data_types' in plot_objs.columns else plot_objs.loc[[col], ['geom']]
+                    used_geoms = []
                     for idx, row in filtered_rows.iterrows():
                         data_types = row['data_types'] if row.size > 1 else []
                         geom = row['geom']
@@ -956,7 +958,11 @@ class TPC(INFO, ITimeSeries2D):
                                     geom = 'R'
                             except Exception:
                                 pass
+                        if geom in used_geoms:
+                            continue
+                        used_geoms.append(geom)
                         if filtered_rows.size < 4 or is_valid_plot_row(dtype, data_types):
+                            dtype = dtype.replace('/', '-')  # sanitise "/" out of data type name
                             po_info['id'].append(col)
                             po_info['data_type'].append(dtype)
                             po_info['geometry'].append(d[geom])

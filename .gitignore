@@ -13,3 +13,4 @@ docs_copy*
 *.cfg.json
 /identifier.sqlite
 profile.*
+*__pycache__*

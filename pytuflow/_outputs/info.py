@@ -776,7 +776,12 @@ class INFO(TimeSeries):
         for data_type, results in self._time_series_data.items():
             for res in results:
                 max_ = res.max()
-                tmax = res.idxmax()
+                valid = max_.notna()
+                tmax = max_.copy()
+                tmax.loc[:] = np.nan  # set tmax to NaN where max is NaN
+                if tmax.dtype != 'float':
+                    tmax = tmax.astype('float')
+                tmax[valid] = res.loc[:,valid].idxmax()
                 self._maximum_data[data_type] = pd.DataFrame({'max': max_, 'tmax': tmax})
 
     def _prepend_1d_type_to_column_name(self, columns: pd.Index) -> pd.Index:

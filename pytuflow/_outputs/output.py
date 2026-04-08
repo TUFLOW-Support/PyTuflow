@@ -297,7 +297,11 @@ class Output(ABC):
             'id': id_filter
         }
 
-        df = df if not df.empty and filtered_something and not (filter_by and not ignore_excess_filters) else pd.DataFrame(columns=df.columns)
+        has_results = not df.empty
+        applied_filters = filtered_something
+        excess_filters = bool(filter_by) and not ignore_excess_filters
+        if not (has_results and applied_filters and not excess_filters):
+            df = pd.DataFrame(columns=df.columns)
 
         return df, filtered
 
