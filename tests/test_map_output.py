@@ -868,17 +868,19 @@ class TestNCMesh(unittest.TestCase):
 
     def test_flux_2d_netcdf4_driver(self):
         nc = './tests/nc_mesh/Trap_Steady_000.nc'
-        res = NCMesh(nc, driver='qgis geometry netcdf4')
-        df = res.flux('./tests/nc_mesh/fv_steady_2d_flux_line.shp', '')
-        self.assertEqual((37, 1), df.shape)
-        self.assertAlmostEqual(446.486, float(df.iloc[:,0].max()), places=3)
+        with pyqgis():
+            res = NCMesh(nc, driver='qgis geometry netcdf4')
+            df = res.flux('./tests/nc_mesh/fv_steady_2d_flux_line.shp', '')
+            self.assertEqual((37, 1), df.shape)
+            self.assertAlmostEqual(446.486, float(df.iloc[:,0].max()), places=3)
 
     def test_flux_2d_qgis_driver(self):
         nc = './tests/nc_mesh/Trap_Steady_000.nc'
-        res = NCMesh(nc, driver='qgis geometry data extractor')
-        df = res.flux('./tests/nc_mesh/fv_steady_2d_flux_line.shp', '')
-        self.assertEqual((37, 1), df.shape)
-        self.assertAlmostEqual(446.486, float(df.iloc[:,0].max()), places=3)
+        with pyqgis():
+            res = NCMesh(nc, driver='qgis geometry data extractor')
+            df = res.flux('./tests/nc_mesh/fv_steady_2d_flux_line.shp', '')
+            self.assertEqual((37, 1), df.shape)
+            self.assertAlmostEqual(446.486, float(df.iloc[:,0].max()), places=3)
 
 
 class TestCATCHJson(unittest.TestCase):
