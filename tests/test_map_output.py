@@ -617,6 +617,22 @@ class TestXMDF(unittest.TestCase):
             self.assertEqual((3, 1), mn.shape)
             self.assertTrue(np.isclose([35.9343795, 0., 0.], mn.to_numpy().flatten()).all())
 
+    def test_flux_netcdf4_driver(self):
+        p = './tests/xmdf/EG00_001.xmdf'
+        with pyqgis():
+            res = XMDF(p, driver='qgis geometry netcdf4')
+            df = res.flux('./tests/xmdf/xmdf_flux_line.shp', '')
+            self.assertEqual((7, 1), df.shape)
+            self.assertAlmostEqual(76.108, float(df.iloc[:,0].max()), places=3)
+
+    def test_flux_qgis_driver(self):
+        p = './tests/xmdf/EG00_001.xmdf'
+        with pyqgis():
+            res = XMDF(p, driver='qgis geometry data extractor')
+            df = res.flux('./tests/xmdf/xmdf_flux_line.shp', '')
+            self.assertEqual((7, 1), df.shape)
+            self.assertAlmostEqual(76.108, float(df.iloc[:,0].max()), places=3)
+
 
 class TestNCMesh(unittest.TestCase):
 

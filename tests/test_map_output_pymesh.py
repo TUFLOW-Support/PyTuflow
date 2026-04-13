@@ -108,6 +108,13 @@ class TestXMDF(unittest.TestCase):
         df = res.surface('max vector vel', 0.)
         self.assertEqual((25, 5), df.shape)
 
+    def test_flux(self):
+        p = './tests/xmdf/EG00_001.xmdf'
+        res = XMDF(p)
+        df = res.flux('./tests/xmdf/xmdf_flux_line.shp', '')
+        self.assertEqual((7, 1), df.shape)
+        self.assertAlmostEqual(76.108, float(df.iloc[:,0].max()), places=3)
+
 
 class TestDAT(unittest.TestCase):
 
