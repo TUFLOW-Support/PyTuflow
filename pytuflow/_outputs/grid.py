@@ -805,6 +805,11 @@ class Grid(MapOutput, LineStringMixin, PointMixin):
                 time: TimeLike, **kwargs) -> pd.DataFrame:
         """no-doc"""
         raise NotImplementedError(f'{__class__.__name__} does not support vertical profile plotting.')
+    
+    def flux(self, locations: LineStringLocation, data_types: str | list[str] = 'unit flow',
+             time_fmt: str = 'relative') -> pd.DataFrame:
+        """no-doc"""
+        raise NotImplementedError
 
     @staticmethod
     def _get_xy_index(pnt: Point, dx: float, dy: float, ox: float, oy: float, ncol: int, nrow: int):

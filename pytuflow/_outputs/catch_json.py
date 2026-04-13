@@ -969,6 +969,11 @@ class CATCHJson(MapOutput):
                         df_ = df_.drop(columns=np.intersect1d(df_.columns, df.columns))
                     df = pd.concat([df, df_], axis=1)
         return df
+    
+    def flux(self, locations: LineStringLocation, data_types: str | list[str] = 'unit flow',
+             time_fmt: str = 'relative') -> pd.DataFrame:
+        """no-doc"""
+        raise NotImplementedError
 
     def _load_json(self, fpath: PathLike | str):
         if Path(fpath).is_file():
