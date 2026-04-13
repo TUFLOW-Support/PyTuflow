@@ -176,7 +176,7 @@ obtain the path to the ``.xmdf`` file from your TUFLOW model. The example below 
     >>> from pytuflow import TCF, XMDF
     >>> tcf = TCF('path/to/EG00_001.tcf')
     >>> xmxdf_path = tcf.context().output_folder_2d() / f'{tcf.context().output_name()}.xmdf'
-    >>> xmdf = NCGrid(xmxdf_path)
+    >>> xmdf = XMDF(xmxdf_path)
 
 Result Information
 ^^^^^^^^^^^^^^^^^^
