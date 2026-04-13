@@ -329,7 +329,7 @@ class CellDataMixin:
         """
         is_unit_flow = data_type in ['q', 'unit flow']
 
-        times = self.times('unit flow' if is_unit_flow else data_type)
+        times = self.times('unit flow' if is_unit_flow else 'velocity')
         T = len(times)
 
         # N-1 segments: segment i spans acell[i]→acell[i+1] and belongs to cell_ids[i]

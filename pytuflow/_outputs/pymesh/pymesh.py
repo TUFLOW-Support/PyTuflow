@@ -887,7 +887,7 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
                 raise ValueError('velocity not found in available data types')
             elif not self.on_vertex('velocity'):
                 # don't need to check depths, the layer thickness are defined in cell centred format
-                if self.is_3d('velocity') and not self.is_3d(data_type):
+                if self.is_3d('velocity') and data_type and not self.is_3d(data_type):
                     raise ValueError('data_type must be 3D for 3D results')
             elif 'depth' not in data_types:
                 raise ValueError('depth not found in available data types')
@@ -912,7 +912,7 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
                 )
 
             # get data
-            if self.on_vertex(data_type):
+            if self.on_vertex('velocity'):
                 flux = self.flux_from_vertex_data(line, cell_ids, acell, dir_mid, data_type)
             else:
                 flux = self.flux_from_cell_data(cell_ids, acell, dir_, data_type)
