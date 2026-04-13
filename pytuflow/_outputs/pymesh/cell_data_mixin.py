@@ -332,9 +332,14 @@ class CellDataMixin:
         times = self.times('unit flow' if is_unit_flow else 'velocity')
         T = len(times)
 
-        # N-1 segments: segment i spans acell[i]→acell[i+1] and belongs to cell_ids[i]
+        # N-1 segments: segment i spans acell[i]→acell[i+1] and belongs to cell_ids[i].
+        # When the line endpoint (p2) lies outside the mesh, cell_ids ends with
+        # [..., cN, cN, -1]: the duplicate cN is a phantom for the exit→p2 segment
+        # which is outside the mesh. Exclude it by zeroing valid for the last entry.
         seg_cells = cell_ids[:-1]
         valid = seg_cells != -1
+        if cell_ids[-1] == -1 and valid.any():
+            valid[-1] = False
         if not valid.any():
             return np.array([])
 
