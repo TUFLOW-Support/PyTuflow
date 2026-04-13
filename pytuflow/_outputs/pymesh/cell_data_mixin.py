@@ -354,31 +354,104 @@ class CellDataMixin:
             proj[~wd_seg] = 0.0
             flux_vals = (proj * widths).sum(axis=1)                              # (T,)
         else:
-            vel_dt = self.translate_data_type('velocity')[0]
+            vel_data_types = self.translate_data_type('velocity')
+            vel_dt = vel_data_types[0]
             if self.is_3d(vel_dt):
-                raise NotImplementedError(
-                    '3D scalar flux from cell-centred data is not yet implemented.'
-                )
-            vel = self.extractor.data(vel_dt, (slice(None), ucells))                # (T, n, 2)
-            wd = self.extractor.wd_flag(vel_dt, (slice(None), ucells)).astype(bool) # (T, n)
-            vel_seg = vel[:, inverse, :]                                             # (T, M, 2)
-            wd_seg = wd[:, inverse]                                                  # (T, M)
-            vel_n = (vel_seg * normals).sum(axis=2)                                  # (T, M)
-            vel_n[~wd_seg] = 0.0
+                # 3D: sum flux contributions layer by layer across all segments
+                cell_idx3 = self.cell_index(ucells, vel_dt)  # (n,) 3D start indices (0-based)
+                nlevels = self.zlevel_count(ucells)           # (n,) layer counts per cell
+                max_NL = int(nlevels.max())
+                n = len(ucells)
 
-            depth_dt = self.translate_data_type('depth')[0]
-            depth = self.extractor.data(depth_dt, (slice(None), ucells))            # (T, n)
-            depth_seg = depth[:, inverse]                                            # (T, M)
-            depth_seg[~wd_seg] = 0.0
+                # Flat list of 3D layer indices: all layers of all unique cells, contiguous
+                flat_3d_idx = [int(cell_idx3[i]) + j
+                               for i, nl in enumerate(nlevels)
+                               for j in range(int(nl))]
 
-            if data_type:
-                scalar_dt = self.translate_data_type(data_type)[0]
-                scalar = self.extractor.data(scalar_dt, (slice(None), ucells))      # (T, n)
-                scalar_seg = scalar[:, inverse]                                      # (T, M)
-                scalar_seg[~wd_seg] = 0.0
-                flux_vals = (scalar_seg * depth_seg * vel_n * widths).sum(axis=1)
+                # Read velocity: two-component (V_x, V_y) or single (T, Σ_NL, 2) dataset
+                if len(vel_data_types) == 1:
+                    all_vel = self.extractor.data(vel_data_types[0], (slice(None), flat_3d_idx))  # (T, Σ_NL, 2)
+                else:
+                    comps = [self.extractor.data(dt, (slice(None), flat_3d_idx)) for dt in vel_data_types]
+                    all_vel = np.stack(comps, axis=-1)                           # (T, Σ_NL, 2)
+
+                # Layer face elevations: (T, Σ_(NL_i+1)); faces are [top, bottom] per layer
+                all_faces = self.extractor.zlevels(slice(None), nlevels, ucells, cell_idx3)
+
+                # Build padded arrays (T, n, max_NL, ...)
+                vel_padded   = np.zeros((T, n, max_NL, 2))
+                thick_padded = np.zeros((T, n, max_NL))
+                valid_mask   = np.zeros((n, max_NL), dtype=bool)  # True where layer exists
+                k_v, k_f = 0, 0
+                for i, nl in enumerate(nlevels):
+                    nl = int(nl)
+                    vel_padded[:, i, :nl, :]  = all_vel[:, k_v:k_v + nl, :]
+                    # abs() handles either face ordering ([top, bottom] or [bottom, top])
+                    thick_padded[:, i, :nl]   = np.abs(np.diff(all_faces[:, k_f:k_f + nl + 1], axis=1))
+                    valid_mask[i, :nl]         = True
+                    k_v += nl
+                    k_f += nl + 1
+
+                # wd_flag per 2D cell (T, n)
+                wd = self.extractor.wd_flag(vel_dt, (slice(None), ucells)).astype(bool)
+
+                # Expand to segment arrays via inverse
+                vel_seg   = vel_padded[:, inverse, :, :]   # (T, M, max_NL, 2)
+                thick_seg = thick_padded[:, inverse, :]    # (T, M, max_NL)
+                wd_seg    = wd[:, inverse]                 # (T, M)
+                valid_seg = valid_mask[inverse]            # (M, max_NL)
+
+                # Normal projection per layer: (T, M, max_NL)
+                vel_n = (vel_seg * normals[np.newaxis, :, np.newaxis, :]).sum(axis=3)
+
+                # Combined wet-dry mask: cell must be wet AND layer must exist
+                wet_3d = wd_seg[:, :, np.newaxis] & valid_seg[np.newaxis, :, :]  # (T, M, max_NL)
+                vel_n[~wet_3d]    = 0.0
+                thick_seg[~wet_3d] = 0.0
+
+                if data_type:
+                    scalar_dt_list = self.translate_data_type(data_type)
+                    scalar_dt = scalar_dt_list[0]
+                    if self.is_3d(scalar_dt):
+                        # Scalar also 3D: read at the same flat layer indices
+                        all_sc = self.extractor.data(scalar_dt, (slice(None), flat_3d_idx))  # (T, Σ_NL)
+                        sc_padded = np.zeros((T, n, max_NL))
+                        k = 0
+                        for i, nl in enumerate(nlevels):
+                            nl = int(nl)
+                            sc_padded[:, i, :nl] = all_sc[:, k:k + nl]
+                            k += nl
+                        sc_seg = sc_padded[:, inverse, :]                        # (T, M, max_NL)
+                        sc_seg[~wet_3d] = 0.0
+                    else:
+                        # 2D scalar: same value for every layer in the column
+                        sc_2d = self.extractor.data(scalar_dt, (slice(None), ucells))  # (T, n)
+                        sc_seg = np.where(wet_3d, sc_2d[:, inverse, np.newaxis], 0.0)  # (T, M, max_NL)
+                    flux_vals = (sc_seg * vel_n * thick_seg * widths[np.newaxis, :, np.newaxis]).sum(axis=(1, 2))
+                else:
+                    flux_vals = (vel_n * thick_seg * widths[np.newaxis, :, np.newaxis]).sum(axis=(1, 2))
             else:
-                flux_vals = (depth_seg * vel_n * widths).sum(axis=1)
+                # 2D path
+                vel = self.extractor.data(vel_dt, (slice(None), ucells))                # (T, n, 2)
+                wd = self.extractor.wd_flag(vel_dt, (slice(None), ucells)).astype(bool) # (T, n)
+                vel_seg = vel[:, inverse, :]                                             # (T, M, 2)
+                wd_seg = wd[:, inverse]                                                  # (T, M)
+                vel_n = (vel_seg * normals).sum(axis=2)                                  # (T, M)
+                vel_n[~wd_seg] = 0.0
+
+                depth_dt = self.translate_data_type('depth')[0]
+                depth = self.extractor.data(depth_dt, (slice(None), ucells))            # (T, n)
+                depth_seg = depth[:, inverse]                                            # (T, M)
+                depth_seg[~wd_seg] = 0.0
+
+                if data_type:
+                    scalar_dt = self.translate_data_type(data_type)[0]
+                    scalar = self.extractor.data(scalar_dt, (slice(None), ucells))      # (T, n)
+                    scalar_seg = scalar[:, inverse]                                      # (T, M)
+                    scalar_seg[~wd_seg] = 0.0
+                    flux_vals = (scalar_seg * depth_seg * vel_n * widths).sum(axis=1)
+                else:
+                    flux_vals = (depth_seg * vel_n * widths).sum(axis=1)
 
         return np.column_stack((times, flux_vals))
 
