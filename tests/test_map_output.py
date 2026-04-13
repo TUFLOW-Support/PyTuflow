@@ -910,6 +910,13 @@ class TestNCMesh(unittest.TestCase):
             is_close = np.isclose(df.iloc[:,0], df_r.iloc[:,0] * -1)
             self.assertTrue(is_close.all())
 
+            df2 = res.flux('./tests/nc_mesh/fv_estuary_flux_line_2.shp', '')
+            df2_r = res.flux('./tests/nc_mesh/fv_estuary_flux_line_2_reversed.shp', '')
+            is_close = np.isclose(df.iloc[:,0], df_r.iloc[:,0] * -1)
+            self.assertTrue(is_close.all())
+            self.assertAlmostEqual(85.970, float(df2.iloc[:,0].max()), places=3)
+            self.assertAlmostEqual(-39.141, float(df2.iloc[:,0].min()), places=3)
+
     def test_flux_3d_qgis_driver(self):
         nc = './tests/nc_mesh/EST000_3D_001.nc'
         with pyqgis():
@@ -921,6 +928,13 @@ class TestNCMesh(unittest.TestCase):
             df_r = res.flux('./tests/nc_mesh/fv_estuary_flux_line_reversed.shp', '')
             is_close = np.isclose(df.iloc[:,0], df_r.iloc[:,0] * -1)
             self.assertTrue(is_close.all())
+
+            df2 = res.flux('./tests/nc_mesh/fv_estuary_flux_line_2.shp', '')
+            df2_r = res.flux('./tests/nc_mesh/fv_estuary_flux_line_2_reversed.shp', '')
+            is_close = np.isclose(df.iloc[:,0], df_r.iloc[:,0] * -1)
+            self.assertTrue(is_close.all())
+            self.assertAlmostEqual(85.970, float(df2.iloc[:,0].max()), places=3)
+            self.assertAlmostEqual(-39.141, float(df2.iloc[:,0].min()), places=3)
 
 
 class TestCATCHJson(unittest.TestCase):
