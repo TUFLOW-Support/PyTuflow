@@ -284,6 +284,17 @@ class TestNCMesh(unittest.TestCase):
         self.assertEqual((37, 1), df.shape)
         self.assertAlmostEqual(446.486, float(df.iloc[:,0].max()), places=3)
 
+    def test_flux_3d(self):
+        nc = './tests/nc_mesh/EST000_3D_001.nc'
+        res = NCMesh(nc)
+        df = res.flux('./tests/nc_mesh/fv_estuary_flux_line.shp', '')
+        self.assertEqual((5, 1), df.shape)
+        self.assertAlmostEqual(85.971, float(df.iloc[:,0].max()), places=3)
+        self.assertAlmostEqual(-39.142, float(df.iloc[:,0].min()), places=3)
+        df_r = res.flux('./tests/nc_mesh/fv_estuary_flux_line_reversed.shp', '')
+        is_close = np.isclose(df.iloc[:,0], df_r.iloc[:,0] * -1)
+        self.assertTrue(is_close.all())
+
 
 class TestCATCHJson(unittest.TestCase):
 
