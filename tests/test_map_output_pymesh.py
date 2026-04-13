@@ -270,6 +270,13 @@ class TestNCMesh(unittest.TestCase):
         df = res.surface('H', 186972, averaging_method='sigma&0&1', coord_scope='local', to_vertex=True)
         self.assertEqual(df.shape, (1419, 4))
 
+    def test_flux_2d(self):
+        nc = './tests/nc_mesh/Trap_Steady_000.nc'
+        res = NCMesh(nc)
+        df = res.flux('./tests/nc_mesh/fv_steady_2d_flux_line.shp', '')
+        self.assertEqual((37, 1), df.shape)
+        self.assertAlmostEqual(446.486, float(df.iloc[:,0].max()), places=3)
+
 
 class TestCATCHJson(unittest.TestCase):
 
