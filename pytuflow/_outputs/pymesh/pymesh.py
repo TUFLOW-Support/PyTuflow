@@ -842,7 +842,7 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
             self.cache.set(curtain, 'curtain', data_type, time_index, self._linestring_as_wkt(line))
             return curtain
 
-    def flux(self, line: LineStringLike, data_type: str) -> np.ndarray:
+    def flux(self, line: LineStringLike, data_type: str, use_unit_flow: bool) -> np.ndarray:
         """Returns the flux across a line. The data_type can be "q"/"unit flow" and the flux will be calculated
         using unit flow and the flow width. It can also be any other scalar result type
         and the flux will be calculated by multiplying data type with the depth the velocity to obtain a flux.
@@ -858,6 +858,8 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
             The result type to extract the flux for. If "q" is specified, then the flux will be calculated using
             solely the "q" data type. If a scalar data type is passed in, then the flux will be calculated
             with help from the velocity result. Other vector data types are not supported.
+        use_unit_flow : bool
+            Use unit flow.
 
         Returns
         -------
@@ -867,14 +869,16 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
         _ = self.data_types()
         data_types = self._standardised_data_types
         # Checks
-        if data_type in ['q', 'unit flow']:
+        unit_flow = ''
+        if use_unit_flow:
             # check to see if this result type is available
             if not 'unit flow' in data_types:
                 raise ValueError('Data type "unit flow" is not available for flux calculation.')
-            if not self.is_vector(data_type):
-                if f'vector {data_type}' not in data_types:
-                    raise ValueError(f'Data type "{data_type}" is not a vector and could not find a "vector {data_type}".')
-                data_type = f'vector {data_type}'
+            unit_flow = 'unit flow'
+            if not self.is_vector('unit flow'):
+                if 'vector unit flow' not in data_types:
+                    raise ValueError('Data type "unit flow" is not a vector and could not find a "vector unit flow".')
+                unit_flow = 'vector unit flow'
         else:
             if data_type:
                 if self.is_static(data_type):
@@ -913,9 +917,9 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
 
             # get data
             if self.on_vertex('velocity'):
-                flux = self.flux_from_vertex_data(line, cell_ids, acell, dir_mid, data_type)
+                flux = self.flux_from_vertex_data(line, cell_ids, acell, dir_mid, data_type, unit_flow)
             else:
-                flux = self.flux_from_cell_data(cell_ids, acell, dir_, data_type)
+                flux = self.flux_from_cell_data(cell_ids, acell, dir_, data_type, unit_flow)
 
             self.cache.set(flux, 'flux', data_type, self._linestring_as_wkt(line))
             return flux

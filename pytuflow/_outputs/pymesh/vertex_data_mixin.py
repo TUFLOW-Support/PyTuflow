@@ -220,6 +220,7 @@ class VertexDataMixin:
                                acell: np.ndarray,
                                dir_mid: np.ndarray,
                                data_type: str,
+                               unit_flow: str,
                                ) -> np.ndarray:
         """Calculate flux across a line using vertex-based data.
 
@@ -241,6 +242,9 @@ class VertexDataMixin:
         data_type : str
             Result type: ``'unit flow'``/``'q'`` for direct unit-flow flux, or a scalar
             data type for ``scalar * depth * velocity`` flux.
+        unit_flow : str
+            The result type name for unit flow. If left blank, velocity and depth will be used
+            rather than unit flow.
 
         Returns
         -------
@@ -248,29 +252,28 @@ class VertexDataMixin:
             ``(T, 2)`` array of ``[time, flux]``, or empty array if the line lies
             entirely outside the mesh.
         """
-        is_unit_flow_request = data_type in ['q', 'unit flow', 'vector unit flow']
+        is_unit_flow_request = unit_flow != ''
         # Some formats (e.g. TUFLOW HPC XMDF) store 'unit flow' as a scalar magnitude
         # rather than a (qx, qy) vector.  Only use it directly when it is truly a vector;
         # otherwise fall back to velocity × depth which is mathematically equivalent.
-        use_q_vector = is_unit_flow_request and self.is_vector(data_type)
+        use_q_vector = is_unit_flow_request and self.is_vector(unit_flow)
 
         if use_q_vector:
-            q_dt = self.translate_data_type(data_type)[0]
+            q_dt = self.translate_data_type(unit_flow)[0]
             wd_dt = q_dt
-            times = self.times(data_type)
-            vel_dt = depth_dt = scalar_dt = None
+            times = self.times(unit_flow)
+            vel_dt = depth_dt = None
         else:
             # Use the vector form of velocity (e.g. TUFLOW HPC XMDF stores the scalar
             # magnitude as 'velocity' and the (Vx, Vy) vector as 'vector velocity').
             vel_dt = self.translate_data_type(
                 'vector velocity' if not self.is_vector('velocity') else 'velocity'
             )[0]
-            depth_dt = self.translate_data_type('depth')[0]
-            # For a unit-flow request where unit flow is scalar, treat as volume flux
-            # (scalar_dt=None) — velocity × depth already gives the same result.
-            scalar_dt = self.translate_data_type(data_type)[0] if (data_type and not is_unit_flow_request) else None
             wd_dt = vel_dt
-            times = self.times(data_type) if (data_type and not is_unit_flow_request) else self.times('velocity')
+            depth_dt = self.translate_data_type('depth')[0]
+            times = self.times(data_type) if data_type else self.times('velocity')
+
+        scalar_dt = self.translate_data_type(data_type)[0] if data_type else None
 
         T = len(times)
         n_segs = len(cell_ids) - 1
@@ -315,8 +318,8 @@ class VertexDataMixin:
         else:
             all_vel = self.extractor.data(vel_dt, (slice(None), all_verts))        # (T, N_v, 2)
             all_depth = self.extractor.data(depth_dt, (slice(None), all_verts))    # (T, N_v)
-            if scalar_dt:
-                all_scalar = self.extractor.data(scalar_dt, (slice(None), all_verts))  # (T, N_v)
+        if scalar_dt:
+            all_scalar = self.extractor.data(scalar_dt, (slice(None), all_verts))  # (T, N_v)
 
         ucells_wd = np.unique(all_tricell_list)
         wd_all = self.extractor.wd_flag(wd_dt, (slice(None), ucells_wd)).astype(bool)  # (T, N_uc)
@@ -348,13 +351,13 @@ class VertexDataMixin:
                 depth_mid = (depth_seg * uvw).sum(axis=1)                   # (T,)
                 depth_mid[~wd] = 0.0
 
-                if scalar_dt:
-                    sc_seg = all_scalar[:, local_idx[inv]]                  # (T, 3)
-                    sc_mid = (sc_seg * uvw).sum(axis=1)                     # (T,)
-                    sc_mid[~wd] = 0.0
-                    flux_vals += sc_mid * depth_mid * vel_n * widths[i]
-                else:
-                    flux_vals += depth_mid * vel_n * widths[i]
+                flux_vals += depth_mid * vel_n * widths[i]
+            
+            if scalar_dt:
+                sc_seg = all_scalar[:, local_idx[inv]]                  # (T, 3)
+                sc_mid = (sc_seg * uvw).sum(axis=1)                     # (T,)
+                sc_mid[~wd] = 0.0
+                flux_vals += sc_mid * flux_vals
 
         return np.column_stack((times, flux_vals))
 

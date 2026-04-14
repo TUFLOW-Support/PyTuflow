@@ -940,8 +940,8 @@ class Mesh(MapOutput):
 
         return df
 
-    def flux(self, locations: LineStringLocation, data_types: str | list[str] = 'unit flow',
-             time_fmt: str = 'relative') -> pd.DataFrame:
+    def flux(self, locations: LineStringLocation, data_types: str | list[str] = '',
+             time_fmt: str = 'relative', use_unit_flow: bool = True) -> pd.DataFrame:
         # doc-string inherited
         if self._driver.DRIVER_SOURCE != 'python':
             raise NotImplementedError('v1.0 driver does not support flux extraction.')
@@ -954,12 +954,17 @@ class Mesh(MapOutput):
         else:
             data_types = ['']
 
+        if use_unit_flow and 'unit flow' not in self.data_types():
+            use_unit_flow = False
+
         for name, line in lines.items():
             df1 = pd.DataFrame()
             for dtype in data_types:
-                a = self._driver.flux(line, dtype)
+                a = self._driver.flux(line, dtype, use_unit_flow)
                 if a.size:
-                    df2 = pd.DataFrame(a[:,1], index=a[:,0], columns=[dtype])
+                    label = 'flux' if not dtype else f'flux {dtype}'
+                    label = f'{label} (q)' if use_unit_flow else f'{label} (d.v)'
+                    df2 = pd.DataFrame(a[:,1], index=a[:,0], columns=[f'{name}/{label}'])
                     df2.index.name = 'time'
                     df1 = pd.concat([df1, df2], axis=1) if not df1.empty else df2
             if df1.empty:

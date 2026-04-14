@@ -807,7 +807,7 @@ class Grid(MapOutput, LineStringMixin, PointMixin):
         raise NotImplementedError(f'{__class__.__name__} does not support vertical profile plotting.')
     
     def flux(self, locations: LineStringLocation, data_types: str | list[str] = 'unit flow',
-             time_fmt: str = 'relative') -> pd.DataFrame:
+             time_fmt: str = 'relative', use_unit_flow: bool = True) -> pd.DataFrame:
         """no-doc"""
         raise NotImplementedError
 

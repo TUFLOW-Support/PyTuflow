@@ -301,6 +301,7 @@ class CellDataMixin:
                              acell: np.ndarray,
                              dir_: np.ndarray,
                              data_type: str,
+                             unit_flow: str,
                              ) -> np.ndarray:
         """Calculate flux across a line using cell-centred data.
 
@@ -320,6 +321,9 @@ class CellDataMixin:
         data_type : str
             Result type: ``'unit flow'``/``'q'`` for direct unit-flow flux, or a scalar
             data type for ``scalar * depth * velocity`` flux.
+        unit_flow : str
+            The result type name for unit flow. If left blank, velocity and depth will be used
+            rather than unit flow.
 
         Returns
         -------
@@ -327,7 +331,7 @@ class CellDataMixin:
             ``(T, 2)`` array of ``[time, flux]``, or empty array if the line lies
             entirely outside the mesh.
         """
-        is_unit_flow = data_type in ['q', 'unit flow']
+        is_unit_flow = data_type != ''
 
         times = self.times('unit flow' if is_unit_flow else 'velocity')
         T = len(times)
@@ -350,6 +354,8 @@ class CellDataMixin:
         ucells, inverse = np.unique(valid_cells, return_inverse=True)            # (n,), (M,)
 
         if is_unit_flow:
+            if data_type and self.is_3d(data_type):
+                raise ValueError('Calculating volumn flux of a data type is not supported with unit flow for 3D results. Use use_unit_flow=False')
             dt = self.translate_data_type('unit flow')[0]
             q = self.extractor.data(dt, (slice(None), ucells))                  # (T, n, 2)
             wd = self.extractor.wd_flag(dt, (slice(None), ucells)).astype(bool) # (T, n)
