@@ -355,7 +355,7 @@ class CellDataMixin:
 
         if is_unit_flow:
             if data_type and self.is_3d(data_type):
-                raise ValueError('Calculating volumn flux of a data type is not supported with unit flow for 3D results. Use use_unit_flow=False')
+                raise ValueError('Calculating volume flux of a data type is not supported with unit flow for 3D results. Use use_unit_flow=False')
             dt = self.translate_data_type('unit flow')[0]
             q = self.extractor.data(dt, (slice(None), ucells))                  # (T, n, 2)
             wd = self.extractor.wd_flag(dt, (slice(None), ucells)).astype(bool) # (T, n)
