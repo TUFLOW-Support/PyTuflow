@@ -480,7 +480,7 @@ class PyMeshGeometry(PointMixin, LineStringMixin):
         dir_mid = np.array([])
         for i in range(1, line.shape[0]):
             seg = line[i-1:i+1,:2]
-            d  = (seg[1] - seg[0]) / np.linalg.norm(seg[1] - seg[0])
+            d  = self._line_direction(seg[0], seg[1])
             c1, a1, c2, a2 = self._mesh_line_segment(seg)
             if cell_ids.size == 0:
                 cell_ids = c1
@@ -500,6 +500,11 @@ class PyMeshGeometry(PointMixin, LineStringMixin):
                 dir_mid = np.append(dir_mid[:-1,...], np.full((c2.shape[0] - 1, 2), d), axis=0)
 
         return cell_ids, acell, dir_, mid_cell_ids, amid, dir_mid
+
+    def _line_direction(self, p1: np.ndarray, p2: np.ndarray) -> np.ndarray:
+        """Returns the unit direction vector from p1 to p2."""
+        diff = p2 - p1
+        return diff / np.linalg.norm(diff)
 
     def _mesh_line_segment(self, line: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """The workhorse for the above routine. Calculates per line segment information."""

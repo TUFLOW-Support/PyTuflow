@@ -250,6 +250,14 @@ class QgisMeshGeometry(PyMeshGeometry, PointMixinQgis):
             p1 = np.repeat(p1.reshape(1, -1), n2, axis=0)
         return ellipsoid_distance(p2.reshape(n2, -1), p1.reshape(n1, -1))
 
+    def _line_direction(self, p1: np.ndarray, p2: np.ndarray) -> np.ndarray:
+        if not self.spherical:
+            return super()._line_direction(p1, p2)
+        from pyproj import Geod
+        az, _, _ = Geod(ellps='WGS84').inv(float(p1[0]), float(p1[1]), float(p2[0]), float(p2[1]))
+        az_rad = np.radians(az)
+        return np.array([np.sin(az_rad), np.cos(az_rad)], dtype=self.dtype)
+
     def _mesh_intersects(self, p1: np.ndarray, p2: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         """Returns points and cell_ids where the line segment intersects the mesh. Last point is not returned."""
         tol = 1e-6
