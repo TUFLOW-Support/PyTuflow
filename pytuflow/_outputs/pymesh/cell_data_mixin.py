@@ -369,9 +369,12 @@ class CellDataMixin:
                 n = len(ucells)
 
                 # Flat list of 3D layer indices: all layers of all unique cells, contiguous
-                flat_3d_idx = [int(cell_idx3[i]) + j
-                               for i, nl in enumerate(nlevels)
-                               for j in range(int(nl))]
+                if self.extractor.NAME == 'QgisDataExtractor':
+                    flat_3d_idx = cell_idx3
+                else:
+                    flat_3d_idx = [int(cell_idx3[i]) + j
+                                for i, nl in enumerate(nlevels)
+                                for j in range(int(nl))]
 
                 # Read velocity: two-component (V_x, V_y) or single (T, Σ_NL, 2) dataset
                 if len(vel_data_types) == 1:

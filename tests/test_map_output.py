@@ -905,7 +905,7 @@ class TestNCMesh(unittest.TestCase):
             df = res.flux('./tests/nc_mesh/fv_estuary_flux_line.shp', '')
             self.assertEqual((5, 1), df.shape)
 
-             # min/max values from pymesh test. Spherical coords are handled a bit differently, so expect some difference in result.
+            # min/max values from pymesh test. Spherical coords are handled a bit differently, so expect some difference in result.
             self.assertAlmostEqual(85.971, float(df.iloc[:,0].max()), places=1)
             self.assertAlmostEqual(-39.142, float(df.iloc[:,0].min()), places=1)
             df_r = res.flux('./tests/nc_mesh/fv_estuary_flux_line_reversed.shp', '')
@@ -925,20 +925,25 @@ class TestNCMesh(unittest.TestCase):
         nc = './tests/nc_mesh/EST000_3D_001.nc'
         with pyqgis():
             res = NCMesh(nc, driver='qgis geometry data extractor')
+            res.spherical = True
             df = res.flux('./tests/nc_mesh/fv_estuary_flux_line.shp', '')
             self.assertEqual((5, 1), df.shape)
-            self.assertAlmostEqual(85.971, float(df.iloc[:,0].max()), places=3)
-            self.assertAlmostEqual(-39.142, float(df.iloc[:,0].min()), places=3)
+
+            # min/max values from pymesh test. Spherical coords are handled a bit differently, so expect some difference in result.
+            self.assertAlmostEqual(85.971, float(df.iloc[:,0].max()), places=1)
+            self.assertAlmostEqual(-39.142, float(df.iloc[:,0].min()), places=1)
             df_r = res.flux('./tests/nc_mesh/fv_estuary_flux_line_reversed.shp', '')
-            is_close = np.isclose(df.iloc[:,0], df_r.iloc[:,0] * -1)
+
+            # there is a slight numerical difference in QGIS cell intersect routine due to long/lat which means atol is a little relaxed.
+            is_close = np.isclose(df.iloc[:,0], df_r.iloc[:,0] * -1, atol=0.01)
             self.assertTrue(is_close.all())
 
             df2 = res.flux('./tests/nc_mesh/fv_estuary_flux_line_2.shp', '')
             df2_r = res.flux('./tests/nc_mesh/fv_estuary_flux_line_2_reversed.shp', '')
-            is_close = np.isclose(df.iloc[:,0], df_r.iloc[:,0] * -1)
+            is_close = np.isclose(df.iloc[:,0], df_r.iloc[:,0] * -1, atol=0.01)
             self.assertTrue(is_close.all())
-            self.assertAlmostEqual(85.970, float(df2.iloc[:,0].max()), places=3)
-            self.assertAlmostEqual(-39.141, float(df2.iloc[:,0].min()), places=3)
+            self.assertAlmostEqual(85.970, float(df2.iloc[:,0].max()), places=1)
+            self.assertAlmostEqual(-39.141, float(df2.iloc[:,0].min()), places=1)
 
 
 class TestCATCHJson(unittest.TestCase):
