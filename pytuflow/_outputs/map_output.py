@@ -270,7 +270,7 @@ class MapOutput(Output, ABC):
     def _wkt_point_to_tuple(point: str) -> tuple[float, ...]:
         if not re.match(r'^POINT\s*\(\s*[-+]?\d*\.?\d+\s+[-+]?\d*\.?\d+\s*\)$', point):
             raise ValueError(f'Invalid WKT point string: {point}')
-        return tuple([float(x) for x in re.split(r'\s+', point.strip('\n\t )').split('(')[1], 1)])
+        return tuple([float(x) for x in re.split(r'\s+', point.strip('\n\t )').split('(')[1], maxsplit=1)])
 
     @staticmethod
     def _wkt_line_to_list(line: str) -> list[tuple[float, ...]]:
