@@ -340,7 +340,7 @@ class VertexDataMixin:
                 q_mid = (q_seg * uvw.reshape(1, 3, 1)).sum(axis=1)          # (T, 2)
                 proj = (q_mid * normals[i]).sum(axis=1)                     # (T,)
                 proj[~wd] = 0.0
-                flux_vals += proj * widths[i]
+                Q_vals_t = proj * widths[i]
             else:
                 vel_seg = all_vel[:, local_idx[inv], :]                     # (T, 3, 2)
                 vel_mid = (vel_seg * uvw.reshape(1, 3, 1)).sum(axis=1)      # (T, 2)
@@ -351,13 +351,15 @@ class VertexDataMixin:
                 depth_mid = (depth_seg * uvw).sum(axis=1)                   # (T,)
                 depth_mid[~wd] = 0.0
 
-                flux_vals += depth_mid * vel_n * widths[i]
+                Q_vals_t = depth_mid * vel_n * widths[i]
             
             if scalar_dt:
                 sc_seg = all_scalar[:, local_idx[inv]]                  # (T, 3)
                 sc_mid = (sc_seg * uvw).sum(axis=1)                     # (T,)
                 sc_mid[~wd] = 0.0
-                flux_vals += sc_mid * flux_vals
+                flux_vals += sc_mid * Q_vals_t
+            else:
+                flux_vals += Q_vals_t
 
         return np.column_stack((times, flux_vals))
 

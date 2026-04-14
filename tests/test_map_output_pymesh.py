@@ -118,6 +118,16 @@ class TestXMDF(unittest.TestCase):
         is_close = np.isclose(df.iloc[:,0], df_r.iloc[:,0] * -1)
         self.assertTrue(is_close.all())
 
+    def test_flux_tracer(self):
+        p = './tests/xmdf/EG17_001.xmdf'
+        res = XMDF(p)
+        df = res.flux('./tests/xmdf/xmdf_flux_line.shp', 'conc tracer1', use_unit_flow=False)
+        self.assertAlmostEqual(116.031, float(df.iloc[:,0].max()), places=3)
+
+        df = res.flux('./tests/xmdf/xmdf_flux_line.shp', 'conc tracer1', use_unit_flow=True)
+        self.assertAlmostEqual(123.393, float(df.iloc[:,0].max()), places=3)
+
+
 
 class TestDAT(unittest.TestCase):
 
