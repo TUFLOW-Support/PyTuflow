@@ -37,7 +37,7 @@ class MapOutput(Output, ABC):
 
     @abc.abstractmethod
     def flux(self, locations: LineStringLocation, data_types: str | list[str] = 'unit flow',
-             time_fmt: str = 'relative', use_unit_flow: bool = True) -> pd.DataFrame:
+             time_fmt: str = 'relative', use_unit_flow: bool = True, *args, **kwargs) -> pd.DataFrame:
         """Returns the flux across a line. The data_type can be "q"/"unit flow" and the flux will be calculated
         using unit flow and the flow width. It can also be any other scalar result type
         and the flux will be calculated by multiplying data type with the depth the velocity to obtain a flux.

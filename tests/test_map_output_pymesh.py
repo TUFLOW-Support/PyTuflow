@@ -611,6 +611,30 @@ class TestNCGrid(unittest.TestCase):
         df = mesh.surface('vector velocity', 1.5, to_vertex=True)
         self.assertEqual((6871, 5), df.shape)
 
+    def test_flux_vel_depth(self):
+        p = './tests/nc_grid/EG00_001_unit_flow.nc'
+        line = './tests/xmdf/xmdf_flux_line.shp'
+        line_rev = './tests/xmdf/xmdf_flux_line_reversed.shp'
+        res = NCGrid(p)
+        df = res.flux(line, '', use_unit_flow=False)
+        self.assertEqual((7, 1), df.shape)
+        self.assertAlmostEqual(80.436, float(df.iloc[:, 0].max()), places=3)
+        # reversed line must give identical magnitude with opposite sign
+        df_r = res.flux(line_rev, '', use_unit_flow=False)
+        self.assertTrue(np.isclose(df.iloc[:, 0].values, -df_r.iloc[:, 0].values).all())
+
+    def test_flux_unit_flow(self):
+        p = './tests/nc_grid/EG00_001_unit_flow.nc'
+        line = './tests/xmdf/xmdf_flux_line.shp'
+        line_rev = './tests/xmdf/xmdf_flux_line_reversed.shp'
+        res = NCGrid(p)
+        df = res.flux(line, '', use_unit_flow=True)
+        self.assertEqual((7, 1), df.shape)
+        self.assertAlmostEqual(82.204, float(df.iloc[:, 0].max()), places=3)
+        # reversed line must give identical magnitude with opposite sign
+        df_r = res.flux(line_rev, '', use_unit_flow=True)
+        self.assertTrue(np.isclose(df.iloc[:, 0].values, -df_r.iloc[:, 0].values).all())
+
 
 class TestGrid(unittest.TestCase):
 

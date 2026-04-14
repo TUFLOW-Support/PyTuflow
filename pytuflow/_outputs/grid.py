@@ -806,10 +806,174 @@ class Grid(MapOutput, LineStringMixin, PointMixin):
         """no-doc"""
         raise NotImplementedError(f'{__class__.__name__} does not support vertical profile plotting.')
     
-    def flux(self, locations: LineStringLocation, data_types: str | list[str] = 'unit flow',
-             time_fmt: str = 'relative', use_unit_flow: bool = True) -> pd.DataFrame:
-        """no-doc"""
-        raise NotImplementedError
+    def flux(self, locations: LineStringLocation, data_types: str | list[str] = '',
+             time_fmt: str = 'relative', use_unit_flow: bool = True,
+             direction_convention: str = 'arithmetic') -> pd.DataFrame:
+        """Returns the flux across one or more lines.
+
+        Velocity (or unit flow) is decomposed into Cartesian components using the stored
+        direction angle and the specified convention, projected onto the line normal, then
+        integrated over the intersection width and (for velocity) the water depth.
+
+        Parameters
+        ----------
+        locations : LineStringLocation
+            The line(s) to extract the flux for.
+        data_types : str | list[str], optional
+            Scalar tracer data type(s) to weight the flux by (e.g. salinity). Pass an
+            empty string (default) for pure volume flux.
+        time_fmt : str, optional
+            ``'relative'`` (default) or ``'absolute'``.
+        use_unit_flow : bool, optional
+            If ``True`` (default) and ``'unit flow'`` / ``'unit flow direction'`` are both
+            available, unit-flow (depth-integrated velocity) is used directly and
+            ``'depth'`` is not required.  Falls back to ``velocity × depth`` otherwise.
+        direction_convention : str, optional
+            Convention used to interpret the stored direction angle:
+
+            - ``'arithmetic'`` (default) — angle is CCW from east (x+)
+              ``vx = mag·cos(θ)``, ``vy = mag·sin(θ)``
+            - ``'nautical'`` — angle is CW from north (y+)
+              ``vx = mag·sin(θ)``, ``vy = mag·cos(θ)``
+
+        Returns
+        -------
+        pd.DataFrame
+            DataFrame with ``time`` as the index and one column per
+            ``{line_name}/{label}`` combination.
+        """
+        available = [x.lower() for x in self.data_types()]
+
+        # Decide which magnitude/direction pair to use
+        if use_unit_flow and 'unit flow' in available and 'unit flow direction' in available:
+            mag_dt = 'unit flow'
+            dir_dt = 'unit flow direction'
+            _use_unit_flow = True
+        else:
+            if 'velocity' not in available:
+                raise ValueError('"velocity" not found in available data types.')
+            if 'velocity direction' not in available:
+                raise ValueError('"velocity direction" not found in available data types.')
+            if 'depth' not in available:
+                raise ValueError('"depth" not found in available data types.')
+            mag_dt = 'velocity'
+            dir_dt = 'velocity direction'
+            _use_unit_flow = False
+
+        if direction_convention not in ('arithmetic', 'nautical'):
+            raise ValueError(f'direction_convention must be "arithmetic" or "nautical", got "{direction_convention}".')
+
+        # Standardise requested data types
+        if data_types:
+            data_types = self._figure_out_data_types(data_types, None)
+        else:
+            data_types = ['']
+
+        # Time array (relative hours)
+        times_list = self.times(filter_by=mag_dt)
+        T = len(times_list)
+        times_arr = np.array(times_list)
+
+        if T == 0:
+            return pd.DataFrame()
+
+        # Grid info for the magnitude dataset (dx, dy, ox, oy, ncol, nrow, ndv)
+        info = self._grid_info(mag_dt)
+        ndv_mag = float(info[6])
+        ndv_dep = float(self._grid_info('depth')[6]) if not _use_unit_flow else None
+
+        df = pd.DataFrame()
+        lines = self._translate_line_string_location(locations)
+
+        for name, line in lines.items():
+            line_arr = self._coerce_into_line(line)
+
+            # Pre-compute per-segment geometry (rows, cols, widths, normal) once
+            segments = []
+            for si in range(1, line_arr.shape[0]):
+                seg = line_arr[si - 1:si + 1, :2]
+                p0, p1 = seg[0], seg[1]
+                dv = p1 - p0
+                length = np.linalg.norm(dv)
+                if length == 0:
+                    continue
+                dv = dv / length
+                # 90° CCW rotation: positive flux is to the left when walking p0→p1
+                normal = np.array([-dv[1], dv[0]])
+
+                # Use the same calling convention as section() / gridline()
+                cells_, inters_ = Grid.gridline_segment(seg, *info[:6])
+                seg_mask = cells_[:, 0] >= 0
+                if not seg_mask.any():
+                    continue
+                rows_ = cells_[seg_mask, 0].astype(int)
+                cols_ = cells_[seg_mask, 1].astype(int)
+                widths_ = np.diff(inters_[:, 0])[seg_mask]   # per-cell widths (m)
+                segments.append((rows_, cols_, widths_, normal))
+
+            if not segments:
+                continue
+
+            for dtype in data_types:
+                flux_vals = np.zeros(T)
+
+                for ti in range(T):
+                    mag_t = np.asarray(self._surface(mag_dt, ti))            # (nrow, ncol)
+                    dir_t = np.asarray(self._surface(dir_dt, ti))            # (nrow, ncol)
+                    act_t = ~np.isnan(mag_t) & (mag_t != ndv_mag)            # (nrow, ncol)
+
+                    dep_t = None
+                    if not _use_unit_flow:
+                        dep_t = np.asarray(self._surface('depth', ti))       # (nrow, ncol)
+                        act_t = act_t & (~np.isnan(dep_t) & (dep_t != ndv_dep))
+
+                    sc_t = None
+                    if dtype:
+                        sc_t = np.asarray(self._surface(dtype, ti))          # (nrow, ncol)
+                        ndv_sc = float(self._grid_info(dtype)[6])
+                        sc_t = np.where((~np.isnan(sc_t)) & (sc_t != ndv_sc), sc_t, 0.0)
+
+                    for rows_, cols_, widths_, normal in segments:
+                        mag_seg = mag_t[rows_, cols_]                        # (N,)
+                        dir_seg = dir_t[rows_, cols_]                        # (N,)
+                        act_seg = act_t[rows_, cols_]                        # (N,)
+
+                        dir_rad = np.radians(dir_seg)
+                        if direction_convention == 'arithmetic':
+                            vx = mag_seg * np.cos(dir_rad)
+                            vy = mag_seg * np.sin(dir_rad)
+                        else:  # nautical
+                            vx = mag_seg * np.sin(dir_rad)
+                            vy = mag_seg * np.cos(dir_rad)
+
+                        proj = vx * normal[0] + vy * normal[1]               # (N,)
+                        proj[~act_seg] = 0.0
+
+                        if _use_unit_flow:
+                            contrib = proj * widths_
+                        else:
+                            dep_seg = np.where(act_seg, dep_t[rows_, cols_], 0.0)
+                            contrib = proj * dep_seg * widths_
+
+                        if sc_t is not None:
+                            contrib = contrib * sc_t[rows_, cols_]
+
+                        flux_vals[ti] += contrib.sum()
+
+                label = 'flux' if not dtype else f'flux {dtype}'
+                label = f'{label} (q)' if _use_unit_flow else f'{label} (d.v)'
+                df2 = pd.DataFrame(flux_vals, index=times_arr, columns=[f'{name}/{label}'])
+                df2.index.name = 'time'
+
+                if not df.empty and not df2.empty:
+                    if np.isclose(df.index.to_numpy(), df2.index.to_numpy(), atol=0.0001, rtol=0).all():
+                        df2.index = df.index
+                df = pd.concat([df, df2], axis=1) if not df.empty else df2
+
+        if time_fmt == 'absolute' and hasattr(self, 'reference_time') and self.reference_time is not None:
+            df.index = self.reference_time + pd.to_timedelta(df.index, unit='h')
+
+        return df
 
     @staticmethod
     def _get_xy_index(pnt: Point, dx: float, dy: float, ox: float, oy: float, ncol: int, nrow: int):

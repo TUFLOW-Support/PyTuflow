@@ -275,6 +275,12 @@ class NCGrid(Grid):
         with self._open():
             return super().section(locations, data_types, time)
 
+    def flux(self, locations, data_types='', time_fmt='relative', use_unit_flow=True,
+             direction_convention='arithmetic') -> pd.DataFrame:
+        self._load()
+        with self._open():
+            return super().flux(locations, data_types, time_fmt, use_unit_flow, direction_convention)
+
     @contextmanager
     def _open(self):
         if self._nc is not None:
