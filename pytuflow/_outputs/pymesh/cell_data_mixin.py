@@ -331,9 +331,9 @@ class CellDataMixin:
             ``(T, 2)`` array of ``[time, flux]``, or empty array if the line lies
             entirely outside the mesh.
         """
-        is_unit_flow = data_type != ''
+        is_unit_flow = unit_flow != ''
 
-        times = self.times('unit flow' if is_unit_flow else 'velocity')
+        times = self.times(unit_flow if is_unit_flow else 'velocity')
         T = len(times)
 
         # N-1 segments: segment i spans acell[i]→acell[i+1] and belongs to cell_ids[i].

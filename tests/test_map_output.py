@@ -945,6 +945,27 @@ class TestNCMesh(unittest.TestCase):
             self.assertAlmostEqual(85.970, float(df2.iloc[:,0].max()), places=1)
             self.assertAlmostEqual(-39.141, float(df2.iloc[:,0].min()), places=1)
 
+    def test_flux_3d_sal_netcdf4_driver(self):
+        nc = './tests/nc_mesh/EST000_3D_001.nc'
+        with pyqgis():
+            res = NCMesh(nc, driver='qgis geometry netcdf4')
+            df = res.flux('./tests/nc_mesh/fv_estuary_flux_line.shp', 'sal')
+
+            # min/max values from pymesh test. Spherical coords are handled a bit differently, so expect some difference in result.
+            self.assertAlmostEqual(875.946, float(df.iloc[:,0].max()), places=0)
+            self.assertAlmostEqual(-391.437, float(df.iloc[:,0].min()), places=0)
+
+    def test_flux_3d_sal_qgis_driver(self):
+        nc = './tests/nc_mesh/EST000_3D_001.nc'
+        with pyqgis():
+            res = NCMesh(nc, driver='qgis geometry data extractor')
+            res.spherical = True
+            df = res.flux('./tests/nc_mesh/fv_estuary_flux_line.shp', 'sal')
+
+            # min/max values from pymesh test. Spherical coords are handled a bit differently, so expect some difference in result.
+            self.assertAlmostEqual(875.946, float(df.iloc[:,0].max()), places=0)
+            self.assertAlmostEqual(-391.437, float(df.iloc[:,0].min()), places=0)
+
 
 class TestCATCHJson(unittest.TestCase):
 

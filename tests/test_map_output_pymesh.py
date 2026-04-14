@@ -305,6 +305,13 @@ class TestNCMesh(unittest.TestCase):
         self.assertAlmostEqual(85.970, float(df2.iloc[:,0].max()), places=3)
         self.assertAlmostEqual(-39.141, float(df2.iloc[:,0].min()), places=3)
 
+    def test_flux_3d_sal(self):
+        nc = './tests/nc_mesh/EST000_3D_001.nc'
+        res = NCMesh(nc)
+        df = res.flux('./tests/nc_mesh/fv_estuary_flux_line.shp', 'sal')
+        self.assertAlmostEqual(875.946, float(df.iloc[:,0].max()), places=3)
+        self.assertAlmostEqual(-391.437, float(df.iloc[:,0].min()), places=3)
+
 
 class TestCATCHJson(unittest.TestCase):
 
