@@ -900,8 +900,8 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
             # coerce line
             line = self._coerce_into_line(line)
 
-            if self.cache.contains('flux', data_type, self._linestring_as_wkt(line)):
-                return self.cache.get('flux', data_type, self._linestring_as_wkt(line))
+            if self.cache.contains('flux', data_type, self._linestring_as_wkt(line), use_unit_flow):
+                return self.cache.get('flux', data_type, self._linestring_as_wkt(line), use_unit_flow)
 
             # check cache for line intersections, otherwise calculate
             if self.cache.contains('mesh_line', self._linestring_as_wkt(line)):
@@ -921,7 +921,7 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
             else:
                 flux = self.flux_from_cell_data(cell_ids, acell, dir_, data_type, unit_flow)
 
-            self.cache.set(flux, 'flux', data_type, self._linestring_as_wkt(line))
+            self.cache.set(flux, 'flux', data_type, self._linestring_as_wkt(line), use_unit_flow)
             return flux
 
     def _find_time_index(self, data_type: str, time: float | datetime) -> int:
