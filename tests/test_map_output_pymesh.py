@@ -641,11 +641,10 @@ class TestNCGrid(unittest.TestCase):
         line_rev = './tests/xmdf/xmdf_flux_line_reversed.shp'
         res = NCGrid(p)
         df = res.flux(line, 'ad01_conc', use_unit_flow=False)
-        # self.assertEqual((7, 1), df.shape)
-        # self.assertAlmostEqual(80.436, float(df.iloc[:, 0].max()), places=3)
-        # # reversed line must give identical magnitude with opposite sign
-        # df_r = res.flux(line_rev, '', use_unit_flow=False)
-        # self.assertTrue(np.isclose(df.iloc[:, 0].values, -df_r.iloc[:, 0].values).all())
+        self.assertEqual((7, 1), df.shape)
+        self.assertAlmostEqual(130.778, float(df.iloc[:, 0].max()), places=3)
+        df_r = res.flux(line_rev, 'ad01_conc', use_unit_flow=False)
+        self.assertTrue(np.isclose(df.iloc[:, 0].values, -df_r.iloc[:, 0].values).all())
 
     def test_flux_grid_mesh(self):
         p = './tests/nc_grid/EG17_001.nc'
@@ -656,6 +655,22 @@ class TestNCGrid(unittest.TestCase):
 
         df = res.flux(line, use_unit_flow=False)
         self.assertAlmostEqual(86, float(df.iloc[:, 0].max()), places=0)
+
+    def test_flux_grid_mesh_tracer(self):
+        p = './tests/nc_grid/EG17_001.nc'
+        line = './tests/xmdf/xmdf_flux_line.shp'
+        line_rev = './tests/xmdf/xmdf_flux_line_reversed.shp'
+        res = NCGrid(p).to_mesh()
+        df = res.flux(line, 'ad01_conc', use_unit_flow=True)
+        self.assertEqual((7, 1), df.shape)
+        self.assertAlmostEqual(137.143, float(df.iloc[:, 0].max()), places=3)
+        df_r = res.flux(line_rev, 'ad01_conc', use_unit_flow=True)
+        self.assertTrue(np.isclose(df.iloc[:, 0].values, -df_r.iloc[:, 0].values).all())
+
+        df = res.flux(line, 'ad01_conc', use_unit_flow=False)
+        self.assertAlmostEqual(130.778, float(df.iloc[:, 0].max()), places=3)
+        df_r = res.flux(line_rev, 'ad01_conc', use_unit_flow=False)
+        self.assertTrue(np.isclose(df.iloc[:, 0].values, -df_r.iloc[:, 0].values).all())
 
 
 class TestGrid(unittest.TestCase):

@@ -364,7 +364,14 @@ class CellDataMixin:
             q_seg[np.isnan(q_seg)] = 0.                              # (T, M)
             proj = (q_seg * normals).sum(axis=2)                                 # (T, M)
             proj[~wd_seg] = 0.0
-            flux_vals = (proj * widths).sum(axis=1)                              # (T,)
+            if data_type:
+                scalar_dt = self.translate_data_type(data_type)[0]
+                scalar = self.extractor.data(scalar_dt, (slice(None), ucells))  # (T, n)
+                scalar_seg = scalar[:, inverse]                                   # (T, M)
+                scalar_seg[~wd_seg] = 0.0
+                flux_vals = (scalar_seg * proj * widths).sum(axis=1)             # (T,)
+            else:
+                flux_vals = (proj * widths).sum(axis=1)                          # (T,)
         else:
             vel_data_types = self.translate_data_type('velocity')
             vel_dt = vel_data_types[0]
