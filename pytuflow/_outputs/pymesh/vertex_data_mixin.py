@@ -280,32 +280,46 @@ class VertexDataMixin:
 
         widths = np.diff(acell[:, 0])                                           # (n_segs,)
         # dir_mid has n_segs+2 entries: one "before start" sentinel and one "after end" sentinel.
-        # Trim both to obtain one direction per segment midpoint, matching the amid layout.
+        # Trim both to obtain one direction per segment, matching the segment layout.
         # The normal is a 90° CCW rotation of the line direction so that positive flux means
         # flow crossing left-to-right when walking along the line (same convention as _project_vector).
         normals = np.column_stack((-dir_mid[1:-1, 1], dir_mid[1:-1, 0]))       # (n_segs, 2)
-        mid_xy = (acell[:-1, 1:3] + acell[1:, 1:3]) / 2.                       # (n_segs, 2) local
 
-        # --- Pass 1: find containing triangle and barycentric weights per segment ---
-        seg_info = []           # (tri_cell, verts, inv, uvw) or None per segment
-        all_vert_set = set()    # all unique vertex IDs needed
-        all_tricell_list = []   # cell IDs for the triangles (for wd_flag reads)
+        # --- Pass 1: find containing triangles for two sample points per segment ---
+        # Each segment is sampled at two points: one nudged from each endpoint toward the
+        # interior of the segment.  This avoids placing the query exactly on a mesh edge
+        # (which can return -1 or NaN from barycentric interpolation) while also capturing
+        # any gradient across the cell rather than averaging it away at the midpoint.
+        # The two contributions are combined with the trapezoidal rule.
+        # When a point lies exactly on the mesh boundary the sample may still fail (-1 tri);
+        # in that case only the successful sample is used with a rectangular (single-point) rule.
+        NUDGE = 0.01                # fraction of segment length to nudge inward from each end
+        seg_info = []               # list of dicts {'a': (...), 'b': (...)} or None per segment
+        all_vert_set = set()        # all unique vertex IDs needed
+        all_tricell_list = []       # cell IDs for wd_flag reads
 
         for i in range(n_segs):
-            if cell_ids[i] == -1 and cell_ids[i + 1] == -1:
+            c0, c1 = cell_ids[i], cell_ids[i + 1]
+            if c0 == -1 and c1 == -1:
                 seg_info.append(None)
                 continue
-            hint = int(cell_ids[i]) if cell_ids[i] != -1 else int(cell_ids[i + 1])
-            tri = self.geom.find_containing_triangle(mid_xy[i], scope='local', cell_id=hint)
-            if tri == -1:
-                seg_info.append(None)
-                continue
-            uvw = self.geom.barycentric_factors(mid_xy[i], tri, scope='local')     # (1, 3)
-            verts, inv = np.unique(self.geom.triangle_vertices(tri), return_inverse=True)
-            tri_cell = int(self.geom.triangle_cell(tri))
-            seg_info.append((tri_cell, verts, inv, uvw))
-            all_vert_set.update(int(v) for v in verts)
-            all_tricell_list.append(tri_cell)
+            hint = int(c0) if c0 != -1 else int(c1)
+            p0, p1 = acell[i, 1:3], acell[i + 1, 1:3]
+            dv = p1 - p0
+
+            info = {}
+            for key, pt in (('a', p0 + NUDGE * dv), ('b', p1 - NUDGE * dv)):
+                tri = self.geom.find_containing_triangle(pt, scope='local', cell_id=hint)
+                if tri == -1:
+                    continue
+                uvw = self.geom.barycentric_factors(pt, tri, scope='local')
+                verts, inv = np.unique(self.geom.triangle_vertices(tri), return_inverse=True)
+                tri_cell = int(self.geom.triangle_cell(tri))
+                info[key] = (tri_cell, verts, inv, uvw)
+                all_vert_set.update(int(v) for v in verts)
+                all_tricell_list.append(tri_cell)
+
+            seg_info.append(info if info else None)
 
         if not all_vert_set:
             return np.array([])
@@ -326,40 +340,56 @@ class VertexDataMixin:
         vert_to_idx = {int(v): i for i, v in enumerate(all_verts)}
         cell_to_wd_idx = {int(c): i for i, c in enumerate(ucells_wd)}
 
-        # --- Pass 3: accumulate flux contributions ---
+        def _q_contrib(local_idx, inv, uvw, wd):
+            """Return per-timestep unit-flow flux contribution (before × width)."""
+            q   = all_q[:, local_idx[inv], :]                       # (T, 3, 2)
+            q_i = (q * uvw.reshape(1, 3, 1)).sum(axis=1)            # (T, 2)
+            p   = (q_i * normals[i]).sum(axis=1)                    # (T,)
+            p[~wd] = 0.0
+            return p
+
+        def _vel_depth_contrib(local_idx, inv, uvw, wd):
+            """Return per-timestep vel×depth flux contribution (before × width)."""
+            v   = all_vel[:, local_idx[inv], :]                     # (T, 3, 2)
+            v_i = (v * uvw.reshape(1, 3, 1)).sum(axis=1)            # (T, 2)
+            vn  = (v_i * normals[i]).sum(axis=1)                    # (T,)
+            vn[~wd] = 0.0
+            d   = all_depth[:, local_idx[inv]]                      # (T, 3)
+            d_i = (d * uvw).sum(axis=1)                             # (T,)
+            d_i[~wd] = 0.0
+            return vn * d_i
+
+        def _scalar(local_idx, inv, uvw, wd):
+            """Return interpolated scalar (concentration / tracer), zeroed on dry cells."""
+            s   = all_scalar[:, local_idx[inv]]                     # (T, 3)
+            s_i = (s * uvw).sum(axis=1)                             # (T,)
+            s_i[~wd] = 0.0
+            return s_i
+
+        # --- Pass 3: accumulate flux contributions (trapezoidal over the two sample points) ---
         flux_vals = np.zeros(T)
         for i, info in enumerate(seg_info):
             if info is None:
                 continue
-            tri_cell, verts, inv, uvw = info
-            local_idx = np.array([vert_to_idx[int(v)] for v in verts])  # indices into all_verts
-            wd = wd_all[:, cell_to_wd_idx[tri_cell]]                     # (T,)
 
-            if use_q_vector:
-                q_seg = all_q[:, local_idx[inv], :]                         # (T, 3, 2)
-                q_mid = (q_seg * uvw.reshape(1, 3, 1)).sum(axis=1)          # (T, 2)
-                proj = (q_mid * normals[i]).sum(axis=1)                     # (T,)
-                proj[~wd] = 0.0
-                Q_vals_t = proj * widths[i]
-            else:
-                vel_seg = all_vel[:, local_idx[inv], :]                     # (T, 3, 2)
-                vel_mid = (vel_seg * uvw.reshape(1, 3, 1)).sum(axis=1)      # (T, 2)
-                vel_n = (vel_mid * normals[i]).sum(axis=1)                  # (T,)
-                vel_n[~wd] = 0.0
+            parts = []
+            for key in ('a', 'b'):
+                if key not in info:
+                    continue
+                tri_cell, verts, inv, uvw = info[key]
+                local_idx = np.array([vert_to_idx[int(v)] for v in verts])
+                wd = wd_all[:, cell_to_wd_idx[tri_cell]]            # (T,)
 
-                depth_seg = all_depth[:, local_idx[inv]]                    # (T, 3)
-                depth_mid = (depth_seg * uvw).sum(axis=1)                   # (T,)
-                depth_mid[~wd] = 0.0
+                Q = (_q_contrib if use_q_vector else _vel_depth_contrib)(local_idx, inv, uvw, wd)
+                if scalar_dt:
+                    parts.append(_scalar(local_idx, inv, uvw, wd) * Q * widths[i])
+                else:
+                    parts.append(Q * widths[i])
 
-                Q_vals_t = depth_mid * vel_n * widths[i]
-            
-            if scalar_dt:
-                sc_seg = all_scalar[:, local_idx[inv]]                  # (T, 3)
-                sc_mid = (sc_seg * uvw).sum(axis=1)                     # (T,)
-                sc_mid[~wd] = 0.0
-                flux_vals += sc_mid * Q_vals_t
-            else:
-                flux_vals += Q_vals_t
+            if len(parts) == 2:
+                flux_vals += 0.5 * (parts[0] + parts[1])   # trapezoidal rule
+            elif parts:
+                flux_vals += parts[0]                       # fallback: single-point rule
 
         return np.column_stack((times, flux_vals))
 

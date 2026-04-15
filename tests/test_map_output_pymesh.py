@@ -113,7 +113,7 @@ class TestXMDF(unittest.TestCase):
         res = XMDF(p)
         df = res.flux('./tests/xmdf/xmdf_flux_line.shp', '')
         self.assertEqual((7, 1), df.shape)
-        self.assertAlmostEqual(76.108, float(df.iloc[:,0].max()), places=3)
+        self.assertAlmostEqual(78.216, float(df.iloc[:,0].max()), places=3)
         df_r = res.flux('./tests/xmdf/xmdf_flux_line_reversed.shp', '')
         is_close = np.isclose(df.iloc[:,0], df_r.iloc[:,0] * -1)
         self.assertTrue(is_close.all())
@@ -122,10 +122,10 @@ class TestXMDF(unittest.TestCase):
         p = './tests/xmdf/EG17_001.xmdf'
         res = XMDF(p)
         df = res.flux('./tests/xmdf/xmdf_flux_line.shp', 'conc tracer1', use_unit_flow=False)
-        self.assertAlmostEqual(116.031, float(df.iloc[:,0].max()), places=3)
+        self.assertAlmostEqual(115.948, float(df.iloc[:,0].max()), places=3)
 
         df = res.flux('./tests/xmdf/xmdf_flux_line.shp', 'conc tracer1', use_unit_flow=True)
-        self.assertAlmostEqual(123.393, float(df.iloc[:,0].max()), places=3)
+        self.assertAlmostEqual(117.907, float(df.iloc[:,0].max()), places=3)
 
 
 
