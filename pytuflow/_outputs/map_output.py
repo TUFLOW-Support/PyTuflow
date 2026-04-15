@@ -38,30 +38,75 @@ class MapOutput(Output, ABC):
     @abc.abstractmethod
     def flux(self, locations: LineStringLocation, data_types: str | list[str] = 'unit flow',
              time_fmt: str = 'relative', use_unit_flow: bool = True, *args, **kwargs) -> pd.DataFrame:
-        """Returns the flux across a line. The data_type can be "q"/"unit flow" and the flux will be calculated
-        using unit flow and the flow width. It can also be any other scalar result type
-        and the flux will be calculated by multiplying data type with the depth the velocity to obtain a flux.
-        E.g. it's possible to calculate the volume of sediment or salt by passing in a sediment or salinity
-        data type. Passing in an empty string will essentially calculate the volume flux, although using 'unit flow'
-        is recommended if it is available.
+        r"""Returns the flux across a line. Tracer data type(s) can be provided to calculate the volume flux.
+
+        Currently does not support groundwater.
+
+        .. admonition:: Warning
+            :class: warning
+
+            The result of the ``flux()`` method should be used with care. Due to result interpolation, the resulting
+            flux could be off by 10% or more. The error depends on the result format, engine, SGS, and line location.
+            
+            For example, the TUFLOW HPC tutorial model was run at a 10 m cell size (the tutorial model is usually run at 5 m) 
+            with SGS on. The peak flow from a PO line gave a peak of 90 m\ :sup:`3`\ /s, and 
+            the equivalent ``flux()`` call gave 81 m\ :sup:`3`\ /s using ``use_unit_flow=True``, and
+            76 m\ :sup:`3`\ /s if using ``use_unit_flow=False``. That is an underprediction of 10% or more, even when using the 
+            unit flow map output.
+
+            However, if using TUFLOW FV and the NetCDF mesh output, this can have a very close match. This is due to the 
+            fact that FV computes everything at the cell centre and the format outputs at the cell centre, so interpolation
+            has little interference with the ``flux()`` extraction.
 
         Parameters
         ----------
         locations : LineStringLocation
             The line(s) to extract the flux for.
         data_types : str | list[str], optional
-            The result type(s) to extract the flux for. If "q" or "unit flow" is specified, then the flux will be calculated using
-            solely the "q" data type. If a scalar data type is passed in, then the flux will be calculated
-            with help from the velocity and epth result. Other vector data types are not supported.
+            The result type(s) to extract the flux for. If left blank, the returned flux will be the flow across the line.
+            If ``data_types`` are provided, this should typically be a tracer concentration (mg/L in SI units). In these
+            cases, the returned flux will the mass flux (g) across the line.
         time_fmt : str, optional
             The format for the time values. Options are 'relative' or 'absolute'.
-        use_unit_flow : boo, optional
-            Use unit flow if it is available. Otherwise the fallback is depth x velocity.
+        use_unit_flow : bool, optional
+            Use unit flow if it is available. Otherwise the fallback is depth x velocity. The resulting data frame column name will have either ``(q)``
+            if unit flow was used, or ``(d.v)`` if depth x velocity was used.
 
         Returns
         -------
-        np.ndarray
+        pd.DataFrame
             An array containing the extracted flux across the line.
+
+        Examples
+        --------
+        Extract the flow across a line:
+
+        >>> res = ... # assume res is a Mesh or NCGrid output
+        >>> Q = res.flux('/path/to/line.shp')
+        >>> Q
+              locA/flux (q)
+        time
+        0.0        0.000000
+        0.5        0.000000
+        1.0       81.115922
+        1.5       52.226762
+        2.0       17.359964
+        2.5        8.920063
+        3.0        4.825885
+
+        Extract the mass flux across a line:
+
+        >>> Q_mass = res.flux('/path/to/line', 'conc tracer1')
+        >>> Q_mass
+              locA/flux conc tracer1 (q)
+        time
+        0.0                     0.000000
+        0.5                     0.000000
+        1.0                    89.579868
+        1.5                   123.392674
+        2.0                   102.520215
+        2.5                   101.631599
+        3.0                   100.038073
         """
         raise NotImplementedError
 
