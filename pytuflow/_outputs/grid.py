@@ -256,7 +256,7 @@ class Grid(MapOutput, LineStringMixin, PointMixin):
             return data[0]
         return np.array(data).reshape(len(time_indexes), *data[0].shape)
 
-    def to_mesh(self, base_topology: 'str | Grid | None' = None) -> GridMesh:
+    def to_mesh(self, base_topology: 'str | Grid | None' = None, direction_convention = 'arithmetic') -> GridMesh:
         """Converts the grid to a :class:`GridMesh<pytuflow.GridMesh>` object, essentially converting the grid
         data structure into a mesh data structure. This can be useful for exporting into other formats that can
         only be done via a mesh class e.g. to a ``glTF`` file.
@@ -275,6 +275,12 @@ class Grid(MapOutput, LineStringMixin, PointMixin):
             other grid should match the grid dimensions of the current grid. For example, the ``DEM_Z`` check file
             from TUFLOW can be used as a base topology for a NetCDF grid output file to provide the static ground
             elevation data and be used as the base mesh topology.
+        direction_convention :  str, optional
+            The convention used for direction data. Only required converting direction to vector or
+            interpolating direction to vertices. Options are:
+
+            - ``"arithmetic"`` (default) - direction is measured anticlockwise from the positive x-axis (east)
+            - ``"nautical"`` - direction is measured clockwise from the positive y-axis (north)
 
         Returns
         -------
@@ -301,7 +307,7 @@ class Grid(MapOutput, LineStringMixin, PointMixin):
                  'nodatavalue': self.no_data_value, 'data_type': base_topology, 'timesteps': -1, 'dtype': 'scalar',
                  'data': self.surface(base_topology)['value'].to_numpy().reshape(self.nrow, self.ncol)}
             base_topology = Grid(d)
-        return GridMesh(self.fpath, self, base_topology)
+        return GridMesh(self.fpath, self, base_topology, direction_convention)
 
     def maximum(self, data_types: str | list[str]) -> float | pd.DataFrame:
         """Returns the maximum values for the given data types.

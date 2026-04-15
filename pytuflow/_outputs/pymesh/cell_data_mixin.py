@@ -356,11 +356,12 @@ class CellDataMixin:
         if is_unit_flow:
             if data_type and self.is_3d(data_type):
                 raise ValueError('Calculating volume flux of a data type is not supported with unit flow for 3D results. Use use_unit_flow=False')
-            dt = self.translate_data_type('unit flow')[0]
+            dt = self.translate_data_type(unit_flow)[0]
             q = self.extractor.data(dt, (slice(None), ucells))                  # (T, n, 2)
             wd = self.extractor.wd_flag(dt, (slice(None), ucells)).astype(bool) # (T, n)
             q_seg = q[:, inverse, :]                                             # (T, M, 2)
-            wd_seg = wd[:, inverse]                                              # (T, M)
+            wd_seg = wd[:, inverse]            
+            q_seg[np.isnan(q_seg)] = 0.                              # (T, M)
             proj = (q_seg * normals).sum(axis=2)                                 # (T, M)
             proj[~wd_seg] = 0.0
             flux_vals = (proj * widths).sum(axis=1)                              # (T,)

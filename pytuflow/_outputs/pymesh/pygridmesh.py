@@ -10,7 +10,7 @@ if typing.TYPE_CHECKING:
 
 class PyGridMesh(PyMesh, Mesh3DMixin, GLTFMixin):
 
-    def __init__(self, grid: 'str | Path | Grid', topology_ref: 'Grid | None' = None):
+    def __init__(self, grid: 'str | Path | Grid', topology_ref: 'Grid | None' = None, direction_convention = 'arithmetic'):
         super().__init__()
         if isinstance(grid, (str, Path)):
             from ..grid import Grid
@@ -20,7 +20,7 @@ class PyGridMesh(PyMesh, Mesh3DMixin, GLTFMixin):
             self.fpath = grid.fpath
             self._grid = grid
         self.geom = GridMeshGeometry(topology_ref if topology_ref is not None else grid)
-        self.extractor = GridMeshDataExtractor(grid)
+        self.extractor = GridMeshDataExtractor(grid, direction_convention)
 
     def load(self):
         super().load()

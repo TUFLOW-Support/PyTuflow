@@ -635,7 +635,7 @@ class TestNCGrid(unittest.TestCase):
         df_r = res.flux(line_rev, '', use_unit_flow=True)
         self.assertTrue(np.isclose(df.iloc[:, 0].values, -df_r.iloc[:, 0].values).all())
 
-    def test_flux_vel_depth(self):
+    def test_flux_vel_depth_tracer(self):
         p = './tests/nc_grid/EG17_001.nc'
         line = './tests/xmdf/xmdf_flux_line.shp'
         line_rev = './tests/xmdf/xmdf_flux_line_reversed.shp'
@@ -646,6 +646,13 @@ class TestNCGrid(unittest.TestCase):
         # # reversed line must give identical magnitude with opposite sign
         # df_r = res.flux(line_rev, '', use_unit_flow=False)
         # self.assertTrue(np.isclose(df.iloc[:, 0].values, -df_r.iloc[:, 0].values).all())
+
+    def test_flux_grid_mesh(self):
+        p = './tests/nc_grid/EG17_001.nc'
+        line = './tests/xmdf/xmdf_flux_line.shp'
+        res = NCGrid(p).to_mesh()
+        df = res.flux(line)
+        self.assertAlmostEqual(82.204, float(df.iloc[:, 0].max()), places=3)
 
 
 class TestGrid(unittest.TestCase):

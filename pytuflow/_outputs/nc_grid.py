@@ -371,8 +371,8 @@ class NCGrid(Grid):
                 idx = (0, idx)
         val = self._nc.variables[varname][idx]
         if np.ma.isMaskedArray(val):
+            a = np.array(val)
             if np.ma.is_masked(val):
-                return val.filled(np.nan)
-            else:
-                return np.array(val)
+                a[val.mask] = np.nan
+            val = a
         return val

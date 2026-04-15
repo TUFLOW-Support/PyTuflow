@@ -93,10 +93,10 @@ class NCEngine(DatasetEngine):
             else:
                 a = grp.variables[varname][idx]
             if np.ma.isMaskedArray(a):
+                a_ = np.array(a)
                 if np.ma.is_masked(a):
-                    a = a.filled(np.nan)
-                else:
-                    a = np.array(a)
+                    a_[a.mask] = np.nan
+                a = a_
             return a
 
     def _group(self, data_path: str) -> tuple[Group | Dataset, str]:

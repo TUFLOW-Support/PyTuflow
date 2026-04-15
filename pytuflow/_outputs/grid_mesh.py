@@ -27,6 +27,12 @@ class GridMesh(Mesh):
         An optional base topology Grid object to define the mesh structure. The :class:`Grid<pytuflow.Grid>` should
         match the dimensions and extent of the dataset being loaded. Typically only required when working with datasets
         that are temporal or contain multiple data types.
+    direction_convention :  str, optional
+            The convention used for direction data. Only required converting direction to vector or
+            interpolating direction to vertices. Options are:
+
+            - ``"arithmetic"`` (default) - direction is measured anticlockwise from the positive x-axis (east)
+            - ``"nautical"`` - direction is measured clockwise from the positive y-axis (north)
 
     Examples
     --------
@@ -34,14 +40,14 @@ class GridMesh(Mesh):
     >>> mesh = GridMesh('/path/to/results/grid/Model_Max_h.tif')
     """
 
-    def __init__(self, fpath: PathLike, grid: 'Grid | None' = None, base_topology: 'Grid | None' = None):
+    def __init__(self, fpath: PathLike, grid: 'Grid | None' = None, base_topology: 'Grid | None' = None, direction_convention = 'arithmetic'):
         super().__init__(fpath)
         if grid is None:
             from .grid import Grid
             self._grid = Grid(fpath)
         else:
             self._grid = grid
-        self._driver = PyGridMesh(self._grid, base_topology)
+        self._driver = PyGridMesh(self._grid, base_topology, direction_convention)
         self._soft_load_driver = self._driver
         self._initial_load()
 

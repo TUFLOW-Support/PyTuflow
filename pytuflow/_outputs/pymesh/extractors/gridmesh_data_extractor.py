@@ -11,8 +11,9 @@ if typing.TYPE_CHECKING:
 
 class GridMeshDataExtractor(PyDataExtractor):
 
-    def __init__(self, grid: 'Grid'):
+    def __init__(self, grid: 'Grid', direction_convention: str):
         super().__init__()
+        self.direction_convention = direction_convention
         self.fpath = grid.fpath
         self._grid = grid
         self.cell_reindex = None
@@ -54,7 +55,9 @@ class GridMeshDataExtractor(PyDataExtractor):
     def data(self, data_type: str, index: PyDataExtractor.SliceType | PyDataExtractor.MultiSliceType) -> np.ndarray:
         if self.is_static(data_type):
             if self.is_vector(data_type):
-                data = self._grid.surface(data_type, direction_to_vector=True)[['value-x', 'value-y']].to_numpy()
+                data = self._grid.surface(
+                    data_type, direction_to_vector=True, direction_convention=self.direction_convention
+                    )[['value-x', 'value-y']].to_numpy()
                 data = data[self.cell_reindex].reshape(-1, 1, 2)
             else:
                 data = self._grid.surface(data_type)['value'].to_numpy()
@@ -63,7 +66,9 @@ class GridMeshDataExtractor(PyDataExtractor):
             vals = []
             for timestep in self._time_index(data_type, index):
                 if self.is_vector(data_type):
-                    val = self._grid.surface(data_type, timestep, direction_to_vector=True)[['value-x', 'value-y']].to_numpy()
+                    val = self._grid.surface(
+                        data_type, timestep, direction_to_vector=True, direction_convention=self.direction_convention
+                        )[['value-x', 'value-y']].to_numpy()
                 else:
                     val = self._grid.surface(data_type, timestep)['value'].to_numpy()
                 vals.append(val)
