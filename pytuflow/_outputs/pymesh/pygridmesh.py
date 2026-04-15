@@ -28,6 +28,19 @@ class PyGridMesh(PyMesh, Mesh3DMixin, GLTFMixin):
         self.extractor.vertex_reindex = self.geom.vertex_reindex
 
     def translate_data_type(self, data_type: str) -> tuple[str, ...]:
+        # For scalar magnitude types that have a "vector X" counterpart, redirect
+        # to the vector form so the extractor returns (T, n, 2) arrays.
+        if 'vector ' not in data_type and not data_type.endswith(' direction'):
+            _ = self.data_types()  # ensure _standardised_data_types is populated
+            prefix = ''
+            base = data_type
+            for pfx in ('max ', 'min '):
+                if base.startswith(pfx):
+                    prefix, base = pfx, base[len(pfx):]
+                    break
+            vector_form = f'{prefix}vector {base}'
+            if vector_form in self._standardised_data_types:
+                data_type = vector_form
         if 'vector ' in data_type:
             dtype = data_type.replace('vector ', '')
             prefix = ''

@@ -73,7 +73,7 @@ class GridMeshDataExtractor(PyDataExtractor):
                     val = self._grid.surface(data_type, timestep)['value'].to_numpy()
                 vals.append(val)
             if self.is_vector(data_type):
-                data = np.hstack(vals).reshape(len(vals), -1, 2)
+                data = np.stack(vals, axis=0)                    # (T, n_grid, 2)
                 data = data[:, self.cell_reindex, :]
             else:
                 data = np.hstack(vals).reshape(len(vals), -1)

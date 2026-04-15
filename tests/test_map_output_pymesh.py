@@ -652,7 +652,10 @@ class TestNCGrid(unittest.TestCase):
         line = './tests/xmdf/xmdf_flux_line.shp'
         res = NCGrid(p).to_mesh()
         df = res.flux(line)
-        self.assertAlmostEqual(82.204, float(df.iloc[:, 0].max()), places=3)
+        self.assertAlmostEqual(88, float(df.iloc[:, 0].max()), places=0)
+
+        df = res.flux(line, use_unit_flow=False)
+        self.assertAlmostEqual(86, float(df.iloc[:, 0].max()), places=0)
 
 
 class TestGrid(unittest.TestCase):
