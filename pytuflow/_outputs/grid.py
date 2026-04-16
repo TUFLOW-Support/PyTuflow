@@ -20,7 +20,7 @@ from .pymesh import Cache, LineStringMixin, PointMixin, Bbox2D, Transform2D
 GRIDLINE_METHOD = 'optimised'  # 'legacy' or 'optimised'
 
 
-class Grid(MapOutput, LineStringMixin, PointMixin):
+class Grid(MapOutput):
     """Generic Grid result class. Can be used to load raster files that are supported by GDAL or rasterio.
     The raster data extracted from an input file is assumed to be static (i.e. no time dimension). Alternatively,
     it is possible to initialise the Grid class with a dictionary containing already extracted grid data in the form of

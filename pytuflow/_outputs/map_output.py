@@ -1,6 +1,7 @@
 import abc
 import re
 from abc import ABC
+from collections import OrderedDict
 from collections.abc import Iterable
 from typing import Union
 
@@ -14,7 +15,8 @@ from .output import Output, PlotExtractionLocation
 from .._pytuflow_types import PathLike
 from ..util import gis
 from ..util import pytuflow_logging
-
+from .pymesh import PointMixin, LineStringMixin
+from .._tmf import Geom, Feature
 
 logger = pytuflow_logging.get_logger()
 
@@ -28,7 +30,7 @@ PointLocation = Point | Points | PathLike
 LineStringLocation = LineStrings | PathLike
 
 
-class MapOutput(Output, ABC):
+class MapOutput(Output, ABC, PointMixin, LineStringMixin):
     ATTRIBUTE_TYPES = {'scalar': ['scalar'], 'vector': ['vector']}
 
     def __init__(self, *args, **kwargs):
@@ -281,8 +283,25 @@ class MapOutput(Output, ABC):
 
         return gis.point_gis_file_to_dict(locations)
 
-    def _translate_line_string_location(self, locations: LineStringLocation) -> dict[str, LineString]:
-        if not locations:
+    def _translate_line_string_location(self, locations: LineStringLocation, name: str = '') -> dict[str, LineString]:
+        try:
+            import shapely
+            from shapely import LineString, MultiLineString
+        except ImportError:
+            shapely = None
+            LineString = str
+            MultiLineString = str
+
+        try:
+            import geopandas as gpd
+            from geopandas import GeoDataFrame
+        except ImportError:
+            gpd = None
+            GeoDataFrame = str
+
+        if gpd and isinstance(locations, GeoDataFrame) and not locations.size:
+            return {}
+        if not isinstance(locations, GeoDataFrame) and not locations:
             return {}
 
         lines = {}
@@ -294,6 +313,20 @@ class MapOutput(Output, ABC):
                     return lines
                 except ValueError:  # assume it's a path then
                     pass
+            elif gpd and isinstance(locations, GeoDataFrame):
+                for j, (_, feat) in enumerate(locations.iterrows()):
+                    attrs = OrderedDict()
+                    for col in locations.columns:
+                        if col != 'geometry':
+                            attrs[col] = feat[col]
+                    geom = feat.geometry
+                    feat = Feature(geom, attrs, geom.geom_type)
+                    lines.update(self._translate_line_string_location(feat, name=f'line{j + 1}'))
+                return lines
+            elif shapely and isinstance(locations[0], (LineString, MultiLineString, Geom, Feature)):
+                for j, loc in enumerate(locations):
+                    lines.update(self._translate_line_string_location(loc), name=f'line{j+1}')
+                return lines
             elif self._list_depth(locations) == 2:  # [(0, 0), (1, 1)] - a single line-string, not a list of line-strings
                 lines['line1'] = locations
                 return lines
@@ -310,6 +343,45 @@ class MapOutput(Output, ABC):
                     key = f'line{i}'
                     lines[key] = loc
                 return lines
+        elif shapely and isinstance(locations, LineString):
+            name = name if name else 'line1'
+            lines[name] = self._coerce_into_line(locations)
+            return lines
+        elif shapely and isinstance(locations, MultiLineString):
+            name = name if name else 'line1'
+            multi = len(locations.geoms) > 1
+            for j, loc in enumerate(locations.geoms):
+                lines[name if not multi else f'{name}{chr(97 + j)}'] = self._coerce_into_line(loc)
+            return lines
+        elif isinstance(locations, Geom):
+            if locations.geometry_type() not in ['LineString', 'MultiLineString']:
+                logger.warning(f'Geom with geometry type {locations.geometry_type()} cannot be translated to a line-string location. Skipping.')
+                return {}
+            name = name if name else 'line1'
+            lines_ = locations.lines()
+            multi = len(lines_) > 1
+            for j, loc in enumerate(lines_):
+                lines[name if not multi else f'{name}{chr(97 + j)}'] = loc
+            return lines
+        elif isinstance(locations, Feature):
+            if locations.geom.geometry_type() not in ['LineString', 'MultiLineString']:
+                logger.warning(
+                    f'Geom with geometry type {locations.geom.geometry_type()} cannot be translated to a line-string location. Skipping.')
+                return {}
+            id_fields = ['id', 'label', 'name']
+            attr = OrderedDict([(k.lower(), v) for k, v in locations.attrs.items()])
+            lines_ = locations.geom.lines()
+            multi = len(lines_) > 1
+            name_ = None
+            for id_field in id_fields:
+                if id_field in attr:
+                    name_ = attr[id_field]
+                    break
+            name_ = name_ if name_ else name
+            name_ = name_ if name_ else 'line1'
+            for j, loc in enumerate(lines_):
+                lines[name_ if not multi else f'{name_}{chr(97 + j)}'] = loc
+            return lines
 
         return gis.line_gis_file_to_dict(locations)  # assume it is a file path
 
