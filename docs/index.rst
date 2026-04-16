@@ -32,6 +32,16 @@ Check out the :doc:`usage` section for further information, including how to :re
 Changelog
 ---------
 
+1.2.0
+"""""
+
+Release date: XX XXX 2026
+
+Bug Fixes
+^^^^^^^^^
+
+- Fixed a bug in the ``MapOutput`` classes where reading in an empty GIS file would cause an unexpected Python error. When an empty GIS file is provided, an exception is still thrown, but gives a more informative message about the issue.
+
 1.1.1
 """""
 
