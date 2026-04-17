@@ -79,7 +79,7 @@ class MapOutput(Output, ABC, PointMixin, LineStringMixin):
 
         Parameters
         ----------
-        locations : LineStringLocation
+        locations : LineString | list[LineString] | dict[str, LineString] | GeoDataFrame | str | PathLike
             The line(s) to extract the flux for.
         data_types : str | list[str], optional
             The result type(s) to extract the flux for. If left blank, the returned flux will be the flow across the line.

@@ -655,7 +655,7 @@ class Grid(MapOutput):
 
         Parameters
         ----------
-        locations : Point | list[Point] | dict[str, Point] | PathLike
+        locations : Point | list[Point] | dict[str, Point] | GeoDataFrame | str | PathLike
             The location to extract the time series data for.
         data_types : str | list[str]
             The data types to extract the time series data for.
@@ -726,7 +726,7 @@ class Grid(MapOutput):
 
         Parameters
         ----------
-        locations : list[Point] | str | PathLike
+        locations : LineString | list[LineString] | dict[str, LineString] | GeoDataFrame | str | PathLike
             The location to extract the section data for.
         data_types : str | list[str], optional
             The data types to extract the section data for.
@@ -837,7 +837,7 @@ class Grid(MapOutput):
 
         Parameters
         ----------
-        locations : LineStringLocation
+        locations : LineString | list[LineString] | dict[str, LineString] | GeoDataFrame | str | PathLike
             The line(s) to extract the flux for.
         data_types : str | list[str], optional
             The result type(s) to extract the flux for. If left blank, the returned flux will be the flow across the line.

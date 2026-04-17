@@ -522,7 +522,7 @@ class Mesh(MapOutput):
 
         Parameters
         ----------
-        locations : Point | list[Point] | dict[str, Point] | PathLike
+        locations : Point | list[Point] | dict[str, Point] | | GeoDataFrame | PathLike
             The location to extract the time series data for.
         data_types : str | list[str]
             The data types to extract the time series data for.
@@ -658,7 +658,7 @@ class Mesh(MapOutput):
 
         Parameters
         ----------
-        locations : list[Point] | str | PathLike
+        locations : LineString | list[LineString] | dict[str, LineString] | GeoDataFrame | str | PathLike
             The location to extract the section data for.
         data_types : str | list[str]
             The data types to extract the section data for.
@@ -794,7 +794,7 @@ class Mesh(MapOutput):
 
         Parameters
         ----------
-        locations : list[Point] | str | PathLike
+        locations : LineString | list[LineString] | dict[str, LineString] | GeoDataFrame | str | PathLike
             The location to extract the section data for.
         data_types : str | list[str]
             The data types to extract the section data for.
@@ -872,7 +872,7 @@ class Mesh(MapOutput):
 
         Parameters
         ----------
-        locations : Point | list[Point] | dict[str, Point] | PathLike
+        locations : Point | list[Point] | dict[str, Point] | GeoDataFrame | str | PathLike
             The location to extract the time series data for.
         data_types : str | list[str]
             The data types to extract the time series data for.
