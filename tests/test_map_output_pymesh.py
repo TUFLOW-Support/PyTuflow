@@ -4,8 +4,10 @@ from datetime import datetime
 import numpy as np
 import pandas as pd
 import rasterio
+import shapely
+import geopandas
 
-from pytuflow import XMDF, NCMesh, CATCHJson, DAT, NCGrid, Grid
+from pytuflow import XMDF, NCMesh, CATCHJson, DAT, NCGrid, Grid, TuflowPath
 
 
 def load_comparison_data(path):
@@ -35,6 +37,36 @@ class TestXMDF(unittest.TestCase):
         df = res.data_point(point, ['max h', 'max vector velocity'], 0)
         self.assertEqual((1, 2), df.shape)
 
+    def test_data_point_shapely_geom(self):
+        xmdf = './tests/xmdf/run.xmdf'
+        res = XMDF(xmdf)
+        point = shapely.Point((1.0, 1.0))
+        df = res.data_point(point, 'max h', 0)
+        self.assertTrue(isinstance(df, float))
+        
+        point = shapely.MultiPoint([(1.0, 1.0)])
+        df = res.data_point(point, 'max h', 0)
+        self.assertTrue(isinstance(df, float))
+
+    def test_data_point_feature(self):
+        xmdf = './tests/xmdf/EG00_001.xmdf'
+        res = XMDF(xmdf)
+        p = TuflowPath('./tests/xmdf/xmdf_point.shp')
+        with p.open_gis() as fo:
+            for feat in fo:
+                val = res.data_point(feat.geom, 'h', 1.0)
+                self.assertTrue(isinstance(val, float))
+
+                val = res.data_point(feat, 'h', 1.)
+                self.assertTrue(isinstance(val, float))
+
+    def test_data_point_geodataframe(self):
+        xmdf = './tests/xmdf/EG00_001.xmdf'
+        res = XMDF(xmdf)
+        gdf = geopandas.read_file('./tests/xmdf/xmdf_point.shp')
+        val = res.data_point(gdf, 'h', 1.)
+        self.assertTrue(isinstance(val, float))
+
     def test_data_point_datetime(self):
         xmdf = './tests/xmdf/EG00_001.xmdf'
         res = XMDF(xmdf)
@@ -57,6 +89,44 @@ class TestXMDF(unittest.TestCase):
         df = res.section(line, 'max h', 0)
         self.assertEqual((4, 2), df.shape)
         self.assertTrue(df[np.isnan(df.iloc[:, 1])].empty)
+
+    def test_section_from_shapely_geom(self):
+        xmdf = './tests/xmdf/run.xmdf'
+        res = XMDF(xmdf)
+        line = shapely.LineString([(0.5, 0.5), (1.5, 1.5)])
+        df = res.section(line, 'max h', 0)
+        self.assertEqual((4, 2), df.shape)
+        self.assertTrue(df[np.isnan(df.iloc[:, 1])].empty)
+
+        # multi-line string
+        line = shapely.MultiLineString([[(0.5, 0.5), (1.5, 1.5)]])
+        df = res.section(line, 'max h', 0)
+        self.assertEqual((4, 2), df.shape)
+        self.assertTrue(df[np.isnan(df.iloc[:, 1])].empty)
+
+    def test_section_from_feature(self):
+        xmdf = './tests/xmdf/EG00_001.xmdf'
+        res = XMDF(xmdf)
+        p = TuflowPath('./tests/xmdf/xmdf_line.shp')
+        test = res.section('./tests/xmdf/xmdf_line.shp', 'max h', 0).to_numpy()
+        with p.open_gis() as fo:
+            for feat in fo:
+                df = res.section(feat.geom, 'max h', 0)
+                equal = (test == df.to_numpy()).all()
+                self.assertTrue(equal)
+
+                df = res.section(feat, 'max h', 0)
+                equal = (test == df.to_numpy()).all()
+                self.assertTrue(equal)
+
+    def test_section_from_geodf(self):
+        xmdf = './tests/xmdf/EG00_001.xmdf'
+        res = XMDF(xmdf)
+        gdf = geopandas.read_file('./tests/xmdf/xmdf_line.shp')
+        test = res.section('./tests/xmdf/xmdf_line.shp', 'max h', 0).to_numpy()
+        df = res.section(gdf, 'max h', 0)
+        equal = (test == df.to_numpy()).all()
+        self.assertTrue(equal)
 
     def test_maximum_level(self):
         xmdf = './tests/xmdf/EG00_001.xmdf'
@@ -126,7 +196,6 @@ class TestXMDF(unittest.TestCase):
 
         df = res.flux('./tests/xmdf/xmdf_flux_line.shp', 'conc tracer1', use_unit_flow=True)
         self.assertAlmostEqual(117.907, float(df.iloc[:,0].max()), places=3)
-
 
 
 class TestDAT(unittest.TestCase):

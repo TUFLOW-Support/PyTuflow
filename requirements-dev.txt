@@ -45,6 +45,7 @@ sphinxcontrib-htmlhelp>=2.0.5
 sphinxcontrib-jsmath>=1.0.1
 sphinxcontrib-qthelp>=1.0.7
 sphinxcontrib-serializinghtml>=1.1.10
+sphinxcontrib-video>=0.4.2
 trove-classifiers>=2025.9.11.17
 typing_extensions>=4.12.2
 tzdata>=2024.1

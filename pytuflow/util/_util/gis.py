@@ -110,10 +110,11 @@ def point_gis_file_to_dict(fpath: PathLike):
 def line_gis_file_to_dict(fpath: PathLike):
     d = {}
     i = 0
-    with TuflowPath(fpath).open_gis() as lyr:
+    p = TuflowPath(fpath)
+    with p.open_gis() as lyr:
         geom_types = lyr.geometry_types()
         if 'LineString' not in geom_types and 'MultiLineString' not in geom_types:
-            raise ValueError(f'Layer {lyr.GetName()} is not a line-string layer.')
+            raise ValueError(f'Layer {p.lyrname} is not a line-string layer.')
         id_fields = ['Id', 'Label', 'Name']
         for feature in lyr:
             fi = -1
