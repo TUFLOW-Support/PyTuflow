@@ -37,6 +37,11 @@ Changelog
 
 Release date: XX XXX 2026
 
+Minor New Features
+^^^^^^^^^^^^^^^^^^
+
+- Point and line locations used for result extraction (e.g. :meth:`XMDF.time_series()<pytuflow.XMDF.time_series>` and :meth:`XMDF.section()<pytuflow.XMDF.section>`) will now accept ``shapely`` geometry and ``geopandas.GeoDataFrame`` objects.
+
 Bug Fixes
 ^^^^^^^^^
 
