@@ -18,16 +18,33 @@ from ..util import pytuflow_logging
 from .pymesh import PointMixin, LineStringMixin
 from .._tmf import Geom, Feature
 
+try:
+    import shapely
+    from shapely import LineString, MultiLineString, Point, MultiPoint
+except ImportError:
+    shapely = None
+    LineString = str
+    MultiLineString = str
+    Point = str
+    MultiPoint = str
+
+try:
+    import geopandas as gpd
+    from geopandas import GeoDataFrame
+except ImportError:
+    gpd = None
+    GeoDataFrame = str
+
 logger = pytuflow_logging.get_logger()
 
-Point = tuple[float, float] | str
-LineString = list[Point] | tuple[Point]
+PointLike = tuple[float, float] | str | Point | MultiPoint | Geom | Feature
+LineStringLike = list[PointLike] | tuple[PointLike] | LineString | MultiLineString | Geom | Feature
 
-Points = list[Point]
-LineStrings = list[LineString]
+Points = list[PointLike]
+LineStrings = list[LineStringLike]
 
-PointLocation = Point | Points | PathLike
-LineStringLocation = LineStrings | PathLike
+PointLocation = PointLike | Points | PathLike | GeoDataFrame
+LineStringLocation = LineStringLike | LineStrings | PathLike | GeoDataFrame
 
 
 class MapOutput(Output, ABC, PointMixin, LineStringMixin):
@@ -249,34 +266,90 @@ class MapOutput(Output, ABC, PointMixin, LineStringMixin):
         data_types = self._figure_out_data_types(list(data_types_), filter_by)
         return [f'{dt}{sfx}' for dt, sfx in zip(data_types, suffixes)]
 
-    def _translate_point_location(self, locations: PointLocation) -> dict[str, Point]:
+    def _translate_point_location(self, locations: PointLocation, name: str = '') -> dict[str, Point]:
         """Translate, as in to understand, not a spatial translation."""
-        if not locations:
+        if gpd and isinstance(locations, (pd.DataFrame, np.ndarray)) and not locations.size:
+            return {}
+        if not isinstance(locations, (pd.DataFrame, np.ndarray)) and not locations:
             return {}
 
         pnts = {}
         i = 0
         if isinstance(locations, Iterable) and not isinstance(locations, str):  # assumes a list of points, does not support a list of files
-            if len(locations) == 2 and all(isinstance(loc, (float, int)) for loc in locations):
-                pnts['pnt1'] = tuple(locations)
+            if isinstance(locations, str):
+                try:
+                    pnts['pnt1'] = self._wkt_point_to_tuple(locations)
+                    return pnts
+                except ValueError:
+                    pass
+            elif gpd and isinstance(locations, GeoDataFrame):
+                for j, (_, feat) in enumerate(locations.iterrows()):
+                    attrs = OrderedDict()
+                    for col in locations.columns:
+                        if col != 'geometry':
+                            attrs[col] = feat[col]
+                    geom = feat.geometry
+                    feat = Feature(geom, attrs, geom.geom_type)
+                    pnts.update(self._translate_point_location(feat, name=f'pnt{j + 1}'))
                 return pnts
-
-            for loc in locations:
-                i += 1
-                key = f'pnt{i}'
-                if isinstance(locations, dict):
-                    key = loc
-                    loc = locations[loc]
-                if isinstance(loc, str):
-                    pnts[key] = self._wkt_point_to_tuple(loc)
-                elif isinstance(loc, Iterable):
-                    pnts[key] = tuple(loc)
-
+            elif isinstance(locations, dict):
+                for key, loc in locations.items():
+                    pnts.update(self._translate_point_location(loc, name=key))
+                return pnts
+            elif shapely and isinstance(locations[0], (LineString, MultiLineString, Geom, Feature)):
+                for j, loc in enumerate(locations):
+                    pnts.update(self._translate_point_location(loc), name=f'pnt{j+1}')
+                return pnts
+            elif len(locations) == 2 and all(isinstance(loc, (float, int)) for loc in locations):
+                name = name if name else 'pnt1'
+                pnts[name] = tuple(locations)
+                return pnts
+            else:
+                for j, loc in enumerate(locations):
+                    pnts.update(self._translate_point_location(loc, name=f'pnt{j + 1}'))
+                return pnts
+        elif shapely and isinstance(locations, Point):
+            name = name if name else 'pnt1'
+            pnts[name] = self._coerce_into_point(locations)
             return pnts
-
-        if isinstance(locations, str):
+        elif shapely and isinstance(locations, MultiPoint):
+            name = name if name else 'pnt1'
+            multi = len(locations.geoms) > 1
+            for j, loc in enumerate(locations.geoms):
+                pnts[name if not multi else f'{name}{chr(97 + j)}'] = self._coerce_into_point(loc)
+            return pnts
+        elif isinstance(locations, Geom):
+            if locations.geometry_type() not in ['Point', 'MultiPoint']:
+                logger.warning(f'Geom with geometry type {locations.geometry_type()} cannot be translated to a point location. Skipping.')
+                return {}
+            name = name if name else 'pnt1'
+            pnts_ = locations.points()
+            multi = len(pnts_) > 1
+            for j, loc in enumerate(pnts_):
+                pnts[name if not multi else f'{name}{chr(97 + j)}'] = loc
+            return pnts
+        elif isinstance(locations, Feature):
+            if locations.geom.geometry_type() not in ['Point', 'MultiPoint']:
+                logger.warning(
+                    f'Geom with geometry type {locations.geom.geometry_type()} cannot be translated to a point location. Skipping.')
+                return {}
+            id_fields = ['id', 'label', 'name']
+            attr = OrderedDict([(k.lower(), v) for k, v in locations.attrs.items()])
+            pnts_ = locations.geom.points()
+            multi = len(pnts_) > 1
+            name_ = None
+            for id_field in id_fields:
+                if id_field in attr:
+                    name_ = attr[id_field]
+                    break
+            name_ = name_ if name_ else name
+            name_ = name_ if name_ else 'pnt1'
+            for j, loc in enumerate(pnts_):
+                pnts[name_ if not multi else f'{name_}{chr(97 + j)}'] = loc
+            return pnts
+        elif isinstance(locations, str):
             try:
-                pnts['pnt1'] = self._wkt_point_to_tuple(locations)
+                pnts['line1'] = self._wkt_line_to_list(locations)
                 return pnts
             except ValueError:
                 pass
@@ -284,24 +357,9 @@ class MapOutput(Output, ABC, PointMixin, LineStringMixin):
         return gis.point_gis_file_to_dict(locations)
 
     def _translate_line_string_location(self, locations: LineStringLocation, name: str = '') -> dict[str, LineString]:
-        try:
-            import shapely
-            from shapely import LineString, MultiLineString
-        except ImportError:
-            shapely = None
-            LineString = str
-            MultiLineString = str
-
-        try:
-            import geopandas as gpd
-            from geopandas import GeoDataFrame
-        except ImportError:
-            gpd = None
-            GeoDataFrame = str
-
-        if gpd and isinstance(locations, GeoDataFrame) and not locations.size:
+        if gpd and isinstance(locations, (pd.DataFrame, np.ndarray)) and not locations.size:
             return {}
-        if not isinstance(locations, GeoDataFrame) and not locations:
+        elif not isinstance(locations, (pd.DataFrame, np.ndarray)) and not locations:
             return {}
 
         lines = {}
@@ -325,10 +383,7 @@ class MapOutput(Output, ABC, PointMixin, LineStringMixin):
                 return lines
             elif isinstance(locations, dict):
                 for key, loc in locations.items():
-                    if isinstance(loc, str):
-                        lines[key] = self._wkt_line_to_list(loc)
-                    elif isinstance(loc, Iterable):
-                        lines[key] = loc
+                    lines.update(self._translate_line_string_location(loc, name=key))
                 return lines
             elif shapely and isinstance(locations[0], (LineString, MultiLineString, Geom, Feature)):
                 for j, loc in enumerate(locations):
@@ -342,6 +397,10 @@ class MapOutput(Output, ABC, PointMixin, LineStringMixin):
                     i += 1
                     key = f'line{i}'
                     lines[key] = loc
+                return lines
+            else:
+                for j, loc in enumerate(locations):
+                    lines.update(self._translate_line_string_location(loc, name=f'line{j+1}'))
                 return lines
         elif shapely and isinstance(locations, LineString):
             name = name if name else 'line1'
@@ -382,6 +441,13 @@ class MapOutput(Output, ABC, PointMixin, LineStringMixin):
             for j, loc in enumerate(lines_):
                 lines[name_ if not multi else f'{name_}{chr(97 + j)}'] = loc
             return lines
+        elif isinstance(locations, str):
+            try:
+                lines['line1'] = self._wkt_line_to_list(locations)
+                return lines
+            except ValueError:
+                pass
+
 
         return gis.line_gis_file_to_dict(locations)  # assume it is a file path
 

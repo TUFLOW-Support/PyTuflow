@@ -37,6 +37,36 @@ class TestXMDF(unittest.TestCase):
         df = res.data_point(point, ['max h', 'max vector velocity'], 0)
         self.assertEqual((1, 2), df.shape)
 
+    def test_data_point_shapely_geom(self):
+        xmdf = './tests/xmdf/run.xmdf'
+        res = XMDF(xmdf)
+        point = shapely.Point((1.0, 1.0))
+        df = res.data_point(point, 'max h', 0)
+        self.assertTrue(isinstance(df, float))
+        
+        point = shapely.MultiPoint([(1.0, 1.0)])
+        df = res.data_point(point, 'max h', 0)
+        self.assertTrue(isinstance(df, float))
+
+    def test_data_point_feature(self):
+        xmdf = './tests/xmdf/EG00_001.xmdf'
+        res = XMDF(xmdf)
+        p = TuflowPath('./tests/xmdf/xmdf_point.shp')
+        with p.open_gis() as fo:
+            for feat in fo:
+                val = res.data_point(feat.geom, 'h', 1.0)
+                self.assertTrue(isinstance(val, float))
+
+                val = res.data_point(feat, 'h', 1.)
+                self.assertTrue(isinstance(val, float))
+
+    def test_data_point_geodataframe(self):
+        xmdf = './tests/xmdf/EG00_001.xmdf'
+        res = XMDF(xmdf)
+        gdf = geopandas.read_file('./tests/xmdf/xmdf_point.shp')
+        val = res.data_point(gdf, 'h', 1.)
+        self.assertTrue(isinstance(val, float))
+
     def test_data_point_datetime(self):
         xmdf = './tests/xmdf/EG00_001.xmdf'
         res = XMDF(xmdf)
@@ -166,7 +196,6 @@ class TestXMDF(unittest.TestCase):
 
         df = res.flux('./tests/xmdf/xmdf_flux_line.shp', 'conc tracer1', use_unit_flow=True)
         self.assertAlmostEqual(123.393, float(df.iloc[:,0].max()), places=3)
-
 
 
 class TestDAT(unittest.TestCase):
