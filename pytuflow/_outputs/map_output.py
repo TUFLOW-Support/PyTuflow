@@ -323,19 +323,19 @@ class MapOutput(Output, ABC, PointMixin, LineStringMixin):
                     feat = Feature(geom, attrs, geom.geom_type)
                     lines.update(self._translate_line_string_location(feat, name=f'line{j + 1}'))
                 return lines
-            elif shapely and isinstance(locations[0], (LineString, MultiLineString, Geom, Feature)):
-                for j, loc in enumerate(locations):
-                    lines.update(self._translate_line_string_location(loc), name=f'line{j+1}')
-                return lines
-            elif self._list_depth(locations) == 2:  # [(0, 0), (1, 1)] - a single line-string, not a list of line-strings
-                lines['line1'] = locations
-                return lines
             elif isinstance(locations, dict):
                 for key, loc in locations.items():
                     if isinstance(loc, str):
                         lines[key] = self._wkt_line_to_list(loc)
                     elif isinstance(loc, Iterable):
                         lines[key] = loc
+                return lines
+            elif shapely and isinstance(locations[0], (LineString, MultiLineString, Geom, Feature)):
+                for j, loc in enumerate(locations):
+                    lines.update(self._translate_line_string_location(loc), name=f'line{j+1}')
+                return lines
+            elif self._list_depth(locations) == 2:  # [(0, 0), (1, 1)] - a single line-string, not a list of line-strings
+                lines['line1'] = locations
                 return lines
             elif self._list_depth(locations) == 3:  # list of line-strings
                 for loc in locations:
