@@ -817,23 +817,32 @@ class Grid(MapOutput):
              direction_convention: str = 'arithmetic') -> pd.DataFrame:
         r"""Returns the flux across a line. Tracer data type(s) can be provided to calculate the volume flux.
 
-        Currently does not support groundwater.
+        Does not currently support groundwater flux calculation.
 
         .. admonition:: Warning
             :class: warning
 
             The result of the ``flux()`` method should be used with care. Due to result interpolation, the resulting
-            flux could be off by 10% or more. The error depends on the result format, engine, SGS, and line location.
+            flux could be off by 10% or more. The error depends on variables such as result format, the hydraulic engine 
+            that created the results, whether SGS was used, and the line location.
             
-            For example, the TUFLOW HPC tutorial model was run at a 10 m cell size (the tutorial model is usually run at 5 m) 
-            with SGS on. The peak flow from a PO line gave a peak of 90 m\ :sup:`3`\ /s, and 
+            As an example, the TUFLOW HPC tutorial model was run at a 10 m cell size (the tutorial model is usually run at 5 m) 
+            with SGS on. The peak flow from a PO line gave a result of 90 m\ :sup:`3`\ /s, and 
             the equivalent ``flux()`` call gave 81 m\ :sup:`3`\ /s using ``use_unit_flow=True``, and
             76 m\ :sup:`3`\ /s if using ``use_unit_flow=False``. That is an underprediction of 10% or more, even when using the 
-            unit flow map output.
+            unit flow map output. From testing, the ``XMDF.flux()`` method will not be as peaky as equivalent PO results, most likely
+            due to some smoothing of the result surface from interpolation. **This means that any error in the XMDF.flux() prediction
+            will typically lean toward underprediction.**
 
-            However, if using TUFLOW FV and the NetCDF mesh output, this can have a very close match. This is due to the 
-            fact that FV computes everything at the cell centre and the format outputs at the cell centre, so interpolation
-            has little interference with the ``flux()`` extraction.
+            The same test with a 5 m cell size and with SGS turned off, resulted in ``XMDF.flux()`` predicting a much closer peak of approximately 1%
+            difference to the PO results. The ``NCGrid.flux()`` predicted even closer with a peak less than 1% difference. Other real world tests have shown
+            that without SGS, the ``XMDF.flux()`` is typically within 5% of the PO result given sufficient cell resolution across the flowpath.
+
+            The same test was run with TUFLOW FV using the NetCDF output format. In this case, the ``NCMesh.flux()`` method returned
+            an estimate that was identical to the flux output from TUFLOW FV (the peak was within ~0.2%). This is due to the interpolation,
+            or lack thereof in this instance. TUFLOW FV calculates both water level and velocity at the cell centre, and the NetCDF output
+            writes values to the cell centre. Note, the ``NCMesh.flux()`` estimate is not guaranteed to always be identical, particularly when
+            using spherical coordinates.
 
         Parameters
         ----------
