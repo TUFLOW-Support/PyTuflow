@@ -91,7 +91,10 @@ class NCEngine(DatasetEngine):
             if idx is None:
                 a = grp.variables[varname][:]
             else:
-                a = grp.variables[varname][idx]
+                contiguous, post_idx = self._to_contiguous(idx)
+                a = grp.variables[varname][contiguous]
+                if post_idx is not None:
+                    a = np.asarray(a)[post_idx]
             if np.ma.isMaskedArray(a):
                 a_ = np.array(a)
                 if np.ma.is_masked(a):
