@@ -18,6 +18,7 @@ from .helpers.mesh_driver_qgis_nc import QgisNcMeshDriver
 from .helpers.mesh_driver_nc_nc import NCMeshDriverNC
 from .mesh import Mesh
 from .._pytuflow_types import PathLike
+from ..results import ResultTypeError
 
 from .pymesh import PyNCMesh
 
@@ -156,6 +157,11 @@ class NCMesh(Mesh):
     """
 
     def __init__(self, fpath: PathLike, driver: str = 'v1.1'):
+        if not Path(fpath).exists():
+            raise FileNotFoundError(f'File does not exist: {fpath}')
+        if not self._looks_like_this(Path(fpath)):
+            raise ResultTypeError(f'File does not look like a NetCDF Mesh result file: {fpath}')
+        
         super().__init__(fpath)
 
         if driver.lower() == 'v1.0':
