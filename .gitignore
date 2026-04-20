@@ -16,3 +16,4 @@ profile.*
 *__pycache__*
 tmp.py
 .vscode*
+.claude*
