@@ -13,7 +13,7 @@ except ImportError:
     from ..stubs.qgis.core import QgsMeshLayer, QgsMeshDatasetIndex, QgsMeshDatasetGroupMetadata
 
 
-MAX_BLOCK_SIZE = 1_000_000
+MAX_BLOCK_SIZE = 100_000_000
 
 
 class QgisDataExtractor(PyDataExtractor):
