@@ -41,6 +41,7 @@ Minor New Features
 ^^^^^^^^^^^^^^^^^^
 
 - Point and line locations used for result extraction (e.g. :meth:`XMDF.time_series()<pytuflow.XMDF.time_series>` and :meth:`XMDF.section()<pytuflow.XMDF.section>`) will now accept ``shapely`` geometry and ``geopandas.GeoDataFrame`` objects.
+- The ``NetCDF4`` driver for XMDF and NetCDF map ouput formats is now more performant when extracting non-contiguous data.
 
 Bug Fixes
 ^^^^^^^^^
