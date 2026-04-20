@@ -27,8 +27,8 @@ class VertexDataMixin:
             wd = np.full(data.shape[0], True, dtype=bool)
             return data, wd
 
-        data = self.extractor.data(data_type, index)
-        wd = self.extractor.wd_flag(data_type, index).astype(bool)
+        data = self.data(data_type, index)
+        wd = self.wd_flag(data_type, index).astype(bool)
         if wd.ndim == 1:
             wd_vert = self._map_wet_dry_to_verts(wd)
         else:
@@ -52,7 +52,7 @@ class VertexDataMixin:
         cell_id = self.geom.triangle_cell(tri)
 
         if data_type.lower() != 'bed elevation':
-            wd_flag = self.extractor.wd_flag(data_type, (time_index, cell_id)).flatten().astype(bool)[0]
+            wd_flag = self.wd_flag(data_type, (time_index, cell_id)).flatten().astype(bool)[0]
             if not wd_flag:
                 return np.nan
 
@@ -65,7 +65,7 @@ class VertexDataMixin:
             pos = self.geom.vertex_position(vert_ids)[inverse]
             a = pos[:, 2].reshape((1, 3))
         else:
-            a = self.extractor.data(data_type, (time_index, vert_ids))[inverse]
+            a = self.data(data_type, (time_index, vert_ids))[inverse]
 
         if self.is_vector(data_type) and return_type == 'vector':
             data_x = (a[..., 0] * uvw).sum(axis=1)
@@ -95,7 +95,7 @@ class VertexDataMixin:
 
         # calculate the values
         vert_ids, inverse = np.unique(self.geom.triangle_vertices(tri), return_inverse=True)
-        a = self.extractor.data(data_type, (slice(None), vert_ids))[:,inverse]
+        a = self.data(data_type, (slice(None), vert_ids))[:,inverse]
 
         vector = self.is_vector(data_type)
         if vector and return_type == 'vector':
@@ -110,7 +110,7 @@ class VertexDataMixin:
 
         # wd flag
         cell_id = self.geom.triangle_cell(tri)
-        wd_flag = self.extractor.wd_flag(data_type, (slice(None), cell_id)).flatten().astype(bool)
+        wd_flag = self.wd_flag(data_type, (slice(None), cell_id)).flatten().astype(bool)
         data[~wd_flag, ...] = np.nan
 
         return data
@@ -149,7 +149,7 @@ class VertexDataMixin:
         if data_type.lower() == 'bed elevation':
             data = self.geom.vertex_position(uvert)[..., 2]
         else:
-            data = self.extractor.data(data_type, (time_index, uvert))
+            data = self.data(data_type, (time_index, uvert))
         if outside:
             data = np.append([[np.nan, np.nan]] if vector else [np.nan], data, axis=0).reshape((-1, 2) if vector else (-1,))
         data = data[inverse].reshape((-1, 3, 2) if vector else (-1, 3))
@@ -182,7 +182,7 @@ class VertexDataMixin:
         if data_type.lower() == 'bed elevation':
             active = np.full(len(cells), True, dtype=bool)
         else:
-            active = self.extractor.wd_flag(data_type, (time_index, cells)).astype(bool)
+            active = self.wd_flag(data_type, (time_index, cells)).astype(bool)
         if outside:
             active = np.append([False], active)
         active = active[inverse]
@@ -328,15 +328,15 @@ class VertexDataMixin:
         all_verts = np.array(sorted(all_vert_set))
 
         if use_q_vector:
-            all_q = self.extractor.data(q_dt, (slice(None), all_verts))            # (T, N_v, 2)
+            all_q = self.data(q_dt, (slice(None), all_verts))            # (T, N_v, 2)
         else:
-            all_vel = self.extractor.data(vel_dt, (slice(None), all_verts))        # (T, N_v, 2)
-            all_depth = self.extractor.data(depth_dt, (slice(None), all_verts))    # (T, N_v)
+            all_vel = self.data(vel_dt, (slice(None), all_verts))        # (T, N_v, 2)
+            all_depth = self.data(depth_dt, (slice(None), all_verts))    # (T, N_v)
         if scalar_dt:
-            all_scalar = self.extractor.data(scalar_dt, (slice(None), all_verts))  # (T, N_v)
+            all_scalar = self.data(scalar_dt, (slice(None), all_verts))  # (T, N_v)
 
         ucells_wd = np.unique(all_tricell_list)
-        wd_all = self.extractor.wd_flag(wd_dt, (slice(None), ucells_wd)).astype(bool)  # (T, N_uc)
+        wd_all = self.wd_flag(wd_dt, (slice(None), ucells_wd)).astype(bool)  # (T, N_uc)
         vert_to_idx = {int(v): i for i, v in enumerate(all_verts)}
         cell_to_wd_idx = {int(c): i for i, c in enumerate(ucells_wd)}
 

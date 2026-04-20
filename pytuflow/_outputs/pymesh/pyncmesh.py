@@ -50,6 +50,10 @@ class PyNCMesh(PyMesh, Mesh3DMixin, GLTFMixin):
                         self.has_inherent_reference_time = True
                         self.reference_time = ref_time
                     break
+        
+    @property
+    def shared_active_flags(self) -> bool:
+        return True
 
     def translate_data_type(self, data_type: str) -> tuple[str, ...]:
         data_type = super().translate_data_type(data_type)

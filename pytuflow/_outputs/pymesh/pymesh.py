@@ -70,6 +70,11 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
     @staticmethod
     def external_engine_available() -> bool:
         return H5Engine.available() or NCEngine.available()
+    
+    @property
+    def shared_active_flags(self) -> bool:
+        """Whether the format uses shared active flags. True = shared, False = flag exists per result type."""
+        return False
 
     def clear_cache(self):
         self.cache.clear()
@@ -360,6 +365,11 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
         int
             The index of the given cell ID for the specified data type.
         """
+        if self.is_3d(data_type) and self.cache.contains('loaded_in_memory', 'cell_id_3d'):
+            cell_index = self.cache.get('loaded_in_memory', 'cell_id_3d')
+            return cell_index[cell_id]
+        elif not self.is_3d(data_type):
+            return cell_id
         return self.extractor.cell_index(cell_id, self.translate_data_type(data_type)[0])
 
     def zlevel_count(self, cell_idx2: int | np.ndarray | list[int] | slice) -> int | np.ndarray | list[int]:
@@ -375,6 +385,9 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
         int | np.ndarray | list[int]
             The number of vertical levels for the given 2D cell index.
         """
+        if self.cache.contains('loaded_in_memory', 'zlevel_count'):
+            zlevel_count = self.cache.get('loaded_in_memory', 'zlevel_count')
+            return zlevel_count[cell_idx2]
         return self.extractor.zlevel_count(cell_idx2)
 
     def zlevels(self, time_index: int, nlevels: int, cell_idx2: int | np.ndarray,
@@ -397,6 +410,15 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
         np.ndarray
             The vertical levels for the given parameters.
         """
+        if self.cache.contains('loaded_in_memory', 'zlevels'):
+            zlevels = self.cache.get('loaded_in_memory', 'zlevels')
+            idx = cell_idx2 + cell_idx3
+            if isinstance(cell_idx2, int):
+                a = zlevels[time_index, slice(idx, idx + nlevels + 1)]
+            else:
+                idx = [i + j for i, nlevel in np.column_stack((idx, nlevels)) for j in range(nlevel + 1)]
+                a = zlevels[time_index, idx]
+            return a
         return self.extractor.zlevels(time_index, nlevels, cell_idx2, cell_idx3)
 
     def surface(self,
@@ -923,6 +945,54 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
 
             self.cache.set(flux, 'flux', data_type, self._linestring_as_wkt(line), use_unit_flow)
             return flux
+        
+    def load_into_memory(self, data_type: str):
+        """Loads all surfaces for a given data type into memory. This can save time later as it removes the need
+        for frequent I/O calls and data unzipping.
+        """
+        with self.extractor.open():
+            for dtype in self.translate_data_type(data_type):
+                if self.cache.contains('loaded_in_memory', dtype):
+                    continue
+                data = self.extractor.data(dtype, slice(None))
+                self.cache.set(data, 'loaded_in_memory', dtype)
+
+                if not self.shared_active_flags or not self.cache.contains('loaded_in_memory', 'wd_global'):
+                    wd = self.extractor.wd_flag(dtype, slice(None))
+                    if self.shared_active_flags:
+                        self.cache.set(wd, 'loaded_in_memory', 'wd_global')
+                    else:
+                        self.cache.set(wd, 'loaded_in_memory', data_type, 'wd')
+                
+                if self.is_3d(dtype) and not self.cache.contains('loaded_in_memory', 'zlevels'):
+                    cell_id_2d = np.arange(self.extractor.cell_count())
+                    cell_id_3d = self.extractor.cell_index(cell_id_2d, dtype)
+                    self.cache.set(cell_id_3d, 'loaded_in_memory', 'cell_id_3d')
+                    zlevel_count = self.zlevel_count(slice(None))
+                    self.cache.set(zlevel_count, 'loaded_in_memory', 'zlevel_count')
+                    zlevels = self.extractor.zlevels(slice(None), zlevel_count, cell_id_2d, cell_id_3d)
+                    self.cache.set(zlevels, 'loaded_in_memory', 'zlevels')
+        
+        
+    def data(self, data_type: str, index: PyDataExtractor.SliceType | PyDataExtractor.MultiSliceType) -> np.ndarray:
+        """Wrapper around extractor.data() that checks the cache first to check if results have been loaded into memory.
+        data_type does not get translated and should already be the correct name and the extractor should already be
+        opened.
+        """
+        if self.cache.contains('loaded_in_memory', data_type):
+            data = self.cache.get('loaded_in_memory', data_type)
+            return data[index]
+        return self.extractor.data(data_type, index)
+    
+    def wd_flag(self, data_type: str, index: PyDataExtractor.SliceType | PyDataExtractor.MultiSliceType) -> np.ndarray:
+        """Wrapper around extractor.wd_flag() that checks the cache first to check if the wd flag has been loaded into memory.
+        data_type does not get translated and should already be the correect name and the extractor should already be opened.
+        """
+        args = ['loaded_in_memory', 'wd_global'] if self.shared_active_flags else ['loaded_in_memory', data_type, 'wd']
+        if self.cache.contains(*args):
+            wd_flag = self.cache.get(*args)
+            return wd_flag[index]
+        return self.extractor.wd_flag(data_type, index)
 
     def _find_time_index(self, data_type: str, time: float | datetime) -> int:
         if data_type.lower() in ['bed elevation', 'bed level']:

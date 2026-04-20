@@ -80,6 +80,20 @@ class PyXMDFDataExtractor(PyDataExtractor):
 
     def data(self, data_type: str, index: PyDataExtractor.SliceType | PyDataExtractor.MultiSliceType) -> np.ndarray:
         return self.engine.data(self._create_path(data_type, 'Values'), index)
+    
+    def cell_count(self) -> int:
+        for dtype in self.data_types():
+            path = self._create_path(dtype, 'Active')
+            shape = self.engine.data_shape(path)
+            return shape[-1]
+        return -1
+    
+    def node_count(self) -> int:
+        for dtype in self.data_types():
+            path = self._create_path(dtype, 'Values')
+            shape = self.engine.data_shape(path)
+            return shape[-1]
+        return -1
 
     def _create_path(self, data_type: str, varname: str) -> str:
         if '/' in data_type:

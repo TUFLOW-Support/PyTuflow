@@ -186,6 +186,12 @@ class PyDataExtractor:
 
     def on_vertex(self, data_type: str) -> bool:
         return True
+    
+    def cell_count(self) -> int:
+        raise NotImplementedError
+    
+    def node_count(self) -> int:
+        raise NotImplementedError
 
     def cell_index(self, cell_id: int | list[int] | np.ndarray, data_type: str) -> np.ndarray:
         return np.array([cell_id] if isinstance(cell_id, (int, np.int32, np.int64)) else cell_id)

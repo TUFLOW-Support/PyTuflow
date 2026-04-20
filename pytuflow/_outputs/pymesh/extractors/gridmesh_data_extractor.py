@@ -1,5 +1,6 @@
 import typing
 from datetime import datetime
+import math
 
 import numpy as np
 
@@ -98,6 +99,12 @@ class GridMeshDataExtractor(PyDataExtractor):
                 data = data.flatten()
             index = self._time_index_leftover(index, False)
         return data[index]
+    
+    def cell_count(self) -> int:
+        return self._grid.ncol * self._grid.nrow
+    
+    def node_count(self) -> int:
+        return (self._grid.ncol + 1) * (self._grid.nrow + 1)
 
     def zlevel_count(self, cell_idx2: int | np.ndarray | list[int]) -> int | np.ndarray | list[int]:
         if isinstance(cell_idx2, (int, np.int32, np.int64)):

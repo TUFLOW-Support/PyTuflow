@@ -126,6 +126,12 @@ class PyNCMeshDataExtractor(PyDataExtractor):
     def on_vertex(self, data_type: str) -> bool:
         dims = set([x.lower() for x in self.dimension_names(data_type)])
         return len({'numcells2d', 'numcells3d'}.intersection(dims)) == 0
+    
+    def cell_count(self) -> int:
+        return self.engine.data_shape('cell_X')[0]
+    
+    def node_count(self) -> int:
+        return self.engine.data_shape('node_X')[0]
 
     def cell_index(self, cell_id: int | list[int] | np.ndarray, data_type: str) -> np.ndarray:
         return self.data('idx3', cell_id).flatten() - 1
