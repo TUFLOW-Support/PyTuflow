@@ -358,7 +358,7 @@ class MapOutput(Output, ABC, PointMixin, LineStringMixin):
             return pnts
         elif isinstance(locations, str):
             try:
-                pnts['line1'] = self._wkt_line_to_list(locations)
+                pnts['pnt1'] = self._wkt_point_to_tuple(locations)
                 return pnts
             except ValueError:
                 pass
