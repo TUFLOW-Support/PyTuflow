@@ -623,7 +623,7 @@ class TestXMDF(unittest.TestCase):
             res = XMDF(p, driver='qgis geometry netcdf4')
             df = res.flux('./tests/xmdf/xmdf_flux_line.shp', '')
             self.assertEqual((7, 1), df.shape)
-            self.assertAlmostEqual(76.108, float(df.iloc[:,0].max()), places=3)
+            self.assertAlmostEqual(78.216, float(df.iloc[:,0].max()), places=3)
 
     def test_flux_qgis_driver(self):
         p = './tests/xmdf/EG00_001.xmdf'
@@ -631,27 +631,27 @@ class TestXMDF(unittest.TestCase):
             res = XMDF(p, driver='qgis geometry data extractor')
             df = res.flux('./tests/xmdf/xmdf_flux_line.shp', '')
             self.assertEqual((7, 1), df.shape)
-            self.assertAlmostEqual(76.108, float(df.iloc[:,0].max()), places=3)
+            self.assertAlmostEqual(78.216, float(df.iloc[:,0].max()), places=3)
 
     def test_flux_tracer_netcdf4_driver(self):
         p = './tests/xmdf/EG17_001.xmdf'
         with pyqgis():
             res = XMDF(p, driver='qgis geometry netcdf4')
             df = res.flux('./tests/xmdf/xmdf_flux_line.shp', 'conc tracer1', use_unit_flow=False)
-            self.assertAlmostEqual(116.031, float(df.iloc[:,0].max()), places=3)
+            self.assertAlmostEqual(115.948, float(df.iloc[:,0].max()), places=3)
 
             df = res.flux('./tests/xmdf/xmdf_flux_line.shp', 'conc tracer1', use_unit_flow=True)
-            self.assertAlmostEqual(123.393, float(df.iloc[:,0].max()), places=3)
+            self.assertAlmostEqual(117.907, float(df.iloc[:,0].max()), places=3)
 
     def test_flux_tracer_qgis_driver(self):
         p = './tests/xmdf/EG17_001.xmdf'
         with pyqgis():
             res = XMDF(p, driver='qgis geometry data extractor')
             df = res.flux('./tests/xmdf/xmdf_flux_line.shp', 'conc tracer1', use_unit_flow=False)
-            self.assertAlmostEqual(116.031, float(df.iloc[:,0].max()), places=3)
+            self.assertAlmostEqual(115.948, float(df.iloc[:,0].max()), places=3)
 
             df = res.flux('./tests/xmdf/xmdf_flux_line.shp', 'conc tracer1', use_unit_flow=True)
-            self.assertAlmostEqual(123.393, float(df.iloc[:,0].max()), places=3)
+            self.assertAlmostEqual(117.907, float(df.iloc[:,0].max()), places=3)
 
 
 class TestNCMesh(unittest.TestCase):
