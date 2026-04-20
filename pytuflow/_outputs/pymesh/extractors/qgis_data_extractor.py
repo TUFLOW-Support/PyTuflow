@@ -176,6 +176,12 @@ class QgisDataExtractor(PyDataExtractor):
         if idx == -1:
             raise ValueError(f'Data type {data_type} not found in mesh output {self.mesh.stem}')
         return self.lyr.datasetGroupMetadata(QgsMeshDatasetIndex(idx)).minimum()
+    
+    def cell_count(self) -> int:
+        return self.lyr.meshFaceCount()
+    
+    def node_count(self) -> int:
+        raise self.lyr.meshVertexCount()
 
     def data(self, data_type: str, index: PyDataExtractor.SliceType | PyDataExtractor.MultiSliceType) -> np.ndarray:
         if isinstance(index, tuple) and len(index) == 2:

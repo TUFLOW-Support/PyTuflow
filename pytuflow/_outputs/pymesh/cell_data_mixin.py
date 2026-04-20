@@ -383,7 +383,7 @@ class CellDataMixin:
                 n = len(ucells)
 
                 # Flat list of 3D layer indices: all layers of all unique cells, contiguous
-                if self.extractor.NAME == 'QgisDataExtractor':
+                if self.extractor.NAME == 'QgisDataExtractor' and (ucells == cell_idx3).all():
                     flat_3d_idx = cell_idx3
                 else:
                     flat_3d_idx = [int(cell_idx3[i]) + j

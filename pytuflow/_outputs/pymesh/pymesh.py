@@ -967,10 +967,12 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
                 if self.is_3d(dtype) and not self.cache.contains('loaded_in_memory', 'zlevels'):
                     cell_id_2d = np.arange(self.extractor.cell_count())
                     cell_id_3d = self.extractor.cell_index(cell_id_2d, dtype)
-                    self.cache.set(cell_id_3d, 'loaded_in_memory', 'cell_id_3d')
                     zlevel_count = self.zlevel_count(slice(None))
-                    self.cache.set(zlevel_count, 'loaded_in_memory', 'zlevel_count')
                     zlevels = self.extractor.zlevels(slice(None), zlevel_count, cell_id_2d, cell_id_3d)
+                    if self.extractor.NAME == 'QgisDataExtractor':
+                        cell_id_3d[1:] = zlevel_count.cumsum()[:-1]
+                    self.cache.set(cell_id_3d, 'loaded_in_memory', 'cell_id_3d')
+                    self.cache.set(zlevel_count, 'loaded_in_memory', 'zlevel_count')
                     self.cache.set(zlevels, 'loaded_in_memory', 'zlevels')
         
         
