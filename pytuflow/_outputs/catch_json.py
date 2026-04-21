@@ -170,6 +170,15 @@ class CATCHJson(MapOutput):
     def _looks_empty(fpath: Path) -> bool:
         return False
 
+    def load_into_memory(self, data_types: str | list[str]):
+        # docstring inherited
+        data_types = self._figure_out_data_types(data_types, None)
+        for provider in self._providers.values():
+            if provider != self._idx_provider:
+                intersection = np.intersect1d(data_types, provider.data_types())
+                if intersection.size:
+                    provider.load_into_memory(intersection.tolist())
+
     def times(self, filter_by: str = None, fmt: str = 'relative') -> list[TimeLike]:
         """Returns a list of times for the given filter.
 
