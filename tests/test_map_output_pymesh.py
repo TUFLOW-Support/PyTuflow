@@ -197,6 +197,17 @@ class TestXMDF(unittest.TestCase):
         df = res.flux('./tests/xmdf/xmdf_flux_line.shp', 'conc tracer1', use_unit_flow=True)
         self.assertAlmostEqual(117.907, float(df.iloc[:,0].max()), places=3)
 
+    def test_flux_in_memory(self):
+        p = './tests/xmdf/EG00_001.xmdf'
+        res = XMDF(p)
+        df = res.flux('./tests/xmdf/xmdf_flux_line.shp', use_unit_flow=False)
+
+        # clear the cache and load the results into memory and calculate again - the results should be identical
+        res._driver.clear_cache()
+        res.load_into_memory(['depth', 'vector velocity'])
+        df1 = res.flux('./tests/xmdf/xmdf_flux_line.shp', use_unit_flow=False)
+        self.assertTrue((df == df1).iloc[:,0].all())
+
 
 class TestDAT(unittest.TestCase):
 
@@ -390,6 +401,26 @@ class TestNCMesh(unittest.TestCase):
         df = res.flux('./tests/nc_mesh/fv_estuary_flux_line.shp', 'sal')
         self.assertAlmostEqual(875.946, float(df.iloc[:,0].max()), places=3)
         self.assertAlmostEqual(-391.437, float(df.iloc[:,0].min()), places=3)
+
+    def test_flux_2d_in_memory(self):
+        nc = './tests/nc_mesh/Trap_Steady_000.nc'
+        res = NCMesh(nc)
+        df = res.flux('./tests/nc_mesh/fv_steady_2d_flux_line.shp', use_unit_flow=False)
+
+        res._driver.clear_cache()
+        res.load_into_memory('velocity')
+        df1 = res.flux('./tests/nc_mesh/fv_steady_2d_flux_line.shp', use_unit_flow=False)
+        self.assertTrue((df == df1).iloc[:,0].all())
+
+    def test_flux_3d_in_memory(self):
+        nc = './tests/nc_mesh/EST000_3D_001.nc'
+        res = NCMesh(nc)
+        df = res.flux('./tests/nc_mesh/fv_estuary_flux_line.shp', use_unit_flow=False)
+
+        res._driver.clear_cache()
+        res.load_into_memory('velocity')
+        df1 = res.flux('./tests/nc_mesh/fv_estuary_flux_line.shp', use_unit_flow=False)
+        self.assertTrue((df == df1).iloc[:,0].all())
 
 
 class TestCATCHJson(unittest.TestCase):
