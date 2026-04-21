@@ -37,6 +37,15 @@ Changelog
 
 Release date: XX XXX 2026
 
+Load into Memory
+^^^^^^^^^^^^^^^^
+
+A method to load data into memory has been added to ``MapOutput`` classes e.g. :meth:`XMDF.load_into_memory()<pytuflow.XMDF.load_into_memory>` and :meth:`NCGrid.load_into_memory()<pytuflow.NCGrid.load_into_memory>`. This method loads the entire dataset, including all timesteps, for given data type(s) into memory. This can greatly improve the speed of subsequent queries by removing the need to perform relatively expensive I/O operations.
+
+The process of loading an entire dataset into memory itself can be relatively expensive, however can move all I/O operation costs to a single upfront call. This can then greatly improve the speed of subsequent calls that would usually make a lot of I/O operations, or if making many calls that use I/O operations. A great example of when it could be beneficial to load data into memory upfront is when using the :meth:`flux()<pytuflow.XMDF.flux>` call. The flux method can be more expensive than other extraction methods, especially if it has to query both depth and velocity results. A single flux call will mostly likely be cheaper than loading a dataset into memory, however it can quickly become beneficial to load into memory up front if making multiple flux calls on the same result.
+
+As an example, a test was carried out by extracting flux on a medium sized XMDF result (~1 GB). The result did not contain unit flow, so both depth and velocity had to be queried to obtain the flux. The :meth:`XMDF.flux()<pytuflow.XMDF.flux>` method took ~2.5 s to execute. Loading both the depth and velocity into memory took ~4.5 s. Subsequent :meth:`XMDF.flux()<pytuflow.XMDF.flux>` calls took ~0.01 s. So in this example case, it would be beneficial to load depth and velocity into memory if extracting flux from two or more locations. The exact ratio will vary depending on the results and other variables such as how many cells the flux line intersects and how many timesteps are in the results etc.
+
 Minor New Features
 ^^^^^^^^^^^^^^^^^^
 
