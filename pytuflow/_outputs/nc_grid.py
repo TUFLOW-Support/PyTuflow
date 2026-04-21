@@ -179,6 +179,12 @@ class NCGrid(Grid):
             if "TUFLOW Build:" in head:
                 return True
         return False
+    
+    def load_into_memory(self, data_types: str | list[str]):
+        # docstring inherited
+        self._load()
+        with self._open():
+            super().load_into_memory(data_types)
 
     def times(self, filter_by: str = None, fmt: str = 'relative') -> list[TimeLike]:
         """Returns a list of times for the given filter.

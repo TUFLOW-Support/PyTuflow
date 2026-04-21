@@ -66,6 +66,14 @@ class Mesh(MapOutput):
             self._driver.geom.spherical = value
         else:
             raise NotImplementedError('v1.0 driver does contain spherical attribute information.')
+        
+    def load_into_memory(self, data_types: str | list[str]):
+        # docstring inherited
+        if self._driver.DRIVER_SOURCE == 'python':
+            for dtype in self._figure_out_data_types(data_types):
+                self._driver.load_into_memory(dtype)
+        else:
+            raise NotImplementedError('v1.0 driver does not support loading into memory.')
 
     def times(self, filter_by: str = None, fmt: str = 'relative') -> list[TimeLike]:
         """Returns a list of times for the given filter.

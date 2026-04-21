@@ -227,7 +227,6 @@ class Grid(MapOutput):
                     self._cached_timesteps[dtype.lower()].add(i)
             return vals
 
-
         if isinstance(time_index, (int, np.int32, np.int64)):
             time_indexes = {time_index}
         elif not is_static and isinstance(time_index, slice):
@@ -255,6 +254,13 @@ class Grid(MapOutput):
         if len(data) == 1:
             return data[0]
         return np.array(data).reshape(len(time_indexes), *data[0].shape)
+    
+    def load_into_memory(self, data_types: str | list[str]):
+        # docstring inherited
+        for dtype in self._figure_out_data_types(data_types, None):
+            if dtype not in self._cached_data:
+                self._cached_data[dtype] = self._value(dtype, slice(None))
+                self._cached_timesteps[dtype] = list(range(len(self.times())))
 
     def to_mesh(self, base_topology: 'str | Grid | None' = None, direction_convention = 'arithmetic') -> GridMesh:
         """Converts the grid to a :class:`GridMesh<pytuflow.GridMesh>` object, essentially converting the grid

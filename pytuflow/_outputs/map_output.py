@@ -55,6 +55,45 @@ class MapOutput(Output, ABC, PointMixin, LineStringMixin):
         self._info = pd.DataFrame(columns=['data_type', 'type', 'is_max', 'is_min', 'static', '3d', 'start', 'end', 'dt'])
 
     @abc.abstractmethod
+    def load_into_memory(self, data_types: str | list[str]):
+        """Load the given data types into memory. This loads the entire dataset, including all timesteps, which
+        can greatly improve the speed of queries by removing the need for frequent and relatively expensive I/O operations.
+        Any accompanying data will also be loaded, e.g. the active (wet/dry) flags will also be loaded into memory.
+        
+        Loading data types into memory can be a relatively slow process, however it will speed up subsequent queries. 
+        The speed up is relative to how many I/O operations a given method makes.
+        e.g. The ``flux()`` method makes many I/O calls and it can typically be beneficial to load the relevant 
+        results into memory if making more than two ``flux()`` calls on a result. On the other hand,
+        the ``section()`` method  will typically only make two queries, one for the data and one for the active 
+        flag. As a consequence, it may not be worth loading the data into memory for ``section()`` calls as 
+        the cost of loading into memory outweighs the subsequent speed up. It will vary depending on the results,
+        the calls being made, and where the results are located (e.g. locally or network drive).
+
+        Note, maximum and temporal datasets are considered separate datasets e.g. loading ``water level`` into memory 
+        will not load ``maximum water level`` and vise versa. It is also not supported in v1.0 mesh drivers.
+
+        Parameters
+        ----------
+        data_types : str | list[str]
+            The result type(s) to load into memory.
+        
+        Examples
+        --------
+        Load a result type into memory to speed up ``flux()`` calls.
+
+        >>> res = ... # assume res is a loaded mesh or grid result file
+        >>> res.load_into_memory('vector unit flow')
+        >>> df = res.flux('/path/to/flux_line.shp')
+
+        If unit flow is not available, the depth and velocity will be needed. Note, just velocity is needed for 
+        :class:`NCMesh<pytuflow.NCMesh>` results as the depth is stored within the vertical layer elevation data.
+
+        >>> res.load_into_memory(['depth', 'vector velocity'])
+        >>> df = res.flux('/path/to/flux_line.shp')
+        """
+        raise NotImplementedError
+
+    @abc.abstractmethod
     def flux(self, locations: LineStringLocation, data_types: str | list[str] = 'unit flow',
              time_fmt: str = 'relative', use_unit_flow: bool = True, *args, **kwargs) -> pd.DataFrame:
         r"""Returns the flux across a line. Tracer data type(s) can be provided to calculate the volume flux.
