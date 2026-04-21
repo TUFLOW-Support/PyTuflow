@@ -1,5 +1,6 @@
 import typing
 from pathlib import Path
+import numpy as np
 
 from . import PyMesh, Py2dm, PyDATDataExtractor, QgisMeshGeometry, QgisDataExtractor
 
@@ -31,15 +32,16 @@ class PyDAT(PyMesh):
                 raise ValueError("QGIS python bindings not found.")
             if not self.qgis_initialized():
                 raise ValueError('QGIS application has not been initialized.')
-            self.extractor = QgisDataExtractor(twodm, fpaths, layer=self.geom.lyr)
-            self.geom.lyr = self.extractor.lyr
+            self.extractors = [QgisDataExtractor(twodm, fpaths, layer=self.geom.lyr)]
+            self.geom.lyr = self.extractors[0].lyr
         else:
-            self.extractor = PyDATDataExtractor(fpaths)
+            self.extractors = [PyDATDataExtractor(fpaths)]
 
         self.name = twodm.stem
 
     def data_types(self) -> list[str]:
         if not self._data_types:
-            data_types = self.extractor.data_types()
+            data_types = [x.data_types() for x in self.extractors]
+            data_types = np.hstack(data_types).tolist()
             self._data_types = ['Bed Elevation'] + data_types if self.geom.has_z else data_types
         return self._data_types

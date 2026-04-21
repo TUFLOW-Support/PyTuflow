@@ -31,21 +31,27 @@ class PyXMDF(PyMesh, Mesh3DMixin, GLTFMixin, AlembicMixin):
             self.geom = Py2dm(twodm)
 
         if fpath.suffix.lower() == '.2dm':  # won't use netcdf4 or h5py
-            self.extractor = PyXMDFDataExtractor(fpath, None)
+            self.extractors = [PyXMDFDataExtractor(fpath, None)]
         elif engine == 'qgis' or (engine is None and not self.external_engine_available() and self.qgis_available()):
             if not self.qgis_available():
                 raise ValueError("QGIS python bindings not found.")
             if not self.qgis_initialized():
                 raise ValueError('QGIS application has not been initialized.')
-            self.extractor = QgisDataExtractor(twodm, [fpath], layer=self.geom.lyr)
-            self.geom.lyr = self.extractor.lyr
+            self.extractors = [QgisDataExtractor(twodm, [fpath], layer=self.geom.lyr)]
+            self.geom.lyr = self.extractors[0].lyr
         elif self.external_engine_available():
-            self.extractor = PyXMDFDataExtractor(fpath, engine)
+            self.extractors = [PyXMDFDataExtractor(fpath, engine)]
         else:
             raise ValueError('No suitable engine found for data extraction.')
 
         self.name = twodm.stem
-        for dtype in self.data_types():
+        data_types = set(self.data_types())
+        self._data_type_to_extractor.append(data_types)
+        for dtype in data_types.copy():
+            dtype_translated = self.translate_data_type(dtype)
+            for dtype_translated_ in dtype_translated:
+                if dtype_translated_ not in data_types:
+                    data_types.add(dtype_translated_)
             if dtype.lower() != 'bed elevation':
                 ref_time = self.reference_time_(dtype)
                 if ref_time is not None:

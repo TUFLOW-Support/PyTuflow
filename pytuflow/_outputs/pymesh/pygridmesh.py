@@ -20,12 +20,12 @@ class PyGridMesh(PyMesh, Mesh3DMixin, GLTFMixin):
             self.fpath = grid.fpath
             self._grid = grid
         self.geom = GridMeshGeometry(topology_ref if topology_ref is not None else grid)
-        self.extractor = GridMeshDataExtractor(grid, direction_convention)
+        self.extractors = [GridMeshDataExtractor(grid, direction_convention)]
 
     def load(self):
         super().load()
-        self.extractor.cell_reindex = self.geom.cell_reindex
-        self.extractor.vertex_reindex = self.geom.vertex_reindex
+        self.extractors[0].cell_reindex = self.geom.cell_reindex
+        self.extractors[0].vertex_reindex = self.geom.vertex_reindex
 
     def translate_data_type(self, data_type: str) -> tuple[str, ...]:
         # For scalar magnitude types that have a "vector X" counterpart, redirect

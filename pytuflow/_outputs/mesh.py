@@ -403,7 +403,8 @@ class Mesh(MapOutput):
         if self._driver.DRIVER_SOURCE != 'python':
             raise NotImplementedError('v1.0 driver does not support surface data extraction.')
         data, mask = self._driver.surface(data_type, time, averaging_method, to_vertex, coord_scope)
-        columns = ['lon', 'lat'] if self._driver.extractor.spherical() and coord_scope != 'local' else ['x', 'y']
+        extractor = self._driver._get_extractor()
+        columns = ['lon', 'lat'] if extractor.spherical() and coord_scope != 'local' else ['x', 'y']
         df = pd.DataFrame(
             data,
             columns=columns + ['value-x', 'value-y'] if data.shape[1] == 4 else columns + ['value']

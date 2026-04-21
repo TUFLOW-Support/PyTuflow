@@ -133,6 +133,7 @@ class CellDataMixin:
         if cell_id == -1:
             return np.nan
 
+        extractor = self._get_extractor(data_type)
         data_type = self.translate_data_type(data_type)
 
         # check if the cell is active
@@ -148,7 +149,7 @@ class CellDataMixin:
         values = []
         for dtype in data_type:
             if is_3d:
-                if self.extractor.NAME == 'QgisDataExtractor':
+                if extractor.NAME == 'QgisDataExtractor':
                     a = self.data(dtype, (time_index, [cell_idx]))
                     if a.ndim == 2:
                         values = [a[:, 0], a[:, 1]]
@@ -183,6 +184,7 @@ class CellDataMixin:
         if cell_id == -1:
             return np.array([])
 
+        extractor = self._get_extractor(data_type)
         data_type = self.translate_data_type(data_type)
 
         # get the data - velocity collects 2 values V_x and V_y
@@ -192,7 +194,7 @@ class CellDataMixin:
         values = []
         for dtype in data_type:
             if is_3d:
-                if self.extractor.NAME == 'QgisDataExtractor':
+                if extractor.NAME == 'QgisDataExtractor':
                     a = self.data(dtype, (slice(None), [cell_idx]))
                     if a.ndim == 3:
                         values = [a[:,:, 0], a[:,:, 1]]
@@ -229,6 +231,7 @@ class CellDataMixin:
             time_index: int,
             depth_averaging_method: str
     ) -> np.ndarray:
+        extractor = self._get_extractor(data_type)
         data_type = self.translate_data_type(data_type)
 
         cells, inverse = np.unique(cell_ids, return_inverse=True)
@@ -240,7 +243,7 @@ class CellDataMixin:
         if is_3d:
             nlevels = self.zlevel_count(cells)
             max_nlevels = nlevels.max()
-            if self.extractor.NAME == 'QgisDataExtractor':
+            if extractor.NAME == 'QgisDataExtractor':
                 idx = cells
             else:
                 idx = [icell + ilevel for icell, nlevel in np.column_stack((cell_idx, nlevels)) for ilevel in range(nlevel)]
@@ -383,7 +386,7 @@ class CellDataMixin:
                 n = len(ucells)
 
                 # Flat list of 3D layer indices: all layers of all unique cells, contiguous
-                if self.extractor.NAME == 'QgisDataExtractor' and (ucells == cell_idx3).all():
+                if self._get_extractor().NAME == 'QgisDataExtractor' and (ucells == cell_idx3).all():
                     flat_3d_idx = cell_idx3
                 else:
                     flat_3d_idx = [int(cell_idx3[i]) + j
@@ -482,6 +485,7 @@ class CellDataMixin:
         if cell_id == -1:
             return np.array([])
 
+        extractor = self._get_extractor(data_type)
         data_type = self.translate_data_type(data_type)
 
         # check if the cell is active
@@ -497,7 +501,7 @@ class CellDataMixin:
         values = []
         for dtype in data_type:
             if self.is_3d(dtype):
-                if self.extractor.NAME == 'QgisDataExtractor':
+                if extractor.NAME == 'QgisDataExtractor':
                     values = self.data(dtype, (time_index, [cell_idx]))
                     shape = (-1, 2 if self.is_vector(dtype) else 1)
                     values = values.reshape(shape)
@@ -523,6 +527,7 @@ class CellDataMixin:
             data_type: str,
             time_index: int
     ) -> np.ndarray:
+        extractor = self._get_extractor(data_type)
         data_type = self.translate_data_type(data_type)
         cells, inverse = np.unique(cell_ids, return_inverse=True)
         outside = cells[0] == -1
@@ -543,7 +548,7 @@ class CellDataMixin:
         nlevels = self.zlevel_count(cells)
         zlevels = self.zlevels(time_index, nlevels, cells, cell_idx)
         if self.is_3d(data_type[0]):
-            if self.extractor.NAME == 'QgisDataExtractor':
+            if extractor.NAME == 'QgisDataExtractor':
                 idx = cells
             else:
                 idx = [icell + ilevel for icell, nlevel in np.column_stack((cell_idx, nlevels)) for ilevel in range(nlevel)]

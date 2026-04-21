@@ -1,7 +1,7 @@
 import typing
 
 if typing.TYPE_CHECKING:
-    from . import PyMesh
+    from . import PyMesh, PyDataExtractor
     from ..helpers.mesh_driver import DatasetGroup
 
 class SoftLoadMixin:
@@ -9,9 +9,10 @@ class SoftLoadMixin:
     def _init_soft_load(self: 'PyMesh'):
         self.valid = True
 
-    def data_groups(self: 'PyMesh') -> typing.Generator['DatasetGroup', None, None]:
+    def data_groups(self: 'PyMesh', extractor: 'PyDataExtractor' = None) -> typing.Generator['DatasetGroup', None, None]:
         from ..helpers.mesh_driver import DatasetGroup
-        with self.extractor.open():
+        extractor = self._get_extractor() if extractor is None else extractor
+        with extractor.open():
             for dtype in self.data_types():
                 if dtype.lower() == 'bed elevation':
                     yield DatasetGroup(dtype, 'scalar', [0.], 1)

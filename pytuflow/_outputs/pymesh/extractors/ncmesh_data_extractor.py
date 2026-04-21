@@ -30,6 +30,7 @@ class PyNCMeshDataExtractor(PyDataExtractor):
 
     def __init__(self, fpath: str | Path, engine: str = None):
         self.long_name_to_variable = {}
+        self.variables = []
         if (H5Engine.available() and engine is None) or (engine and engine.lower() == 'h5py'):
             self.engine = H5Engine(fpath)
         elif (NCEngine.available() and engine is None) or (engine and engine.lower() == 'netcdf4'):
@@ -57,6 +58,7 @@ class PyNCMeshDataExtractor(PyDataExtractor):
     def data_types(self) -> list[str]:
         dtypes = []
         for variable in self.engine.iterate():
+            self.variables.append(variable)
             if variable.lower() not in self.NON_RESULT_VARIABLES:
                 long_name = self.engine.get_property(variable, 'long_name')
                 if variable.lower().endswith('_x'):
