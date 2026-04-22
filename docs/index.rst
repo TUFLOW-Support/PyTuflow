@@ -44,7 +44,83 @@ A method to load data into memory has been added to ``MapOutput`` classes e.g. :
 
 The process of loading an entire dataset into memory itself can be relatively expensive, however can move all I/O operation costs to a single upfront call. This can then greatly improve the speed of subsequent calls that would usually make a lot of I/O operations, or if making many calls that use I/O operations. A great example of when it could be beneficial to load data into memory upfront is when using the :meth:`flux()<pytuflow.XMDF.flux>` call. The flux method can be more expensive than other extraction methods, especially if it has to query both depth and velocity results. A single flux call will mostly likely be cheaper than loading a dataset into memory, however it can quickly become beneficial to load into memory up front if making multiple flux calls on the same result.
 
-As an example, a test was carried out by extracting flux on a medium sized XMDF result (~1 GB). The result did not contain unit flow, so both depth and velocity had to be queried to obtain the flux. The :meth:`XMDF.flux()<pytuflow.XMDF.flux>` method took ~2.5 s to execute. Loading both the depth and velocity into memory took ~4.5 s. Subsequent :meth:`XMDF.flux()<pytuflow.XMDF.flux>` calls took ~0.01 s. So in this example case, it would be beneficial to load depth and velocity into memory if extracting flux from two or more locations. The exact ratio will vary depending on the results and other variables such as how many cells the flux line intersects and how many timesteps are in the results etc.
+As an example, a test was carried out by extracting flux on a medium sized XMDF result (~1 GB). The result did not contain unit flow, so both depth and velocity had to be queried to obtain the flux. The :meth:`XMDF.flux()<pytuflow.XMDF.flux>` method took ~2.5 s to execute. Loading both the depth and velocity into memory took ~4.5 s. Subsequent :meth:`XMDF.flux()<pytuflow.XMDF.flux>` calls took ~0.01 s. So in this example case, it would be beneficial to load depth and velocity into memory if extracting flux from two or more locations. This can scale very rapidly, so it is almost always a good idea to load the relevant result types into memory when batch exporting flux from a single result. The exact ratio will vary depending on the results and other variables such as how many cells the flux line intersects and how many timesteps are in the results etc.
+
+Example:
+
+.. code-block:: pycon
+
+  >>> from pytuflow import XMDF
+  >>> res = XMDF('/path/to/hpc-result.xmdf')
+  >>> res.load_into_memory(['depth', 'vector velocity'])  # make sure to use 'vector velocity' and not 'velocity' for Classic/HPC results
+  >>> df = res.flux('/path/to/flux-lines.shp')
+  >>> df
+        38_1/flux (d.v)  38_2/flux (d.v)  37_1/flux (d.v)  ...  TMR_001/flux (d.v)  SRC_073/flux (d.v)  BCC_077/flux (d.v)
+  time                                                      ...
+  80.0          0.000000         0.000000         0.000000  ...            0.000000            0.000000            0.000000
+  82.0          0.000000         0.000000         0.000000  ...          510.361820            0.000000            0.003746
+  84.0          0.000000         0.000000         0.000000  ...        -1140.110520            0.000000           -0.004497
+  86.0          0.000000         0.000000         0.000000  ...         -176.114340            0.000000           -0.011052
+  88.0          0.000000         0.000000         0.000000  ...         1446.423141            0.000000           -0.032609
+  ...                ...              ...              ...  ...                 ...                 ...                 ...
+  342.0        13.754197         4.655368         6.469491  ...         3636.175415         3202.797150         3052.134145
+  344.0        13.498373         4.438060         6.097150  ...         3243.619695         3208.747937         3048.996453
+  346.0        13.158218         4.238195         5.743462  ...         3412.564508         3203.476447         3048.696176
+  348.0        13.268435         4.044892         5.398321  ...         3906.436114         3208.706137         3050.309653
+  350.0        12.799280         3.846815         5.082798  ...         4107.193577         3197.010855         3050.993464
+
+  [136 rows x 122 columns]
+
+.. note::
+
+  QGIS drivers, specifically the result extraction drivers, are much slower than ``h5py`` and ``netcdf4`` for extracting entire data types results. The same example, which takes ~4.5 s in ``h5py`` takes ~60 s with QGIS drivers. This can still be beneficial if exporting hundreds of flux locations, however it is much better to use a different driver if possible. Note, it is possible to use QGIS for geometry and ``netcdf4`` for result extraction which will negate this problem. In fact, the TUFLOW Viewer V2 (part of the TUFLOW plugin in QGIS) uses this capability and preferences ``netcdf4`` if it is available and QGIS for the geometry.
+
+  This is not intended as a dig at QGIS. Libraries such as ``h5py`` have been specifically optimised for getting entire datasets from hdf5 files into Python. So naturally they are very quick at this task. General data extraction in QGIS, given single timesteps, are comparable to speeds in ``h5py``.
+
+Add Dataset
+^^^^^^^^^^^
+
+A method to add additional datasets has been added to ``Mesh`` classes e.g. :meth:`XMDF.add_dataset()<pytuflow.XMDF.add_dataset>` and :meth:`NCMesh.add_dataset()<pytuflow.NCMesh.add_dataset>`. This routine will take an additional dataset and add it to an existing mesh class as long as they use the same geometry and are of the same type (i.e. a ``.xmdf`` can only be loaded onto an :class:`XMDF<pytuflow.XMDF>` class even if the mesh files share the same geometry). 
+
+Adding a dataset to an existing mesh output instance will be cheaper than loading into its own instance since it will not have to load its own mesh geometry (which is typically the slowest part of loading a mesh result). It can also be useful to have result types together in a single result instance as some routines can combine results to give more information. An example of this is the :meth:`flux()<pytuflow.NCMesh.flux>` method which can take additional tracer or constituent data types to provide the resulting mass flux across a line. Results from the TUFLOW FV WQ module is a good example of when this is useful. The WQ module outputs into a separate NetCDF mesh to the hydrodynamic results. The WQ results can be added to the hydrodynamics to combine them to calculate mass flux of various constituents. This is not possible with the WQ results by themselves.
+
+Example:
+
+.. code-block:: pycon
+
+  >>> from pytuflow import NCMesh
+  >>> res = NCMesh('/path/to/hydrodynamic-results.nc')
+  >>> res.add_dataset('/path/to/wq-results.nc')
+  >>> df = res.flux('/path/to/flux-line.shp', 'wq_ammonium_mg_l')
+  >>> df
+            line/flux wq_ammonium_mg_l (d.v)
+  time
+  289272.00                          0.000000
+  289272.25                          0.000000
+  289272.50                          0.000009
+  289272.75                          0.000009
+  289273.00                          0.000011
+  ...                                     ...
+  289439.00                          0.002076
+  289439.25                         -0.000039
+  289439.50                         -0.001020
+  289439.75                         -0.001708
+  289440.00                         -0.000621
+
+  [673 rows x 1 columns]
+  >>> df.plot()
+  >>> import matplotlib.pyplot as plt
+  >>> plt.show()
+
+.. image:: ./assets/images/wq_ammonium_flux.png
+
+.. note::
+
+  This functionality is not intended as a way to quickly reload results onto an already instantiated mesh. The class will return the first instance of a given result type name, which will be the original mesh result. This means that if a dataset is added with data type names that exist already in the mesh instance, it will **not overwrite** the original instance's datasets.
+
+.. note::
+
+  QGIS drivers do not allow a NetCDF mesh to be appended to another NetCDF mesh. PyTUFLOW will allow it and the subsequent behaviour in PyTUFLOW in respect to interacting the the mesh output will be identical regardless of this. However, the mesh geometry will be required to be loaded again so the performance gain will be lost in this situation.
 
 Minor New Features
 ^^^^^^^^^^^^^^^^^^
