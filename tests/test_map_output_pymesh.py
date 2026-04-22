@@ -208,6 +208,37 @@ class TestXMDF(unittest.TestCase):
         df1 = res.flux('./tests/xmdf/xmdf_flux_line.shp', use_unit_flow=False)
         self.assertTrue((df == df1).iloc[:,0].all())
 
+    def test_add_data(self):
+        p1 = './tests/xmdf/EG02_010_hV.xmdf'
+        res = XMDF(p1)
+        self.assertEqual(
+            ['bed level', 'max vector velocity', 'max velocity', 'max water level', 'vector velocity', 'velocity', 'water level',  'tmax water level'], 
+            res.data_types()
+        )
+
+        p2 = './tests/xmdf/EG02_010_dq.xmdf'
+        res.add_dataset(p2)
+
+        # check new result types show up
+        self.assertTrue('depth' in res.data_types())
+        self.assertTrue('max depth' in res.data_types())
+        self.assertTrue('unit flow' in res.data_types())
+        self.assertTrue('vector unit flow' in res.data_types())
+
+        # spot check old types are still there
+        self.assertTrue('water level' in res.data_types())
+
+        # check that it's possible to get results from different datasets
+        df = res.time_series('./tests/xmdf/xmdf_point.shp', 'h')
+        self.assertEqual((4, 1), df.shape)
+        df = res.time_series('./tests/xmdf/xmdf_point.shp', 'd')
+        self.assertEqual((4, 1), df.shape)
+
+        # check that the datasets work in tandem - depth and velocity exist in different datasets
+        df = res.flux('./tests/xmdf/xmdf_flux_line.shp', use_unit_flow=False)
+        self.assertEqual((4, 1), df.shape)
+        self.assertTrue('d.v' in df.columns[0])
+
 
 class TestDAT(unittest.TestCase):
 

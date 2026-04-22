@@ -33,6 +33,12 @@ class QgisDataExtractor(PyDataExtractor):
             self.lyr = layer
         self.cache = Cache()
 
+    def add_data(self, fpath: str | Path):
+        success = self.lyr.dataProvider().addDataset(str(fpath))
+        if not success:
+            raise ValueError(f'Failed to load results onto mesh: {fpath}')
+        self.cache.clear('data_types')
+
     def times(self, data_type: str) -> np.ndarray:
         if self.cache.contains('times', data_type):
             return self.cache.get('times', data_type)

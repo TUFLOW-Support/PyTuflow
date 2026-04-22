@@ -74,6 +74,41 @@ class Mesh(MapOutput):
                 self._driver.load_into_memory(dtype)
         else:
             raise NotImplementedError('v1.0 driver does not support loading into memory.')
+        
+    def add_dataset(self, dataset: PathLike):
+        """Adds an additional dataset to the mesh class. Adding a dataset can be a quick way
+        of appending results onto an existing result class without having to load the mesh geometry 
+        (which is typically the slowest aspect of loading a result). Note, this is not always 
+        true for every instance e.g. loading a :class:`NCMesh<pytuflow.NCMesh>` 
+        onto another :class:`NCMesh<pytuflow.NCMesh>` while using QGIS drivers will require 
+        loading the mesh geometry of the incoming dataset.
+        
+        The incoming dataset must have identical geometry and must match the existing format of the 
+        existing datasets e.g. only an XMDF can be added to another XMDF result. Crucially, this means that DAT cannot
+        be loaded onto an XMDF, even if they share the same .2dm file.
+        
+        The incoming dataset will be loaded into a driver based on the existing settings e.g. if the existing XMDF is using
+        ``h5py`` then the new dataset will also use ``h5py``.
+
+        Parameters
+        ----------
+        dataset : PathLike
+            The path to the dataset for adding
+
+        Examples
+        --------
+        A nice use case for this functionality is if you have results from a TUFLOW FV WQ module simulation. The WQ module writes out into a separate ``.nc`` file.
+        This can be loaded onto the TUFLOW FV hydrodynamic results. This will save the effort of loading identical geometry and also combines
+        the results into a single class instance, which can have benefits.
+
+        >>> mesh = NCMesh('/path/to/hydrodynamic.nc')
+        >>> mesh.add_dataset('/path/to/WQ.nc')
+        """
+        if self._driver.DRIVER_SOURCE == 'python':
+            self._driver.add_data(dataset)
+            self._initial_load()
+        else:
+            raise NotImplementedError('v1.0 driver does not support adding additional datasets.')
 
     def times(self, filter_by: str = None, fmt: str = 'relative') -> list[TimeLike]:
         """Returns a list of times for the given filter.

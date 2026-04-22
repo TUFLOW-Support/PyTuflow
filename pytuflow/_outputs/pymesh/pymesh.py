@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from pathlib import Path
 
 import numpy as np
 try:
@@ -85,6 +86,18 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
     def load(self):
         self.geom.load()
 
+    def add_data(self, fpath: str | Path):
+        """Adds mesh results/data onto the mesh. The data geometry must match the existing mesh geometry.
+        This routine does not load the mesh geometry of the incoming fpath (note, not alway the case when using QGIS drivers), 
+        which makes it quick if you already have a compatible mesh geometry loaded. 
+        If the incoming data has a result type that has already been loaded it will be registered but never be
+        found by the class when trying to query it as it will return the first instance.
+
+        The add_data is implemented per class, so the incoming data must match the existing class data
+        e.g. cannot load DAT results onto XMDF results even though they share the same mesh geometry.
+        """
+        raise NotImplementedError
+
     def translate_data_type(self, data_type: str) -> tuple[str, ...]:
         """Translate data type for result extraction. An example is velocity, which the user would input
         "V", but some extractors may require 2 separate data types "V_x" and "V_y to extract the full vector.
@@ -129,10 +142,8 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
         data_type = self.translate_data_type(data_type)[0]
         if self.cache.contains('times', data_type):
             return self.cache.get('times', data_type)
-        times = []
-        for extractor in self.extractors:
-            times.append(extractor.times(data_type))
-        times = np.unique(np.hstack(times)) if len(times) > 1 else times[0]            
+        extractor = self._get_extractor(data_type)
+        times = extractor.times(data_type)     
         self.cache.set(times, 'times', data_type)
         return times
 
@@ -1069,7 +1080,7 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
         
         try:
             for i, data_types in enumerate(self._data_type_to_extractor):
-                if data_type in data_types:
+                if data_type.lower() in [x.lower() for x in data_types]:
                     return self.extractors[i]
         except IndexError:
             pass

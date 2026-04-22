@@ -1,7 +1,7 @@
 import typing
 from pathlib import Path
 
-from . import PyMesh, Py2dm, PyXMDFDataExtractor, QgisMeshGeometry, QgisDataExtractor
+from . import PyMesh, Py2dm, PyDataExtractor, PyXMDFDataExtractor, QgisMeshGeometry, QgisDataExtractor
 from .mesh3d import Mesh3DMixin, GLTFMixin, AlembicMixin
 
 
@@ -45,7 +45,21 @@ class PyXMDF(PyMesh, Mesh3DMixin, GLTFMixin, AlembicMixin):
             raise ValueError('No suitable engine found for data extraction.')
 
         self.name = twodm.stem
-        data_types = set(self.data_types())
+        self._preload(self.extractors[0])
+
+    def add_data(self, fpath: str | Path):
+        existing_extractor = self.extractors[0]
+        if existing_extractor.NAME == 'PyDataExtractor':
+            new_extractor = PyXMDFDataExtractor(fpath, existing_extractor.engine.ENGINE_NAME)
+            self.extractors.append(new_extractor)
+        else:
+            existing_extractor.add_data(fpath)
+            new_extractor = existing_extractor
+        self._data_types.clear()
+        self._preload(new_extractor)
+
+    def _preload(self, extractor: PyDataExtractor):
+        data_types = set(extractor.data_types())
         self._data_type_to_extractor.append(data_types)
         for dtype in data_types.copy():
             dtype_translated = self.translate_data_type(dtype)
@@ -58,3 +72,4 @@ class PyXMDF(PyMesh, Mesh3DMixin, GLTFMixin, AlembicMixin):
                     self.has_inherent_reference_time = True
                     self.reference_time = ref_time
                     break
+        
