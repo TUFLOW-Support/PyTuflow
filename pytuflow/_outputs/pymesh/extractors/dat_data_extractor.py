@@ -235,7 +235,7 @@ class PyDATDataExtractor(PyDataExtractor):
     def times(self, data_type: str) -> np.ndarray:
         dtype, is_max, is_min = self.strip_data_type(data_type)
         if is_max or is_min:
-            return np.ndarray([])
+            return np.empty(0)
         cards = self._results.get(dtype, {})
         if not cards:
             raise ValueError(f'Data type {data_type} not found.')
@@ -247,7 +247,7 @@ class PyDATDataExtractor(PyDataExtractor):
         ts_card = cards.get('timestep')
         if ts_card:
             return ts_card.times[(ts_card.times < 99998) & (ts_card.times > -99998)] * time_conv
-        return np.ndarray([])
+        return np.empty(0)
 
     def data_types(self) -> list[str]:
         # yield maximums first

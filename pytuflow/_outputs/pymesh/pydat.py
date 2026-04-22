@@ -38,10 +38,15 @@ class PyDAT(PyMesh):
             self.extractors = [PyDATDataExtractor(fpaths)]
 
         self.name = twodm.stem
-
-    def data_types(self) -> list[str]:
-        if not self._data_types:
-            data_types = [x.data_types() for x in self.extractors]
-            data_types = np.hstack(data_types).tolist()
-            self._data_types = ['Bed Elevation'] + data_types if self.geom.has_z else data_types
-        return self._data_types
+        self._preload(self.extractors[0])
+    
+    def add_data(self, fpath: str | Path):
+        existing_extractor = self.extractors[0]
+        if existing_extractor.NAME == 'PyDataExtractor':
+            new_extractor = PyDATDataExtractor([fpath])
+            self.extractors.append(new_extractor)
+        else:
+            existing_extractor.add_data(fpath)
+            new_extractor = existing_extractor
+        self._data_types.clear()
+        self._preload(new_extractor)  

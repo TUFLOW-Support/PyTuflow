@@ -321,6 +321,22 @@ class TestDAT(unittest.TestCase):
         mn = res.minimum('bed level')
         self.assertTrue(np.isclose(mn, 36.01).all())
 
+    def test_add_dataset(self):
+        p1 = './tests/dat/EG00_001_d.dat'
+        res = DAT(p1)
+        self.assertEqual(['bed level', 'max depth', 'depth'], res.data_types())
+        
+        p2 = './tests/dat/EG00_001_V.dat'
+        res.add_dataset(p2)
+        
+        self.assertTrue('velocity' in res.data_types())
+        df = res.time_series('./tests/xmdf/xmdf_point.shp', 'depth')
+        self.assertEqual((3, 1), df.shape)
+        df = res.time_series('./tests/xmdf/xmdf_point.shp', 'velocity')
+        self.assertEqual((3, 1), df.shape)
+        df = res.flux('./tests/xmdf/xmdf_flux_line.shp')
+        self.assertEqual((3, 1), df.shape)
+
 
 class TestNCMesh(unittest.TestCase):
 

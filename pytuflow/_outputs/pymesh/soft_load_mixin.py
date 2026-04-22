@@ -1,4 +1,5 @@
 import typing
+import numpy as np
 
 if typing.TYPE_CHECKING:
     from . import PyMesh, PyDataExtractor
@@ -19,7 +20,7 @@ class SoftLoadMixin:
                     yield DatasetGroup(dtype, 'scalar', [0.], 1)
                     continue
                 times = self.times(dtype).tolist()
-                if not times:
+                if (isinstance(times, np.ndarray) and not times.size) or (not isinstance(times, np.ndarray) and not times):
                     times = [0.]
                 type_ = 'vector' if self.is_vector(dtype) else 'scalar'
                 if type_ == 'vector' and dtype.lower().endswith('_y'):
