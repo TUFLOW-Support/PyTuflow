@@ -1036,6 +1036,20 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
             return wd_flag[index]
         extractor = self._get_extractor(data_type)
         return extractor.wd_flag(data_type, index)
+    
+    def _preload(self, extractor: PyDataExtractor):
+        data_types = set(extractor.data_types())
+        self._data_type_to_extractor.append(data_types)
+        for dtype in data_types.copy():
+            dtype_translated = self.translate_data_type(dtype)
+            for dtype_translated_ in dtype_translated:
+                if dtype_translated_ not in data_types:
+                    data_types.add(dtype_translated_)
+            if not self.has_inherent_reference_time and dtype.lower() != 'bed elevation':
+                ref_time = self.reference_time_(dtype)
+                if ref_time is not None:
+                    self.has_inherent_reference_time = True
+                    self.reference_time = ref_time
 
     def _find_time_index(self, data_type: str, time: float | datetime) -> int:
         if data_type.lower() in ['bed elevation', 'bed level']:

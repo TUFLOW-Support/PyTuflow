@@ -208,7 +208,7 @@ class TestXMDF(unittest.TestCase):
         df1 = res.flux('./tests/xmdf/xmdf_flux_line.shp', use_unit_flow=False)
         self.assertTrue((df == df1).iloc[:,0].all())
 
-    def test_add_data(self):
+    def test_add_dataset(self):
         p1 = './tests/xmdf/EG02_010_hV.xmdf'
         res = XMDF(p1)
         self.assertEqual(
@@ -452,6 +452,26 @@ class TestNCMesh(unittest.TestCase):
         res.load_into_memory('velocity')
         df1 = res.flux('./tests/nc_mesh/fv_estuary_flux_line.shp', use_unit_flow=False)
         self.assertTrue((df == df1).iloc[:,0].all())
+
+    def test_add_dataset(self):
+        p1 = './tests/nc_mesh/EST000_3D_001_hvd.nc'
+        res = NCMesh(p1)
+        self.assertEqual(['bed level', 'water level', 'velocity', 'depth', 'vertical velocity', 'water density'], res.data_types())
+
+        p2 = './tests/nc_mesh/EST000_3D_001_saltemp.nc'
+        res.add_dataset(p2)
+
+        self.assertTrue('salinity' in res.data_types())
+        self.assertTrue('temperature' in res.data_types())
+
+        self.assertTrue('water level' in res.data_types())
+
+        df = res.time_series('./tests/nc_mesh/ncmesh_point_longlat.shp', 'water level')
+        self.assertEqual((5, 1), df.shape)
+        df = res.time_series('./tests/nc_mesh/ncmesh_point_longlat.shp', 'salinity')
+        self.assertEqual((5, 1), df.shape)
+        df = res.flux('./tests/nc_mesh/fv_estuary_flux_line.shp', 'sal')
+        self.assertEqual((5, 1), df.shape)
 
 
 class TestCATCHJson(unittest.TestCase):
