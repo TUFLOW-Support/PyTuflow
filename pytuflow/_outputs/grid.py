@@ -662,7 +662,15 @@ class Grid(MapOutput):
         Parameters
         ----------
         locations : Point | list[Point] | dict[str, Point] | GeoDataFrame | str | PathLike
-            The location to extract the time series data for.
+            The location to extract the time series data for. The location can be:
+
+            - Point represented by a ``tuple[x, y]``
+            - Point represented by a WKT string
+            - ``shapely.Point`` object
+            - ``list[Point]``
+            - ``dict[str, Point]`` where the ``str`` will be used as the ID in the resulting ``pd.DataFrame``
+            - ``geopandas.GeoDataFrame``
+            - Path to a GIS file containing points
         data_types : str | list[str]
             The data types to extract the time series data for.
         time_fmt : str, optional
@@ -733,7 +741,15 @@ class Grid(MapOutput):
         Parameters
         ----------
         locations : LineString | list[LineString] | dict[str, LineString] | GeoDataFrame | str | PathLike
-            The location to extract the section data for.
+            The line(s) to extract the flux for. The location can be:
+            
+            - LineString represented by a list of ``tuple[x, y]`` coordinates.
+            - LineString represented by a WKT string
+            - ``shapely.LineString`` object
+            - ``list[LineStrings]``
+            - ``dict[str, LineString]`` where the ``str`` will be used as the ID in the resulting ``pd.DataFrame``
+            - ``geopandas.GeoDataFrame``
+            - Path to a GIS file containing lines
         data_types : str | list[str], optional
             The data types to extract the section data for.
         time : TimeLike, optional
@@ -825,8 +841,7 @@ class Grid(MapOutput):
 
         Does not currently support groundwater flux calculation.
 
-        .. admonition:: Warning
-            :class: warning
+        .. warning::
 
             The result of the ``flux()`` method should be used with care. Due to result interpolation, the resulting
             flux could be off by 10% or more. The error depends on variables such as result format, the hydraulic engine 

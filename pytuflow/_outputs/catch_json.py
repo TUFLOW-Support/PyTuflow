@@ -571,8 +571,16 @@ class CATCHJson(MapOutput):
 
         Parameters
         ----------
-        locations : Point | list[Point] | dict[str, Point] | PathLike
-            The location to extract the time series data for.
+        locations : Point | list[Point] | dict[str, Point] | GeoDataFrame | str | PathLike
+            The location to extract the time series data for. The location can be:
+
+            - Point represented by a ``tuple[x, y]``
+            - Point represented by a WKT string
+            - ``shapely.Point`` object
+            - ``list[Point]``
+            - ``dict[str, Point]`` where the ``str`` will be used as the ID in the resulting ``pd.DataFrame``
+            - ``geopandas.GeoDataFrame``
+            - Path to a GIS file containing points
         data_types : str | list[str]
             The data types to extract the time series data for.
         time_fmt : str, optional
@@ -707,8 +715,16 @@ class CATCHJson(MapOutput):
 
         Parameters
         ----------
-        locations : list[Point] | str | PathLike
-            The location to extract the section data for.
+        locations : LineString | list[LineString] | dict[str, LineString] | GeoDataFrame | str | PathLike
+            The line(s) to extract the flux for. The location can be:
+            
+            - LineString represented by a list of ``tuple[x, y]`` coordinates.
+            - LineString represented by a WKT string
+            - ``shapely.LineString`` object
+            - ``list[LineStrings]``
+            - ``dict[str, LineString]`` where the ``str`` will be used as the ID in the resulting ``pd.DataFrame``
+            - ``geopandas.GeoDataFrame``
+            - Path to a GIS file containing lines
         data_types : str | list[str]
             The data types to extract the section data for.
         time : TimeLike
@@ -848,8 +864,16 @@ class CATCHJson(MapOutput):
 
         Parameters
         ----------
-        locations : list[Point] | str | PathLike
-            The location to extract the section data for.
+        locations : LineString | list[LineString] | dict[str, LineString] | GeoDataFrame | str | PathLike
+            The line(s) to extract the flux for. The location can be:
+            
+            - LineString represented by a list of ``tuple[x, y]`` coordinates.
+            - LineString represented by a WKT string
+            - ``shapely.LineString`` object
+            - ``list[LineStrings]``
+            - ``dict[str, LineString]`` where the ``str`` will be used as the ID in the resulting ``pd.DataFrame``
+            - ``geopandas.GeoDataFrame``
+            - Path to a GIS file containing lines
         data_types : str | list[str]
             The data types to extract the section data for.
         time : TimeLike
@@ -930,8 +954,16 @@ class CATCHJson(MapOutput):
 
         Parameters
         ----------
-        locations : Point | list[Point] | dict[str, Point] | PathLike
-            The location to extract the time series data for.
+        locations : Point | list[Point] | dict[str, Point] | GeoDataFrame | str | PathLike
+            The location to extract the time series data for. The location can be:
+
+            - Point represented by a ``tuple[x, y]``
+            - Point represented by a WKT string
+            - ``shapely.Point`` object
+            - ``list[Point]``
+            - ``dict[str, Point]`` where the ``str`` will be used as the ID in the resulting ``pd.DataFrame``
+            - ``geopandas.GeoDataFrame``
+            - Path to a GIS file containing points
         data_types : str | list[str]
             The data types to extract the time series data for.
         time : TimeLike

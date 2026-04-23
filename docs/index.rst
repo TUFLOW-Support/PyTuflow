@@ -37,6 +37,48 @@ Changelog
 
 Release date: XX XXX 2026
 
+Flux
+^^^^
+
+The ability to extract flux from map output results has been added. The flux method takes line(s) and extracts the resulting flux by using the unit flow, or alternatively, the velocity and depth. By default, the :meth:`flux()<pytuflow.XMDF.flux>` method returns the volume of water passing over the line. However, it also has the option to pass in the name of constituent/tracer data types. In these cases, the routine will return the mass flux passing over the line.
+
+The routine is available for map output result formats that contain vector velocity or vector unit flow data. This includes the :class:`XMDF<pytuflow.XMDF>`,
+:class:`NCGrid<pytuflow.NCGrid>`, :class:`NCMesh<pytuflow.NCMesh>`, and :class:`CATCHJson<pytuflow.CATCHJson>` classes. Flux calculation from 3D results will include the summation from each vertical layer and will not perform depth averaging.
+
+.. warning::
+
+  The :meth:`flux()<pytuflow.XMDF.flux>` method should be used with care as for most result formats, it will be calculating the flux from an interpolated surface.
+  From limited testing on real world models, the :meth:`XMDF.flux()<pytuflow.XMDF.flux>` method will typically estimate flow peak within 5% of the equivalent PO
+  flow line. This is provided there is enough cell resolution across the flow path and SGS is turned off. If SGS is turned on, then it is recommended to use unit flow
+  rather than depth and velocity. Depth at cell corners can be a poor representation of the flow depth within a cell using an SGS curve.
+
+The :meth:`flux()<pytuflow.XMDF.flux>` routine can be expensive, mostly due to the number of I/O operations it has to perform (especially if it has to query both depth and velocity). This can be greatly sped up if performing multiple :meth:`flux()<pytuflow.XMDF.flux>` calls on the same result by loading the relevant result types into memory by using the :meth:`load_into_memory()<pytuflow.XMDF.load_into_memory>` method. See :ref:`load_into_memory` below for more information.
+
+Example:
+
+.. code-block:: pycon
+
+  >>> from pytuflow import XMDF
+  >>> res = XMDF('/path/to/hpc-result.xmdf')
+  >>> df = res.flux('/path/to/flux-line.shp')
+           line/flux (q)
+  time
+  80.0          0.000000
+  82.0          0.000000
+  84.0          0.000000
+  86.0          0.000000
+  88.0          0.000000
+  ...                ...
+  342.0        13.754197
+  344.0        13.498373
+  346.0        13.158218
+  348.0        13.268435
+  350.0        12.799280
+
+  [136 rows x 1 columns]
+
+.. _load_into_memory:
+
 Load into Memory
 ^^^^^^^^^^^^^^^^
 
@@ -75,7 +117,7 @@ Example:
 
   QGIS drivers, specifically the result extraction drivers, are much slower than ``h5py`` and ``netcdf4`` for extracting entire data types results. The same example, which takes ~4.5 s in ``h5py`` takes ~60 s with QGIS drivers. This can still be beneficial if exporting hundreds of flux locations, however it is much better to use a different driver if possible. Note, it is possible to use QGIS for geometry and ``netcdf4`` for result extraction which will negate this problem. In fact, the TUFLOW Viewer V2 (part of the TUFLOW plugin in QGIS) uses this capability and preferences ``netcdf4`` if it is available and QGIS for the geometry.
 
-  This is not intended as a dig at QGIS. Libraries such as ``h5py`` have been specifically optimised for getting entire datasets from hdf5 files into Python. So naturally they are very quick at this task. General data extraction in QGIS, given single timesteps, are comparable to speeds in ``h5py``.
+  This is not intended to disparage QGIS. Libraries such as ``h5py`` have been specifically optimised for getting entire datasets from hdf5 files into Python. So naturally they are very quick at this task. General data extraction in QGIS, given single timesteps, are comparable to speeds in ``h5py``.
 
 Add Dataset
 ^^^^^^^^^^^

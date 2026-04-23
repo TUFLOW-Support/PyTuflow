@@ -58,7 +58,7 @@ class MapOutput(Output, ABC, PointMixin, LineStringMixin):
     def load_into_memory(self, data_types: str | list[str]):
         """Load the given data types into memory. This loads the entire dataset, including all timesteps, which
         can greatly improve the speed of queries by removing the need for frequent and relatively expensive I/O operations.
-        Any accompanying data will also be loaded, e.g. the active (wet/dry) flags will also be loaded into memory.
+        Any accompanying data will also be loaded, e.g. the active (wet/dry) flags.
         
         Loading data types into memory can be a relatively slow process, however it will speed up subsequent queries. 
         The speed up is relative to how many I/O operations a given method makes.
@@ -69,8 +69,24 @@ class MapOutput(Output, ABC, PointMixin, LineStringMixin):
         the cost of loading into memory outweighs the subsequent speed up. It will vary depending on the results,
         the calls being made, and where the results are located (e.g. locally or network drive).
 
-        Note, maximum and temporal datasets are considered separate datasets e.g. loading ``water level`` into memory 
-        will not load ``maximum water level`` and vise versa. It is also not supported in v1.0 mesh drivers.
+        .. note::
+
+            The maximum and temporal datasets are considered separate datasets e.g. loading ``water level`` into memory 
+            will not load ``maximum water level`` and vise versa. It is also not supported in v1.0 mesh drivers.
+        
+        .. note::
+
+            QGIS drivers, specifically the result extraction drivers, are much slower than ``h5py`` and ``netcdf4`` 
+            for extracting entire data types results. In one test case, ``h5py`` took ~4.5 s to load both 
+            ``vector velocity`` and ``depth``, whereas QGIS drivers took ~60 s. 
+            This can still be beneficial if exporting hundreds of flux locations, however it is 
+            much better to use a different driver if possible. Note, it is possible to use QGIS for geometry and ``netcdf4`` 
+            for result extraction which will negate this problem. In fact, the TUFLOW Viewer V2 (part of the TUFLOW plugin 
+            in QGIS) uses this capability and preferences ``netcdf4`` if it is available and QGIS for the geometry.
+
+            This is not intended to disparage QGIS. Libraries such as ``h5py`` have been specifically optimised for 
+            getting entire datasets from hdf5 files into Python. So naturally they are very quick at this task.
+            General data extraction in QGIS, given single timesteps, are comparable to speeds in ``h5py``.
 
         Parameters
         ----------
@@ -96,43 +112,61 @@ class MapOutput(Output, ABC, PointMixin, LineStringMixin):
     @abc.abstractmethod
     def flux(self, locations: LineStringLocation, data_types: str | list[str] = 'unit flow',
              time_fmt: str = 'relative', use_unit_flow: bool = True, *args, **kwargs) -> pd.DataFrame:
-        r"""Returns the flux across a line. Tracer data type(s) can be provided to calculate the volume flux.
+        r"""Returns the flux across a line. Tracer data type(s) can be provided to calculate the mass flux of a constituent.
+        By default, the routine will preference the use of unit flow, otherwise depth and velocity is used.
+
+        Multiple flux calls on the same result can potentially be sped up by pre-loading the relevant results
+        into memory. For example, loading ``vector unit flow`` into memory, or if unit flow does not exist
+        in the result, then loading ``vector velocity`` and ``depth`` into memory (just ``velocity`` is required for
+        :class:`NCMesh<pytuflow.NCMesh>` results).
+
+        .. note::
+
+            The ``flux`` calculation requires vector results. For HPC/Classic ``.xmdf`` results, these will be labelled
+            ``vector unit flow`` and ``vector velocity`` (not ``unit flow`` and ``velocity``, these are scalar results).
+            Make sure to choose the correct result types if loading results into memory.
 
         Does not currently support groundwater flux calculation.
 
-        .. admonition:: Warning
-            :class: warning
+        .. warning::
 
             The result of the ``flux()`` method should be used with care. Due to result interpolation, the resulting
-            flux could be off by 10% or more. The error depends on variables such as result format, the hydraulic engine 
+            flux could be off by 10% or more. The error depends on variables such as the result format, the hydraulic engine 
             that created the results, whether SGS was used, and the line location.
             
             As an example, the TUFLOW HPC tutorial model was run at a 10 m cell size (the tutorial model is usually run at 5 m) 
             with SGS on. The peak flow from a PO line gave a result of 90 m\ :sup:`3`\ /s, and 
             the equivalent ``flux()`` call gave 81 m\ :sup:`3`\ /s using ``use_unit_flow=True``, and
-            76 m\ :sup:`3`\ /s if using ``use_unit_flow=False``. That is an underprediction of 10% or more, even when using the 
-            unit flow map output. From testing, the ``XMDF.flux()`` method will not be as peaky as equivalent PO results, most likely
-            due to some smoothing of the result surface from interpolation. **This means that any error in the XMDF.flux() prediction
-            will typically lean toward underprediction.**
+            76 m\ :sup:`3`\ /s when using ``use_unit_flow=False``. That is an underprediction of 10% or more.
 
-            The same test with a 5 m cell size and with SGS turned off, resulted in ``XMDF.flux()`` predicting a much closer peak of approximately 1%
-            difference to the PO results. The ``NCGrid.flux()`` predicted even closer with a peak less than 1% difference. Other real world tests have shown
-            that without SGS, the ``XMDF.flux()`` is typically within 5% of the PO result given sufficient cell resolution across the flowpath.
+            The same test with a 5 m cell size, and with SGS turned off, resulted in ``XMDF.flux()`` predicting a much closer peak.
+            The estimate peak was within 1% of the PO line. The ``NCGrid.flux()`` predicted even closer with a peak less 
+            than 1% different. Other real world tests have shown that ``XMDF.flux()`` is typically within 5% of the PO 
+            result given sufficient cell resolution across the flowpath and SGS is off (it is recommended to use the
+            unit flow result if SGS is turned on, rather than use depth and velocity).
 
             The same test was run with TUFLOW FV using the NetCDF output format. In this case, the ``NCMesh.flux()`` method returned
-            an estimate that was identical to the flux output from TUFLOW FV (the peak was within ~0.2%). This is due to the interpolation,
+            an estimate that was almost identical to the flux output from TUFLOW FV (the peak was within ~0.2%). This is due to the interpolation,
             or lack thereof in this instance. TUFLOW FV calculates both water level and velocity at the cell centre, and the NetCDF output
-            writes values to the cell centre. Note, the ``NCMesh.flux()`` estimate is not guaranteed to always be identical, particularly when
+            writes values to the cell centre. Note, the ``NCMesh.flux()`` estimate is not guaranteed to always be this close, particularly when
             using spherical coordinates.
 
         Parameters
         ----------
         locations : LineString | list[LineString] | dict[str, LineString] | GeoDataFrame | str | PathLike
-            The line(s) to extract the flux for.
+            The line(s) to extract the flux for. The location can be:
+            
+            - A linestring represented by a list of ``tuple[x, y]`` coordinates.
+            - A linestring represented by a WKT string
+            - A ``shapely.LineString`` object
+            - A list of of LineStrings
+            - A ``dict[str, LineString]`` where the ``str`` will be used as the ID in the resulting ``pd.DataFrame``
+            - A ``geopandas.GeoDataFrame``
+            - A path to a GIS file containing lines
         data_types : str | list[str], optional
             The result type(s) to extract the flux for. If left blank, the returned flux will be the flow across the line.
-            If ``data_types`` are provided, this should typically be a tracer concentration (mg/L in SI units). In these
-            cases, the returned flux will the mass flux (g) across the line.
+            If ``data_types`` are provided, this should typically be a tracer concentration (e.g. ``mg/L``). In these
+            cases, the returned flux will the mass flux (``g/s``) across the line.
         time_fmt : str, optional
             The format for the time values. Options are 'relative' or 'absolute'.
         use_unit_flow : bool, optional
@@ -163,7 +197,7 @@ class MapOutput(Output, ABC, PointMixin, LineStringMixin):
 
         Extract the mass flux across a line:
 
-        >>> Q_mass = res.flux('/path/to/line', 'conc tracer1')
+        >>> Q_mass = res.flux('/path/to/line.shp', 'conc tracer1')
         >>> Q_mass
               locA/flux conc tracer1 (q)
         time
