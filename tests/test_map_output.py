@@ -1570,6 +1570,57 @@ class TestCATCHJson(unittest.TestCase):
             mn = res.minimum('h')
             self.assertTrue(np.isclose(mn, 0.).all())
 
+    def test_loading_ontop_netcdf4_driver(self):
+        p = './tests/catch_json/EST000_3D_001.tuflow.json'
+        with pyqgis():
+            res = CATCHJson(p, driver='qgis geometry netcdf4')
+            res1 = NCMesh('./tests/catch_json/EST000_3D_001_index.nc')
+
+            self.assertEqual(8, len(res.data_types()))
+            self.assertEqual(2, len(res._providers))
+
+            df = res.time_series('./tests/nc_mesh/ncmesh_point_longlat.shp', 'h')
+            self.assertEqual((5, 1), df.shape)
+            df1 = res1.time_series('./tests/nc_mesh/ncmesh_point_longlat.shp', 'h')
+            self.assertTrue(np.isclose(df.iloc[:,0], df1.iloc[:,0], atol=1e-3).all())
+
+            df = res.time_series('./tests/nc_mesh/ncmesh_point_longlat.shp', 'sal')
+            self.assertEqual((5, 1), df.shape)
+            df1 = res1.time_series('./tests/nc_mesh/ncmesh_point_longlat.shp', 'sal')
+            self.assertTrue(np.isclose(df.iloc[:,0], df1.iloc[:,0], atol=1e-3).all())
+
+            df = res.flux('./tests/nc_mesh/fv_estuary_flux_line.shp', 'sal')
+            self.assertEqual((5, 1), df.shape)
+            df1 = res1.flux('./tests/nc_mesh/fv_estuary_flux_line.shp', 'sal')
+            self.assertTrue(np.isclose(df.iloc[:,0], df1.iloc[:,0], atol=1).all())
+
+    def test_loading_ontop_qgis_driver(self):
+        p = './tests/catch_json/EST000_3D_001.tuflow.json'
+        with pyqgis():
+            res = CATCHJson(p, driver='qgis geometry data extractor')
+            for provider in res._providers.values():  # catch should never be spherical. This is just an easy test case to setup.
+                provider.spherical = True
+            res1 = NCMesh('./tests/catch_json/EST000_3D_001_index.nc')
+            res1.spherical = True
+
+            self.assertEqual(8, len(res.data_types()))
+            self.assertEqual(2, len(res._providers))
+
+            df = res.time_series('./tests/nc_mesh/ncmesh_point_longlat.shp', 'h')
+            self.assertEqual((5, 1), df.shape)
+            df1 = res1.time_series('./tests/nc_mesh/ncmesh_point_longlat.shp', 'h')
+            self.assertTrue(np.isclose(df.iloc[:,0], df1.iloc[:,0], atol=1e-3).all())
+
+            df = res.time_series('./tests/nc_mesh/ncmesh_point_longlat.shp', 'sal')
+            self.assertEqual((5, 1), df.shape)
+            df1 = res1.time_series('./tests/nc_mesh/ncmesh_point_longlat.shp', 'sal')
+            self.assertTrue(np.isclose(df.iloc[:,0], df1.iloc[:,0], atol=1e-3).all())
+
+            df = res.flux('./tests/nc_mesh/fv_estuary_flux_line.shp', 'sal')
+            self.assertEqual((5, 1), df.shape)
+            df1 = res1.flux('./tests/nc_mesh/fv_estuary_flux_line.shp', 'sal')
+            self.assertTrue(np.isclose(df.iloc[:,0], df1.iloc[:,0], atol=1).all())
+
 
 class TestDAT(unittest.TestCase):
 

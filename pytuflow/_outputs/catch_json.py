@@ -981,8 +981,24 @@ class CATCHJson(MapOutput):
     
     def flux(self, locations: LineStringLocation, data_types: str | list[str] = 'unit flow',
              time_fmt: str = 'relative', use_unit_flow: bool = True) -> pd.DataFrame:
-        """no-doc"""
-        raise NotImplementedError
+        # doscstring inherited
+        locations = self._translate_line_string_location(locations)
+        data_types = self._figure_out_data_types(data_types, None)
+        df = pd.DataFrame()
+        for locname, line in locations.items():
+            df1 = pd.DataFrame()
+            for provider in self._providers.values():
+                if provider == self._idx_provider:
+                    continue
+                intersection = np.intersect1d(data_types, provider.data_types()) if data_types else np.empty(0)
+                if data_types and intersection.size == 0:
+                    continue
+                if provider.PROVIDER_NAME == 'NCMesh' and 'velocity' not in provider.data_types():
+                    continue
+                df2 = provider.flux({locname: line}, data_types, time_fmt, use_unit_flow)
+                df1 = df1 + df2 if not df1.empty else df2
+            df = df1 if df.empty else pd.concat([df, df1])
+        return df
 
     def _load_json(self, fpath: PathLike | str):
         if Path(fpath).is_file():
@@ -1007,8 +1023,20 @@ class CATCHJson(MapOutput):
         self._result_types = [self._get_standard_data_type_name(x) for x in self._data.get('result types')]
 
         index_result_name = self._data.get('index')
+        base_nc_mesh_provider = None  # NetCDF mesh results can be loaded ontop of each other
         for res_name in self._data.get('outputs', []):
             output = self._data.get('output data', {}).get(res_name, {})
+            if not output:
+                logger.warning(f'Output data not found for {res_name} in json file.')
+                continue
+            
+            # check if we can load output ontop of another one
+            if base_nc_mesh_provider and output['format'].lower() == 'netcdf mesh' and res_name != index_result_name:
+                logger.debug(f'{res_name} is being added to exsting result provider {base_nc_mesh_provider.name}')
+                path = self.fpath.parent / output['path']
+                base_nc_mesh_provider.add_dataset(path)
+                continue
+
             provider = CATCHProvider.from_catch_json_output(self.fpath.parent, output, self.driver)
             if res_name == index_result_name:
                 self._idx_provider = provider
@@ -1016,6 +1044,12 @@ class CATCHJson(MapOutput):
                 provider.time_offset = (provider.reference_time - self.reference_time).total_seconds()
             else:
                 provider.reference_time = self.reference_time
+
+            # check if provider should be saved as the base_nc_mesh_provider
+            if not base_nc_mesh_provider and output['format'].lower() == 'netcdf mesh' and res_name != index_result_name:
+                logger.debug(f'{res_name} has been saved as the base NetCDF mesh to load further NetCDF meshes onto')
+                base_nc_mesh_provider = provider
+
             self._providers[res_name] = provider
 
         self._load_info()

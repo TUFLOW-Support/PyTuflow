@@ -1,0 +1,66 @@
+{
+  "version": 0.1,
+  "name": "res",
+  "outputs": [
+    "EST000_3D_001_index",
+    "EST000_3D_001_hvd",
+    "EST000_3D_001_saltemp"
+  ],
+  "index": "EST000_3D_001_index",
+  "result types": [
+    "Bed Elevation",
+    "Water Level",
+    "Velocity",
+    "Vertical Velocity",
+    "Depth",
+    "Density",
+    "Salinity",
+    "Temperature"
+  ],
+  "units": "metric",
+  "time units": "hours since 1990-01-01 00:00",
+  "output data": {
+    "EST000_3D_001_index": {
+      "format": "netcdf mesh",
+      "path": "EST000_3D_001_index.nc",
+      "result type map": {
+        "Bed Elevation": "Bed Elevation",
+        "Water Level": "water surface elevation",
+        "Velocity": "velocity",
+        "Vertical Velocity": "vertical velocity",
+        "Depth": "depth",
+        "Density": "water density",
+        "Salinity": "salinity",
+        "Temperature": "temperature"
+      }
+    },
+    "EST000_3D_001_hvd": {
+      "format": "netcdf mesh",
+      "path": "../nc_mesh/EST000_3D_001_hvd.nc",
+      "result type map": {
+        "Bed Elevation": "Bed Elevation",
+        "Water Level": "water surface elevation",
+        "Velocity": "velocity",
+        "Vertical Velocity": "vertical velocity",
+        "Depth": "depth",
+        "Density": "water density",
+        "Salinity": "none",
+        "Temperature": "none"
+      }
+    },
+    "EST000_3D_001_saltemp": {
+      "format": "netcdf mesh",
+      "path": "../nc_mesh/EST000_3D_001_saltemp.nc",
+      "result type map": {
+        "Bed Elevation": "Bed Elevation",
+        "Water Level": "none",
+        "Velocity": "none",
+        "Vertical Velocity": "none",
+        "Depth": "none",
+        "Density": "none",
+        "Salinity": "salinity",
+        "Temperature": "temperature"
+      }
+    }
+  }
+}

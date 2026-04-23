@@ -396,8 +396,9 @@ class MapOutput(Output, ABC, PointMixin, LineStringMixin):
                 pnts[name_ if not multi else f'{name_}{chr(97 + j)}'] = loc
             return pnts
         elif isinstance(locations, str):
+            name_ = name if name else 'pnt1'
             try:
-                pnts['pnt1'] = self._wkt_point_to_tuple(locations)
+                pnts[name_] = self._wkt_point_to_tuple(locations)
                 return pnts
             except ValueError:
                 pass
@@ -438,7 +439,8 @@ class MapOutput(Output, ABC, PointMixin, LineStringMixin):
                     lines.update(self._translate_line_string_location(loc), name=f'line{j+1}')
                 return lines
             elif self._list_depth(locations) == 2:  # [(0, 0), (1, 1)] - a single line-string, not a list of line-strings
-                lines['line1'] = locations
+                name_ = name if name else 'line1'
+                lines[name_] = locations
                 return lines
             elif self._list_depth(locations) == 3:  # list of line-strings
                 for loc in locations:
