@@ -110,10 +110,10 @@ class MapOutput(Output, ABC, PointMixin, LineStringMixin):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def flux(self, locations: LineStringLocation, data_types: str | list[str] = 'unit flow',
+    def flux(self, locations: LineStringLocation, data_types: str | list[str] = None,
              time_fmt: str = 'relative', use_unit_flow: bool = True, *args, **kwargs) -> pd.DataFrame:
-        r"""Returns the flux across a line. Tracer data type(s) can be provided to calculate the mass flux of a constituent.
-        By default, the routine will preference the use of unit flow, otherwise depth and velocity is used.
+        r"""Returns the flux across a line. Tracer data type(s) can be provided to calculate the mass flux of a
+        constituent. By default, the routine will preference the use of unit flow, otherwise depth and velocity is used.
 
         Multiple flux calls on the same result can potentially be sped up by pre-loading the relevant results
         into memory. For example, loading ``vector unit flow`` into memory, or if unit flow does not exist
@@ -131,24 +131,27 @@ class MapOutput(Output, ABC, PointMixin, LineStringMixin):
         .. warning::
 
             The result of the ``flux()`` method should be used with care. Due to result interpolation, the resulting
-            flux could be off by 10% or more. The error depends on variables such as the result format, the hydraulic engine 
-            that created the results, whether SGS was used, and the line location.
+            flux could be off by 10% or more. The error depends on variables such as the result format, the hydraulic
+            engine that created the results, whether SGS was used, and the line location.
             
-            As an example, the TUFLOW HPC tutorial model was run at a 10 m cell size (the tutorial model is usually run at 5 m) 
-            with SGS on. The peak flow from a PO line gave a result of 90 m\ :sup:`3`\ /s, and 
+            As an example, the TUFLOW HPC tutorial model was run at a 10 m cell size (the tutorial model is usually
+            run at 5 m)  with SGS on. The peak flow from a PO line gave a result of 90 m\ :sup:`3`\ /s, and
             the equivalent ``flux()`` call gave 81 m\ :sup:`3`\ /s using ``use_unit_flow=True``, and
             76 m\ :sup:`3`\ /s when using ``use_unit_flow=False``. That is an underprediction of 10% or more.
 
-            The same test with a 5 m cell size, and with SGS turned off, resulted in ``XMDF.flux()`` predicting a much closer peak.
-            The estimate peak was within 1% of the PO line. The ``NCGrid.flux()`` predicted even closer with a peak less 
-            than 1% different. Other real world tests have shown that ``XMDF.flux()`` is typically within 5% of the PO 
-            result given sufficient cell resolution across the flowpath and SGS is off (it is recommended to use the
-            unit flow result if SGS is turned on, rather than use depth and velocity).
+            The same test with a 5 m cell size, and with SGS turned off, resulted in ``XMDF.flux()`` predicting a
+            much closer peak. The estimate peak was within 1% of the PO line. The ``NCGrid.flux()`` predicted even
+            closer with a peak less than 1% different. Other real world tests have shown that ``XMDF.flux()`` is
+            typically within 5% of the PO result given sufficient cell resolution across the flowpath and SGS is off.
+            It is recommended to use the unit flow result if SGS is turned on, rather than use depth and velocity.
+            *Note, it is recommended to use unit flow whether SGS is on or off, however it is especially important
+            to use when SGS is on".
 
-            The same test was run with TUFLOW FV using the NetCDF output format. In this case, the ``NCMesh.flux()`` method returned
-            an estimate that was almost identical to the flux output from TUFLOW FV (the peak was within ~0.2%). This is due to the interpolation,
-            or lack thereof in this instance. TUFLOW FV calculates both water level and velocity at the cell centre, and the NetCDF output
-            writes values to the cell centre. Note, the ``NCMesh.flux()`` estimate is not guaranteed to always be this close, particularly when
+            The same test was run with TUFLOW FV using the NetCDF output format. In this case, the ``NCMesh.flux()``
+            method returned an estimate that was almost identical to the flux output from TUFLOW FV (the peak was
+            within ~0.2%). This is due to the interpolation, or lack thereof in this instance. TUFLOW FV calculates
+            both water level and velocity at the cell centre, and the NetCDF output writes values to the cell centre.
+            Note, the ``NCMesh.flux()`` estimate is not guaranteed to always be this close, particularly when
             using spherical coordinates.
 
         Parameters
@@ -156,22 +159,22 @@ class MapOutput(Output, ABC, PointMixin, LineStringMixin):
         locations : LineString | list[LineString] | dict[str, LineString] | GeoDataFrame | str | PathLike
             The line(s) to extract the flux for. The location can be:
             
-            - A linestring represented by a list of ``tuple[x, y]`` coordinates.
-            - A linestring represented by a WKT string
-            - A ``shapely.LineString`` object
-            - A list of of LineStrings
-            - A ``dict[str, LineString]`` where the ``str`` will be used as the ID in the resulting ``pd.DataFrame``
-            - A ``geopandas.GeoDataFrame``
-            - A path to a GIS file containing lines
+            - LineString represented by a list of ``tuple[x, y]`` coordinates.
+            - LineString represented by a WKT string
+            - ``shapely.LineString`` object
+            - ``list[LineStrings]``
+            - ``dict[str, LineString]`` where the ``str`` will be used as the ID in the resulting ``pd.DataFrame``
+            - ``geopandas.GeoDataFrame``
+            - path to a GIS file containing lines
         data_types : str | list[str], optional
-            The result type(s) to extract the flux for. If left blank, the returned flux will be the flow across the line.
-            If ``data_types`` are provided, this should typically be a tracer concentration (e.g. ``mg/L``). In these
-            cases, the returned flux will the mass flux (``g/s``) across the line.
+            The result type(s) to extract the flux for. If left blank, the returned flux will be the flow across the
+            line. If ``data_types`` are provided, this should typically be a tracer concentration (e.g. ``mg/L``).
+            In these cases, the returned flux will the mass flux (``g/s``) across the line.
         time_fmt : str, optional
             The format for the time values. Options are 'relative' or 'absolute'.
         use_unit_flow : bool, optional
-            Use unit flow if it is available. Otherwise the fallback is depth x velocity. The resulting data frame column name will have either ``(q)``
-            if unit flow was used, or ``(d.v)`` if depth x velocity was used.
+            Use unit flow if it is available. Otherwise the fallback is depth x velocity. The resulting data frame
+            column name will have either ``(q)`` if unit flow was used, or ``(d.v)`` if depth x velocity was used.
 
         Returns
         -------
@@ -210,6 +213,85 @@ class MapOutput(Output, ABC, PointMixin, LineStringMixin):
         3.0                   100.038073
         """
         raise NotImplementedError
+
+    def flux_integral(self, locations: LineStringLocation, data_types: str | list[str] = None,
+                      time_fmt: str = 'relative', use_unit_flow: bool = False) -> pd.DataFrame:
+        """A convenience function that returns that integrates the curve returned from the
+        :meth:`flux()<pytuflow.XMDF.flux>` method. This method is basically a wrapper around ``flux().cumsum()``
+        and will rename the returned DataFrame columns.
+
+        The parameters are passed directly into the :meth:`flux()<pytuflow.XMDF.flux>` method. More
+        information can be found within the :meth:`flux()<pytuflow.XMDF.flux>` documentation.
+
+        .. warning::
+
+            The results of the ``flux_integral`` method should be used withe care. Similar caveats apply as in
+            the :meth:`flux()<pytuflow.XMDF.flux>` method. Read the :meth:`flux()<pytuflow.XMDF.flux>`
+            documentation for more information.
+
+        Parmeters
+        ---------
+        locations : LineString | list[LineString] | dict[str, LineString] | GeoDataFrame | str | PathLike
+            The line(s) to extract the flux for. The location can be:
+
+            - LineString represented by a list of ``tuple[x, y]`` coordinates.
+            - LineString represented by a WKT string
+            - ``shapely.LineString`` object
+            - ``list[LineStrings]``
+            - ``dict[str, LineString]`` where the ``str`` will be used as the ID in the resulting ``pd.DataFrame``
+            - ``geopandas.GeoDataFrame``
+            - path to a GIS file containing lines
+        data_types : str | list[str], optional
+            The result type(s) to extract the flux for. If left blank, the returned flux will be the flow across the
+            line. If ``data_types`` are provided, this should typically be a tracer concentration (e.g. ``mg/L``).
+            In these cases, the returned flux will the mass flux (``g/s``) across the line.
+        time_fmt : str, optional
+            The format for the time values. Options are 'relative' or 'absolute'.
+        use_unit_flow : bool, optional
+            Use unit flow if it is available. Otherwise the fallback is depth x velocity. The resulting data frame
+            column name will have either ``(q)`` if unit flow was used, or ``(d.v)`` if depth x velocity was used.
+
+        Returns
+        -------
+        pd.DataFrame
+            An array containing the integrated flux across the line.
+
+        Examples
+        --------
+        Estimate the cumulative volume of water passing over a line.
+
+        >>> res = ... # assume res is a Mesh or Grid instance
+        >>> vol = res.flux_integral('/path/to/line.shp')
+        >>> vol
+              line/flux integral (d.v)
+        time
+        0.0                   0.000000
+        0.5                   0.000000
+        1.0                  80.615680
+        1.5                 132.488715
+        2.0                 149.876389
+        2.5                 158.860493
+        3.0                 163.762476
+
+        Estimate the cumulative mass of a constituent passing over a line.
+
+        >>> res = ... # assume res is a Mesh or Grid instance
+        >>> mass = res.flux_integral('/path/to/line.shp', 'conc tracer1')
+        >>> mass
+              line/flux integral conc tracer1 (d.v)
+        time
+        0.0                                0.000000
+        0.5                                0.000000
+        1.0                               82.259233
+        1.5                              198.207042
+        2.0                              301.399413
+        2.5                              396.370227
+        3.0                              496.216145
+        """
+        df = self.flux(locations, data_types, time_fmt, use_unit_flow)
+        df_integral = df.cumsum()
+        df_integral.columns = df_integral.columns.str.replace('/flux', '/flux integral', regex=False)
+        return df_integral
 
     @staticmethod
     def _get_standard_data_type_name(name: str) -> str:

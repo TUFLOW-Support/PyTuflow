@@ -208,6 +208,12 @@ class TestXMDF(unittest.TestCase):
         df1 = res.flux('./tests/xmdf/xmdf_flux_line.shp', use_unit_flow=False)
         self.assertTrue((df == df1).iloc[:,0].all())
 
+    def test_flux_integral(self):
+        p = './tests/xmdf/EG00_001.xmdf'
+        res = XMDF(p)
+        df = res.flux_integral('./tests/xmdf/xmdf_flux_line.shp')
+        self.assertEqual((7, 1), df.shape)
+
     def test_add_dataset(self):
         p1 = './tests/xmdf/EG02_010_hV.xmdf'
         res = XMDF(p1)

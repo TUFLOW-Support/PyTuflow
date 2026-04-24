@@ -37,6 +37,8 @@ Changelog
 
 Release date: XX XXX 2026
 
+.. _flux:
+
 Flux
 ^^^^
 
@@ -76,6 +78,15 @@ Example:
   350.0        12.799280
 
   [136 rows x 1 columns]
+
+Flux Integral
+^^^^^^^^^^^^^
+
+The ability to extract the flux integral from map output results has been added. The flux integral method takes line(s) and extracts the resulting flux integral by using the unit flow, or alternatively, the velocity and depth. By default, the :meth:`flux_integral()<pytuflow.XMDF.flux_integral>` method returns the volume of water passing over the line integrated over time. However, it also has the option to pass in the name of constituent/tracer data types. In these cases, the routine will return the mass flux passing over the line integrated over time.
+
+.. note::
+
+   Similar caveats and recommendations apply to the :meth:`flux_integral()<pytuflow.XMDF.flux_integral>` method as for the :meth:`flux()<pytuflow.XMDF.flux>` method. See the :ref:`flux` section above for more information.
 
 .. _load_into_memory:
 
