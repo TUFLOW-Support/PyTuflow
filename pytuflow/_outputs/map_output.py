@@ -57,12 +57,12 @@ class MapOutput(Output, ABC, PointMixin, LineStringMixin):
     @abc.abstractmethod
     def load_into_memory(self, data_types: str | list[str]):
         """Load the given data types into memory. This loads the entire dataset, including all timesteps, which
-        can greatly improve the speed of queries by removing the need for frequent and relatively expensive I/O operations.
+        can greatly improve the speed of queries by removing the need for frequent and relatively expensive I⁠/⁠O operations.
         Any accompanying data will also be loaded, e.g. the active (wet/dry) flags.
         
         Loading data types into memory can be a relatively slow process, however it will speed up subsequent queries. 
-        The speed up is relative to how many I/O operations a given method makes.
-        e.g. The ``flux()`` method makes many I/O calls and it can typically be beneficial to load the relevant 
+        The speed-up is relative to how many I⁠/⁠O operations a given method makes.
+        e.g. The ``flux()`` method makes many I⁠/⁠O calls and it can typically be beneficial to load the relevant
         results into memory if making more than two ``flux()`` calls on a result. On the other hand,
         the ``section()`` method  will typically only make two queries, one for the data and one for the active 
         flag. As a consequence, it may not be worth loading the data into memory for ``section()`` calls as 
