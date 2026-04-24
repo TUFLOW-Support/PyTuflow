@@ -216,7 +216,7 @@ class MapOutput(Output, ABC, PointMixin, LineStringMixin):
 
     def flux_integral(self, locations: LineStringLocation, data_types: str | list[str] = None,
                       time_fmt: str = 'relative', use_unit_flow: bool = False) -> pd.DataFrame:
-        """A convenience function that returns that integrates the curve returned from the
+        """A convenience function that integrates the curve returned from the
         :meth:`flux()<pytuflow.XMDF.flux>` method. This method is basically a wrapper around ``flux().cumsum()``
         and will rename the returned DataFrame columns.
 
@@ -229,7 +229,7 @@ class MapOutput(Output, ABC, PointMixin, LineStringMixin):
             the :meth:`flux()<pytuflow.XMDF.flux>` method. Read the :meth:`flux()<pytuflow.XMDF.flux>`
             documentation for more information.
 
-        Parmeters
+        Parameters
         ---------
         locations : LineString | list[LineString] | dict[str, LineString] | GeoDataFrame | str | PathLike
             The line(s) to extract the flux for. The location can be:
