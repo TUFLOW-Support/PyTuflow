@@ -72,7 +72,7 @@ class MapOutput(Output, ABC, PointMixin, LineStringMixin):
         .. note::
 
             The maximum and temporal datasets are considered separate datasets e.g. loading ``water level`` into memory 
-            will not load ``maximum water level`` and vise versa. It is also not supported in v1.0 mesh drivers.
+            will not load ``maximum water level`` and vice versa. It is also not supported in v1.0 mesh drivers.
         
         .. note::
 
@@ -300,7 +300,7 @@ class MapOutput(Output, ABC, PointMixin, LineStringMixin):
         df, filtered_something_ = self._filter_generic(filter_by, df, {True: ['2d']}, '3d', exclude=True)
         if filtered_something_:
             filtered_something = True
-        df, filtered_something_ = self._filter_generic(filter_by, df, {True: ['3d']},'3d')
+        df, filtered_something_ = self._filter_generic(filter_by, df, {True: ['3d']}, '3d')
         if filtered_something_:
             filtered_something = True
 
@@ -356,7 +356,6 @@ class MapOutput(Output, ABC, PointMixin, LineStringMixin):
             return {}
 
         pnts = {}
-        i = 0
         if isinstance(locations, Iterable) and not isinstance(locations, str):  # assumes a list of points, does not support a list of files
             if isinstance(locations, str):
                 try:
@@ -380,7 +379,7 @@ class MapOutput(Output, ABC, PointMixin, LineStringMixin):
                 return pnts
             elif shapely and isinstance(locations[0], (LineString, MultiLineString, Geom, Feature)):
                 for j, loc in enumerate(locations):
-                    pnts.update(self._translate_point_location(loc), name=f'pnt{j+1}')
+                    pnts.update(self._translate_point_location(loc, name=f'pnt{j+1})'))
                 return pnts
             elif len(locations) == 2 and all(isinstance(loc, (float, int)) for loc in locations):
                 name = name if name else 'pnt1'
@@ -470,7 +469,7 @@ class MapOutput(Output, ABC, PointMixin, LineStringMixin):
                 return lines
             elif shapely and isinstance(locations[0], (LineString, MultiLineString, Geom, Feature)):
                 for j, loc in enumerate(locations):
-                    lines.update(self._translate_line_string_location(loc), name=f'line{j+1}')
+                    lines.update(self._translate_line_string_location(loc, name=f'line{j+1}'))
                 return lines
             elif self._list_depth(locations) == 2:  # [(0, 0), (1, 1)] - a single line-string, not a list of line-strings
                 name_ = name if name else 'line1'
