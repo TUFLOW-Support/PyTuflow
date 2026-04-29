@@ -15,6 +15,7 @@ from .nc_mesh import NCMesh
 from .catch_json import CATCHJson
 from .dat import DAT
 from .nc_grid import NCGrid
+from .lp2d import LP2D
 
 # expose some base classes for convenience
 from .map_output import MapOutput

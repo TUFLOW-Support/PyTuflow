@@ -145,7 +145,7 @@ class MapOutput(Output, ABC, PointMixin, LineStringMixin):
             typically within 5% of the PO result given sufficient cell resolution across the flowpath and SGS is off.
             It is recommended to use the unit flow result if SGS is turned on, rather than use depth and velocity.
             *Note, it is recommended to use unit flow whether SGS is on or off, however it is especially important
-            to use when SGS is on".
+            to use when SGS is on*.
 
             The same test was run with TUFLOW FV using the NetCDF output format. In this case, the ``NCMesh.flux()``
             method returned an estimate that was almost identical to the flux output from TUFLOW FV (the peak was
@@ -246,9 +246,9 @@ class MapOutput(Output, ABC, PointMixin, LineStringMixin):
             line. If ``data_types`` are provided, this should typically be a tracer concentration (e.g. ``mg/L``).
             In these cases, the returned flux will the mass flux (``g/s``) across the line.
         time_fmt : str, optional
-            The format for the time values. Options are 'relative' or 'absolute'.
+            The format for the time values. Options are ``"relative"`` or ``"absolute"``.
         use_unit_flow : bool, optional
-            Use unit flow if it is available. Otherwise the fallback is depth x velocity. The resulting data frame
+            Use unit flow if it is available. Otherwise, the fallback is depth x velocity. The resulting data frame
             column name will have either ``(q)`` if unit flow was used, or ``(d.v)`` if depth x velocity was used.
 
         Returns

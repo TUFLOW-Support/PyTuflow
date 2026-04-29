@@ -108,10 +108,11 @@ class Mesh(MapOutput):
 
         Examples
         --------
-        A nice use case for this functionality is if you have results from a TUFLOW FV WQ module simulation. The WQ module writes out into a separate ``.nc`` file.
-        This can be loaded onto the TUFLOW FV hydrodynamic results. This will save the effort of loading identical geometry and also combines
-        the results into a single class instance. This can have additional benefits such as being able to estimate the mass flux of a WQ constituent, which
-        usually would not be possible as the velocity is stored in the hydrodynamic result file.
+        A nice use case for this functionality is if you have results from a TUFLOW FV WQ module simulation.
+        The WQ module writes out into a separate ``.nc`` file. This can be loaded onto the TUFLOW FV hydrodynamic
+        results. This will save the effort of loading identical geometry and also combines the results into a single
+        class instance. This can have additional benefits such as being able to estimate the mass flux of a WQ
+        constituent, which usually would not be possible as the velocity is stored in the hydrodynamic result file.
 
         >>> from pytuflow import NCMesh
         >>> res = NCMesh('/path/to/hydrodynamic-results.nc')

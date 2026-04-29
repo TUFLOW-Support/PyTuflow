@@ -20,6 +20,7 @@ from pytuflow._outputs.fm_ts import FMTS
 from pytuflow._outputs.fv_bc_tide import FVBCTide
 from pytuflow._outputs.cross_sections import CrossSections
 from pytuflow._outputs.fm_dat import DATCrossSections
+from pytuflow._outputs.lp2d import LP2D
 from pytuflow import pytuflow_logging
 
 
@@ -161,7 +162,7 @@ class Test_Info_2013(unittest.TestCase):
     def test_long_plot(self):
         p = './tests/2013/M04_5m_001_1d.info'
         res = INFO(p)
-        df = res.section('ds1', ['bed level', 'water level', 'max water level', 'pits'], 1)
+        df = res.section('ds1', ['bed level', 'h', 'max h', 'pits'], 1)
         self.assertEqual((12, 8), df.shape)
 
     def test_long_plot_2(self):
@@ -1795,3 +1796,74 @@ class TestDatCrossSections(unittest.TestCase):
         res = DATCrossSections(p)
         df = res.section('FC01.08', ['xz', 'manning n'])
         self.assertEqual((21, 3), df.shape)
+
+
+class Test_LP2D(unittest.TestCase):
+
+    def test_load(self):
+        p = './tests/lp2d/EG02_012_LP_01_H.csv'
+        res = LP2D(p)
+        self.assertEqual(['bed level', 'water level', 'max water level'], res.data_types())
+        self.assertEqual(181, len(res.times()))
+        self.assertEqual(10, len(res.ids()))
+
+        p1 = './tests/lp2d/EG02_012_LP_01_V.csv'
+        res = LP2D([p, p1])
+        self.assertEqual(['bed level', 'water level', 'velocity', 'max water level', 'max velocity'], res.data_types())
+        self.assertEqual(181, len(res.times()))
+        self.assertEqual(10, len(res.ids()))
+
+    def test_time_series(self):
+        p = './tests/lp2d/EG02_012_LP_01_H.csv'
+        res = LP2D(p)
+        id_ = res.ids()[0]
+        df = res.time_series(id_, 'h')
+        self.assertEqual((181, 1), df.shape)
+
+        p1 = './tests/lp2d/EG02_012_LP_01_V.csv'
+        res = LP2D([p, p1])
+        df = res.time_series(id_, ['h', 'v'])
+        self.assertEqual((181, 2), df.shape)
+
+    def test_section(self):
+        p = './tests/lp2d/EG02_012_LP_01_H.csv'
+        res = LP2D(p)
+        df = res.section('EG02_012_LP_01', ['bed level', 'water level', 'max water level'], 1.)
+        self.assertEqual((9, 6), df.shape)
+
+    def test_with_gis(self):
+        p = './tests/lp2d/EG02_012_LP_01_H.csv'
+        gis = './tests/lp2d/2d_lp_EG02_012_L.shp'
+        res = LP2D(p, gis)
+        self.assertEqual(['bed level', 'water level', 'max water level'], res.data_types())
+        self.assertEqual(181, len(res.times()))
+        self.assertEqual(10, len(res.ids()))
+        self.assertEqual('LP_01', res.ids()[-1])
+        self.assertEqual('LP_01_2.07_pnt0', res.ids()[0])
+        
+        df = res.time_series('LP_01_2.07_pnt0', 'h')
+        self.assertEqual((181, 1), df.shape)
+        
+        df = res.section('LP_01', ['h', 'max h'], 1.)
+        self.assertEqual((9, 5), df.shape)
+        
+    def test_quadtree_output(self):
+        p = './tests/lp2d/EG02_012_QDT_LP_01_H.csv'
+        res = LP2D(p)
+        self.assertEqual(['bed level', 'water level', 'max water level'], res.data_types())
+        self.assertEqual(181, len(res.times()))
+        self.assertEqual(10, len(res.ids()))
+        
+        df = res.time_series(res.ids()[0], 'h')
+        self.assertEqual((181, 1), df.shape)
+
+        df = res.section('EG02_012_QDT_LP_01', ['bed level', 'h'], 1.0)
+        self.assertEqual((9, 5), df.shape)
+
+    def test_maximum(self):
+        p = './tests/lp2d/EG02_012_QDT_LP_01_H.csv'
+        res = LP2D(p)
+        df = res.maximum(res.ids()[0], 'h')
+        self.assertEqual((1, 2), df.shape)
+        self.assertEqual(49.91, df.iloc[0, 0])
+        self.assertEqual(0.95, df.iloc[0, 1])

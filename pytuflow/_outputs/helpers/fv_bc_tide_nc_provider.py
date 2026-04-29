@@ -11,11 +11,12 @@ except ImportError:
     Dataset = 'Dataset'
     has_netcdf4 = False
 
+from .lp_data_extractor import LongProfileDataExtractor
 from ..._pytuflow_types import TimeLike
 from ...util import pytuflow_logging
 
 
-class FVBCTideNCProvider:
+class FVBCTideNCProvider(LongProfileDataExtractor):
     """Class for providing data from the netCDF file to the FVBCTideProvider class."""
 
     def __init__(self, path: Path, use_local_time: bool) -> None:
@@ -29,27 +30,14 @@ class FVBCTideNCProvider:
         """
         if not has_netcdf4:
             raise ImportError('NetCDF4 is not installed, unable to initialise FVBCTideNCProvider class.')
-        #: Path: Path to the netCDF file.
-        self.path = path
-        #: list: List of result labels.
-        self.labels = []
-        #: bool: Use local time.
+        super().__init__(path)
         self.use_local_time = use_local_time
-        #: datetime: Reference time.
-        self.reference_time = datetime(1990, 1, 1, tzinfo=timezone.utc)
-        #: bool: Whether the object has an explicit reference time
-        self.has_reference_time = False
-        #: str: Time units.
-        self.units = 'd'
         #: str: Timezone.
         self.tz = 'UTC'
         self._timevar = 'time'
         self._nc = None
         self._units = ''  # full units string from nc file
         self._timesteps = None  # cache this data so we don't have to read it every time it's requested
-
-    def __repr__(self):
-        return f'FVBCTideNCProvider({self.path.name})'
 
     def open(self) -> None:
         """Open the netCDF file.
@@ -87,15 +75,6 @@ class FVBCTideNCProvider:
         self.labels = [self._strip_label(k) for k, v in self._nc.variables.items() if v.ndim == 2 and v.dimensions[0] == 'time']
         self.labels = [x for x in self.labels if x.strip()]
 
-    def is_empty(self) -> bool:
-        """Returns True if the NC file is empty.
-
-        Returns
-        -------
-        bool
-        """
-        return bool(self.labels)
-
     def is_fv_tide_bc(self) -> bool:
         """Returns True if the netCDF file looks like a FV tide boundary condition file.
 
@@ -104,24 +83,6 @@ class FVBCTideNCProvider:
         bool
         """
         return 'time' in self._nc.dimensions and len(self._nc.dimensions) > 1
-
-    def get_timesteps(self, fmt: str) -> np.ndarray:
-        """Get the timesteps from the netCDF file.
-
-        Parameters
-        ----------
-        fmt : str
-            Format of the timesteps. Options are 'relative', 'absolute' (or 'datetime' can also be used as an alias).
-
-        Returns
-        -------
-        np.ndarray
-            Array of timesteps.
-        """
-        if fmt == 'relative':
-            return self._get_relative_timesteps()
-        else:  # absolute or datetime
-            return self._get_absolute_timesteps()
 
     def number_of_points(self, label: str) -> int:
         """Returns the number of points along the node string for a given label.
@@ -243,35 +204,6 @@ class FVBCTideNCProvider:
     @staticmethod
     def _chainage_dim_label(label: str) -> str:
         return f'ns{label}_chain'
-
-    def _get_closest_timestep_index(self, time: TimeLike, tol: float = 0.01) -> int:
-        if isinstance(time, datetime):
-            time = (time - self.reference_time).total_seconds() / 3600
-        timesteps = self._get_relative_timesteps()
-        a = np.isclose(time, timesteps, atol=tol, rtol=0.)
-        if a[a].any():
-            # noinspection PyTypeChecker
-            return np.where(a)[0][0]
-        else:
-            if time < timesteps.min():
-                return 0
-            elif time > timesteps.max():
-                return timesteps.size - 1
-            i = np.argmin(np.absolute(timesteps - time))
-            if timesteps[i] < time:
-                return i
-            return max(i - 1, 0)
-
-    def _get_relative_timesteps(self) -> np.ndarray:
-        # return in hours
-        if self.units == 'd':
-            return self._get_timesteps() * 24
-        elif self.units == 's':
-            return self._get_timesteps() / 3600
-        return self._get_timesteps()
-
-    def _get_absolute_timesteps(self) -> np.ndarray:
-        return np.array([self.reference_time + timedelta(hours=float(ts)) for ts in self._get_relative_timesteps()])
 
     def _get_timesteps(self) -> np.ndarray:
         if self._timesteps is None:

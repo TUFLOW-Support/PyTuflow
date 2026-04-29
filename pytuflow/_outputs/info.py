@@ -609,12 +609,12 @@ class INFO(TimeSeries):
 
     def curtain(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
                 time: TimeLike) -> pd.DataFrame:
-        """Not supported for ``INFO`` results. Raises a :code:`NotImplementedError`."""
+        """no-doc"""
         raise NotImplementedError(f'{__class__.__name__} does not support curtain plotting.')
 
     def profile(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
                 time: TimeLike, **kwargs) -> pd.DataFrame:
-        """Not supported for ``INFO`` results. Raises a :code:`NotImplementedError`."""
+        """no-doc"""
         raise NotImplementedError(f'{__class__.__name__} does not support vertical profile plotting.')
 
     def _initial_load(self) -> None:

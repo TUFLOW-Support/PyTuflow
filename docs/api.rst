@@ -100,6 +100,7 @@ This page gives an overview of the public modules, classes, and functions within
    GPKGRL
    FMTS
    FVBCTide
+   LP2D
    HydTablesCheck
    BCTablesCheck
    CrossSections
