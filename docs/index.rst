@@ -175,6 +175,15 @@ Example:
 
   QGIS drivers do not allow a NetCDF mesh to be appended to another NetCDF mesh. PyTUFLOW will allow it and the subsequent behaviour in PyTUFLOW in respect to interacting the the mesh output will be identical regardless of this. However, the mesh geometry will be required to be loaded again so the performance gain will be lost in this situation.
 
+LP2D
+^^^^
+
+The ``2d_lp`` output from TUFLOW Classic/HPC is now supported as a new output class - :class:`LP2D<pytuflow.LP2D>`. This class supports the :meth:`section()<pytuflow.LP2D.section>` method as well as the :meth:`time_series()<pytuflow.LP2D.time_series>` method at automatically generated points at each distance value in the CSV file.
+
+.. video:: ./_static/videos/lp-animation.mp4
+    :width: 600
+    :align: center
+
 Minor New Features
 ^^^^^^^^^^^^^^^^^^
 

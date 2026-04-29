@@ -135,6 +135,7 @@ class LP2D(LongProfileBase):
         plt.show()
 
     .. video:: ../_static/videos/lp2d_time_slider_example.mp4
+        :width: 720
     """
 
     def __init__(self, fpath: PathLike | Sequence[PathLike], gis_fpath: PathLike = None):
