@@ -8,7 +8,7 @@ except ImportError:
     from .pymesh.stubs import pandas as pd
 from packaging.version import Version
 
-from .gpkg_2d import GPKG2D
+from .gpkg_2d import GPKG2D, _safe_identifier
 from .._pytuflow_types import PathLike, AppendDict, TimeLike
 
 if typing.TYPE_CHECKING:
@@ -86,6 +86,7 @@ class GPKGRL(GPKG2D):
     def _looks_like_this(fpath: PathLike) -> bool:
         # docstring inherited
         import sqlite3
+        ALLOWED_TABLES = {'Geom_P', 'Geom_L', 'Geom_R'}
         # noinspection PyBroadException
         try:
             conn = sqlite3.connect(fpath)
@@ -108,7 +109,9 @@ class GPKGRL(GPKG2D):
                     )
                     count = int(cur.fetchone()[0])
                     if count:
-                        tname_quoted = '"' + table_name.replace('"', '""') + '"'
+                        if table_name not in ALLOWED_TABLES:
+                            raise ValueError(f'Table {table_name} not allowed')
+                        tname_quoted = _safe_identifier(table_name)
                         cur.execute(f'SELECT Type FROM {tname_quoted} LIMIT 1;')
                         typ = cur.fetchone()
                         if typ:

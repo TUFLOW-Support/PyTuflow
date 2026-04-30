@@ -10,6 +10,15 @@ except ImportError:
 if TYPE_CHECKING:
     from sqlite3 import Cursor
 
+import re
+
+_VALID_IDENTIFIER = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+
+def _safe_identifier(name: str) -> str:
+    if not _VALID_IDENTIFIER.match(name):
+        raise ValueError(f"Invalid SQL identifier: {name}")
+    return '"' + name.replace('"', '""') + '"'
+
 
 class GPKGBase:
 
@@ -48,8 +57,8 @@ class GPKGBase:
         """Extract the time series data from a TUFLOW GeoPackage Time Series file for
         a given data type from a given table.
         """
-        col_quoted = '"' + dtype_name.replace('"', '""') + '"'
-        tbl_quoted = '"' + table_name.replace('"', '""') + '"'
+        col_quoted = _safe_identifier(dtype_name)
+        tbl_quoted = _safe_identifier(table_name)
         cur.execute(f'SELECT ID, Time_relative, {col_quoted} FROM {tbl_quoted};')
         df = pd.DataFrame(cur.fetchall(), columns=['ID', 'time', dtype_name])
         df = df.pivot(index='time', columns='ID', values=dtype_name)
