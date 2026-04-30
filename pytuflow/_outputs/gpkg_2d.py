@@ -147,7 +147,7 @@ class GPKG2D(GPKGBase, TimeSeries, ITimeSeries2D):
                             if table_name not in ALLOWED_TABLES:
                                 raise ValueError(f'Table {table_name} not allowed')
                             tname_quoted = _safe_identifier(table_name)
-                            cur.execute(f'SELECT Type FROM {tname_quoted} LIMIT 1;')
+                            cur.execute(f'SELECT Type FROM {tname_quoted} LIMIT 1;')  # nosec B608
                             typ = cur.fetchone()
                             if typ:
                                 valid = typ[0].lower() == '2d'
