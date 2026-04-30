@@ -520,7 +520,10 @@ class GPKG1D(GPKGBase, INFO):
 
     def _load_time_series(self, cur: 'Cursor'):
         # nodes
-        cur.execute(f'SELECT Column_name FROM Timeseries_info WHERE Table_name = "{self._gis_layer_p_name}";')
+        cur.execute(
+            'SELECT Column_name FROM Timeseries_info WHERE Table_name = ?;',
+            (self._gis_layer_p_name,)
+        )
         data_types = [x[0] for x in cur.fetchall()]
         for dtype in data_types:
             dtype1 = 'node flow regime' if dtype == 'Flow Regime' else self._get_standard_data_type_name(dtype)
@@ -528,7 +531,10 @@ class GPKG1D(GPKGBase, INFO):
             self._time_series_data[dtype1] = self._gpkg_time_series_extractor(cur, dtype, self._gis_layer_p_name)
 
         # channels
-        cur.execute(f'SELECT Column_name FROM Timeseries_info WHERE Table_name = "{self._gis_layer_l_name}";')
+        cur.execute(
+            'SELECT Column_name FROM Timeseries_info WHERE Table_name = ?;',
+            (self._gis_layer_l_name,)
+        )
         data_types = [x[0] for x in cur.fetchall()]
         for dtype in data_types:
             dtype1 = 'channel flow regime' if dtype == 'Flow Regime' else self._get_standard_data_type_name(dtype)

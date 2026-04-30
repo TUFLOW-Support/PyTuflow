@@ -48,7 +48,9 @@ class GPKGBase:
         """Extract the time series data from a TUFLOW GeoPackage Time Series file for
         a given data type from a given table.
         """
-        cur.execute(f'SELECT ID, Time_relative, "{dtype_name}" FROM "{table_name}";')
+        col_quoted = '"' + dtype_name.replace('"', '""') + '"'
+        tbl_quoted = '"' + table_name.replace('"', '""') + '"'
+        cur.execute(f'SELECT ID, Time_relative, {col_quoted} FROM {tbl_quoted};')
         df = pd.DataFrame(cur.fetchall(), columns=['ID', 'time', dtype_name])
         df = df.pivot(index='time', columns='ID', values=dtype_name)
         df.columns.name = None  # to be consistent with other outputs

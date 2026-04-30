@@ -102,10 +102,14 @@ class GPKGRL(GPKG2D):
             else:
                 valid = None
                 for table_name in ['Geom_P', 'Geom_L', 'Geom_R']:
-                    cur.execute(f'SELECT count(*) FROM sqlite_master WHERE type=\'table\' AND name="{table_name}";')
+                    cur.execute(
+                        "SELECT count(*) FROM sqlite_master WHERE type='table' AND name=?;",
+                        (table_name,)
+                    )
                     count = int(cur.fetchone()[0])
                     if count:
-                        cur.execute(f'SELECT Type FROM "{table_name}" LIMIT 1;')
+                        tname_quoted = '"' + table_name.replace('"', '""') + '"'
+                        cur.execute(f'SELECT Type FROM {tname_quoted} LIMIT 1;')
                         typ = cur.fetchone()
                         if typ:
                             valid = typ[0].lower() == 'rl'
