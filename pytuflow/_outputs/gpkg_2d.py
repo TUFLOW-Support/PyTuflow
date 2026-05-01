@@ -11,7 +11,7 @@ except ImportError:
     from .pymesh.stubs import pandas as pd
 from packaging.version import Version
 
-from .gpkg_base import GPKGBase
+from .gpkg_base import GPKGBase, _safe_identifier
 from .time_series import TimeSeries
 from .itime_series_2d import ITimeSeries2D
 from .._pytuflow_types import PathLike, AppendDict, TimeLike, TuflowPath
@@ -127,6 +127,7 @@ class GPKG2D(GPKGBase, TimeSeries, ITimeSeries2D):
     def _looks_like_this(fpath: PathLike) -> bool:
         # docstring inherited
         import sqlite3
+        ALLOWED_TABLES = {'Geom_P', 'Geom_L', 'Geom_R'}
         try:
             with GPKGBase.connect(fpath) as conn:
                 cur = conn.cursor()
@@ -137,10 +138,16 @@ class GPKG2D(GPKGBase, TimeSeries, ITimeSeries2D):
                 else:
                     valid = None
                     for table_name in ['Geom_P', 'Geom_L', 'Geom_R']:
-                        cur.execute(f'SELECT count(*) FROM sqlite_master WHERE type=\'table\' AND name="{table_name}";')
+                        cur.execute(
+                            'SELECT count(*) FROM sqlite_master WHERE type=\'table\' AND name=?;',
+                            (table_name,)
+                        )
                         count = int(cur.fetchone()[0])
                         if count:
-                            cur.execute(f'SELECT Type FROM "{table_name}" LIMIT 1;')
+                            if table_name not in ALLOWED_TABLES:
+                                raise ValueError(f'Table {table_name} not allowed')
+                            tname_quoted = _safe_identifier(table_name)
+                            cur.execute(f'SELECT Type FROM {tname_quoted} LIMIT 1;')  # nosec B608
                             typ = cur.fetchone()
                             if typ:
                                 valid = typ[0].lower() == '2d'
@@ -475,7 +482,10 @@ class GPKG2D(GPKGBase, TimeSeries, ITimeSeries2D):
 
     def _load_time_series(self, cur: 'Cursor', storage: AppendDict):
         if self._gis_layer_p_name:
-            cur.execute(f'SELECT Column_name FROM Timeseries_info WHERE Table_name = "{self._gis_layer_p_name}";')
+            cur.execute(
+                'SELECT Column_name FROM Timeseries_info WHERE Table_name = ?;',
+                (self._gis_layer_p_name,)
+            )
             data_types = [row[0] for row in cur.fetchall()]
             for dtype in data_types:
                 dtype1 = self._get_standard_data_type_name(dtype)
@@ -483,7 +493,10 @@ class GPKG2D(GPKGBase, TimeSeries, ITimeSeries2D):
                 self._geoms[dtype1] = 'point'
 
         if self._gis_layer_l_name:
-            cur.execute(f'SELECT Column_name FROM Timeseries_info WHERE Table_name = "{self._gis_layer_l_name}";')
+            cur.execute(
+                'SELECT Column_name FROM Timeseries_info WHERE Table_name = ?;',
+                (self._gis_layer_l_name,)
+            )
             data_types = [row[0] for row in cur.fetchall()]
             for dtype in data_types:
                 dtype1 = self._get_standard_data_type_name(dtype)
@@ -491,7 +504,10 @@ class GPKG2D(GPKGBase, TimeSeries, ITimeSeries2D):
                 self._geoms[dtype1] = 'line'
 
         if self._gis_layer_r_name:
-            cur.execute(f'SELECT Column_name FROM Timeseries_info WHERE Table_name = "{self._gis_layer_r_name}";')
+            cur.execute(
+                'SELECT Column_name FROM Timeseries_info WHERE Table_name = ?;',
+                (self._gis_layer_r_name,)
+            )
             data_types = [row[0] for row in cur.fetchall()]
             for dtype in data_types:
                 dtype1 = 'max water level' if dtype.lower() == 'max water level' else self._get_standard_data_type_name(dtype)
@@ -533,17 +549,17 @@ class GPKG2D(GPKGBase, TimeSeries, ITimeSeries2D):
 
     def _geom_from_id(self, cur: 'Cursor', id_: str) -> str:
         if self._gis_layer_p_name:
-            cur.execute(f'SELECT ID FROM Geom_P WHERE ID = "{id_}";')
+            cur.execute('SELECT ID FROM Geom_P WHERE ID = ?;', (id_,))
             if cur.fetchone():
                 return 'point'
 
         if self._gis_layer_l_name:
-            cur.execute(f'SELECT ID FROM Geom_L WHERE ID = "{id_}";')
+            cur.execute('SELECT ID FROM Geom_L WHERE ID = ?;', (id_,))
             if cur.fetchone():
                 return 'line'
 
         if self._gis_layer_r_name:
-            cur.execute(f'SELECT ID FROM Geom_R WHERE ID = "{id_}";')
+            cur.execute('SELECT ID FROM Geom_R WHERE ID = ?;', (id_,))
             if cur.fetchone():
                 return 'polygon'
 

@@ -10,6 +10,15 @@ except ImportError:
 if TYPE_CHECKING:
     from sqlite3 import Cursor
 
+import re
+
+_VALID_IDENTIFIER = re.compile(r"^[A-Za-z0-9_][A-Za-z0-9_\s\\-]*$")
+
+def _safe_identifier(name: str) -> str:
+    if not _VALID_IDENTIFIER.match(name):
+        raise ValueError(f"Invalid SQL identifier: {name}")
+    return '"' + name.replace('"', '""') + '"'
+
 
 class GPKGBase:
 
@@ -81,11 +90,13 @@ class GPKGBase:
             out.columns = col_names
 
             return out
-        
-        if table_name in self._cached:    
+
+        if table_name in self._cached:
             df = self._cached[table_name][['ID', 'time', dtype_name]]
         else:
-            cur.execute(f'SELECT ID, Time_relative, "{dtype_name}" FROM "{table_name}";')
+            col_quoted = _safe_identifier(dtype_name)
+            tbl_quoted = _safe_identifier(table_name)
+            cur.execute(f'SELECT ID, Time_relative, {col_quoted} FROM {tbl_quoted};')  # nosec B608
             df = pd.DataFrame(cur.fetchall(), columns=['ID', 'time', dtype_name])
             df = df.sort_values(['ID', 'time'])
         # df = df.pivot(index='time', columns='ID', values=dtype_name)

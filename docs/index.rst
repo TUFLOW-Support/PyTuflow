@@ -133,7 +133,7 @@ Example:
 Add Dataset
 ^^^^^^^^^^^
 
-A method to add additional datasets has been added to ``Mesh`` classes e.g. :meth:`XMDF.add_dataset()<pytuflow.XMDF.add_dataset>` and :meth:`NCMesh.add_dataset()<pytuflow.NCMesh.add_dataset>`. This routine will take an additional dataset and add it to an existing mesh class as long as they use the same geometry and are of the same type (i.e. a ``.xmdf`` can only be loaded onto an :class:`XMDF<pytuflow.XMDF>` class even if the mesh files share the same geometry). 
+A method to add additional datasets has been added to ``Mesh`` classes e.g. :meth:`XMDF.add_dataset()<pytuflow.XMDF.add_dataset>` and :meth:`NCMesh.add_dataset()<pytuflow.NCMesh.add_dataset>`. This routine will take an additional dataset and add it to an existing mesh class as long as they use the same geometry and are of the same type (i.e. a ``.xmdf`` can only be loaded onto an :class:`XMDF<pytuflow.XMDF>` class even if the mesh files share the same geometry).
 
 Adding a dataset to an existing mesh output instance will be cheaper than loading into its own instance since it will not have to load its own mesh geometry (which is typically the slowest part of loading a mesh result). It can also be useful to have result types together in a single result instance as some routines can combine results to give more information. An example of this is the :meth:`flux()<pytuflow.NCMesh.flux>` method which can take additional tracer or constituent data types to provide the resulting mass flux across a line. Results from the TUFLOW FV WQ module is a good example of when this is useful. The WQ module outputs into a separate NetCDF mesh to the hydrodynamic results. The WQ results can be added to the hydrodynamics to combine them to calculate mass flux of various constituents. This is not possible with the WQ results by themselves.
 
@@ -194,6 +194,13 @@ Bug Fixes
 ^^^^^^^^^
 
 - Fixed a bug in the ``MapOutput`` classes where reading in an empty GIS file would cause an unexpected Python error. When an empty GIS file is provided, an exception is still thrown, but gives a more informative message about the issue.
+
+1.1.2
+"""""
+
+Release date: 1 May 2026
+
+- Fixed a number of potential security vulnerabilities.
 
 1.1.1
 """""

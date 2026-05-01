@@ -17,3 +17,4 @@ profile.*
 tmp.py
 .vscode*
 .claude*
+uv.lock
