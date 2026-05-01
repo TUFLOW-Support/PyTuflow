@@ -32,6 +32,13 @@ Check out the :doc:`usage` section for further information, including how to :re
 Changelog
 ---------
 
+1.1.2
+"""""
+
+Release date: 1 May 2026
+
+- Fixed a number of potential security vulnerabilities.
+
 1.1.1
 """""
 
