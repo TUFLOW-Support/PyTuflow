@@ -28,7 +28,7 @@ GisFeatureType = typing.Union['QgsFeature', 'ogr.Feature']
 
 import re
 
-_VALID_IDENTIFIER = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+_VALID_IDENTIFIER = re.compile(r"^[A-Za-z_][A-Za-z0-9_\s\\-]*$")
 
 def _safe_identifier(name: str) -> str:
     if not _VALID_IDENTIFIER.match(name):
