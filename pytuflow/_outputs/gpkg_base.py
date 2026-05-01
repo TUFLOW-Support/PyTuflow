@@ -12,7 +12,7 @@ if TYPE_CHECKING:
 
 import re
 
-_VALID_IDENTIFIER = re.compile(r"^[A-Za-z_][A-Za-z0-9_\s\\-]*$")
+_VALID_IDENTIFIER = re.compile(r"^[A-Za-z0-9_][A-Za-z0-9_\s\\-]*$")
 
 def _safe_identifier(name: str) -> str:
     if not _VALID_IDENTIFIER.match(name):
