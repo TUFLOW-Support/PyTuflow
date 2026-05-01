@@ -14,3 +14,5 @@ docs_copy*
 /identifier.sqlite
 profile.*
 *__pycache__*
+.vscode*
+uv.lock
