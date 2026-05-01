@@ -62,6 +62,10 @@ class GPKGBase:
 
         # do some post-processing to make the data easier to work with
         df = df.sort_values(['ID', 'time'])
+
+        # ensure there are no duplicated columns
+        df = df.loc[:, ~df.columns.duplicated()]
+
         groupby = df.groupby('ID', sort=False)
 
         # cache data
@@ -96,10 +100,12 @@ class GPKGBase:
         else:
             col_quoted = _safe_identifier(dtype_name)
             tbl_quoted = _safe_identifier(table_name)
-            cur.execute(f'SELECT ID, Time_relative, {col_quoted} FROM {tbl_quoted};')  # nosec B608
-            df = pd.DataFrame(cur.fetchall(), columns=['ID', 'time', dtype_name])
+            sql = f'SELECT ID, Time_relative, {col_quoted} FROM {tbl_quoted};'  # nosec B608
+            df = pd.read_sql_query(sql, cur.connection)
+            df = df.rename(columns={'Time_relative': 'time'})
             df = df.sort_values(['ID', 'time'])
-        # df = df.pivot(index='time', columns='ID', values=dtype_name)
+            df = df.loc[:, ~df.columns.duplicated()]
+
         df = fast_pivot(df, dtype_name)
         df.columns.name = None  # to be consistent with other outputs
         return df
