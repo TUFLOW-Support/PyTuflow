@@ -32,6 +32,14 @@ Check out the :doc:`usage` section for further information, including how to :re
 Changelog
 ---------
 
+1.1.3
+"""""
+
+Release date: 12 May 2026
+
+- Fixed a bug where comment inputs were not removed when called with :meth:`remove_input()<pytuflow.TCF.remove_input>`.
+- Updated several docstrings to fix formatting.
+
 1.1.2
 """""
 
