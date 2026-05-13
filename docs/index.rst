@@ -32,7 +32,7 @@ Check out the :doc:`usage` section for further information, including how to :re
 Changelog
 ---------
 
-1.1.3
+1.1.4
 """""
 
 Release date: 13 May 2026
