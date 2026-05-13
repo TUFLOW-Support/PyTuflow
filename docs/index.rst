@@ -35,6 +35,13 @@ Changelog
 1.1.3
 """""
 
+Release date: 13 May 2026
+
+- Fixed a bug for :meth:`DATCrossSections.ids()<pytuflow.DATCrossSections.ids>` method where the filter would only work if the filter matched an ID. This doesn't make sense for this method and it has been fixed to accept the usual filters such as a domain type.
+
+1.1.3
+"""""
+
 Release date: 12 May 2026
 
 - Fixed a bug where comment inputs were not removed when called with :meth:`remove_input()<pytuflow.TCF.remove_input>`.
