@@ -128,11 +128,9 @@ class DATCrossSections(TabularOutput):
         ['FC01.40', 'FC01.39', 'FC01.38', ..., 'FC02.01', 'FC02.01d']
         """
         if filter_by is not None and filter_by != 'section':
-            filter_by = [x.lower() for x in filter_by.split('/') if x.strip()]
-            for id_ in filter_by:
-                # check if the filter is an ID
-                df = self.objs[(self.objs.index.str.lower() == id_.lower()) | (self.objs.name.str.lower() == id_.lower())]
-                return df.loc[:,'name'].unique().tolist()
+            # filter_by = [x.lower() for x in filter_by.split('/') if x.strip()]
+            df, _ = self._filter(filter_by)
+            return df['name'].unique().tolist()
         return self.objs['name'].unique().tolist()
 
     def data_types(self, filter_by: str = None) -> list[str]:
