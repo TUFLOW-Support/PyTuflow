@@ -31,7 +31,19 @@ class GridMeshGeometry(PyMeshGeometry, GeometryLazyLoadMixin, VTKGeometryMixin):
         self._weights = None
         self._loaded = False
 
-    def load(self):
+    def cell_position(self, cell_id: int | typing.Iterable[int] | slice, scope: str = 'global') -> np.ndarray:
+        self.load()
+        if scope == 'local':
+            return self._trans.transform(self._cell_pos[cell_id])
+        return self._cell_pos[cell_id]
+
+    def cell_to_vertex_weights(self) -> np.ndarray:
+        self.load()
+        if self._weights is None:
+            self._weights = np.full((self._cells_df.shape[0], 4), 1.)
+        return self._weights
+    
+    def _load(self):
         if self._loaded:
             return
 
@@ -86,15 +98,3 @@ class GridMeshGeometry(PyMeshGeometry, GeometryLazyLoadMixin, VTKGeometryMixin):
         self._locator = self._build_locator(self._mesh)
 
         self._loaded = True
-
-    def cell_position(self, cell_id: int | typing.Iterable[int] | slice, scope: str = 'global') -> np.ndarray:
-        self.load()
-        if scope == 'local':
-            return self._trans.transform(self._cell_pos[cell_id])
-        return self._cell_pos[cell_id]
-
-    def cell_to_vertex_weights(self) -> np.ndarray:
-        self.load()
-        if self._weights is None:
-            self._weights = np.full((self._cells_df.shape[0], 4), 1.)
-        return self._weights

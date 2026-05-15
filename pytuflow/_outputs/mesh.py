@@ -14,8 +14,13 @@ from .helpers.mesh_driver_nc import NCMeshDriver
 from .map_output import MapOutput, PointLocation, LineStringLocation
 from .._pytuflow_types import PathLike, TimeLike
 from ..util import pytuflow_logging
-from .pymesh import Bbox2D
+from .pymesh import Bbox2D, PyMesh
 from .pymesh.mesh3d import FormatConvention
+
+try:
+    import pyvista as pv
+except ImportError:
+    from .pymesh.stubs import pyvista as pv
 
 
 logger = pytuflow_logging.get_logger()
@@ -1091,6 +1096,256 @@ class Mesh(MapOutput):
             df.index = self.reference_time + pd.to_timedelta(df.index, unit='h')
 
         return df
+    
+    def mesh_dataset(self, 
+                     mesh_geometry: str = '', 
+                     time: TimeLike = -1, 
+                     datasets: list[str] = (), 
+                     location_ref: 'Mesh | str' = 'local', 
+                     reindex: bool = False
+                     ) -> pv.PolyData:
+        r"""Returns the mesh dataset as a pyvista.PolyData instance.
+
+        .. warning::
+
+            The method is only available when using pyvista mesh geometry drivers. This is the driver
+            that PyTUFLOW uses in a Python environment. It will not be available if using PyTUFLOW
+            in a QGIS environment.
+        
+        Parameters
+        ----------
+        mesh_geometry : str, optional
+            The data type to use for the mesh geometry, e.g. ``"water level"``. If not provided,
+            the base mesh geometry will be used e.g. this will be the ``"Bed Elevation"`` for XMDF results.
+        time : float | datetime, optional
+            The time to export the data for. This is required if using a temporal dataset or mesh_geometry.
+        datasets : list, optional
+            Additional datasets to add to the mesh. These do not change the mesh geometry, however can be used
+            when plotting to assign a colour ramp.
+        location_ref : Mesh | str, optional
+            The location reference to use. The options are:
+
+            - ``"local"`` - Default. Use the mesh local coordinate system where the X,Y origin (0,0) is at the centre of the dataset.
+            - ``"global"`` - Use the global coordinate system i.e. converts back to the original spatially referenced results.
+            - ``Mesh`` - Another mesh object. The returned pyvista.PolyData object will be converted to the local coordinate system
+              of the provided ``Mesh``. This allows mesh objects to be aligned without having to use a global coordinate system.
+        reindex : bool, optional
+            Whether to reindex the pyvista.PolyData object before returning it. Reindexing in this case is removing inactive cells.
+
+        Returns
+        -------
+        pyvista.PolyData
+            The mesh dataset.
+
+        Examples
+        --------
+        Plot the bed elevation and max water level from an XMDF results.
+
+        .. pyvista-plot::
+            :include-source: True
+            :caption: Left-click = rotate, Ctrl+left = rotate locked to camera, Shift+left = pan
+
+            >>> import pytuflow
+            >>> import pyvista as pv
+            >>> res = pytuflow.XMDF('examples/datasets/xmdf/EG15_001.xmdf')
+            >>> mesh = res.mesh_dataset()
+            >>> wl_mesh = res.mesh_dataset('max water level', reindex=True) # reindex removes inactive cells
+            >>> pl = pv.Plotter() # init the plotter
+            >>> _ = pl.add_mesh(mesh, scalars='bed level', cmap='Spectral_r', smooth_shading=True)
+            >>> _ = pl.add_mesh(
+            ...         wl_mesh, 
+            ...         scalars='max water level', 
+            ...         cmap='Blues', 
+            ...         smooth_shading=True, 
+            ...         opacity=0.75, 
+            ...         show_scalar_bar=False
+            ...     )
+            >>> pl.set_scale(zscale=5) # exagerate the z scale
+            >>> pl.enable_terrain_style() # has no effect on interaction window below, but will work in other contexts
+            >>> pl.show()
+
+        Animate water level through time using a time slider.
+
+        .. code-block:: python
+
+            import numpy as np
+            import pytuflow
+            import pyvista as pv
+
+            
+            res = pytuflow.XMDF('/path/to/result.xmdf')
+            times = res.times()
+
+            # static bed-level mesh used as the base surface
+            bed_mesh = res.mesh_dataset()
+
+            # water-level mesh initialised at the first time step
+            wl_mesh = res.mesh_dataset('water level', times[0])
+
+            pl = pv.Plotter()
+            pl.set_scale(zscale=5)
+            _ = pl.add_mesh(bed_mesh, scalars='bed level', cmap='Spectral_r', smooth_shading=True)
+            _ = pl.add_mesh(wl_mesh, scalars='water level', cmap='Blues', smooth_shading=True, opacity=0.75)
+
+            def update_time(time_val):
+                # snap slider value to the nearest available time step
+                idx = int(np.argmin(np.abs(np.array(times) - time_val)))
+
+                # don't need to re-copy mesh, extracting the surface is enough
+                surf = res.surface('water level', times[idx])
+                
+                # update geometry and scalars in-place to avoid re-adding the actor
+                wl_mesh.points[:,2] = surf['value']
+                wl_mesh.point_data['water level'][:] = surf['value']
+
+            slider = pl.add_slider_widget(update_time, [times[0], times[-1]], value=times[0], title='Time')
+
+            # the default callback behaviour is only when the slider is released
+            # if you want to add a callback each time the slider is changed, add the following line
+            slider.AddObserver('InteractionEvent', lambda w, e: update_time(w.GetRepresentation().GetValue()))
+            pl.show()
+
+        .. video:: ../_static/videos/mesh_dataset_example_3.mp4
+            :width: 720
+            :caption: Example of using a time slider to dynamically update the plot
+
+        Render a movie. This example also shows how to add vectors to the map.
+
+        This example will require installing ``imageio[tifffile]`` and ``imageio-ffmpeg``:
+
+        ``pip install imageio[tifffile] imageio-ffmpeg``
+
+        .. code-block:: python
+
+            import pytuflow
+            import pyvista as pv
+            from pathlib import Path
+
+            
+            SCALE = 5.
+            DATASETS = ['water level', 'velocity', 'vector velocity']
+
+            res = pytuflow.XMDF('/path/to/result.xmdf')
+            times = res.times()
+
+            # static bed-level mesh used as the base surface
+            bed_mesh = res.mesh_dataset()
+
+            # result datasets - these can all be collected together
+            # as they can share the water level mesh geometry
+            res_mesh = res.mesh_dataset('water level', times[0], datasets=DATASETS)
+
+            # retrieve the min/max velocity for the colour bar
+            vel_min = 0.
+            vel_max = res.maximum('velocity')
+
+            # setup the arrow geometry
+            # scale the arrow geometry to counter 
+            # the plot scaling that is applied later
+            arrow_geom = pv.Arrow().scale([1., 1., 1 / SCALE])
+            arrows = res_mesh.glyph(
+                orient='vector velocity', 
+                scale='velocity', 
+                geom=arrow_geom, 
+                factor=5
+            )
+
+            # setup the plotter
+            pl = pv.Plotter(off_screen=True)
+            pl.set_scale(zscale=5)
+
+            # add the meshes to the plotter
+            pl.add_mesh(
+                bed_mesh, 
+                scalars='bed level', 
+                cmap='Spectral_r', 
+                smooth_shading=True, 
+                show_scalar_bar=False
+            )
+            pl.add_mesh(
+                res_mesh, 
+                scalars='water level', 
+                cmap='Blues', 
+                smooth_shading=True, 
+                opacity=0.75, 
+                show_scalar_bar=False
+            )
+            pl.add_mesh(
+                arrows, 
+                cmap='coolwarm', 
+                clim=(vel_min, vel_max)
+            )
+
+            # this will need to be customised for your model
+            # the best way is to use an interactive plot first and find a good spot
+            # and then retrieve (and copy) the position in python with pl.camera_position
+            pl.camera_position = [
+                (564.2798, 488.9518, 583.4595),
+                (-33.3634, 91.8160, 175.7947),
+                (-0.3921, -0.3020, 0.8690)
+            ]
+
+            # open the movie file and loop through all the timesteps
+            pl.open_movie('/path/to/movie.mp4', framerate=10)
+            for time_ in times:
+                updated_mesh = res.mesh_dataset('water level', time_, datasets=DATASETS)
+                
+                res_mesh.points[:, 2] = updated_mesh.points[:,2]
+                res_mesh.point_data['water level'][:] = res_mesh.points[:, 2]
+
+                new_arrows = updated_mesh.glyph(
+                    orient='vector velocity', 
+                    scale='velocity', 
+                    geom=arrow_geom, 
+                    factor=5
+                )
+                arrows.copy_from(new_arrows)
+
+                pl.write_frame()
+
+            pl.close()
+
+        .. video:: ../_static/videos/mesh_dataset_example_4.mp4
+            :width: 720
+            :caption: Output of the rendered movie with velocity vectors
+        
+        """
+        if not PyMesh.available():
+            raise ImportError('mesh_dataset() only supported when using pyvista')
+        
+        mesh = self._driver.geom.mesh.copy()
+
+        mesh_geometry = self.data_types()[0] if not mesh_geometry else mesh_geometry
+        if self._driver.is_vector(mesh_geometry):
+            raise ValueError(f'mesh_geometry must be a scalar type: {mesh_geometry}')
+        if not datasets:
+            datasets = [mesh_geometry]
+
+        # geometry
+        z = self.surface(mesh_geometry, time, to_vertex=True)
+        mesh.points[:,2] = z.value
+        if (not isinstance(location_ref, str) or location_ref.lower() != 'local'):
+            xy = z[['x', 'y']]
+            if not isinstance(location_ref, str) or location_ref.lower() != 'global':
+                if not isinstance(location_ref, Mesh):
+                    raise ValueError('Unexpected location_ref argument. The options are "local"/"global" or a Mesh instance.')
+                transform = location_ref._driver.geom.trans
+                xy = transform.transform(xy)
+            mesh.points[:,0:2] = xy
+
+        # dataset result types
+        for dtype in datasets:
+            surf = self.surface(dtype, time, to_vertex=True)
+            if self._driver.is_vector(dtype):
+                surf['value-z'] = 0.
+                mesh.point_data.set_vectors(surf[['value-x', 'value-y', 'value-z']], dtype)
+            else:
+                mesh.point_data[dtype] = surf.value
+
+        if reindex:
+            mesh = mesh.extract_points(z['active'].values, adjacent_cells=False).extract_surface(algorithm='dataset_surface')
+
+        return mesh
 
     def to_gltf(self,
                 output_path: Path | str,

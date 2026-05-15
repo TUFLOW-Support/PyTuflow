@@ -175,6 +175,18 @@ Example:
 
   QGIS drivers do not allow a NetCDF mesh to be appended to another NetCDF mesh. PyTUFLOW will allow it and the subsequent behaviour in PyTUFLOW in respect to interacting the the mesh output will be identical regardless of this. However, the mesh geometry will be required to be loaded again so the performance gain will be lost in this situation.
 
+Mesh Dataset
+^^^^^^^^^^^^
+
+Mesh results now has a convenience function to obatin a `pyvista.PolyData <https://docs.pyvista.org/api/core/_autosummary/pyvista.polydata/>`_ mesh object. This can be done using :meth:`~pytuflow.XMDF.mesh_dataset`, which will return a geometry based on a dataset such as ``bed level`` or ``water level``.
+
+A ``pyvista.PolyData`` object can be plotted in 3D space using the ``pyvista.Plotter()`` class. Results can be rendered to a movie, or a time slider can be added to allow interaction as well. See the :meth:`~pytuflow.XMDF.mesh_dataset` documentation for examples.
+
+.. video:: ./_static/videos/mesh_dataset_example_4.mp4
+    :width: 720
+    :align: center
+    :caption: Example using pyvista to render an animation with vectors
+
 LP2D
 ^^^^
 
