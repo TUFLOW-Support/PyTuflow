@@ -11,11 +11,15 @@ class SoftLoadMixin:
 
     def data_groups(self: 'PyMesh') -> typing.Generator['DatasetGroup', None, None]:
         from ..helpers.mesh_driver import DatasetGroup
+        bed_level_count = 0
         with self.extractor.open():
             for dtype in self.data_types():
-                if dtype.lower() == 'bed elevation':
+                if dtype.lower() == 'bed elevation' and bed_level_count == 0:
                     yield DatasetGroup(dtype, 'scalar', [0.], 1)
+                    bed_level_count += 1
                     continue
+                if dtype.lower() == 'bed elevation':
+                    dtype = 'dynamic bed level'
                 times = self.times(dtype).tolist()
                 if not times:
                     times = [0.]
