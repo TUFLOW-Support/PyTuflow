@@ -866,6 +866,28 @@ class TestNCMesh(unittest.TestCase):
             mn = res.minimum('sal', averaging_method=None)
             self.assertTrue(np.isclose(mn, 0., atol=0.0001).all())
 
+    def test_dynamic_bed_level_netcdf4_driver(self):
+        nc = './tests/nc_mesh/FMA2_SED_001.nc'
+        with pyqgis():
+            res = NCMesh(nc, driver='qgis geometry netcdf4')
+
+            data_types = res.data_types()
+            self.assertIn('dynamic bed level', data_types)
+
+            df = res.time_series((9753.243, 11350.008), 'zb')
+            self.assertEqual((5, 1), df.shape)
+
+    def test_dynamic_bed_level_qgis_driver(self):
+        nc = './tests/nc_mesh/FMA2_SED_001.nc'
+        with pyqgis():
+            res = NCMesh(nc, driver='qgis geometry data extractor')
+
+            data_types = res.data_types()
+            self.assertIn('dynamic bed level', data_types)
+
+            df = res.time_series((9753.243, 11350.008), 'zb')
+            self.assertEqual((5, 1), df.shape)
+
 
 class TestCATCHJson(unittest.TestCase):
 

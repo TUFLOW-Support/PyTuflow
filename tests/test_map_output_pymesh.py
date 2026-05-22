@@ -270,6 +270,16 @@ class TestNCMesh(unittest.TestCase):
         df = res.surface('H', 186972, averaging_method='sigma&0&1', coord_scope='local', to_vertex=True)
         self.assertEqual(df.shape, (1419, 4))
 
+    def test_dynamic_bed_level(self):
+        nc = './tests/nc_mesh/FMA2_SED_001.nc'
+        res = NCMesh(nc)
+
+        data_types = res.data_types()
+        self.assertIn('dynamic bed level', data_types)
+
+        df = res.time_series((9753.243, 11350.008), 'zb')
+        self.assertEqual((5, 1), df.shape)
+
 
 class TestCATCHJson(unittest.TestCase):
 
