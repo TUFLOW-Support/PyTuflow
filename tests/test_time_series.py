@@ -426,6 +426,11 @@ class Test_TPC_2016(TestCase):
             except ValueError:
                 self.assertEqual(1, custom_logger.msg_count)
 
+    def test_tpc_encoding(self):
+        p = './tests/tpc_encoding_error/EG14_001.tpc'
+        res = TPC(p)
+        self.assertEqual('EG14_001', res.name)
+
 
 class Test_TPC_NC(TestCase):
 
