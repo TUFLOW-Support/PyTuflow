@@ -276,6 +276,7 @@ class TestNCMesh(unittest.TestCase):
 
         data_types = res.data_types()
         self.assertIn('dynamic bed level', data_types)
+        self.assertEqual(11, len(data_types))
 
         df = res.time_series((9753.243, 11350.008), 'zb')
         self.assertEqual((5, 1), df.shape)
