@@ -73,7 +73,7 @@ class PyNCMeshDataExtractor(PyDataExtractor):
                     continue
                 self.long_name_to_variable[long_name] = variable
                 dtypes.append(long_name)
-        return ['Bed Elevation'] + dtypes
+        return dtypes
 
     def reference_time(self, data_type: str) -> datetime | None:
         units = self.engine.get_property('ResTime', 'units')
