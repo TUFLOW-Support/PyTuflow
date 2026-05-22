@@ -32,6 +32,13 @@ Check out the :doc:`usage` section for further information, including how to :re
 Changelog
 ---------
 
+1.1.5
+"""""
+
+Release date: 22 May 2026
+
+- Fixed a bug when extracting data from a pit inlet database. The area column was incorrectly being applied as an "index add" column which caused the depth column to have the area added to the values.
+
 1.1.4
 """""
 
