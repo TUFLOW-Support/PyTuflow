@@ -668,6 +668,7 @@ class INFO(TimeSeries):
                     names=['no', 'id', 'bed_level', 'top_level', 'nchannel', 'channels'],
                     header=None,
                     on_bad_lines=lambda x: x[:5] + [tuple(x[5:])],
+                    encoding_errors='ignore'
                 )
                 self._node_info.drop('no', axis=1, inplace=True)
                 self._node_info.drop('Node', axis=0, inplace=True)
@@ -707,7 +708,8 @@ class INFO(TimeSeries):
                         'lbds_obvert': float,
                         'rbds_obvert': float,
                         'pblockage': float,
-                    }
+                    },
+                    encoding_errors='ignore'
                 )
                 self._channel_info.drop('no', axis=1, inplace=True)
                 try:
@@ -754,7 +756,7 @@ class INFO(TimeSeries):
     def _load_time_series_csv(self, fpath: Path) -> pd.DataFrame:
         """Load the time-series data from the CSV file into a DataFrame."""
         dtype = str if fpath.stem.endswith('_1d_CF') or fpath.stem.endswith('_1d_NF') else np.float32
-        df = pd.read_csv(fpath, na_values='**********', index_col=1, dtype=dtype)
+        df = pd.read_csv(fpath, na_values='**********', index_col=1, dtype=dtype, encoding_errors='ignore')
         df.index.name = 'Time (h)'
         df.drop(df.columns[0], axis=1, inplace=True)
         df.rename(columns={x: self._csv_col_name_corr(x) for x in df.columns}, inplace=True)
