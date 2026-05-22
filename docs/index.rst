@@ -38,6 +38,7 @@ Changelog
 Release date: 22 May 2026
 
 - Fixed a bug when extracting data from a pit inlet database. The area column was incorrectly being applied as an "index add" column which caused the depth column to have the area added to the values.
+- Fixed a bug for NetCDF mesh outputs that contained the "zb" result type. The "zb" result type would incorrectly be ignored, a fix has been added to ensure that the "zb" result type is correctly recognised and extracted.
 
 1.1.4
 """""

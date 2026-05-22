@@ -58,15 +58,18 @@ class PyNCMeshDataExtractor(PyDataExtractor):
         dtypes = []
         for variable in self.engine.iterate():
             if variable.lower() not in self.NON_RESULT_VARIABLES:
-                long_name = self.engine.get_property(variable, 'long_name')
-                if variable.lower().endswith('_x'):
+                if variable.lower() == 'zb':  # special treatment for variable bed level result type - "bed elevation" is already for the static version
+                    long_name = 'dynamic bed level'
+                else:
+                    long_name = self.engine.get_property(variable, 'long_name')
+                if not isinstance(long_name, str):
+                    long_name = variable.lower().replace('_', ' ')
+                elif variable.lower().endswith('_x'):
                     self.long_name_to_variable[long_name] = variable
                     long_name = long_name[2:]
                     variable = variable[:-2]
                 elif variable.lower().endswith('_y'):
                     self.long_name_to_variable[long_name] = variable
-                    continue
-                elif variable.lower() == 'zb':
                     continue
                 self.long_name_to_variable[long_name] = variable
                 dtypes.append(long_name)
