@@ -23,4 +23,4 @@ class SuperFile:
         if self._data is not None:
             return
         self._data = pd.read_csv(self.fpath, sep=' ', names=['key', 'value'],
-                                 converters={'value': lambda x: x.strip(' "')})
+                                 converters={'value': lambda x: x.strip(' "')}, encoding_errors='ignore')
