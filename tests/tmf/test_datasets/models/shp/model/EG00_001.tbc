@@ -1,0 +1,4 @@
+! TUFLOW BOUNDARY CONTROL (.TBC) file controls the location of the 2D boundary conditions, and any 1D/2D or 2D/2D boundary links
+
+! EXTERNAL BOUNDARIES
+Read GIS BC == gis/2d_bc_EG00_001_L.shp			! GIS layer defining external 2D boundaries within model

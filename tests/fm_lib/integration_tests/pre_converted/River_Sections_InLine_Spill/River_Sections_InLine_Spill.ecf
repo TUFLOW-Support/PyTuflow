@@ -1,0 +1,5 @@
+Read GIS Network == 1d_nwk_RIVER_River_Sections_InLine_Spill
+Read GIS Table Links == 1d_xs_RIVER_River_Sections_InLine_Spill
+
+Read GIS Network == 1d_nwk_WEIR_River_Sections_InLine_Spill
+Read GIS Table Links == 1d_xs_WEIR_River_Sections_InLine_Spill

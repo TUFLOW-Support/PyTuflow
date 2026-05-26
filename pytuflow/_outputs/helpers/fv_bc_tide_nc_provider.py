@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 import re
@@ -13,7 +14,6 @@ except ImportError:
 
 from .lp_data_extractor import LongProfileDataExtractor
 from ..._pytuflow_types import TimeLike
-from ...util import pytuflow_logging
 
 
 class FVBCTideNCProvider(LongProfileDataExtractor):
@@ -68,7 +68,7 @@ class FVBCTideNCProvider(LongProfileDataExtractor):
         None
         """
         if self.use_local_time and 'local_time' not in self._nc.variables:
-            pytuflow_logging.get_logger().warning('Local time not available in netCDF file. Using UTC time instead.')
+            logging.getLogger('pytuflow').warning('Local time not available in netCDF file. Using UTC time instead.')
         self.use_local_time = 'local_time' in self._nc.variables and self.use_local_time
         self._timevar = 'local_time' if self.use_local_time else 'time'
         self._get_units()

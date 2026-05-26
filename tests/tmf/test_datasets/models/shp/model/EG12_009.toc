@@ -1,0 +1,41 @@
+!*********************************************************************************************************
+! The .toc file contains sets of rules to control operational structures
+!*********************************************************************************************************
+!_________________________________________________________________________________________________________
+! OPERATING CONTROL COMMANDS 
+Define Spillway Control == OC_002				! Start block of commands for 'OC_001'
+
+	! Default Settings
+	Period Opening/Closing (min) == 15
+	Gate Opening == CLOSED
+	Gate Height Fully Open == 2.0
+	
+	! User Variables 
+	t == Time in 24H
+	wday == DAY of WEEK 
+	
+	! Logic Commands 
+	IF wday = Sun
+		IF t >= 1.0 AND t <= 3
+			Gate Opening % == 30
+		Else	
+			Gate Opening == CLOSED	
+		End IF
+	Else IF wday = Tue
+		IF t >= 1.0 AND t <= 3
+			Gate Opening % == 30
+		Else	
+			Gate Opening == CLOSED	
+		End IF	
+	Else IF wday = Thu
+		IF t >= 1.0 AND t <= 3
+			Gate Opening % == 30
+		Else	
+			Gate Opening == CLOSED	
+		End IF
+	Else	
+		Gate Opening == CLOSED	
+	End IF	
+
+
+End Define									! End block of commands for 'OC_001'

@@ -1,0 +1,7 @@
+RF Grid Cell Size == 10 										! Sets the output rainfall grid cell size
+RF Grid Format == nc 											! Output in netcdf format
+
+Read GIS RF Points == ../model/gis/2d_rf_EG03_008_P.shp 		! Rainfall data input locations
+
+RF Interpolation Method == IDW									! Rainfall interpolation method
+IDW Exponent == 2

@@ -1,0 +1,9 @@
+Material ID,Manning's n,Infiltration Parameters,Land Use Hazard ID,! Description
+1,depth_varying1.csv,,,!Pasture
+2,0.022,,,!Roads
+3,depth_varying2.csv,,,!Buildings
+4,0.03,,,!Ponds and other water
+10,0.08,,,!Vegetated creek
+11,0.04,,,!Maintained Grass
+99,depth_varying3.csv,,,!nasty depth varying csv
+100,"0.1,0.8,0.25,0.5",,,

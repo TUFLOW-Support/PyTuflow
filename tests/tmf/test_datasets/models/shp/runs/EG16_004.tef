@@ -1,0 +1,15 @@
+!*********************************************************************************************************
+! The .tef file defines the parameters for the model events
+!*********************************************************************************************************
+
+!---------------------------------------------------------------------------------------------------------
+Define Event == Q100							! Start definition of block of commands for event 'Q100'
+	BC Event Source == _event_ | 100yr2hr		! Specifies the text in which '_event_' is to be substituted within the bc_dbase
+	Timestep == 1								! Specifies a 2D computational timestep of 1s
+End Define										! End definition of block of commands for event 'Q100'
+
+!-----------------------------------------------------------------------------
+Define Event == QPMF							! Start definition of block of commands for event 'QPMF'
+	BC Event Source == _event_ | PMFyr2hr		! Specifies the text in which '_event_' is to be substituted within the bc_dbase
+	Timestep == 0.5  							! Specifies a 2D computational timestep of 0.5s
+End Define										! End definition of block of commands for event 'QPMF'

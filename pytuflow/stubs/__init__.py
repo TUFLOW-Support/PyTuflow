@@ -1,1 +1,1 @@
-from .._tmf.tmf.tuflow_model_files.stubs import ogr_, gdal_, osr_
+from .._tmf.stubs import ogr_, gdal_, osr_

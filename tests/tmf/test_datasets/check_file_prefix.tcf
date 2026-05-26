@@ -1,0 +1,4 @@
+Write Check Files == ../check/model
+Start 1D Domain
+    Write Check Files == ../check/model1d
+End 1D Domain

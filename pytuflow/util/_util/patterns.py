@@ -17,6 +17,6 @@ Examples
 """
 
 
-from ..._tmf.tmf.tuflow_model_files.tfstrings.patterns import (expand_and_get_files)
-from ..._tmf.tmf.tuflow_model_files.tfstrings.increment_number import increment_fpath
-from ..._tmf.tmf.tuflow_model_files.utils.csv_line import csv_line_split
+from ..._tmf.tfstrings.patterns import (expand_and_get_files)
+from ..._tmf.tfstrings.increment_number import increment_fpath
+from ..._tmf.utils.csv_line import csv_line_split

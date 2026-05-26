@@ -1,0 +1,23 @@
+! TUFLOW EVENT FILE (.TEF) defines the parameters for the model events
+
+Define Event == Q100							! Start definition of block of commands for event 'Q100'
+	BC Event Source == _event1_ | 100yr			! Specifies the text in which '_event1_' is to be substituted within the bc_dbase
+	Timestep == 1								! Specifies a 2D computational timestep of 1s
+	Blockage ARI == 100
+End Define										! End definition of block of commands for event 'Q100'
+
+Define Event == QPMF							! Start definition of block of commands for event 'QPMF'
+	BC Event Source == _event1_ | PMFyr			! Specifies the text in which '_event1_' is to be substituted within the bc_dbase
+	Timestep == 0.5  							! Specifies a 2D computational timestep of 0.5s
+	Blockage ARI == 2000
+End Define										! End definition of block of commands for event 'QPMF'
+
+Define Event == 2hr								! Start definition of block of commands for event '2hr'
+	BC Event Source == _event2_ | 2hr			! Specifies the text in which '_event2_' is to be substituted within the bc_dbase
+	End Time == 3								! Specifies a simulation end time of 3 hours
+End Define										! End definition of block of commands for event '2hr'
+
+Define Event == 4hr								! Start definition of block of commands for event '4hr'
+	BC Event Source == _event2_ | 4hr			! Specifies the text in which '_event2_' is to be substituted within the bc_dbase
+	End Time == 5  								! Specifies a simulation end time of 5 hours
+End Define										! End definition of block of commands for event 'QPMF'

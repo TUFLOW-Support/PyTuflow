@@ -41,29 +41,6 @@ from typing import Union
 from ..._pytuflow_types import PathLike
 
 
-def get_logger() -> logging.Logger:
-    """Setup and return the standard logger used throughout the pytuflow package.
-
-    To use, add the following lines to the top of any module in the library:
-
-    Returns
-    -------
-    logging.Logger
-        Logger instance with the name 'pytuflow'
-
-    Example
-    -------
-    >>> import pytuflow
-    >>> logger = pytuflow.get_logger()
-
-    The logger instance can be used the same as any other standard python logger.
-    """
-    logger = logging.getLogger('pytuflow')
-
-    # logger.addHandler(TMFHandler())
-    return logger
-
-
 def set_logging_level(
         level: Union['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'] = 'WARNING',
         log_to_file: PathLike = None) -> None:
@@ -86,8 +63,6 @@ def set_logging_level(
         log_file = log_file.joinpath('pytuflow_logs.log') if log_file.is_dir() else log_file.with_name('pytuflow_logs.log')
 
         pytuflow_logger = logging.getLogger("pytuflow")
-        tmf_logger = logging.getLogger("tmf")
-        fm2estry_logger = logging.getLogger("fm2estry")
         if log_file.parent.exists():
             fhandler = logging.FileHandler(log_file.resolve())
             fhandler.setFormatter(logging.Formatter(
@@ -96,8 +71,6 @@ def set_logging_level(
             fhandler.maxBytes = 51200
             fhandler.backupCount = 2
             pytuflow_logger.addHandler(fhandler)
-            tmf_logger.addHandler(fhandler)
-            fm2estry_logger.addHandler(fhandler)
             try:
                 pytuflow_logger.warning("Added a file handler to log results to: {}".format(log_to_file))
             except PermissionError:
@@ -109,5 +82,3 @@ def set_logging_level(
     level = level.upper()
     level = level if level in ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'] else 'WARNING'
     logging.getLogger('pytuflow').setLevel(level)
-    logging.getLogger('tmf').setLevel(level)
-    logging.getLogger('fm2estry').setLevel(level)

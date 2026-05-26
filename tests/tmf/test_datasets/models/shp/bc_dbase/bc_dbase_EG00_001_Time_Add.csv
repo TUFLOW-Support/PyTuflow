@@ -1,0 +1,3 @@
+Name,Source,Column 1,Column 2,Add Col 1,Mult Col 2,Add Col 2,Column 3,Column 4
+FC01,EG00_001.csv,inflow_time_hr,inflow_FC01,100,,,,
+FC02,,,10,,,,,

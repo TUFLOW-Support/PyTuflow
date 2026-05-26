@@ -1,0 +1,7 @@
+if scenario == D01 | D02
+    Read GIS Z Shape == 2d_zsh_D01_R.shp
+else if scenario == D02
+    Read GIS Z Shape == 2d_zsh_D02_R.shp
+else
+    Read GIS Z Shape == 2d_zsh_EXG_R.shp
+end if

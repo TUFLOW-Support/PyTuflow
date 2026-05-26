@@ -1,0 +1,26 @@
+!!!!!!!!!!!!!!!!!!!!!!!!
+! TUFLOW Materials File  
+!!!!!!!!!!!!!!!!!!!!!!!!
+
+! Based on B2G_CON_001_R7
+! Code, Mannings, Description
+1, 0.035	! ! Waterway
+2, 0.015	! ! Sealed road Corridor
+3, 0.025	! ! Unsealed road corridor
+4, 0.09		! ! Rural Residential
+5, 0.1		! ! Urban Residential
+6, 0.06		! ! Commercial
+7, 0.045	! ! Open Space - Minimum Veg
+8, 0.055	! ! Open Space - Moderate Veg
+9, 0.065	! ! Open Space - Heavy Veg
+10, 0.025	! ! Open Water
+11, 0.025	! ! Rail
+14, 0.05 	! ! Riparian
+
+! Crops
+
+15, 0.0814	! Uniform crop assumption - Annual Average
+16, 0.0901	! Uniform crop assumption - Early Summer
+17,	0.1292	! Uniform crop assumption - Late Summer
+18,	0.0904	! Uniform crop assumption - Early Winter
+19,	0.1485	! Uniform crop assumption - Late Winter

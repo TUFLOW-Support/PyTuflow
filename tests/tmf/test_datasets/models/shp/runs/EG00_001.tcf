@@ -1,0 +1,55 @@
+! TUFLOW CONTROL FILE (.TCF) defines the model simulation parameters and directs input from other data sources
+
+! MODEL INITIALISATION COMMANDS  
+Tutorial Model == ON                                ! This command allows for this model to be simulated without a TUFLOW licence
+GIS FORMAT == SHP									! Specify SHP as the output format for all GIS files
+SHP Projection == ../model/gis/projection.prj       ! Sets the GIS projection for the TUFLOW Model
+!Write Empty GIS Files == ..\model\gis\empty        ! This command is commented out. It is only needed for the project establishment
+GIS Projection Check == WARNING
+
+! SOLUTION SCHEME
+Solution Scheme == HPC								! Heavily Parallelised Compute, uses adaptive timestepping
+Hardware == GPU										! Comment out if GPU card is not available or replace with "Hardware == CPU"
+SGS == ON											! Switches on Sub-Grid Sampling
+SGS Approach == Method C							! SGS Sampling Approach
+SGS Sample Frequency == 11							! SGS Sampling Frequency
+If Scenario == QPC
+    Quadtree Control File == ../model/EG13_001.qcf
+End if
+
+! MODEL INPUTS
+Geometry Control File == ../model/EG00_001.tgc		! Reference the TUFLOW Geometry Control File
+BC Control File == ../model/EG00_001.tbc			! Reference the TUFLOW Boundary Conditions Control File
+BC Database == ../bc_dbase/bc_dbase_EG00_001.csv	! Reference the Boundary Conditions Database
+Read Materials File == ../model/Materials.csv  		! Reference the Materials Definition File
+Read Soils File == ../model/EG05_GA_006.tsoilf
+Estry Control File == ../model/EG12_004.ecf
+Matrix Blockage File == ../model/Matrix_Blockages.csv
+AD Control File == ../model/EG17_001.adcf
+Rainfall Control File == ../bc_dbase/EG03_008.trfc
+Set IWL == 36.5										! Define an initial 2D water level at start of simulation
+
+! SIMULATION TIME CONTROL COMMANDS
+Timestep == 1	  									! Specifies a 2D computational timestep of 1s
+Start Time == 0  									! Specifies a simulation start time of 0 hours
+End Time == 3  										! Specifies a simulation end time of 3 hours
+
+! OUTPUT FOLDERS
+Log Folder == log		  							! Redirects log output files log folder
+Output Folder == ../results/EG00	  				! Specifies the location of the 2D result files
+Write Check Files == ../check/EG00/		  			! Specifies the location of the 2D check files and prefixes them with the .tcf filename
+
+! OUTPUT SETTINGS
+Map Output Format == XMDF FLT GPKG					! Specifies the format for the map output result files
+Map Output Data Types == h V d z0 q					! Specify the output data types for XMDF Format
+FLT Map Output Data Types == h d V dt ZAEM1			! Specify the output data types for FLT Format
+Start Map Output == 0 								! Writes the XMDF map output from time 0 hours
+Map Output Interval == 300  						! Writes the XMDF map output result files every 300s 
+FLT Map Output Interval == 0						! Only write FLT map output result for maximums (and minimum for dt)
+GPKG Map Output Interval == 0  			
+SGS Depth Output == Cell Average
+
+Time Series Output Interval == 60
+Read GIS PO == ../model/gis/0d_rl_EG02_013_L.shp
+
+Event File == EG16_004.tef

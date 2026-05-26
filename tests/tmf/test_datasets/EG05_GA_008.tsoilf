@@ -1,0 +1,13 @@
+!Soil ID,	Method,		USDA Type,			Initial Moisture,	Max Ponding Depth
+1,			GA,			"CLAY",				0.2,				0.2
+2,			GA,			"SILTY CLAY",		0.2,				0.2
+3,			GA,			"SANDY CLAY",		0.2,				0.2
+4,			GA,			"CLAY LOAM",		0.2,				0.2
+5,			GA,			"SILTY CLAY LOAM",	0.2,				0.2
+6,			GA,			"SANDY CLAY LOAM",	0.2,				0.2
+7,			GA,			"SILT LOAM",		0.2,				0.2
+8,			GA,			"LOAM",				0.2,				0.2
+9,			GA,			"SANDY LOAM",		0.2,				0.2
+10,			GA,			"LOAMY SAND",		0.2,				0.2
+11,			GA,			"SAND",				0.2,				0.2
+12,			NONE

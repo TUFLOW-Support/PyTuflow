@@ -1,3 +1,4 @@
+import logging
 import abc
 import re
 from abc import ABC
@@ -14,7 +15,6 @@ except ImportError:
 from .output import Output, PlotExtractionLocation
 from .._pytuflow_types import PathLike
 from ..util import gis
-from ..util import pytuflow_logging
 from .pymesh import PointMixin, LineStringMixin
 from .._tmf import Geom, Feature
 
@@ -35,7 +35,7 @@ except ImportError:
     gpd = None
     GeoDataFrame = str
 
-logger = pytuflow_logging.get_logger()
+logger = logging.getLogger('pytuflow')
 
 PointLike = tuple[float, float] | str | Point | MultiPoint | Geom | Feature
 LineStringLike = list[PointLike] | tuple[PointLike] | LineString | MultiLineString | Geom | Feature

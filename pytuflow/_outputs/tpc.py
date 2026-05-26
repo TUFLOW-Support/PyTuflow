@@ -1,3 +1,4 @@
+import logging
 from pathlib import Path
 import re
 from typing import Union
@@ -22,11 +23,11 @@ from .info import INFO
 from .itime_series_2d import ITimeSeries2D
 from .helpers.tpc_reader import TPCReader
 from .._pytuflow_types import PathLike, AppendDict, TimeLike
-from ..util import pytuflow_logging, patterns
+from ..util import patterns
 from .._outputs.helpers.nc_dataset_wrapper import DatasetWrapper
 
 
-logger = pytuflow_logging.get_logger()
+logger = logging.getLogger('pytuflow')
 
 
 class TPC(INFO, ITimeSeries2D):

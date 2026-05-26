@@ -1,0 +1,51 @@
+-- FM_to_ESTRY --
+
+Library for converting a Flood Modeller river models to an ESTRY models.
+
+Documentation: https://wiki.tuflow.com/Flood_Modeller_to_TUFLOW
+Repository: https://gitlab.com/tuflow-user-group/tuflow/model-conversions/fm-to-estry
+
+REQUIRED INPUTS
+  [/path/to/gxy]
+  [/path/to/dat]
+OPTIONAL
+  "-help" print tool documentation (this)
+  "-crs [CRS]" specify the output CRS. Can be in the form of "Authority:Code" e.g. -crs "EPSG:27700" or can point to an existing GIS file e.g. -crs "/path/to/file.shp"
+  "-o [/path/to/output-dir]" specify the output directory. Default is the current working directory + DAT file name (also accepts "-out")
+  "-logfile [/optional/path/to/logfile.log]" outputs the log to a file (echo of console output to a log file)
+  "-shp" export the output to shapefiles
+  "-gpkg" export the output to a geopackage
+  "-mif" export the output to a mif file
+  "-tab" export the output to a tab file
+  "-check" output the dat/gxy data to GIS for checking prior to any conversion (also accepts "-raw").
+  "-loglimit [N]" sets the maximum number of warnings that will be logged to the console.
+  "-list-unconverted [/optional/path/to/unconverted.txt]" outputs a list of unconverted units to a text file. Default is the output folder.
+  "-co [OPTION=VALUE]" see conversion options below
+CONVERSION OPTIONS
+More advanced conversion options use the following form "-co OPTION=VALUE" where multiple "-co" can be specified. See examples further below.
+  "outname=[STR]" specify the output name for the ESTRY model (default is the name of the DAT file)
+  "output_dir=[STR]" specify the output directory for the ESTRY model (default is the current working directory + outname)
+  "gis_format=[STR]" specify the output format for the ESTRY model. Options are "shp", "gpkg", "mif", "tab" (default is GPKG)
+  "crs=[STR]" specify the output CRS for the ESTRY model (no default)
+  "group_db=[True/False]" GPKG output will be grouped in a single database or not (default is True)
+  "single_nwk=[True/False]" output the 1d_nwk features in a single layer or not (default is False)
+  "single_tab=[True/False]" output the 1d_tab (1d_xs, 1d_hw) features in a single layer or not (default is False)
+  "arch_bridge_approach=[BARCH/I-CULV]" output arch bridges as "BARCH" type or as irregular "I" type culverts (default is BARCH)
+  "arch_bridge_culv_approach=[SINGLE/MULTI]" when using "I-CULV" arch bridge approach, determines whether to output each arch as a single culvert or combine into a single HW table (default is MULTI)
+  "xs_gis_length=[float]" specify the length of 1d_xs and 1d_hw lines in the GIS output (default is 20)
+
+EXAMPLES
+  Simple:
+  fm_to_estry.exe flood_model.dat flood_model.gxy -crs "EPSG:27700"
+
+  Custom output directory
+  fm_to_estry.exe flood_model.dat flood_model.gxy -crs "EPSG:27700" -o .\custom_out_dir\
+
+  Output to console to a log file
+  fm_to_estry.exe flood_model.dat flood_model.gxy -crs "EPSG:27700" -logfile
+
+  Using Shapefile format
+  fm_to_estry.exe flood_model.dat flood_model.gxy -crs "EPSG:27700" -shp
+
+  Output all 1d_nwk and 1d_tab to a single GIS layer
+  fm_to_estry.exe flood_model.dat flood_model.gxy -crs "EPSG:27700" -co single_nwk=True -co single_tab=True

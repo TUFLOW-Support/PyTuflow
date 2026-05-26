@@ -1,0 +1,21 @@
+Define Event == StormTide-2030
+	BC Event Source == ~TideSource~ | StormTideAndWaveSetup_OtakiNorth_2030<<~E2~>>_v0.4.csv
+End Define
+Define Event == StormTide-2130
+	BC Event Source == ~TideSource~ | StormTideAndWaveSetup_OtakiNorth_2130<<~E2~>>_v0.4.csv
+End Define
+!__________________________________________
+!**(E2)** Define Climate change
+Define Event == SSP1-2.6M
+End Define
+Define Event == SSP2-4.5M
+End Define
+Define Event == SSP3-7.0M
+
+End Define
+Define Event == SSP5-8.5M
+
+End Define
+Define Event == SSP5-8.5H+
+
+End Define

@@ -1,3 +1,4 @@
+import logging
 from pathlib import Path
 import numpy as np
 
@@ -14,8 +15,7 @@ except ImportError:
     has_shapely = False
 
 
-from ...util import pytuflow_logging
-logger = pytuflow_logging.get_logger()
+logger = logging.getLogger('pytuflow')
 
 
 class FVBCTideProvider(LongProfileBaseProvider):

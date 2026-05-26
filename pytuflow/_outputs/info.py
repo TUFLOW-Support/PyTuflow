@@ -1,3 +1,4 @@
+import logging
 import re
 from datetime import datetime
 from pathlib import Path
@@ -12,13 +13,12 @@ except ImportError:
 from .helpers.tpc_reader import TPCReader
 from .time_series import TimeSeries
 from .._pytuflow_types import PathLike, TimeLike, AppendDict
-from ..util import pytuflow_logging
 from ..util import patterns
 from ..results import ResultTypeError
 from .helpers.lp_1d import LP1D
 
 
-logger = pytuflow_logging.get_logger()
+logger = logging.getLogger('pytuflow')
 
 
 class INFO(TimeSeries):

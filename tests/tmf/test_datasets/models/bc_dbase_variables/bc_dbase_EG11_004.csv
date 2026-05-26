@@ -1,0 +1,2 @@
+Name,Source,Column 1,Column 2,Add Col 1,Mult Col 2,Add Col 2,Column 3,Column 4
+FC01,EG16_<<EVENT>>2hr.csv,inflow_time_hr,inflow_FC01,,,,,

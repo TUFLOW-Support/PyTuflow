@@ -1,0 +1,4 @@
+Read GIS Network == 1d_nwk_RIVER_River_Sections_Culvert_inlet_outlet
+Read GIS Table Links == 1d_xs_RIVER_River_Sections_Culvert_inlet_outlet
+
+Read GIS Network == 1d_nwk_CONDUIT_River_Sections_Culvert_inlet_outlet

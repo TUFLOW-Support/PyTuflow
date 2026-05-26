@@ -1,3 +1,4 @@
+import logging
 import typing
 from datetime import datetime
 from pathlib import Path
@@ -13,7 +14,6 @@ from .helpers.mesh_driver_qgis import QgisMeshDriver
 from .helpers.mesh_driver_nc import NCMeshDriver
 from .map_output import MapOutput, PointLocation, LineStringLocation
 from .._pytuflow_types import PathLike, TimeLike
-from ..util import pytuflow_logging
 from .pymesh import Bbox2D, PyMesh
 from .pymesh.mesh3d import FormatConvention
 
@@ -23,7 +23,7 @@ except ImportError:
     from .pymesh.stubs import pyvista as pv
 
 
-logger = pytuflow_logging.get_logger()
+logger = logging.getLogger('pytuflow')
 
 
 class Mesh(MapOutput):

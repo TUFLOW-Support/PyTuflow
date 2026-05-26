@@ -1,0 +1,7 @@
+Read GIS PO == ../model/gis/2d_po_EG02_010_L.shp
+
+If Scenario == TEST
+	IF Scenario == TEST_2
+		Read GIS PO == ../model/gis/2d_po_EG02_010_P.shp
+	End if
+End If

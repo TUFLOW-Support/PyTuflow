@@ -1,0 +1,9 @@
+If Scenario == D01
+	Start 1D Domain
+		Timestep == 0.5
+	End 1D Domain
+Else
+	Start 1D Domain
+		Timestep == 0.25
+	End 1D Domain
+End if

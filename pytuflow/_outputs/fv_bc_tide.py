@@ -1,3 +1,4 @@
+import logging
 import re
 from pathlib import Path
 from typing import Union
@@ -18,11 +19,10 @@ except ImportError:
 from .lp_base import LongProfileBase
 from .._pytuflow_types import PathLike, TuflowPath, TimeLike
 from .helpers.fv_bc_tide_provider import FVBCTideProvider
-from ..util import pytuflow_logging
 from ..results import ResultTypeError
 
 
-logger = pytuflow_logging.get_logger()
+logger = logging.getLogger('pytuflow')
 
 
 class FVBCTide(LongProfileBase):

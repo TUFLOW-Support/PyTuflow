@@ -1,3 +1,4 @@
+import logging
 import json
 from datetime import timezone
 from pathlib import Path
@@ -15,8 +16,7 @@ from .._pytuflow_types import PathLike, TimeLike
 from .helpers.catch_providers import CATCHProvider
 from ..results import ResultTypeError
 
-from ..util import pytuflow_logging
-logger = pytuflow_logging.get_logger()
+logger = logging.getLogger('pytuflow')
 
 
 class CATCHJson(MapOutput):

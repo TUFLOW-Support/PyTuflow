@@ -1,3 +1,4 @@
+import logging
 import numpy as np
 import pandas as pd
 
@@ -8,8 +9,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from .lp_gis_driver import LongProfileGIS
 
-from ...util import pytuflow_logging
-logger = pytuflow_logging.get_logger()
+logger = logging.getLogger('pytuflow')
 
 
 class LP2DExtractor(LongProfileDataExtractor):

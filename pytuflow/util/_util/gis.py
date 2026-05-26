@@ -36,13 +36,13 @@ from contextlib import contextmanager
 
 from ..._pytuflow_types import PathLike, TuflowPath
 from ..._tmf import Geom, Feature
-from ..._tmf.tmf.tuflow_model_files.gis import GPKG, ogr_basic_geom_type
-from ..._tmf.tmf.tuflow_model_files.gis import GISAttributes
+from ..._tmf.gis import GPKG, ogr_basic_geom_type
+from ..._tmf.gis import GISAttributes
 
 try:
     from osgeo import ogr
     from osgeo.ogr import Layer
-    from fm_to_estry.helpers.gis import vector_geometry_as_array, get_driver_name_from_extension
+    from .gis import vector_geometry_as_array, get_driver_name_from_extension
     has_gdal = True
 except ImportError:
     ogr = None

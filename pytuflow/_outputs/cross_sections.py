@@ -1,3 +1,4 @@
+import logging
 import os
 from datetime import datetime, timezone
 from pathlib import Path
@@ -11,12 +12,11 @@ except ImportError:
 from .tabular_output import TabularOutput
 from .._tmf import TuflowCrossSection
 from .._tmf import GISAttributes
-from ..util import pytuflow_logging
 from .._pytuflow_types import PathLike, TimeLike, TuflowPath
 from ..results import ResultTypeError
 
 
-logger = pytuflow_logging.get_logger()
+logger = logging.getLogger('pytuflow')
 
 
 class CrossSections(TabularOutput):

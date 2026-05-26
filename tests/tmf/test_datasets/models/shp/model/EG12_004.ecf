@@ -1,0 +1,15 @@
+! ESTRY CONTROL FILE (.ECF) controls the 1D ESTRY engine
+
+! 1D TIME CONTROL
+Timestep == 0.5													! Specifies a 1D computational timestep as 0.5 seconds
+
+! 1D ELEMENTS
+Read Operating Controls File == ../model/EG12_009.toc		    ! Reference the TUFLOW Operations Control File
+Pit Inlet Database == ../model/csv/pit_inlet_dbase.csv
+
+
+Read GIS Network == gis/1d_nwk_EG15_001_L.shp
+Read GIS Network == gis/1d_nwk_EG15_001_P.shp
+
+Read GIS Table Links == csv/1d_xs_EG11_002_L.shp
+
