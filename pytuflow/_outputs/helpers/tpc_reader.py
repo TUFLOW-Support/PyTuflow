@@ -29,7 +29,7 @@ class TPCReader:
             raise FileNotFoundError(f'File not found: {self.fpath}')
 
         try:
-            self._df = pd.read_csv(self.fpath, sep=' == ', engine='python', header=None)
+            self._df = pd.read_csv(self.fpath, sep=' == ', engine='python', header=None, encoding_errors='ignore')
         except Exception as e:
             raise Exception(f'Error loading file: {e}')
 

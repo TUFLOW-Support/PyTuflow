@@ -682,7 +682,7 @@ class TestXMDF(unittest.TestCase):
         with pyqgis():
             res = XMDF(p1, driver='qgis geometry netcdf4')
             self.assertEqual(
-                ['bed level', 'max vector velocity', 'max velocity', 'max water level', 'vector velocity', 'velocity', 'water level',  'tmax water level'], 
+                ['bed level', 'max vector velocity', 'max velocity', 'max water level', 'vector velocity', 'velocity', 'water level',  'tmax water level'],
                 res.data_types()
             )
 
@@ -714,7 +714,7 @@ class TestXMDF(unittest.TestCase):
         with pyqgis():
             res = XMDF(p1, driver='qgis geometry data extractor')
             self.assertEqual(
-                ['bed level', 'max vector velocity', 'max velocity', 'max water level', 'vector velocity', 'velocity', 'water level',  'tmax water level'], 
+                ['bed level', 'max vector velocity', 'max velocity', 'max water level', 'vector velocity', 'velocity', 'water level',  'tmax water level'],
                 res.data_types()
             )
 
@@ -1158,6 +1158,30 @@ class TestNCMesh(unittest.TestCase):
             df = res.time_series('./tests/nc_mesh/ncmesh_point_longlat.shp', 'salinity')
             self.assertEqual((5, 1), df.shape)
             df = res.flux('./tests/nc_mesh/fv_estuary_flux_line.shp', 'sal')
+            self.assertEqual((5, 1), df.shape)
+
+    def test_dynamic_bed_level_netcdf4_driver(self):
+        nc = './tests/nc_mesh/FMA2_SED_001.nc'
+        with pyqgis():
+            res = NCMesh(nc, driver='qgis geometry netcdf4')
+
+            data_types = res.data_types()
+            self.assertIn('dynamic bed level', data_types)
+            self.assertEqual(11, len(data_types))
+
+            df = res.time_series((9753.243, 11350.008), 'zb')
+            self.assertEqual((5, 1), df.shape)
+
+    def test_dynamic_bed_level_qgis_driver(self):
+        nc = './tests/nc_mesh/FMA2_SED_001.nc'
+        with pyqgis():
+            res = NCMesh(nc, driver='qgis geometry data extractor')
+
+            data_types = res.data_types()
+            self.assertIn('dynamic bed level', data_types)
+            self.assertEqual(11, len(data_types))
+
+            df = res.time_series((9753.243, 11350.008), 'zb')
             self.assertEqual((5, 1), df.shape)
 
 
@@ -1813,10 +1837,10 @@ class TestDAT(unittest.TestCase):
         with pyqgis():
             res = DAT(p1, driver='qgis geometry python')
             self.assertEqual(['bed level', 'max depth', 'depth'], res.data_types())
-            
+
             p2 = './tests/dat/EG00_001_V.dat'
             res.add_dataset(p2)
-            
+
             self.assertTrue('velocity' in res.data_types())
             df = res.time_series('./tests/xmdf/xmdf_point.shp', 'depth')
             self.assertEqual((3, 1), df.shape)
@@ -1830,10 +1854,10 @@ class TestDAT(unittest.TestCase):
         with pyqgis():
             res = DAT(p1, driver='qgis geometry data extractor')
             self.assertEqual(['bed level', 'depth', 'max depth'], res.data_types())
-            
+
             p2 = './tests/dat/EG00_001_V.dat'
             res.add_dataset(p2)
-            
+
             self.assertTrue('velocity' in res.data_types())
             df = res.time_series('./tests/xmdf/xmdf_point.shp', 'depth')
             self.assertEqual((3, 1), df.shape)

@@ -280,6 +280,9 @@ class QgisDataExtractor(PyDataExtractor):
             name = grp_metadata.name()
             if self._is_dat:
                 name = self.translate_dat_data_type(name)
+            if name == 'bed elevation' and data_type.lower() == 'dynamic bed level':
+                self.cache.set(i, 'group_index', data_type, source)
+                return i
             name = MapOutput._get_standard_data_type_name(name)
             if name == data_type:
                 self.cache.set(i, 'group_index', data_type, source)

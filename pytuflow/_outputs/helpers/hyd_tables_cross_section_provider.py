@@ -102,7 +102,7 @@ class HydTablesCrossSectionProvider:
         xs_type : str
             Type attribute of the cross-section (XZ, HW, etc).
         """
-        df = pd.read_csv(fo)
+        df = pd.read_csv(fo, encoding_errors='ignore')
         df.columns = df.columns.str.lower()
         if xs_type == 'XZ':
             df_xs = df[df.columns[:4]].dropna()

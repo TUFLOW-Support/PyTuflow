@@ -865,7 +865,7 @@ class TPC(INFO, ITimeSeries2D):
         p = self._expand_property_path(prop)
         if p:
             try:
-                df = pd.read_csv(p, index_col=1, na_values='**********')
+                df = pd.read_csv(p, index_col=1, na_values='**********', encoding_errors='ignore')
                 df.index.name = 'id'
                 df.drop(df.columns[0], axis=1, inplace=True)
                 return df
@@ -976,7 +976,7 @@ class TPC(INFO, ITimeSeries2D):
         prop = self._expand_property_path('GIS Plot Objects')
         if prop:
             try:
-                return pd.read_csv(prop, index_col='id', names=['id', 'domain', 'data_types', 'geom'], header=None)
+                return pd.read_csv(prop, index_col='id', names=['id', 'domain', 'data_types', 'geom'], header=None, encoding_errors='ignore')
             except Exception as e:
                 logger.warning(f'TPC._gis_plot_objects(): Error loading GIS Plot Objects: {e}')
         elif self.format.lower() == 'gpkg':

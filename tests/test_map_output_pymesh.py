@@ -43,7 +43,7 @@ class TestXMDF(unittest.TestCase):
         point = shapely.Point((1.0, 1.0))
         df = res.data_point(point, 'max h', 0)
         self.assertTrue(isinstance(df, float))
-        
+
         point = shapely.MultiPoint([(1.0, 1.0)])
         df = res.data_point(point, 'max h', 0)
         self.assertTrue(isinstance(df, float))
@@ -218,7 +218,7 @@ class TestXMDF(unittest.TestCase):
         p1 = './tests/xmdf/EG02_010_hV.xmdf'
         res = XMDF(p1)
         self.assertEqual(
-            ['bed level', 'max vector velocity', 'max velocity', 'max water level', 'vector velocity', 'velocity', 'water level',  'tmax water level'], 
+            ['bed level', 'max vector velocity', 'max velocity', 'max water level', 'vector velocity', 'velocity', 'water level',  'tmax water level'],
             res.data_types()
         )
 
@@ -331,10 +331,10 @@ class TestDAT(unittest.TestCase):
         p1 = './tests/dat/EG00_001_d.dat'
         res = DAT(p1)
         self.assertEqual(['bed level', 'max depth', 'depth'], res.data_types())
-        
+
         p2 = './tests/dat/EG00_001_V.dat'
         res.add_dataset(p2)
-        
+
         self.assertTrue('velocity' in res.data_types())
         df = res.time_series('./tests/xmdf/xmdf_point.shp', 'depth')
         self.assertEqual((3, 1), df.shape)
@@ -422,6 +422,17 @@ class TestNCMesh(unittest.TestCase):
         res = NCMesh(nc)
         df = res.surface('H', 186972, averaging_method='sigma&0&1', coord_scope='local', to_vertex=True)
         self.assertEqual(df.shape, (1419, 4))
+
+    def test_dynamic_bed_level(self):
+        nc = './tests/nc_mesh/FMA2_SED_001.nc'
+        res = NCMesh(nc)
+
+        data_types = res.data_types()
+        self.assertIn('dynamic bed level', data_types)
+        self.assertEqual(11, len(data_types))
+
+        df = res.time_series((9753.243, 11350.008), 'zb')
+        self.assertEqual((5, 1), df.shape)
 
     def test_flux_2d(self):
         nc = './tests/nc_mesh/Trap_Steady_000.nc'

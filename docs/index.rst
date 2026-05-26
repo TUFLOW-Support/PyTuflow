@@ -207,6 +207,29 @@ Bug Fixes
 
 - Fixed a bug in the ``MapOutput`` classes where reading in an empty GIS file would cause an unexpected Python error. When an empty GIS file is provided, an exception is still thrown, but gives a more informative message about the issue.
 
+1.1.5
+"""""
+
+Release date: 26 May 2026
+
+- Fixed a bug when extracting data from a pit inlet database. The area column was incorrectly being applied as an "index add" column which caused the depth column to have the area added to the values.
+- Fixed a bug for NetCDF mesh outputs that contained the "zb" result type. The "zb" result type would incorrectly be ignored, a fix has been added to ensure that the "zb" result type is correctly recognised and extracted.
+
+1.1.4
+"""""
+
+Release date: 13 May 2026
+
+- Fixed a bug for the :meth:`DATCrossSections.ids()<pytuflow.DATCrossSections.ids>` method where the filter would only work if the filter matched an ID. This doesn't make sense for this method and it has been fixed to accept the usual filters such as a domain type.
+
+1.1.3
+"""""
+
+Release date: 12 May 2026
+
+- Fixed a bug where comment inputs were not removed when called with :meth:`remove_input()<pytuflow.TCF.remove_input>`.
+- Updated several docstrings to fix formatting.
+
 1.1.2
 """""
 

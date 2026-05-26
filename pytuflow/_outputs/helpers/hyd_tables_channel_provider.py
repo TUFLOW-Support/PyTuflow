@@ -65,7 +65,7 @@ class HydTablesChannelProvider:
             The channel ID.
         """
         from ..output import Output
-        df = pd.read_csv(fo)
+        df = pd.read_csv(fo, encoding_errors='ignore')
         if not self._stnd_col_names:
             self._stnd_col_names = [Output._get_standard_data_type_name(x) for x in df.columns]
         df.columns = self._stnd_col_names

@@ -72,7 +72,7 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
     @staticmethod
     def external_engine_available() -> bool:
         return H5Engine.available() or NCEngine.available()
-    
+
     @property
     def shared_active_flags(self) -> bool:
         """Whether the format uses shared active flags. True = shared, False = flag exists per result type."""
@@ -88,8 +88,8 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
 
     def add_data(self, fpath: str | Path):
         """Adds mesh results/data onto the mesh. The data geometry must match the existing mesh geometry.
-        This routine does not load the mesh geometry of the incoming fpath (note, not alway the case when using QGIS drivers), 
-        which makes it quick if you already have a compatible mesh geometry loaded. 
+        This routine does not load the mesh geometry of the incoming fpath (note, not alway the case when using QGIS drivers),
+        which makes it quick if you already have a compatible mesh geometry loaded.
         If the incoming data has a result type that has already been loaded it will be registered but never be
         found by the class when trying to query it as it will return the first instance.
 
@@ -162,9 +162,14 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
         """
         if not self._data_types:
             from ..map_output import MapOutput
-            self._data_types = ([self.geom.data_type] if self.geom.data_type else []) + [x.data_types() for x in self.extractors]
+            self._data_types = ([self.geom.data_type] if self.geom.data_type else []) + [x.data_types() for x in
+                                                                                         self.extractors]
             self._data_types = np.hstack(self._data_types).flatten().tolist()
+            if 'bed elevation' in self._data_types:
+                i = self._data_types.index('bed elevation')
+                self._data_types[i] = 'dynamic bed elevation'  # ensure correct case
             self._standardised_data_types = [MapOutput._get_standard_data_type_name(x) for x in self._data_types]
+
         return self._data_types
 
     def reference_time_(self, data_type: str) -> datetime:
@@ -984,7 +989,7 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
             return flux
         finally:
             [x.close_reader() for x in extractors if x is not None]
-        
+
     def load_into_memory(self, data_type: str):
         """Loads all surfaces for a given data type into memory. This can save time later as it removes the need
         for frequent I/O calls and data unzipping.
@@ -1003,7 +1008,7 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
                         self.cache.set(wd, 'loaded_in_memory', 'wd_global')
                     else:
                         self.cache.set(wd, 'loaded_in_memory', data_type, 'wd')
-                
+
                 if self.is_3d(dtype) and not self.cache.contains('loaded_in_memory', 'zlevels'):
                     cell_id_2d = np.arange(extractor.cell_count())
                     cell_id_3d = extractor.cell_index(cell_id_2d, dtype)
@@ -1014,7 +1019,7 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
                     self.cache.set(cell_id_3d, 'loaded_in_memory', 'cell_id_3d')
                     self.cache.set(zlevel_count, 'loaded_in_memory', 'zlevel_count')
                     self.cache.set(zlevels, 'loaded_in_memory', 'zlevels')
-        
+
     def data(self, data_type: str, index: PyDataExtractor.SliceType | PyDataExtractor.MultiSliceType) -> np.ndarray:
         """Wrapper around extractor.data() that checks the cache first to check if results have been loaded into memory.
         data_type does not get translated and should already be the correct name and the extractor should already be
@@ -1025,7 +1030,7 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
             return data[index]
         extractor = self._get_extractor(data_type)
         return extractor.data(data_type, index)
-    
+
     def wd_flag(self, data_type: str, index: PyDataExtractor.SliceType | PyDataExtractor.MultiSliceType) -> np.ndarray:
         """Wrapper around extractor.wd_flag() that checks the cache first to check if the wd flag has been loaded into memory.
         data_type does not get translated and should already be the correect name and the extractor should already be opened.
@@ -1036,7 +1041,7 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
             return wd_flag[index]
         extractor = self._get_extractor(data_type)
         return extractor.wd_flag(data_type, index)
-    
+
     def _preload(self, extractor: PyDataExtractor):
         data_types = set(extractor.data_types())
         self._data_type_to_extractor.append(data_types)
@@ -1086,19 +1091,19 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
             return ind.groupby(by='value').max().to_numpy().reshape((-1,))
         elif mapping_func == 'mean':
             return ind.groupby(by='value').mean().to_numpy().reshape((-1,))
-        
+
     def _get_extractor(self, data_type: str = '') -> PyDataExtractor:
         """Return the extractor for the given data_type."""
         if not data_type or data_type.lower() in ['bed elevation', 'bed level']:  # return the first one - can be acceptable if querying a mesh property rather than result
             return self.extractors[0]
-        
+
         try:
             for i, data_types in enumerate(self._data_type_to_extractor):
                 if data_type.lower() in [x.lower() for x in data_types]:
                     return self.extractors[i]
         except IndexError:
             pass
-        
+
         return self.extractors[0]
 
     def _2d_to_3d_data_types(self, data_type: str) -> tuple[str, str]:
