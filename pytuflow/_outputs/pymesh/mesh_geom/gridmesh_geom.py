@@ -43,7 +43,7 @@ class GridMeshGeometry(PyMeshGeometry, GeometryLazyLoadMixin, VTKGeometryMixin):
             self._weights = np.full((self._cells_df.shape[0], 4), 1.)
         return self._weights
     
-    def _load(self):
+    def load(self):
         if self._loaded:
             return
 
