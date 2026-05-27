@@ -23,8 +23,9 @@ class UnitConverterManager(metaclass=Singleton):
             dir_ = Path(sys.executable).parent /'_internal' / 'converters'
         else:
             dir_ = Path(__file__).parent
-        import_loc = 'pytuflow._fm.converters'
+        # import_loc = 'pytuflow._fm.converters'
         # import_loc = '_fm_tmp.fm_to_estry.parsers.units'
+        import_loc = self.__module__.rsplit('.', 2)[0] + '.converters'
         for converter in get_available_classes(dir_, self.base_class, import_loc):
             self.add_converter(converter)
 

@@ -23,7 +23,7 @@ class UnitHandlerManager(metaclass=Singleton):
             dir_ = Path(sys.executable).parent /'_internal' / 'parsers' / 'units'
         else:
             dir_ = Path(__file__).parent.parent / 'parsers' / 'units'
-        import_loc = 'pytuflow._fm.parsers.units'
+        import_loc = self.__module__.rsplit('.', 1)[0] + '.units'
         base_class = 'Handler'
         for handler in get_available_classes(dir_, base_class, import_loc):
             self.add_handler(handler)
