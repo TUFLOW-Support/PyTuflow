@@ -31,14 +31,16 @@ class TuflowBinaries:
 
     def __init__(self):
         self._tuflow_version_json = self.tuflow_version_json()
-        self._settings = self.load_tuflow_settings_cache()
+        self._settings = {}
         self._version2bin = None
 
         #: dict: User registered TUFLOW binary locations
-        self.user_bin_locations = self._settings.get('bin', OrderedDict())
+        self.user_bin_locations = {}
 
         #: list[Path]: Registered TUFLOW binary folders
-        self.user_folders = self._settings.get('folders', [])
+        self.user_folders = {}
+
+        self.refresh_from_settings()
 
     @property
     def version2bin(self) -> dict:
@@ -89,6 +91,18 @@ class TuflowBinaries:
             Path to the JSON file containing stored TUFLOW version info.
         """
         return Path(get_cache_dir()) / 'tuflow_versions.json'
+
+    def refresh_from_settings(self):
+        """Updates the setting  the cache (JSON file)."""
+        self._settings = self.load_tuflow_settings_cache()
+ 
+        #: dict: User registered TUFLOW binary locations
+        self.user_bin_locations = self._settings.get('bin', OrderedDict())
+ 
+        #: list[Path]: Registered TUFLOW binary folders``
+        self.user_folders = self._settings.get('folders', [])
+ 
+        self.load_versions()
 
     def load_tuflow_settings_cache(self) -> dict:
         """Load the TuflowVersions object from the JSON file.
