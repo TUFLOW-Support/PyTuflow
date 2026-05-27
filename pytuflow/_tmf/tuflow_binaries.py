@@ -93,7 +93,7 @@ class TuflowBinaries:
         return Path(get_cache_dir()) / 'tuflow_versions.json'
 
     def refresh_from_settings(self):
-        """Updates the setting  the cache (JSON file)."""
+        """Updates the internal state based on the setting cache (JSON file) in case it was modified from a separate pytuflow process."""
         self._settings = self.load_tuflow_settings_cache()
  
         #: dict: User registered TUFLOW binary locations
