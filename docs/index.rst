@@ -201,7 +201,7 @@ Minor New Features
 
 - Point and line locations used for result extraction (e.g. :meth:`XMDF.time_series()<pytuflow.XMDF.time_series>` and :meth:`XMDF.section()<pytuflow.XMDF.section>`) will now accept ``shapely`` geometry and ``geopandas.GeoDataFrame`` objects.
 - The ``NetCDF4`` driver for XMDF and NetCDF map ouput formats is now more performant when extracting non-contiguous data.
-- Added the ability to refresh the tuflow binary locations if the cache (json settings file) is modified by a separate pytuflow process using the :meth:`TuflowBinaries.refresh_from_settings` method.
+- Added the ability to refresh the tuflow binary locations if the cache (json settings file) is modified by a separate pytuflow process using the :meth:`TuflowBinaries.refresh_from_settings<pytuflow.TuflowBinaries.refresh_from_settings>` method.
 
 Bug Fixes
 ^^^^^^^^^
