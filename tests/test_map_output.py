@@ -27,6 +27,17 @@ def pyqgis():
 
 class TestXMDF(unittest.TestCase):
 
+    def test_looks_empty_netcdf4_driver(self):
+        xmdf = './tests/xmdf/EG02_010.xmdf'
+        with pyqgis():
+            try:
+                res = XMDF(xmdf, driver='qgis geometry netcdf4')
+                self.assertFalse(True, 'Expected EOFError was not raised')
+            except EOFError:
+                pass
+            except IndexError:
+                self.assertFalse(True, 'Encountered IndexError because EOFError was not raised')
+
     def test_load_2dm_only_netcdf4_driver(self):
         twodm = './tests/xmdf/run.2dm'
         with pyqgis():

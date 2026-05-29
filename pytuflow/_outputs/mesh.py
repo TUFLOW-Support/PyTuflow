@@ -38,11 +38,11 @@ class Mesh(MapOutput):
         self._loaded = False
 
     @staticmethod
-    def _looks_like_this(fpath: Path) -> bool:
+    def _looks_like_this(fpath: PathLike) -> bool:
         return True
 
     @staticmethod
-    def _looks_empty(driver: QgisMeshDriver) -> bool:
+    def _looks_empty(fpath: PathLike, engine_name: str) -> bool:
         return False
 
     @property

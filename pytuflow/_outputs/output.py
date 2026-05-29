@@ -62,7 +62,7 @@ class Output(ABC):
         return True
 
     @staticmethod
-    def _looks_empty(*fpath: PathLike) -> bool:
+    def _looks_empty(*fpath: PathLike, **kwargs) -> bool:
         """Check if the given file(s) look empty or incomplete.
 
         Parameters

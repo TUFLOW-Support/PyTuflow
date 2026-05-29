@@ -8,7 +8,7 @@ from .mesh import Mesh
 from .._pytuflow_types import PathLike
 from ..results import ResultTypeError
 
-from .pymesh import PyXMDF
+from .pymesh import PyXMDF, NCEngine, H5Engine
 
 
 class XMDF(Mesh):
@@ -175,6 +175,9 @@ class XMDF(Mesh):
             elif 'netcdf4' in driver.lower():
                 engine = 'netcdf4'
 
+        if XMDF._looks_empty(self.fpath, engine_name=engine):
+            raise EOFError(f'File looks empty or incomplete: {fpath}')
+
         if driver.lower() == 'v1.0':
             self._driver = QgisXmdfMeshDriver(self.twodm, self.fpath)
             self._soft_load_driver = NCMeshDriverXmdf(self.twodm, self.fpath)
@@ -195,3 +198,18 @@ class XMDF(Mesh):
     def _looks_like_this(fpath: Path) -> bool:
         return (fpath.suffix.lower() == '.xmdf' or fpath.suffix.lower() == '.2dm' or
                 (fpath.suffix.lower() == '.sup' or Path(fpath.stem).suffix.lower() == '.xmdf'))
+    
+    @staticmethod
+    def _looks_empty(fpath: PathLike, engine_name: str = '') -> bool:
+        if engine_name == 'qgis':
+            return False  # can't check without loading the mesh
+        try:
+            if engine_name == 'netcdf4':
+                engine = NCEngine(fpath)
+            elif engine_name == 'h5py':
+                engine = H5Engine(fpath)
+            else:
+                return False  # can't check without loading the mesh
+            return bool(engine.get_name())
+        except Exception:
+            return True
