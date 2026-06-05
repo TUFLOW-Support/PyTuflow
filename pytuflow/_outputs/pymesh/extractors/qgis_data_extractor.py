@@ -114,7 +114,7 @@ class QgisDataExtractor(PyDataExtractor):
     def zlevel_count(self, cell_idx2: int | np.ndarray | list[int]) -> int | np.ndarray | list[int]:
         _3d_grp_idx = self._3d_dataset_index()
         if _3d_grp_idx == -1:
-            return 1
+            return [1]
         if isinstance(cell_idx2, int):
             cell_idx2 = [cell_idx2]
         elif isinstance(cell_idx2, np.ndarray):
