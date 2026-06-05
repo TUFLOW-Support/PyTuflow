@@ -32,6 +32,14 @@ Check out the :doc:`usage` section for further information, including how to :re
 Changelog
 ---------
 
+1.1.6
+"""""
+
+Release date: 05 June 2026
+
+- Fixed a bug when the "ZH" map output data type was included in the XMDF result file which caused an error when loading the :class:`~pytuflow.XMDF` output class.
+- Fixed a bug that could occur when extracting data from a 2D only :class:`~pytuflow.NCMesh` output with only QGIS drivers.
+
 1.1.5
 """""
 
