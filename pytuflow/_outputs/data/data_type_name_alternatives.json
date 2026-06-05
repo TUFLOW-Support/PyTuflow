@@ -83,6 +83,6 @@
     "rating curve": ["rating(?:\\s|_|-)?curves?", "rating(?:\\s|_|-)?tables?", "hq"],
     "rainfall": ["rf", "rain(?:\\s|_|-)?falls?"],
     "xz": ["xz", "xs", "section", "river"],
-    "dynamic bed level": ["zb", "dynamic(?:\\s|_|-)?bed(?:\\s|_|-)?levels?", "dynamic(?:\\s|_|-)?bed(?:\\s|_|-)?elevations?"]
+    "dynamic bed level": ["zb", "zh", "dynamic(?:\\s|_|-)?bed(?:\\s|_|-)?levels?", "dynamic(?:\\s|_|-)?bed(?:\\s|_|-)?elevations?"]
   }
 }

@@ -22,6 +22,7 @@ class PyXMDFDataExtractor(PyDataExtractor):
         else:
             raise ImportError('Unable to find a library for reading XMDF files. Require NetCDF4 of h5py.')
         self.dataset_name = self.engine.get_name()
+        self.custom_name_to_variable = {}
 
     @contextlib.contextmanager
     def open(self) -> typing.Generator['PyXMDFDataExtractor', None, None]:
@@ -48,6 +49,10 @@ class PyXMDFDataExtractor(PyDataExtractor):
         for key1 in self.engine.iterate(self.dataset_name):
             for key2 in self.engine.iterate(f'{self.dataset_name}/{key1}'):
                 if key1.lower() == 'temporal':
+                    if key2.lower() == 'bathymetry':
+                        key3 = 'dynamic bed level'
+                        self.custom_name_to_variable[key3] = key2
+                        key2 = key3
                     dtypes.append(key2)
                 else:
                     dtypes.append(f'{key2}/{key1}')
@@ -82,6 +87,7 @@ class PyXMDFDataExtractor(PyDataExtractor):
         return self.engine.data(self._create_path(data_type, 'Values'), index)
 
     def _create_path(self, data_type: str, varname: str) -> str:
+        data_type = self.custom_name_to_variable.get(data_type, data_type)
         if '/' in data_type:
             p1, p2 = data_type.split('/', 1)
             data_type = f'{p2}/{p1}'

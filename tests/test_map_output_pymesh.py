@@ -108,6 +108,13 @@ class TestXMDF(unittest.TestCase):
         df = res.surface('max vector vel', 0.)
         self.assertEqual((25, 5), df.shape)
 
+    def test_zh_output(self):
+        xmdf = './tests/xmdf/M10_5m_001.xmdf'
+        res = XMDF(xmdf)
+        self.assertIn('dynamic bed level', res.data_types())
+        df = res.time_series((293126., 6177715.), 'zh')
+        self.assertEqual((4, 1), df.shape)
+
 
 class TestDAT(unittest.TestCase):
 

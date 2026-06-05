@@ -143,9 +143,12 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
         if not self._data_types:
             from ..map_output import MapOutput
             self._data_types = ([self.geom.data_type] if self.geom.data_type else []) + self.extractor.data_types()
-            if 'bed elevation' in self._data_types:
+            if 'bed elevation' in self._data_types:  # case is important
                 i = self._data_types.index('bed elevation')
-                self._data_types[i] = 'dynamic bed elevation'  # ensure correct case
+                self._data_types[i] = 'dynamic bed level'  # ensure correct case
+            elif 'Bathymetry' in self._data_types:
+                i = self._data_types.index('Bathymetry')
+                self._data_types[i] = 'dynamic bed level'  # ensure correct case and common name
             self._standardised_data_types = [MapOutput._get_standard_data_type_name(x) for x in self._data_types]
 
         return self._data_types
