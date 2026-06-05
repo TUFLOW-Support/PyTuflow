@@ -752,6 +752,22 @@ class TestXMDF(unittest.TestCase):
             self.assertEqual((4, 1), df.shape)
             self.assertTrue('d.v' in df.columns[0])
 
+    def test_zh_output_netcdf4_driver(self):
+        xmdf = './tests/xmdf/M10_5m_001.xmdf'
+        with pyqgis():
+            res = XMDF(xmdf, driver='qgis geometry netcdf4')
+            self.assertIn('dynamic bed level', res.data_types())
+            df = res.time_series((293126., 6177715.), 'zh')
+            self.assertEqual((4, 1), df.shape)
+
+    def test_zh_output_qgis_driver(self):
+        xmdf = './tests/xmdf/M10_5m_001.xmdf'
+        with pyqgis():
+            res = XMDF(xmdf, driver='qgis geometry data extractor')
+            self.assertIn('dynamic bed level', res.data_types())
+            df = res.time_series((293126., 6177715.), 'zh')
+            self.assertEqual((4, 1), df.shape)
+
 
 class TestNCMesh(unittest.TestCase):
 
