@@ -203,6 +203,8 @@ class XMDF(Mesh):
     def _looks_empty(fpath: PathLike, engine_name: str = '') -> bool:
         if engine_name == 'qgis':
             return False  # can't check without loading the mesh
+        elif Path(fpath).suffix.lower() == '.2dm':
+            return Path(fpath).stat().st_size == 0
         try:
             if engine_name == 'netcdf4':
                 engine = NCEngine(fpath)
@@ -210,6 +212,6 @@ class XMDF(Mesh):
                 engine = H5Engine(fpath)
             else:
                 return False  # can't check without loading the mesh
-            return bool(engine.get_name())
+            return not bool(engine.get_name())
         except Exception:
             return True
