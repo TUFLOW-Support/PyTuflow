@@ -32,6 +32,13 @@ Check out the :doc:`usage` section for further information, including how to :re
 Changelog
 ---------
 
+1.1.7
+"""""
+
+Release date: 08 June 2026
+
+- Fixed a bug that could occur if the "Bathymetry" data type (produced by the "ZH" map output data type) was not within the "Temporal" folder within the XMDF.
+
 1.1.6
 """""
 
