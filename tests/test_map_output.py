@@ -633,6 +633,20 @@ class TestXMDF(unittest.TestCase):
             df = res.time_series((293126., 6177715.), 'zh')
             self.assertEqual((4, 1), df.shape)
 
+    def test_zh_output_fixed_folder_netcdf4_driver(self):
+        xmdf = './tests/xmdf/M10_5m_003.xmdf'
+        with pyqgis():
+            res = XMDF(xmdf, driver='qgis geometry netcdf4')
+            res._load()
+            self.assertIn('dynamic bed level', res.data_types())
+
+    def test_zh_output_fixed_folder_qgis_driver(self):
+        xmdf = './tests/xmdf/M10_5m_003.xmdf'
+        with pyqgis():
+            res = XMDF(xmdf, driver='qgis geometry data extractor')
+            res._load()
+            self.assertIn('dynamic bed level', res.data_types())
+
 
 class TestNCMesh(unittest.TestCase):
 
