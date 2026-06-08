@@ -208,6 +208,21 @@ Bug Fixes
 
 - Fixed a bug in the ``MapOutput`` classes where reading in an empty GIS file would cause an unexpected Python error. When an empty GIS file is provided, an exception is still thrown, but gives a more informative message about the issue.
 
+1.1.7
+"""""
+
+Release date: 08 June 2026
+
+- Fixed a bug that could cause an error and prevent the :class:`~pytuflow.XMDF` output class from loading if the "Bathymetry" data type (produced by the "ZH" map output data type) was not within the "Temporal" folder within the XMDF.
+
+1.1.6
+"""""
+
+Release date: 05 June 2026
+
+- Fixed a bug when the "ZH" map output data type was included in the XMDF result file which caused an error when loading the :class:`~pytuflow.XMDF` output class.
+- Fixed a bug that could occur when extracting data from a 2D only :class:`~pytuflow.NCMesh` output with only QGIS drivers.
+
 1.1.5
 """""
 
