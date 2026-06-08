@@ -9,6 +9,11 @@ from . import PyDataExtractor
 from .. import H5Engine, NCEngine, TwoDMEngine
 
 
+_SPECIAL_VARIABLE_NAMES = {
+    'bathymetry': 'dynamic bed level',
+}
+
+
 class PyXMDFDataExtractor(PyDataExtractor):
     """Class for extracting data from XMDF files."""
 
@@ -48,11 +53,15 @@ class PyXMDFDataExtractor(PyDataExtractor):
         dtypes = []
         for key1 in self.engine.iterate(self.dataset_name):
             for key2 in self.engine.iterate(f'{self.dataset_name}/{key1}'):
+                if key2.lower() in _SPECIAL_VARIABLE_NAMES:
+                    key3 = _SPECIAL_VARIABLE_NAMES[key2.lower()]
+                    key3_w_folder = f'{key3}/{key1}'
+                    key2_w_folder = f'{key2}/{key1}'
+                    key4 = key3 if key1.lower() == 'temporal' else key3_w_folder
+                    self.custom_name_to_variable[key4] = key2 if key1.lower() == 'temporal' else key2_w_folder
+                    key2 = key3
+                
                 if key1.lower() == 'temporal':
-                    if key2.lower() == 'bathymetry':
-                        key3 = 'dynamic bed level'
-                        self.custom_name_to_variable[key3] = key2
-                        key2 = key3
                     dtypes.append(key2)
                 else:
                     dtypes.append(f'{key2}/{key1}')

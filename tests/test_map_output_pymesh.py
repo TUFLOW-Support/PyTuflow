@@ -252,6 +252,12 @@ class TestXMDF(unittest.TestCase):
         df = res.time_series((293126., 6177715.), 'zh')
         self.assertEqual((4, 1), df.shape)
 
+    def test_zh_output_fixed_folder(self):
+        xmdf = './tests/xmdf/M10_5m_003.xmdf'
+        res = XMDF(xmdf)
+        res._load()
+        self.assertIn('dynamic bed level', res.data_types())
+
 
 class TestDAT(unittest.TestCase):
 
