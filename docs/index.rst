@@ -37,7 +37,7 @@ Changelog
 
 Release date: 08 June 2026
 
-- Fixed a bug that could occur if the "Bathymetry" data type (produced by the "ZH" map output data type) was not within the "Temporal" folder within the XMDF.
+- Fixed a bug that could cause and error and prevent the :class:`~pytuflow.XMDF` output class from loading if the "Bathymetry" data type (produced by the "ZH" map output data type) was not within the "Temporal" folder within the XMDF.
 
 1.1.6
 """""
