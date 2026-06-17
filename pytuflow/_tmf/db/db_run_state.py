@@ -66,6 +66,11 @@ class DatabaseRunState(RunState, Database):
     @property
     def df(self):
         return self._df
+    
+    def is_plottable(self, item: str | int) -> bool:
+        """no-doc"""
+        entry = self.entries[item]
+        return entry.uses_source_file
 
     def value(self, item: str | int) -> int | float | pd.DataFrame:
         """Returns the value of the given index.

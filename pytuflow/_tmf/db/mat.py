@@ -23,6 +23,15 @@ if typing.TYPE_CHECKING:
 logger = logging.getLogger('pytuflow')
 
 
+class TMFMixin:
+
+    def _is_plottable(self, item: str | int, df: pd.DataFrame) -> bool:
+        """no-doc"""
+        if len(df.columns) < 7 or not any([x for x in df.loc[int(item), :].tolist()[3:7] if not np.isnan(x) and x != 'nan']):
+            return False
+        return True
+
+
 class MatDatabaseRunState(DatabaseRunState):
     """Class for storing the run state of a materials.csv file.
 
@@ -43,6 +52,11 @@ class MatDatabaseRunState(DatabaseRunState):
         #: MatDatabase: the BuildState object that the RunState object is based on.
         self.bs = build_state
         super().__init__(build_state, context, parent)
+
+    def is_plottable(self, item: str | int) -> bool:
+        """no-doc"""
+        entry = self.entries[item]
+        return super().is_plottable(item) or entry.is_list()
 
     def value(self, item: str | int) -> typing.Any:
         if not self.loaded:
@@ -66,7 +80,7 @@ class MatDatabaseRunState(DatabaseRunState):
         return super().value(item)
 
 
-class MatDatabaseTMFRunState(DatabaseRunState):
+class MatDatabaseTMFRunState(DatabaseRunState, TMFMixin):
     """Class for storing the run state of a materials.tmf file.
 
     This class should not be instantiated directly, but rather it should be created from an instance
@@ -86,6 +100,10 @@ class MatDatabaseTMFRunState(DatabaseRunState):
         #: MatDatabaseTMF: the BuildState object that the RunState object is based on.
         self.bs = build_state
         super().__init__(build_state, context, parent)
+
+    def is_plottable(self, item: str | int) -> bool:
+        """no-doc"""
+        return super().is_plottable(item) or self._is_plottable(item, self._df)
 
     def value(self, item: str | int) -> typing.Any:
         if not self.loaded:
@@ -137,6 +155,11 @@ class MatDatabase(DatabaseBuildState):
         # docstring inherited
         ctx = context if context else Context(run_context, config=self.config)
         return MatDatabaseRunState(self, ctx, parent)
+    
+    def is_plottable(self, item: str | int) -> bool:
+        """no-doc"""
+        entry = self.entries[item]
+        return super().is_plottable(item) or entry.is_list()
 
     def _find_header_row_end(self, fpath: Path) -> dict:
         idx = -1
@@ -165,7 +188,7 @@ class MatDatabase(DatabaseBuildState):
             self._df_wrapped = DataFrameWrapper(on_change=self.record_change, data=self._df.copy())
 
 
-class MatDatabaseTMF(MatDatabase):
+class MatDatabaseTMF(MatDatabase, TMFMixin):
     SOURCE_INDEX = -1
     COLUMN_NAMES = ["Manning's n", 'IL', 'CL', 'y1', 'n1', 'y2', 'n2', 'Land Use Hazard ID',
                     'SRF', 'Fraction Impervious']
@@ -189,6 +212,10 @@ class MatDatabaseTMF(MatDatabase):
         # docstring inherited
         ctx = context if context else Context(run_context, config=self.config)
         return MatDatabaseTMFRunState(self, ctx, parent)
+    
+    def is_plottable(self, item: str | int) -> bool:
+        """no-doc"""
+        return super().is_plottable(item) or self._is_plottable(item, self._df)
 
     def _find_header_row_end(self, fpath: Path) -> dict:
         return {'header': 'infer'}

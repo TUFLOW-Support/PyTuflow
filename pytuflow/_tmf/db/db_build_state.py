@@ -222,6 +222,11 @@ class DatabaseBuildState(BuildState, Database):
     def entry_class(self) -> type[DBEntry]:
         """no-doc"""
         return DBEntry
+    
+    def is_plottable(self, item: str | int) -> bool:
+        """no-doc"""
+        entry = self.entries[item]
+        return entry.uses_source_file
 
     def _load_from_df(self, df: pd.DataFrame):
         for index, row in df.iterrows():

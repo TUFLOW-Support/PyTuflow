@@ -1877,3 +1877,16 @@ def test_case_insensitive_path_from_cf():
     command = Command(line, config)
     inp = get_input_class(command)(None, command)
     assert inp.value.resolve() == (TuflowPath() / 'tests/tmf/test_datasets/event_file.tef').resolve()
+
+
+def test_projection_command_vector_attribute_files():
+    config = TCFConfig()
+    config.control_file = TuflowPath('tests/tmf/test_datasets/models/shp/model/EG12_004.ecf')
+    line = 'SHP Projection == csv/1d_xs_EG11_002_L.shp'
+    command = Command(line, config)
+    inp = get_input_class(command)(None, command)
+    assert isinstance(inp, GisInput)
+    assert len(inp.files) == 1
+    assert inp.files[0].exists()
+    _, attr_files = inp._process_gis_file(inp.files[0], command)
+    assert len(attr_files) == 0  # it should not try and find files within attributes on a projection command
