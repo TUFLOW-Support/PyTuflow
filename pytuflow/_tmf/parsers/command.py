@@ -379,7 +379,7 @@ class Command(TuflowLine):
     def is_read_projection(self):
         """Returns whether command is a set model projection command."""
         return self.command is not None and 'PROJECTION' in self.command and 'CHECK' not in self.command \
-            and (bool(re.findall(r'\.(shp)|(prj)|(mi)|(gpkg)', str(self.value_orig), flags=re.IGNORECASE)) or
+            and (bool(re.findall(r'\.(?:shp|prj|mi|gpkg)', str(self.value_orig), flags=re.IGNORECASE)) or
                  TuflowPath(self.value_orig).suffix == '' or self.is_mi_prj_string())
 
     def is_uk_hazard_formula(self):

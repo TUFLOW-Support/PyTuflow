@@ -5,10 +5,14 @@ from pathlib import Path
 from dataclasses import dataclass, field
 import re
 import platform
+import logging
 
 from .event import EventDatabase
 from .tfpathlib import TuflowPath
 from .gis import GisFormat
+
+
+logger = logging.getLogger('pytuflow')
 
 
 def set_prefer_gdal(value: bool):
@@ -384,13 +388,15 @@ class TCFConfig:
             elif command.is_read_projection():
                 try:
                     ctx.projection_wkt = ogr_projection(command.value_expanded_path or command.value)
-                except (ImportError, FileNotFoundError, RuntimeError):
+                except (ImportError, FileNotFoundError, RuntimeError) as e:
+                    logger.warning(f'Error extracting projection "{command}": {e}')
                     continue
             # tif projection
             elif command.is_tif_projection():
                 try:
                     ctx.tif_projection = gdal_projection(command.value_expanded_path or command.value)
-                except (ImportError, FileNotFoundError, RuntimeError):
+                except (ImportError, FileNotFoundError, RuntimeError) as e:
+                    logger.warning(f'Error extracting projection "{command}": {e}')
                     continue
             # gis format
             elif command.is_gis_format():

@@ -141,6 +141,8 @@ def get_driver_name_from_extension(driver_type: str, ext: str | Path) -> str | N
 
 def gdal_projection(raster_file: str | Path) -> str | None:
     p = TuflowPath(raster_file)
+    if not p.exists():
+        raise FileNotFoundError(f'File {p} does not exist.')
     with p.open_grid() as fo:
         return fo.crs_wkt()
 

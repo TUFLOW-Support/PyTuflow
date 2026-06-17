@@ -27,3 +27,8 @@ def test_settings_event_file():
     settings = TCFConfig(tcf)
     assert len(settings.event_db) == 2
     assert len(settings.event_db.event_variables().get('_event_', [])) == 2
+    
+
+def test_settings_missing_projection_files():
+    tcf = './tests/tmf/test_datasets/missing_projection_file.tcf'
+    settings = TCFConfig(tcf)
