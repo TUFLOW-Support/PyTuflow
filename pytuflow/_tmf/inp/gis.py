@@ -249,7 +249,7 @@ class GisInput(GisInputBase):
                 geoms = gis_lyr.geometry_types()
 
             # check if the layer might contain file path references in the attributes
-            col_indexes = tuflow_type_requires_feature_iter(file.lyrname)
+            col_indexes = tuflow_type_requires_feature_iter(file.lyrname) if not cmd.is_read_projection() else []
             if not col_indexes:
                 return geoms, attr_files
 
@@ -258,7 +258,7 @@ class GisInput(GisInputBase):
                 for i in col_indexes:
                     field_count = len(feat)
                     attrs = feat if has_gdal or has_geopandas else list(feat.values())
-                    if field_count <= i or not attrs[i]:
+                    if field_count <= i or not attrs[i] or isinstance(attrs[i], float):
                         continue
                     if '|' in str(attrs[i]):
                         op, file_ref = [x.strip() for x in attrs[i].split('|', 1)]  # operational control | file
