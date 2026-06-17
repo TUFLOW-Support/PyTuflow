@@ -16,6 +16,7 @@ from ...pytuflow._tmf.inp.get_input_class import get_input_class
 from ...pytuflow._tmf.settings import TCFConfig
 from ...pytuflow._tmf.event import EventDatabase
 from ...pytuflow._tmf.db.mat import get_material_database_class
+from ...pytuflow._tmf.db.drivers.csv import CsvDatabaseDriver
 
 
 def test_bcdbase_init_empty():
@@ -306,3 +307,10 @@ def test_database_case_insensitive():
     db = BCDatabase(p, config)
     bc = db.value('fc01')
     assert not bc.empty
+
+
+def test_csv_driver_rainfall_bc_with_comment_above_header_row():
+    p = './tests/tmf/test_datasets/rainfall_bc_with_comment_row_above_header.csv'
+    header_labels = ['Time (hours)', 'TP10']
+    df = CsvDatabaseDriver().load(p, header_kwargs={'header': header_labels}, index_col=False)
+    assert len(df.columns) == 11 and df.columns[0] == 'Time (hours)'

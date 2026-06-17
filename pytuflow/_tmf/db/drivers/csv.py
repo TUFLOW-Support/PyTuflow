@@ -67,7 +67,11 @@ class CsvDatabaseDriver(DatabaseDriver):
     def find_header_from_names(path: Path, names: str | list[str]) -> int:
         header_row = 0
         with open(path, 'r') as f:
-            for i, line in enumerate(f):
+            i = -1
+            for line in f:
+                if line.strip().startswith('!'):
+                    continue
+                i += 1
                 data = [x.strip() for x in line.split(',')]
                 found = True
                 if isinstance(names, list):
