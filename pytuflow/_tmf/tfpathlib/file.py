@@ -235,8 +235,8 @@ class TuflowPath(Path):
             with self.connect() as conn:
                 cur = conn.cursor()
                 cur.execute("SELECT table_name, data_type FROM gpkg_contents;")
-                layers = {x[0]: x[1] for x in cur.fetchall()}
-                if layers.get(self.lyrname) == 'features':
+                layers = {x[0].lower(): x[1] for x in cur.fetchall()}
+                if layers.get(self.lyrname.lower() if isinstance(self.lyrname, str) else self.lyrname) == 'features':
                     return True
         return False
 
