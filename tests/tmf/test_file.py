@@ -25,3 +25,8 @@ def test_file_is_not_binary():
         raise e
     finally:
         p.unlink()
+
+
+def test_is_vector_file_case_sensitivity():
+    p = TuflowPath('./tests/tmf/test_datasets/Lower_Case.gpkg')
+    assert p.is_vector_gis()
