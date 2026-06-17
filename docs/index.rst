@@ -39,6 +39,7 @@ Release date: XX June 2026
 
 - Fixed an uncaught exception if a TIF Projection command was present in a :class:`~pytuflow.TCF` and the file did not exist. The error is now logged, but loading will continue which matches other similar behaviour when attempting to loadi missing files.
 - Improved logging messages when GDAL Python bindings are not installed and projection extraction fails as a consequence.
+- Fixed a bug where files referenced in GIS attributes were incorrectly being added to the :attr:`~pytuflow.GisInput.files` property for projection commands.
 
 1.1.7
 """""
