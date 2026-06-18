@@ -336,10 +336,10 @@ class TuflowPath(Path):
             return False
         if self.suffix.lower() == '.gpkg':
             layers = self._gpkg_layers()
-            return bool(layers)
+            return self.lyrname.lower() in [x.lower() for x in layers]
         elif self.suffix.lower() == '.nc' and str(self).lower().startswith('netcdf:'):
             layers = self._nc_layers()
-            return bool(layers)
+            return self.lyrname.lower() in [x.lower() for x in layers]
         return True
 
     def with_suffix(self, suffix: str):
