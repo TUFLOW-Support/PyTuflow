@@ -204,6 +204,7 @@ class VirtualFVMatDatabase(MatDatabase, FVMatMixin):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.fpath = self.parent.fpath if self.parent else None
         self.item2mat_class = CaseInsDictOrdered() 
 
     @property
@@ -272,6 +273,10 @@ class VirtualFVMatDatabase(MatDatabase, FVMatMixin):
 
 
 class VirtualFVMatDatabaseRunState(MatDatabaseRunState):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fpath = self.parent.fpath if self.parent else None
     
     def is_plottable(self, item: str | int) -> bool:
         return False
