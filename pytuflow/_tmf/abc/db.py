@@ -10,9 +10,10 @@ from .t_cf import ControlBase
 from ..misc.case_insensitive_dict import CaseInsDictOrdered
 from ..misc.dataframe_wrapper import DataFrameWrapper
 from ..db.db_entry import DBEntry
+from ..abc.tf_cf_base_mixin import TuflowControlFileMixin
 
 
-class Database(ControlBase):
+class Database(ControlBase, TuflowControlFileMixin):
     """Abstract base class for database objects e.g. bc_dbase, materials, soil etc."""
 
     def __init__(self, *args, **kwargs):
@@ -33,7 +34,7 @@ class Database(ControlBase):
         return item in self.entries
 
     @property
-    def tcf(self):
+    def root_cf(self):
         #: ControlFile: The parent TCF control file object
         if not self.parent:
             return self

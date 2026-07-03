@@ -8,6 +8,10 @@ if TYPE_CHECKING:
     from .bld_state import BuildState
 
 
+class ResolveError(Exception):
+    pass
+
+
 class RunState:
     """Abstract model class containing information when the model is in 'Run State'.
 

@@ -1,15 +1,16 @@
 import logging
 import typing
 from pathlib import Path
+import pandas as pd
 
 try:
     import pandas as pd
 except ImportError:
     from ..stubs import pandas as pd
 
-from ..abc.run_state import RunState
+from ..abc.run_state import RunState, ResolveError
 from ..abc.db import Database
-from ..settings import TCFConfig
+from ..settings import TCFConfig, from_config
 from ..context import Context
 from .drivers.get_database_driver_class import get_database_driver_class
 
@@ -93,22 +94,15 @@ class DatabaseRunState(RunState, Database):
         entry = self[item]
         if entry.uses_source_file:
             source = Path(entry[self.bs.SOURCE_INDEX].value_expanded_path)
-            if self.bs.TIME_INDEX != -1:
-                header_labels = [entry[self.bs.TIME_INDEX].value, entry[self.bs.VALUE_INDEX].value]
-            else:
-                header_labels = 'infer'
+            header_labels = self._header_labels(item)
         else:
             return float(entry[self.bs.VALUE_INDEX].value)
 
         if not source.exists():
-            logger.error('Source file referenced by bcdatabase could not be found at: {}'.format(source))
+            logger.error('Source file referenced by bc_database could not be found at: {}'.format(source))
             raise FileNotFoundError(f'Could not find source file {source}')
 
-        driver = get_database_driver_class(source)
-        if driver is None:
-            logger.error('File format not implemented yet: {0}'.format(source.name))
-            raise NotImplementedError('File format not implemented yet: {0}'.format(source.name))
-        source_df = driver().load(source, header_kwargs={'header': header_labels}, index_col=False)
+        source_df = self._load_source_as_df(source, header_labels)
         if header_labels != 'infer':
             header_labels = [x for x in source_df.columns if x.lower() in [str(h).lower() for h in header_labels]]
         source_df = source_df[header_labels] if header_labels != 'infer' else source_df
@@ -122,12 +116,34 @@ class DatabaseRunState(RunState, Database):
         for index, row in self._df.iterrows():
             new_index = self.ctx.translate(index) if isinstance(index, str) else index
             new_row = [self.ctx.translate(x) for x in row]
-            self._df.loc[index] = new_row
-            config = TCFConfig.from_tcf_config(self.bs.config)
+            row_arr = pd.array([None] * len(new_row), dtype=object)
+            row_arr[:] = new_row
+            self._df.loc[index] = row_arr
+            config = from_config(self.bs.config)
             config.variables = self.ctx.translate
             entry = self.bs.entry_class()(new_index, new_row, config, self)
             self.entries[index] = entry
 
             if not self.ctx.is_resolved(str(entry.line)):
                 logger.error('Database entry has not been completely resolved - {0}'.format(entry.line))
-                raise ValueError('Database entry has not been completely resolved - {0}'.format(entry.line))
+                raise ResolveError('Database entry has not been completely resolved - {0}'.format(entry.line))
+            
+    def _header_labels(self, item: str | int) -> str | list[str]:
+        entry = self[item]
+        header_labels = []
+        if self.bs.TIME_INDEX != -1:
+            header_labels.append(entry[self.bs.TIME_INDEX].value)
+            if self.bs.VALUE_INDEX != -1:
+                header_labels.append(entry[self.bs.VALUE_INDEX].value)
+
+        if not header_labels:
+            header_labels = 'infer'
+        return header_labels
+            
+    def _load_source_as_df(self, source: Path, header_labels: str | list[str]) -> pd.DataFrame:
+        driver = get_database_driver_class(source)
+        if driver is None:
+            logger.error('File format not implemented yet: {0}'.format(source.name))
+            raise NotImplementedError('File format not implemented yet: {0}'.format(source.name))
+        source_df = driver().load(source, header_kwargs={'header': header_labels}, index_col=False)
+        return source_df

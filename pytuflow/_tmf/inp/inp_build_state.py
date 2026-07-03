@@ -47,7 +47,7 @@ class InputBuildState(BuildState, Input):
     """
     TUFLOW_TYPE = const.INPUT.INPUT
 
-    def __init__(self, parent: 'ControlFileBuildState', command: Command) -> None:
+    def __init__(self, parent: 'ControlFileBuildState', command: Command, load_control_files: bool = True) -> None:
         super().__init__()
         self.parent: 'ControlFileBuildState' = parent
         self.resolved = '<<' not in str(command.value)
@@ -62,7 +62,7 @@ class InputBuildState(BuildState, Input):
         self._file_to_scope = {}
         self._file_to_original = {}
         self._scope = self._init_scope()
-        self._load()
+        self._load(load_control_files)
 
     @property
     def lhs(self) -> str:
@@ -218,7 +218,7 @@ class InputBuildState(BuildState, Input):
         for file in self.files:
             self._file_to_scope[str(file)] = Scope.resolve_scope(self.file_scope(file), str(self._file_to_original[file]), str(file), scope_list)
 
-    def _load(self):
+    def _load(self, load_control_files: bool):
         pass
 
     def _load_files(self):

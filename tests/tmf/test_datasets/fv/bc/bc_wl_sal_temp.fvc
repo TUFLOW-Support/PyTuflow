@@ -1,0 +1,5 @@
+Include Salinity == 1,1
+Include Temperature == 1,1
+BC == WL, 2, bc_dbase\Downstream_WL_001.csv
+	BC Header == time,tidelevel_m,sal_ppt,temp_degC
+End BC

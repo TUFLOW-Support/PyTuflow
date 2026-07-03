@@ -37,7 +37,7 @@ class FileInput(InputBuildState):
             self._files.append(file)
             self._file_to_original[file] = self._command.value_expanded_path
         if not self._files:
-            file = Path(self._command.value_expanded_path) if self._command.config.control_file != Path() else Path(self._command.value)
+            file = Path(self._command.value_expanded_path) if self._command.value_expanded_path and self._command.config.control_file != Path() else Path(self._command.value)
             self._files = [file]
             self._file_to_original[file] = file
             self._has_missing_files = True

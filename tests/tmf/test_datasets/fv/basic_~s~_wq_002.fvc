@@ -1,0 +1,19 @@
+if scenario == WQ1
+    water quality control file == .\WQ_000.fvwq
+else if scenario == WQ2
+    water quality control file == .\WQ_001.fvwq
+else if scenario == HYD
+    ! nothing
+else
+    Pause == Scenario is invalid
+end if
+
+if scenario == WQ1
+    water quality model directory == simple_wqm\
+else if scenario == WQ2
+    water quality model directory == simple_wqm_2\
+else if scenario == HYD
+    ! nothing
+else
+    Pause == Scenario is invalid
+end if

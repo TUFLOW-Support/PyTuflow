@@ -4,6 +4,7 @@ from pathlib import Path
 
 from .block import DefineBlock
 from .command import Command, EventCommand
+from . import fvcommand
 
 if typing.TYPE_CHECKING:
     # noinspection PyUnusedImports
@@ -96,7 +97,7 @@ def get_commands(control_file: Path, settings: 'TCFConfig | _ParseContext') -> t
                     state.block_types[-1].pop(0)
                     state.block_names[-1].pop(0)
 
-            command.define_blocks = state.define_blocks
+            command.define_blocks = state.define_blocks.copy()
             if command.is_check_folder():
                 command.set_check_folder_prefix(settings)
 
@@ -142,3 +143,26 @@ def get_event_commands(control_file: Path, settings: 'TCFConfig | _ParseContext'
         elif command.is_bc_event_text() or command.is_bc_event_name():
             raise NotImplementedError('Pytuflow does not support "BC Event Text == " and "BC Event Name == " commands '
                                       'outside "Define Event" blocks within TEF files.')
+        
+
+def get_fv_commands(control_file: Path, settings: 'TCFConfig | _ParseContext') -> typing.Generator[fvcommand.FVCommand, None, None]:
+    fv_blocks = []
+    for command in get_commands(control_file, settings):
+        fv_command = fvcommand.get_fv_command(control_file, command)
+        fv_command.fv_blocks = fv_blocks.copy()
+        if isinstance(fv_command, fvcommand.FVCommand) and fv_command.is_fv_block():  # it can be and eventcommand which does not inherit from FVCommand
+            if not fv_command.is_acceptable_block():
+                if fv_blocks:
+                    raise ValueError(f'Start FV block on line {fv_command.line_number} not a valid sub-block of {fv_blocks[-1].command}')
+                else:
+                    raise ValueError(f'Start FV block on line {fv_command.line_number} not a valid block command in the context of {fv_command.COMMAND_CONTEXT}')
+            fv_blocks.append(fv_command)
+        elif isinstance(fv_command, fvcommand.FVCommand) and fv_command.is_end_fv_block():
+            if not fv_blocks:
+                raise ValueError(f'END FV block command found without matching start block at line {fv_command.line_number}')
+            if not fv_command.is_correct_end_fv_block():
+                raise ValueError(f'END FV block command does not match the most recent start block at line {fv_command.line_number}')
+            fv_blocks.pop()
+        yield fv_command
+    if fv_blocks:
+        raise ValueError(f'Start FV block command found without matching end block at line {fv_blocks[-1].line_number}')

@@ -24,10 +24,10 @@ class GridInput(GisInputBase):
     """
     TUFLOW_TYPE = const.INPUT.GRID
 
-    def __init__(self, parent: 'ControlFileBuildState', command: Command):
+    def __init__(self, parent: 'ControlFileBuildState', command: Command, load_control_files: bool = True):
         self.multiplier = 1.
         self.clip_layer = None
-        super().__init__(parent, command)
+        super().__init__(parent, command, load_control_files)
 
     def _load_files(self):
         for cmd in self._command.parts():

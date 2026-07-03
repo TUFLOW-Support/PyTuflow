@@ -33,10 +33,10 @@ def test_tuflow_path_gpkg():
 
 def test_tuflow_path_gpkg_layername():
     # Test that TuflowPath can be instantiated with a .gpkg file with a layername
-    path = TuflowPath('tests/tmf/test_datasets/M02_001.gpkg >> 2d_code_M01_001_')
+    path = TuflowPath('tests/tmf/test_datasets/M02_001.gpkg >> 2d_code_M01_001_R')
     assert path.exists()
     assert path.dbpath == Path('tests/tmf/test_datasets/M02_001.gpkg')
-    assert path.lyrname == '2d_code_M01_001_'
+    assert path.lyrname == '2d_code_M01_001_R'
     assert path.stem == 'M02_001'
     assert path.suffix == '.gpkg'
     assert path.name == 'M02_001.gpkg'
@@ -45,10 +45,10 @@ def test_tuflow_path_gpkg_layername():
 
 def test_tuflow_path_gpkg_layername_qgis_uri():
     # Test that TuflowPath can be instantiated with a .gpkg file with a layername using QGIS uri format
-    path = TuflowPath('tests/tmf/test_datasets/M02_001.gpkg|layername=2d_code_M01_001_')
+    path = TuflowPath('tests/tmf/test_datasets/M02_001.gpkg|layername=2d_code_M01_001_R')
     assert path.exists()
     assert path.dbpath == Path('tests/tmf/test_datasets/M02_001.gpkg')
-    assert path.lyrname == '2d_code_M01_001_'
+    assert path.lyrname == '2d_code_M01_001_R'
     assert path.stem == 'M02_001'
     assert path.suffix == '.gpkg'
     assert path.name == 'M02_001.gpkg'
@@ -93,9 +93,9 @@ def test_relative_to_gpkg():
 
 def test_relative_to_gpkg_layername():
     # Test that TuflowPath can be made relative to another path when there is a layer name
-    path = TuflowPath('tests/tmf/test_datasets/M02_001.gpkg >> 2d_code_M01_001_')
+    path = TuflowPath('tests/tmf/test_datasets/M02_001.gpkg >> 2d_code_M01_001_R')
     relative_path = path.relative_to(Path('tests/tmf'))
-    assert relative_path == TuflowPath('test_datasets/M02_001.gpkg >> 2d_code_M01_001_')
+    assert relative_path == TuflowPath('test_datasets/M02_001.gpkg >> 2d_code_M01_001_R')
 
 
 def test_glob():
@@ -140,5 +140,5 @@ def test_case_insensitive_path():
 
 
 def test_case_insensitive_path_gpkg():
-    path = TuflowPath('tests/tmf') // 'test_datasets/M02_001.gpkg >> 2d_code_M01_001_'
+    path = TuflowPath('tests/tmf') // 'test_datasets/M02_001.gpkg >> 2d_code_M01_001_R'
     assert path.exists()

@@ -1,0 +1,15 @@
+Spherical == 0													! {0} Cartesian | 1 Long/Lat
+Spatial Order == 1,1											! {1} | 2 Horizontal, {1} | 2 Vertical (Vertical ignored for 2d models)
+Units == Metric 												! {Metric} | Imperial | US Customary | English
+Bottom Drag Model == Manning 									! {Manning} | ks
+
+!______________________________________________________________________________
+! MODEL PARAMETERS
+! Turbulence
+Momentum Mixing Model == Smagorinsky							! {None} | Constant | Smagorinsky | Wu
+Global Horizontal Eddy Viscosity == 0.4							! {0.0} Coeffecient
+Global Horizontal Eddy Viscosity Limits == 0.05, 99999.			! {0.0} Minimum eddy viscosity (m^2/s), {99999.} Maximum eddy viscosity (m^2/s)
+
+!______________________________________________________________________________
+! MATERIAL PROPERTIES
+Include == Materials_Manning_001.fvc							! Include file with material specific commands

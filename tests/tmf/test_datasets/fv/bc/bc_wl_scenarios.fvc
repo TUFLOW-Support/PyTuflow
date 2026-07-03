@@ -1,0 +1,9 @@
+BC == WL, 2, bc_dbase\Downstream_WL_001.csv
+    if scenario == SCENA
+	    BC Header == time,tidelevel_m
+    else if scenario == SCENB
+        BC Header == time,tidelevel_m_b
+    else
+        BC Header == time,tidelevel_m_c
+    end if
+End BC

@@ -1,5 +1,6 @@
 import typing
 from pathlib import Path
+import io
 
 if typing.TYPE_CHECKING:
     # noinspection PyUnusedImports

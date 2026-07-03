@@ -18,6 +18,7 @@ if typing.TYPE_CHECKING:
     # noinspection PyUnusedImports
     from ..cf.cf_run_state import ControlFileRunState
 
+
 logger = logging.getLogger('pytuflow')
 
 
@@ -55,7 +56,7 @@ class BCDatabase(DatabaseBuildState):
             logger.error(f'Item {group} not found in database')
             raise KeyError(f'Item {group} not found in database')
         try:
-            db_ctx = self.context()
+            db_ctx = self.context(parent=self.parent)
         except Exception as e:
             raise ValueError('Database requires a context to resolve value.') from e
         return db_ctx.value(item)

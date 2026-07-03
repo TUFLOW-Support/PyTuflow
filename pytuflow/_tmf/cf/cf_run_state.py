@@ -71,11 +71,11 @@ class ControlFileRunState(RunState, ControlFile):
         # if context is empty, look for model events / scenario commands in file
         if self.ctx.is_empty():
             d = {}
-            model_scenarios = self.bs.tcf.find_input(lhs='model scenario')
+            model_scenarios = self.bs.root_cf.find_input(lhs='model scenario')
             for s in reversed(model_scenarios):
                 d.update({'s{0}'.format(i+1): v for i, v in enumerate(re.split(r'[\t\s|,]+', s.rhs))})
                 break
-            model_events = self.bs.tcf.find_input(lhs='model event')
+            model_events = self.bs.root_cf.find_input(lhs='model event')
             for e in reversed(model_events):
                 d.update({'e{0}'.format(i+1): v for i, v in enumerate(re.split(r'[\t\s|,]+', e.rhs))})
                 break

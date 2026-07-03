@@ -1,0 +1,3 @@
+BC == HQ, Downstream, bc_dbase\HQ.csv						! Water level rating curve
+  BC Header == H,Q												! Columns to read for water level (m), Flow (m^3/s)
+End BC

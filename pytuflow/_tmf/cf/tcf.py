@@ -6,6 +6,7 @@ from .tcf_build_state import TCFBuildState
 from ..tmf_types import PathLike
 from ..context import Context
 from .cf_run_state import ControlFileRunState
+from ..abc.tf_cf_base_mixin import TuflowControlFileMixin
 
 if typing.TYPE_CHECKING:
     from .tcf_run_state import TCFRunState
@@ -20,7 +21,7 @@ if typing.TYPE_CHECKING:
     from ..db.mat import MatDatabase
 
 
-class TCF(ControlFileLoadMixin, TCFBuildState):
+class TCF(ControlFileLoadMixin, TuflowControlFileMixin, TCFBuildState):
     """Initialises the TCF class in a build state. This is the main entry point for reading/writing a TUFLOW
     model.
 

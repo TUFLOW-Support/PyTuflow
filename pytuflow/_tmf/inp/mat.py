@@ -16,12 +16,12 @@ logger = logging.getLogger('pytuflow')
 class MatDatabaseInput(DatabaseInput):
     TUFLOW_TYPE = const.INPUT.DB_MAT
 
-    def __init__(self, parent: 'ControlFileBuildState', command: Command):
+    def __init__(self, parent: 'ControlFileBuildState', command: Command, load_control_files: bool = True):
         self.multiplier = 1.0
         self._rhs = []
-        super().__init__(parent, command)
+        super().__init__(parent, command, load_control_files)
 
-    def _load(self):
+    def _load(self, load_control_files: bool):
         for cmd in self._command.parts():
             if cmd.is_value_a_file():
                 self._rhs.append(Path(cmd.value_expanded_path))
@@ -42,5 +42,6 @@ class MatDatabaseInput(DatabaseInput):
                 raise ValueError(f'Unexpected command part: {cmd} in {self._command}')
 
         self._rhs_files = self._files.copy()
-        self._load_database_files()
+        if load_control_files:
+            self._load_database_files()
         self._file_scopes()

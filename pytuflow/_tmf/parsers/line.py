@@ -2,6 +2,7 @@ import os
 import typing
 from pathlib import Path
 
+from ..settings import from_config
 from .expand_tuflow_value import TuflowValueExpander
 from ..tfpathlib import TuflowPath
 from ..tfstrings.patterns import globify
@@ -15,7 +16,7 @@ class TuflowLine:
     def __init__(self, line: str, config: 'TCFConfig | _ParseContext', parent: Path = None, *args, **kwargs):
         from ..settings import TCFConfig
         self.original_text = line
-        self.config = TCFConfig.from_tcf_config(config)  # make a copy to preserve a snapshot of the config at this point
+        self.config = from_config(config)  # make a copy to preserve a snapshot of the config at this point
         self.parent = parent if parent else config.control_file
         self.part_count = 1
         self.part_index = -1

@@ -1,0 +1,105 @@
+! ORGANICS SIMULATION CLASS
+!_________________________________________________________________
+! SIMULATION CONTROLS
+Simulation Class == organics
+WQ dt == 1800.0
+WQ Units == mgl
+!_________________________________________________________________
+! CONSTITUENT MODEL SETTINGS
+! Oxygen
+Oxygen Model == O2
+	Oxygen Min Max == 0.0, 16.0
+	Oxygen Benthic == 0.5, 1.08
+End Oxygen Model
+
+! Silicate
+Silicate Model == si
+	Silicate Min Max == 0.0, 100.0
+	Silicate Benthic == 4.2, 1.01
+	Oxygen == on
+End Silicate Model
+
+! Inorganic Nitrogen
+Inorganic Nitrogen Model == ammoniumnitrate
+	Ammonium Min Max == 0.0, 50.0
+	Nitrate Min Max == 0.0, 50.0
+	Ammonium Benthic == 4.05, 1.06
+	Nitrate Benthic == 4.25, 1.10
+	Nitrification == 0.05, 4.15, 1.01
+	Denitrification == michaelis menten, 0.05, 4.01, 1.03
+	Oxygen == on
+	Atmospheric Deposition == 5.0, 0.0, 0.5
+	Anaerobic Oxidation Of Ammonium == 0.005, 2.5, 2.5
+	Diss Nitrate Reduction To Ammonium == 0.005, 5.0
+End Inorganic Nitrogen Model
+
+! Inorganic Phosphorus
+Inorganic Phosphorus Model == frphsads
+	FRP Min Max == 0.0, 5.0
+	FRP Ads Min Max == 0.0, 5.0
+	FRP Benthic == 4.3, 1.095
+	Oxygen == on
+	Atmospheric Deposition == 0.5, 0.0
+	Adsorption == linear, 0.005
+	Settling == 0.000
+End Inorganic Phosphorus Model
+
+! Phytoplankton
+Phyto Model == basic, green
+	Min Max == 0.05, 50.0
+	Temperature Limitation == none
+	Salinity Limitation == none
+	Light Limitation == basic, 0.0, 20.0
+	Nitrogen Limitation == 0.01, 2.5
+	Phosphorus Limitation == 0.005, 0.01
+	Uptake == 3.0, 0.6, 8.0
+	Primary Productivity == 2.4, 1.2
+	Respiration == 0.01, 1.0, 0.3, 0.4, 0.5
+	Carbon Chla Ratio == 27.8
+	Nitrogen Fixing == 0.001, 0.5
+	Settling == constant, -0.05
+End Phyto Model
+
+! Organics
+Organic Matter Model == refractory
+	Carbon Min Max == 0.0, 10.0, 0.0, 10.0
+	Nitrogen Min Max == 0.0, 10.0, 0.0, 10.0
+	Phosphorus Min Max == 0.0, 9.0, 0.0, 9.0
+	Organics Benthic == 1.0, 1.08
+	Hydrolysis == 0.05, 0.007, 0.0004, 1.0, 1.05
+	Mineralisation == 0.01, 1.2, 1.03, 0.5, 0.5
+	Self Shading == 0.0, 0.0
+	Settling == stokes, 0.00000035, 2450.8
+	Ref Carbon Min Max == 0.0, 10.0, 0.0, 10.0
+	Ref Nitrogen Min Max == 0.0, 10.0, 0.0, 10.0
+	Ref Phosphorus Min Max == 0.0, 9.0, 0.0, 9.0
+	Ref Breakdown == 0.001, 0.1, 0.01
+	Ref Activation == 0.01
+	Ref Photolysis == 0.5
+	Ref Self Shading == 0.0, 0.0
+	Ref Settling == stokes, 0.00000045, 2450.8
+End Organic Matter Model
+!_________________________________________________________________
+! MATERIAL SPECIFICATIONS
+Material == default
+	Oxygen Flux ==  -10.0
+	Silicate Flux == 10.0
+	Ammonium Flux == 20.0
+	Nitrate Flux == 30.0
+	FRP Flux == 5.0
+	DOC Flux == 20.0
+	DON Flux == 10.0
+	DOP Flux == 5.0
+End Material
+
+Material == 1
+  Oxygen Flux == -550.0
+End Material
+
+Material == 2 ! Mudflats
+  Oxygen Flux == 0.0
+End Material
+
+Material == 4 ! Deep channel
+  Oxygen Flux == -3500.0
+End Material

@@ -49,7 +49,7 @@ class Command(TuflowLine):
             self.value = self.expand(self.value_orig)
             if self.is_value_a_folder() or self.is_value_a_file():
                 self.value_expanded_path = self.expand_paths()
-            self.part_count = self.value.count('|') + 1
+            self.part_count = self.get_part_count()
 
         # estry auto stuff
         if self.is_control_file() and str(self.value).upper() == 'AUTO' or self.command == 'ESTRY CONTROL FILE AUTO':
@@ -78,12 +78,24 @@ class Command(TuflowLine):
         if value:
             self._define_blocks = value
 
+    @staticmethod
+    def from_command(command: 'Command', cls: type, *args, **kwargs) -> 'Command':
+        cmd = cls(command.original_text, command.config, command.parent, command.part_index, command.line_number)
+        cmd.define_blocks = command.define_blocks
+        if command.part_index != -1:
+            cmd.part_count = command.part_count
+        cmd.reload_value()
+        return cmd
+    
+    def get_part_count(self) -> int:
+        return self.value.count('|') + 1 if self.value else 0
+
     def reload_value(self):
         if self.value_orig:
             self.value = self.expand(self.value_orig)
             if self.is_value_a_folder() or self.is_value_a_file():
                 self.value_expanded_path = self.expand_paths()
-            self.part_count = self.value.count('|') + 1
+            self.part_count = self.get_part_count()
 
     def is_number(self, text: str, total_parts: int, index: int) -> bool:
         if not self.is_valid() or not self.value_orig:
@@ -135,7 +147,7 @@ class Command(TuflowLine):
 
         # if it has a suffix that isn't just a number, then it should also be considered a file
         p = TuflowPath(str(self.value))
-        if not p.suffix:
+        if not p.suffix or p.suffix == '.':
             return False
         try:
             float(p.suffix)
@@ -187,6 +199,7 @@ class Command(TuflowLine):
             string = f'{self.command_orig} == {part.strip()}'
             cmd = Command(string, self.config, self.parent, i)
             cmd.part_count = self.part_count
+            cmd.define_blocks = self.define_blocks
             yield cmd
 
     def gis_format(self, settings, value=None) -> GisFormat:
@@ -234,6 +247,13 @@ class Command(TuflowLine):
     def is_spatial_database_command(self):
         """Returns True/False if command is setting the spatial database."""
         return self.command == 'SPATIAL DATABASE'
+    
+    def is_time_format_command(self):
+        """Returns True/False if command is setting the time format."""
+        return self.command in ['TIME FORMAT']
+    
+    def is_time_command(self):
+        return self.is_valid() and self.command in ['START TIME', 'END TIME', 'REFERENCE TIME']
 
     def re_add_comments(self, new_command, rel_gap = False):
         """Re-add any comments after the command - try and maintain their position as best as possible."""

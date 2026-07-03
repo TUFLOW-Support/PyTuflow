@@ -34,10 +34,11 @@ class DatabaseInput(FileInput):
     def dirty(self, value: bool):
         BuildState.dirty.fset(self, value)
 
-    def _load(self):
-        super()._load()
+    def _load(self, load_control_files: bool):
+        super()._load(load_control_files)
         self._load_files()
-        self._load_database_files()
+        if load_control_files:
+            self._load_database_files()
         self._file_scopes()
 
     def _load_files(self):

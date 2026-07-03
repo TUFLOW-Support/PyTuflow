@@ -1,0 +1,6 @@
+BC == FORCEM, bc_dbase\FORCEM_010.csv											! Example timeseries of tugboat propeller thrust 500kW producing a velocity of 5m/s (F = P/v = 500000/5 = 100,000 N) (this examples simplies the components by assuming the force is always directed northerly, this will not be the case for real conditions where the thrust direction will vary with ship movement)
+   BC Header == Time, X, Y, Force_X, Force_Y										! Columns to read from Time, X coordinate (decimal degrees), Y coordinate (decimal degrees), ! Time, Force x-component (N), Force x-component (N)				
+   Temporal Extrapolation Check == Warning											! {ERROR} | WARNING - If the timeseries does not extend to the full simulation period, extrapolate the data
+   Vertical Coordinate Type == Sigma												! Sigma coordinates to define the vertical location of applied force
+   Vertical Distribution File == ..\bc_dbase\MovingBC_Distribution_004.csv			! Sigma (0 bed -1 water surface), Weight (0 no weighting - 1 full weighting) - 	Assign force to the top 10% of the water depth (closest to the surface)
+End BC

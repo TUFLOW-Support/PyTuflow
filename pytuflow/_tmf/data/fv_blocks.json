@@ -1,0 +1,39 @@
+{
+    "block": {
+        "hydrodynamics": {
+            "material": {},
+            "bc": {},
+            "grid definition": {"end command": "end grid"},
+            "grid definition file": {"end command": "end grid"},
+            "structure": {},
+            "tracer": {},
+            "output": {}
+        },
+        "sediment": {
+            "fraction": {},
+            "material": {"subblocks": ["sediment layer", "fraction"]}
+        },
+        "particle tracking": {
+            "group": {"subblocks": ["mobility model"]},
+            "material": {"subblocks": ["particle layer", "group"]},
+            "seed particles": {"end command": "end seed"},
+            "output": {}
+        },
+        "water quality": {
+            "material": {},
+            "phyto model": {},
+            "inorganic phosphorus model": {},
+            "oxygen model": {},
+            "silicate model": {},
+            "inorganic nitrogen model": {},
+            "organic matter model": {}
+        }
+    },
+    "subblock": {
+        "fraction": {},
+        "mobility model": {},
+        "sediment layer": {"command": "layer", "subblocks": ["fraction"]},
+        "particle layer": {"command": "layer", "subblocks": ["group"]},
+        "group": {"subblocks": []}
+    }
+}

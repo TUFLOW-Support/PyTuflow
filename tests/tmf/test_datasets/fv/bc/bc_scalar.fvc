@@ -1,0 +1,33 @@
+Include Salinity == 1,0
+
+BC == WL_CURT, Eastern_Boundary, GoC_Tide_20100301_20100501_AEST.nc							! Time and spatially varying water level boundary
+  BC Header == local_time, nsEastern_Boundary_chainage, dummy, nsEastern_Boundary_wl		! Time, Chainage (m), Depth (m), Water level (mRL)
+  BC Update dt == 60.																		! (s) Update the boundary condition every minute of simulation time
+  BC Time Units == days																		! Days | {Hours} | Minutes | Seconds | ISOTIME Time units - days since reference time
+  BC Reference Time == 01/01/1990 00:00														! The values in the variable local_time are relative to the reference time. In this case days since the reference time as specified by the BC Time Units command
+  BC Default == NaN																			! Default value for missing data
+  Includes MSLP == 0 																		! 0 Does not include MSLP water level correction | {1} Does include MSLP water level correction - If 0 use meterological boundary MSLP (if available, otherwise do nothing) to adjust the water level for the inverse barometer effect
+End BC
+
+! This will assign salinity concentration at the eastern boundary
+BC == SCALAR, Eastern_Boundary, bc_dbase/tidal_inflow_east_001.csv
+  BC Header == local_time, salinity
+  BC Update dt == 60.																		! (s) Update the boundary condition every minute of simulation time
+  BC Default == NaN																			! Default value for missing data
+End BC
+
+BC == WL_CURT, Western_Boundary, GoC_Tide_20100301_20100501_AEST.nc							! Time and spatially varying water level boundary
+  BC Header == local_time, nsWestern_Boundary_chainage, dummy, nsWestern_Boundary_wl		! Time, Chainage (m), Depth (m), Water level (mRL)
+  BC Update dt == 60.																		! (s) Update the boundary condition every minute of simulation time
+  BC Time Units == days																		! Days | {Hours} | Minutes | Seconds | ISOTIME Time units - days since reference time
+  BC Reference Time == 01/01/1990 00:00														! The values in the variable local_time are relative to the reference time. In this case days since the reference time as specified by the BC Time Units command
+  BC Default == NaN																			! Default value for missing data
+  Includes MSLP == 0 																		! 0 Does not include MSLP water level correction | {1} Does include MSLP water level correction - If 0 use meterological boundary MSLP (if available, otherwise do nothing) to adjust the water level for the inverse barometer effect
+End BC
+
+! This will assign salinity concentration at the western boundary
+BC == SCALAR, Western_Boundary, bc_dbase/tidal_inflow_west_001.csv
+  BC Header == local_time, salinity
+  BC Update dt == 60.																		! (s) Update the boundary condition every minute of simulation time
+  BC Default == NaN																			! Default value for missing data
+End BC

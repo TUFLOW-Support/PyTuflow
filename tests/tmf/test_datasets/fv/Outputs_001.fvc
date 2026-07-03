@@ -1,0 +1,30 @@
+! Output Data Type Definition
+
+!______________________________________________________________________________
+! Flow cross section locations - In addition to boundary and structure nodestrings
+Read GIS Nodestring == ..\model\gis\2d_ns_Flux_Monitoring_001_L.shp
+
+!______________________________________________________________________________
+! Output Format and Parameters
+Output == netcdf												! TUFLOW FV NetCDF map output format
+  Output Parameters == h,v,d,zb									! Water level, velocity, depth, bed elevation
+  Output Interval == 300.										! Ouptut interval (s) 5 minutes
+End Output
+
+Output == flux													! Timeseries of net flow across each nodestring
+	Output Interval == 300.										! Ouptut interval (s) 5 minutes
+End Output
+
+Output == structflux											! Timeseries of net flow through structures (culverts, weirs, bridges)
+	Output Interval == 300.										! Ouptut interval (s) 5 minutes
+End Output
+
+Output == mass													! Timeseries of total mass in model
+	Output Interval == 300.										! Ouptut interval (s) 5 minutes
+End Output
+
+Output == points                                 	      		! Time series output at points
+  Read GIS PO == ..\model\gis\3d_po_Monitoring_001_P.shp		! Location of points
+  Output Parameters == h, v, d    								! Water level, velocity, depth
+  Output Interval == 300. 										! Ouptut interval (s) 5 minutes
+End Output

@@ -20,7 +20,7 @@ from ..abc.cf import ControlFile
 from ..abc.bld_state import BuildState
 from ..tfstrings.increment_number import increment_fpath, get_iter_number
 from ..tfstrings.geom_suffix import get_geom_suffix
-from ..settings import TCFConfig
+from ..settings import from_config, TCFConfig
 from ..parsers.command import Command
 from ..parsers.non_recursive_basic_parser import get_commands
 from ..scope_writer import ScopeWriter
@@ -77,7 +77,7 @@ class ControlFileBuildState(BuildState, ControlFile):
                  **kwargs) -> None:
         super(BuildState, self).__init__()
         #: TCFConfig: The configuration settings for the model.
-        self.config = TCFConfig.from_tcf_config(config) if config is not None else TCFConfig()
+        self.config = from_config(config) if config is not None else TCFConfig()
         if path is not None:
             self.config.control_file = Path(path)
         #: Inputs: The list of inputs and comments in the control file
@@ -127,7 +127,6 @@ class ControlFileBuildState(BuildState, ControlFile):
             self.config.tcf = value
             for inp in self.inputs:
                 inp.config.control_file = value
-                inp.tcf = self.config.tcf
                 for cf in inp.cf:
                     cf.config.tcf = self.config.tcf
                     if inp.TUFLOW_TYPE == const.INPUT.CF:
@@ -186,10 +185,10 @@ class ControlFileBuildState(BuildState, ControlFile):
             for inp, ind in inputs.iter_indexes():
                 inp.dirty = True
                 self.dirty = True
-                self.tcf.dirty = True
-                self.tcf.altered_inputs.add(inp, ind[0], ind[1], uuid, change_type)
+                self.root_cf.dirty = True
+                self.root_cf.altered_inputs.add(inp, ind[0], ind[1], uuid, change_type)
         elif isinstance(inputs, DatabaseBuildState):
-            self.tcf.altered_inputs.add(inputs, -1, -1, uuid, 'database')
+            self.root_cf.altered_inputs.add(inputs, -1, -1, uuid, 'database')
 
     def undo(self, include_children: bool = True) -> list[AlteredInput]:
         """Undo the last recorded change. Recorded changes are automatically stored when inputs are changed, added,
@@ -247,9 +246,9 @@ class ControlFileBuildState(BuildState, ControlFile):
         Hardware == GPU
         SGS == On
         """
-        if self.tcf != self and include_children:
+        if self.root_cf != self and include_children:
             include_children = False
-        return self.tcf.altered_inputs.undo(self, include_children)
+        return self.root_cf.altered_inputs.undo(self, include_children)
 
     def reset(self, include_children: bool = True) -> list[AlteredInput]:
         """Resets all recorded changes made to the control file since the last call to :meth:`write`.
@@ -313,9 +312,9 @@ class ControlFileBuildState(BuildState, ControlFile):
         SGS == On
 
         """
-        if self.tcf != self and include_children:
+        if self.root_cf != self and include_children:
             include_children = False
-        return self.tcf.altered_inputs.reset(self, include_children)
+        return self.root_cf.altered_inputs.reset(self, include_children)
 
     def remove_input(self, inp: InputBuildState) -> InputBuildState | None:
         """Removes the input from the control file.
@@ -360,8 +359,8 @@ class ControlFileBuildState(BuildState, ControlFile):
             inputs.append(inp)
             self.inputs.remove(inp)
             self.record_change(inputs, 'remove_input')
-            if self.tcf and self.tcf != self:
-                self.tcf.record_change(inputs, 'remove_input')
+            if self.root_cf and self.root_cf != self:
+                self.root_cf.record_change(inputs, 'remove_input')
             return inp
         else:
             for inp1 in self.inputs:
@@ -532,8 +531,8 @@ class ControlFileBuildState(BuildState, ControlFile):
         inputs = Inputs()
         inputs.append(new_inp)
         self.record_change(inputs, 'comment_out')
-        if self.tcf and self.tcf != self:
-            self.tcf.record_change(inputs, 'comment_out')
+        if self.root_cf and self.root_cf != self:
+            self.root_cf.record_change(inputs, 'comment_out')
         return new_inp
 
     def uncomment(self, inp: CommentInput) -> InputBuildState:
@@ -582,8 +581,8 @@ class ControlFileBuildState(BuildState, ControlFile):
         inputs = Inputs()
         inputs.append(new_inp)
         self.record_change(inputs, 'uncomment')
-        if self.tcf and self.tcf != self:
-            self.tcf.record_change(inputs, 'uncomment')
+        if self.root_cf and self.root_cf != self:
+            self.root_cf.record_change(inputs, 'uncomment')
         return new_inp
 
     def write(self, inc: str | None = 'auto') -> 'ControlFileBuildState':
@@ -749,13 +748,21 @@ class ControlFileBuildState(BuildState, ControlFile):
         logger.info('Loading control file at: {}'.format(p))
 
         if not self.config:
-            self.config = TCFConfig(p)
+            self.config = self._generate_initial_config(p)
 
-        for command in get_commands(p, self.config):
+        parser = self._parser(p, self.config)
+        # parser needs to be accessed in a loop like this to maintain the state of the parser for FV blocks
+        while True:
+            try:
+                command = next(parser)
+            except StopIteration:
+                break
             self._append_input(command, self._active_trd, self._active_trd_inp)
 
-    @staticmethod
-    def _get_trd_inputs(cf: 'ControlFileBuildState') -> tuple[Inputs, dict[Path, dict[str, Inputs | T_Input]]]:
+    def _parser(self, path: Path, config: TCFConfig) -> typing.Iterator[Command]:
+        return get_commands(path, config)
+
+    def _get_trd_inputs(self, cf: 'ControlFileBuildState') -> tuple[Inputs, dict[Path, dict[str, Inputs | T_Input]]]:
         """Get the inputs that are in TRD files from the control file.
         This method returns a list of input from the control file without inputs that are in TRD files and with the
         "Read File == " input inserted. It also returns a dictionary with the TRD file paths keys and the
@@ -769,7 +776,19 @@ class ControlFileBuildState(BuildState, ControlFile):
                     d[inp.trd] = {}
                     d[inp.trd]['inputs'] = Inputs()
                     rel_path = os.path.relpath(inp.trd, cf.fpath.parent)
-                    trd_inp = TuflowReadFileInput(cf, Command(f'Read File == {rel_path}', inp.config, line_number=inp.line_number))
+
+                    # build TRD text complete with original inline comments
+                    trd_command_text = f'{cf._trd_command_lhs()} == {rel_path}'
+                    if inp.trd_input and inp.trd_input.command().comment_index:
+                        cidx = inp.trd_input.command().comment_index
+                        comment = inp.trd_input.command().comment
+                        if len(trd_command_text) > cidx + 1:
+                            trd_command_text = f'{trd_command_text}  {comment}'
+                        else:
+                            whitespace = cidx - len(trd_command_text)
+                            trd_command_text = f'{trd_command_text}{" " * whitespace}{comment}'
+                        
+                    trd_inp = TuflowReadFileInput(cf, self._command_class()(trd_command_text, inp.config, line_number=inp.line_number))
                     d[inp.trd]['inpref'] = trd_inp
                     ret_inputs.append(trd_inp)
                 d[inp.trd]['inputs'].append(inp)
@@ -777,6 +796,22 @@ class ControlFileBuildState(BuildState, ControlFile):
                 ret_inputs.append(inp)
 
         return ret_inputs, d
+    
+    @staticmethod
+    def _trd_command_lhs() -> str:
+        return 'Read File'
+    
+    @staticmethod
+    def _generate_initial_config(path: Path) -> TCFConfig:
+        return TCFConfig(path)
+    
+    @staticmethod
+    def _command_class() -> type[Command]:
+        return Command
+    
+    @staticmethod
+    def _parent_tuflow_type() -> str:
+        return const.CONTROLFILE.TCF
 
     @staticmethod
     def _write(fo: TextIO, inputs: Inputs):
@@ -845,7 +880,7 @@ class ControlFileBuildState(BuildState, ControlFile):
             The input that was added to the control file.
         """
         # check if input is in another control file if the current control file is a TCF
-        if inp and inp not in self.inputs.inputs(include_hidden=True) and self.TUFLOW_TYPE == const.CONTROLFILE.TCF:
+        if inp and inp not in self.inputs.inputs(include_hidden=True) and self.TUFLOW_TYPE == self._parent_tuflow_type():
             for inp1 in self.inputs:
                 if inp1.TUFLOW_TYPE == const.INPUT.CF and inp1.cf:
                     for cf in inp.cf:
@@ -873,14 +908,14 @@ class ControlFileBuildState(BuildState, ControlFile):
             try:
                 config = self.inputs.next_before(inp).config
             except ValueError:  # no input before the specified input
-                config = TCFConfig.from_tcf_config(self.config)
-                if self.TUFLOW_TYPE == const.CONTROLFILE.TCF:
+                config = from_config(self.config)
+                if self.TUFLOW_TYPE == self._parent_tuflow_type():
                     config.spatial_database = Path()
                 else:
                     config.spatial_database = self.config.spatial_database_tcf
 
         # create the command
-        cmd = Command(input_text, config) if isinstance(input_text, str) else input_text.command()
+        cmd = self._command_class()(input_text, config) if isinstance(input_text, str) else input_text.command()
         cmd.config = config
         trd = None
         uuid = None
@@ -898,7 +933,7 @@ class ControlFileBuildState(BuildState, ControlFile):
             i = -1
             for i in range(gap):
                 idx = index + i
-                blank_inp = self._insert_input(idx, Command('\n', cmd.config), trd=None, after=after, hidden_index=True)
+                blank_inp = self._insert_input(idx, self._command_class()('\n', cmd.config), trd=None, after=after, hidden_index=True)
                 inputs.append(blank_inp)
             index += i + 1
 
@@ -917,20 +952,19 @@ class ControlFileBuildState(BuildState, ControlFile):
 
         if not after:  # insert blank lines after adding the new input if the new input is before the specified input
             for i in range(gap):
-                blank_inp = self._insert_input(index + i + 1, Command('\n', cmd.config), trd, after, hidden_index=True)
+                blank_inp = self._insert_input(index + i + 1, self._command_class()('\n', cmd.config), trd, after, hidden_index=True)
                 inputs.append(blank_inp)
 
         self.record_change(inputs, 'add_input')
-        if self.tcf and self.tcf != self:
-            self.tcf.record_change(inputs, 'add_input')
+        if self.root_cf and self.root_cf != self:
+            self.root_cf.record_change(inputs, 'add_input')
 
         if cmd.is_set_variable() and Scope('Scenario') not in inp_out.scope and Scope('Event') not in inp_out.scope:
-            self.tcf.add_variable(*cmd.parse_variable())
+            self.root_cf.add_variable(*cmd.parse_variable())
 
         return inp_out
 
-    @staticmethod
-    def _comment_out(inp: InputBuildState) -> CommentInput:
+    def _comment_out(self, inp: InputBuildState) -> CommentInput:
         config = inp.command().config
         text = inp.command().original_text
         trd = inp.trd
@@ -945,7 +979,7 @@ class ControlFileBuildState(BuildState, ControlFile):
         else:
             new_text = text[:i] + '! ' + text[i:]
 
-        new_cmd = Command(new_text, config)
+        new_cmd = self._command_class()(new_text, config)
         new_inp = CommentInput(inp.parent, new_cmd)
         new_inp.trd = trd
         inp.parent.inputs.amend(inp, new_inp)
@@ -977,7 +1011,7 @@ class ControlFileBuildState(BuildState, ControlFile):
             else:
                 new_text = text.replace('#', '', 1)
 
-        new_cmd = Command(new_text, config)
+        new_cmd = self._command_class()(new_text, config)
         new_inp = get_input_class(new_cmd)(self, new_cmd)
         new_inp.trd = trd
         self.inputs.amend(inp, new_inp)

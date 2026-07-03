@@ -25,6 +25,12 @@ class Inputs(list[T_Input], typing.Generic[T_Input]):
 
     def __deepcopy__(self, memo):
         return self
+    
+    def copy(self):
+        copy = Inputs(self._inputs)
+        copy._indexes = self._indexes.copy()
+        copy._iter_idx = self._iter_idx
+        return copy
 
     def next(self):
         if self._iter_idx >= len(self._inputs):

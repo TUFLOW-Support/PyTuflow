@@ -29,6 +29,11 @@ This page gives an overview of the public modules, classes, and functions within
    TESF
    TSCF
    ADCF
+   FVC
+   FVWQ
+   FVSed
+   FVPTM
+   BlockControl
 
 .. rubric:: Database Classes
 
@@ -60,6 +65,8 @@ This page gives an overview of the public modules, classes, and functions within
    ControlFileInput
    DatabaseInput
    CommentInput
+   BlockControlInput
+   BCBlockControlInput
 
 .. rubric:: Run State Classes
 
@@ -78,6 +85,8 @@ This page gives an overview of the public modules, classes, and functions within
    CrossSectionRunState
    InputRunState
    GisInputRunState
+   BlockControlRunState
+   BCBlockControlRunState
 
 .. rubric:: Output Classes
 

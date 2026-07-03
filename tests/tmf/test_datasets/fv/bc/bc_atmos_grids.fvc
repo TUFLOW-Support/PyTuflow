@@ -1,0 +1,77 @@
+! MET Forcing
+
+!Specifies a netCDF location and filename that defines grid coordinates
+grid definition file == ./NPD_NCEP_CFSR_dlwr_May2011.nc
+  grid definition variables == lon, lat
+  grid definition label == ncep
+end grid
+
+!Downward shortwave radiation (W m^-2) 
+bc == SW_RAD_GRID, ncep, ./NPD_NCEP_CFSR_dswr_May2011.nc
+  bc header == time,dswr
+  bc update dt == 900.
+  bc time units == hours
+  bc reference time == 01/01/1990 00:00
+end bc
+
+!Downward longwave radiation (W m^-2) 
+bc == LW_RAD_GRID, ncep, ./NPD_NCEP_CFSR_dlwr_May2011.nc
+  bc header == time,dlwr
+  bc update dt == 900.
+  bc time units == hours
+  bc reference time == 01/01/1990 00:00
+end bc
+
+!Wind velocity at 10m (m s^-1)  
+bc == W10_grid, ncep, ./NPD_NCEP_CFSR_wind_May2011.nc
+  bc header == time,u,v
+  bc update dt == 900.
+  bc time units == hours
+  bc reference time == 01/01/1990 00:00
+end bc
+
+! Temperature input (deg C) 
+bc == AIR_TEMP_GRID, ncep, ./NPD_NCEP_CFSR_temp_May2011.nc
+  bc header == time,temp
+  bc update dt == 900.
+  bc time units == hours
+  bc reference time == 01/01/1990 00:00
+end bc
+
+! Precipitation grid (m/day) 
+bc == PRECIP_GRID, ncep, ./NPD_NCEP_CFSR_rain_May2011.nc
+  bc header == time,rain
+  bc update dt == 900.
+  bc time units == hours
+  bc scale == 0.024
+  bc reference time == 01/01/1990 00:00
+end bc
+
+!
+grid definition file == ./NPD_NCEP_CFSR_relhum_May2011.nc
+  grid definition variables == lon,lat
+  grid definition label == rhumgrid
+end grid
+
+! Relative humidity (%) 
+bc == REL_HUM_GRID, rhumgrid, ./NPD_NCEP_CFSR_relhum_May2011.nc
+  bc header == time,rhum
+  bc update dt == 900.
+  bc time units == hours
+  bc reference time == 01/01/1990 00:00
+end bc
+
+!
+grid definition file == ./NPD_NCEP_CFSR_mslp_May2011.nc
+  grid definition variables == lon,lat
+  grid definition label == mslpgrid
+end grid
+
+!Mean sea level pressure field (hPA) 
+bc == MSLP_GRID, mslpgrid, ./NPD_NCEP_CFSR_mslp_May2011.nc
+  bc header == time,mslp
+  bc update dt == 900.
+  bc time units == hours
+!  bc scale == 0.01
+  bc reference time == 01/01/1990 00:00
+end bc

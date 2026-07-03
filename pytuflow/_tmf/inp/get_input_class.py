@@ -1,6 +1,7 @@
-from . import setting, cf, file, folder, gis, grid, tin, comment, db, inp_build_state, mat, trd
+from . import setting, cf, file, folder, gis, grid, tin, comment, db, inp_build_state, mat, trd, block, time_inp
 
 from ..parsers.command import Command
+from ..parsers.fvcommand import FVCommand
 
 
 def get_input_class(cmd: Command) -> type[inp_build_state.InputBuildState]:
@@ -18,6 +19,14 @@ def get_input_class(cmd: Command) -> type[inp_build_state.InputBuildState]:
         return trd.TuflowReadFileInput
     elif cmd.is_control_file() and not (cmd.is_quadtree_control_file() and cmd.is_quadtree_single_level()):
         return cf.ControlFileInput
+    elif cmd.is_time_command():
+        return time_inp.TimeInput
+    elif isinstance(cmd, FVCommand) and cmd.is_fv_bc_block():
+        return block.BCBlockControlInput
+    elif isinstance(cmd, FVCommand) and cmd.is_fv_grid_definition_file_block():
+        return block.GridDefinitionFileBlockInput
+    elif isinstance(cmd, FVCommand) and cmd.is_fv_block():
+        return block.BlockControlInput
     elif cmd.is_value_a_file():
         return file.FileInput
     elif cmd.is_folder(cmd.value, cmd.part_count, cmd.part_index):

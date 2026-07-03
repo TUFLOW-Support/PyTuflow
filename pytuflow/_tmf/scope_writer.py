@@ -74,9 +74,9 @@ class ScopeWriter:
                                      'ELSE or ELSE IF, but found a negative scope')
                 if self._else_():
                     fo.write(f'{self.indent(1)}Else\n')
-                else:
+                elif self.active_scope.to_string_start():
                     fo.write(f'{self.indent(1)}Else {self.active_scope.to_string_start()}\n')
-            else:
+            elif self.active_scope.to_string_start():
                 fo.write(f'{self.indent(1)}{self.active_scope.to_string_start()}\n')
 
         i = -1

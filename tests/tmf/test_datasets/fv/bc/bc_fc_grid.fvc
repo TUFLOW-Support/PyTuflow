@@ -1,0 +1,24 @@
+!______________________________________________________________________________________________________________________
+! SIMULATION CONFIGURATION
+Bottom Drag Model == ks 															! {Manning} | ks
+Include Salinity == 1,1																! {0} Salinity off | 1 Salinity on, {0} Hydrodynamic density coupling off | 1 Hydrodynamic density coupling on
+Include Temperature == 1,1															! {0} Temperature off | 1 Temperature on, {0} Hydrodynamic density coupling off | 1 Hydrodynamic density coupling on
+Spatial Order == 1,2																! {1} | 2 Horizontal, {1} | 2 Vertical
+Include Heat == 1																	! {0} Atmospheric heat exchange off | 1 Atmospheric heat exchange on
+Spherical == 1																		! {0} Cartesian | 1 Long/Lat
+NTracer == 1
+
+! Grid Location Definition
+Grid Definition File == example_diffuser.nc ! NetCDF file containing coordinates used to define the grid map
+  Grid Definition Variables == longitude, latitude, z ! X, Y and Z coordinate variable names in the NetCDF
+  Grid Definition Label == diffuser_grid ! Grid name
+  Vertical Coordinate Type == elevation ! {Elevation} | Depth | Sigma | Height
+End Grid
+
+! Model Mass Flux From Outfall/Diffuser
+BC == FC_GRID, diffuser_grid, example_diffuser.nc ! boundary_type, location_ID, data_filepath
+  BC Header == time, weight, SFLX ! {TIME}, {WEIGHT}, {FLUX_SAL} (kg/s) - NetCDF variable names
+  BC Time Units == hours ! {ISODATE | HOURS} | DAYS | MINUTES | SECONDS - Hours since the BC Reference Time (01/01/1990 00:00:00 or 0.0)
+  BC Update dt == 900. ! {0.0} Boundary update interval (s)
+  Vertical Coordinate Type == elevation ! {Elevation} | Depth | Sigma | Height
+End BC

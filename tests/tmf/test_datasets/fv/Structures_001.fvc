@@ -1,0 +1,46 @@
+! Structure Spatial and Tabular Definition
+! Base Case Hydraulic Structure Configuration
+
+!______________________________________________________________________________
+! STRUCTURE LOCATIONS
+Read GIS Nodestring == ..\model\gis\2d_ns_Culverts_001_L.shp			! Culvert 1D/2D connections
+Read GIS Nodestring == ..\model\gis\2d_ns_Weirs_001_L.shp				! Road centrelines
+
+!______________________________________________________________________________
+! STRUCTURE DEFINITION
+
+!-------------------------------------------------------------------------------
+! Main Channel - Southern Road Crossing 
+Structure == Linked Nodestrings, FC01.1_R_US, FC01.1_R_DS				! Structure type, upstream nodestring, downstream nodestring
+  Flux Function == Culvert												! Culvert flux function
+  Culvert File == ..\model\csv\Culvert_dbase.csv, 3						! 3 x 1.8m x 1.8m box culverts
+End Structure
+
+Structure == Nodestring, FC01.1_W										! Structure type, nodestring name
+	Flux Function == Weir_dz											! Weir_dz flux function
+	Properties == 0.1, 1.705											! Weir height above face elevation (m), weir coefficient
+End Structure
+
+!-------------------------------------------------------------------------------
+! Eastern Road Crossing
+Structure == Linked Nodestrings, FC04.1_C_US, FC04.1_C_DS				! Structure type, upstream nodestring, downstream nodestring
+  Flux Function == Culvert												! Culvert flux function
+  Culvert File == ..\model\csv\Culvert_dbase.csv, 2						! 3 x 1.2m diameter pipe culverts
+End Structure
+
+Structure == Nodestring, FC04.1_W										! Structure type, nodestring name
+	Flux Function == Weir_dz											! Weir_dz flux function
+	Properties == 0.1, 1.705											! Weir height above face elevation (m), weir coefficient
+End Structure
+
+!-------------------------------------------------------------------------------
+! Main Channel - Northern Road Crossing 
+Structure == Linked Nodestrings, FC01.2_R_US, FC01.2_R_DS				! Structure type, upstream nodestring, downstream nodestring
+  Flux Function == Culvert												! Culvert flux function		
+  Culvert File == ..\model\csv\Culvert_dbase.csv, 1						! 5 x 2.4m x 1.2m box culverts
+End Structure
+
+Structure == Nodestring, FC01.2_W										! Structure type, nodestring name
+	Flux Function == Weir_dz											! Weir_dz flux function
+	Properties == 0.1, 1.705											! Weir height above face elevation (m), weir coefficient
+End Structure

@@ -2,7 +2,7 @@ import logging
 import typing
 from pathlib import Path
 
-from ..abc.run_state import RunState
+from ..abc.run_state import RunState, ResolveError
 from ..abc.input import Input
 from ..tmf_types import PathLike
 from ..parsers.command import Command
@@ -98,9 +98,9 @@ class InputRunState(RunState, Input):
         """
         from .get_input_class import get_input_class
         cmd_txt = f'{self.bs.lhs} == {self.ctx.translate(self.bs.rhs)}' if self.bs.rhs else self.bs.lhs
-        self._command = Command(cmd_txt, self.config)
+        self._command = self.bs.command().__class__(cmd_txt, self.config)
         self._command.config.variables = self.ctx.translate
-        self._rs = get_input_class(self._command)(self.bs.parent, self._command)  # Input representing the RunState
+        self._rs = get_input_class(self._command)(self.bs.parent, self._command, load_control_files=False)  # Input representing the RunState
         # check all variable names in file have been resolved
         if [x for x in self.files if not self.ctx.is_resolved(x)]:
-            raise ValueError('Input has not been completely resolved - {0}'.format(self.rhs))
+            raise ResolveError('Input has not been completely resolved - {0}'.format(self.rhs))

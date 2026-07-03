@@ -229,9 +229,9 @@ class AlteredInputs:
             self.set_clean(cf)
             for cf_ in cfs:
                 self.set_clean(cf_)
-            if cf.tcf and cf != cf.tcf:
-                if not self.is_dirty(cf.tcf):
-                    self.set_clean(cf.tcf)
+            if cf.root_cf and cf != cf.root_cf:
+                if not self.is_dirty(cf.root_cf):
+                    self.set_clean(cf.root_cf)
 
         return inputs
 
@@ -267,6 +267,6 @@ class AlteredInputs:
                 for inp in ac.parent.inputs:
                     inp.dirty = False
             ac.parent.dirty = False
-            ac.parent.tcf.dirty = False
+            ac.parent.root_cf.dirty = False
         self._updated_inputs.append([])
         # self._updated_inputs.clear()

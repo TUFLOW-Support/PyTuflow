@@ -1,9 +1,10 @@
 from .cf_build_state import ControlFileBuildState
 from .cf_load_factory import ControlFileLoadMixin
+from ..abc.tf_cf_base_mixin import TuflowControlFileMixin
 from .. import const
 
 
-class TOC(ControlFileLoadMixin, ControlFileBuildState):
+class TOC(ControlFileLoadMixin, TuflowControlFileMixin, ControlFileBuildState):
     """Initialises the TOC class in a build state.
 
     If the class is initialised with the :code:`fpath` parameter set to ``None``, an empty class will be initialised.

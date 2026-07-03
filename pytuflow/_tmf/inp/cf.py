@@ -43,9 +43,10 @@ class ControlFileInput(FileInput):
     def dirty(self, value: bool):
         BuildState.dirty.fset(self, value)
 
-    def _load(self):
-        super()._load()
-        self._load_control_files()
+    def _load(self, load_control_files: bool):
+        super()._load(load_control_files)
+        if load_control_files:
+            self._load_control_files()
 
     def _load_files(self):
         super()._load_files()

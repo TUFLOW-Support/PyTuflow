@@ -1,0 +1,3 @@
+BC == QC, FC04, ../models/shp/bc_dbase/EG00_001.csv							! Cell inflow
+	BC Header == Time_hr,FC04									! Columns to read data from for Time (hrs), Flow (m^3/s)
+End BC

@@ -1,4 +1,3 @@
-import copy
 import dataclasses
 import typing
 from pathlib import Path
@@ -10,6 +9,13 @@ import logging
 from .event import EventDatabase
 from .tfpathlib import TuflowPath
 from .gis import GisFormat
+
+if typing.TYPE_CHECKING:
+    from .parsers.command import Command, EventCommand
+
+
+logger = logging.getLogger('pytuflow')
+
 
 
 logger = logging.getLogger('pytuflow')
@@ -48,7 +54,7 @@ class _ParseContext:
     ``_ParseContext`` exposes the same attribute interface that
     ``Command``/``TuflowLine``/``TuflowValueExpander`` read from a settings
     object, so it can be passed as *config* to :func:`get_commands` and to
-    :meth:`TCFConfig.from_tcf_config` without any special-casing.
+    :func:`from_config` without any special-casing.
 
     ``variables`` is intentionally passed by reference when seeding the
     context so that variable definitions accumulate and are immediately visible
@@ -72,6 +78,7 @@ class _ParseContext:
     model_name: str = ''
     gis_format: GisFormat = GisFormat.MIF
     grid_format: GisFormat = GisFormat.TIF
+    time_format: str = 'HOURS'
     check_file_prefix_1d: str = ''
     check_file_prefix_2d: str = ''
 
@@ -91,6 +98,11 @@ class _ParseContext:
 
 
 @dataclass
+class _FVParseContext(_ParseContext):
+    wq_model_directories: list = field(default_factory=list)
+
+
+@dataclass
 class TCFConfig:
     """Config class for parsing TUFLOW model files. Collects various settings from the TCF file in an initial
     pass of the TCF that can be passed into the TUFLOW model file parser e.g., variables, GIS projection, etc.
@@ -99,6 +111,8 @@ class TCFConfig:
     position in the TCF. An example of this is the spatial database which can be changed in the TCF which will
     affect the parsing of later control files.
     """
+    ISODATE_FORMAT: typing.ClassVar[str] = ''  # will use standard library datetime parsing, so no fixed format string
+
     tcf: str | Path | None = TuflowPath()
     control_file: Path = TuflowPath()
     spatial_database: Path = field(default_factory=TuflowPath, repr=False)
@@ -117,6 +131,7 @@ class TCFConfig:
     model_name: str = ''
     gis_format: GisFormat = GisFormat.MIF
     grid_format: GisFormat = GisFormat.TIF
+    time_format: str = field(default='HOURS', repr=False)   
     check_file_prefix_1d: str = field(default='', repr=False)
     check_file_prefix_2d: str = field(default='', repr=False)
     init_from_tcf: bool = field(default=True, repr=False)
@@ -130,40 +145,7 @@ class TCFConfig:
             self.read_tcf()
 
     def __bool__(self):
-        return self.tcf != Path()
-
-    @staticmethod
-    def from_tcf_config(config: 'TCFConfig | _ParseContext') -> 'TCFConfig':
-        """Create a new TCFConfig snapshot from an existing TCFConfig or _ParseContext.
-
-        ``variables`` is passed by reference so that variable definitions
-        accumulated during pass 1 remain visible to later commands in the same
-        pass (see :class:`TuflowValueExpander`).
-
-        All other mutable collections are shallow-copied so that subsequent
-        mutations to the source do not affect the snapshot.
-        """
-        return TCFConfig(
-            tcf=config.tcf,
-            control_file=config.control_file,
-            spatial_database=config.spatial_database,
-            spatial_database_tcf=config.spatial_database_tcf,
-            projection_wkt=config.projection_wkt,
-            tif_projection=config.tif_projection,
-            root_folder=config.root_folder,
-            output_folder=config.output_folder,
-            output_zones=list(config.output_zones),
-            wildcards=list(config.wildcards),
-            variables=config.variables,  # intentionally shared — live dict for variable expansion
-            scenarios=list(config.scenarios),
-            event_db=config.event_db.copy(),
-            model_name=config.model_name,
-            gis_format=config.gis_format,
-            grid_format=config.grid_format,
-            check_file_prefix_1d=config.check_file_prefix_1d,
-            check_file_prefix_2d=config.check_file_prefix_2d,
-            init_from_tcf=False
-        )
+        return self.tcf != Path()    
 
     @staticmethod
     def get_model_name(tcf):
@@ -190,7 +172,7 @@ class TCFConfig:
         any ``_TUFLOW_Override``) have finished, so the published
         ``TCFConfig`` is never seen in a partially-initialised state.
         """
-        ctx = _ParseContext(
+        ctx =self._parse_context_class()(
             tcf=self.tcf,
             control_file=self.tcf,
             # Seed with any values already set on self (e.g. by callers who
@@ -205,6 +187,14 @@ class TCFConfig:
     # ------------------------------------------------------------------
     # Private helpers
     # ------------------------------------------------------------------
+
+    def _parse_context_class(self):
+        return _ParseContext
+    
+    def _parser(self):
+        """Return the appropriate parser function for this config class."""
+        from .parsers.non_recursive_basic_parser import get_commands
+        return get_commands
 
     def _run_tcf_passes(self, ctx: _ParseContext) -> _ParseContext:
         """Run all three parsing passes on *ctx* and return the final context.
@@ -238,22 +228,7 @@ class TCFConfig:
             # Seed the override context from the fully accumulated base state.
             # variables and event_db are shared by reference so that override
             # additions merge additively with what the base TCF accumulated.
-            override_ctx = _ParseContext(
-                tcf=tcf_override,
-                control_file=tcf_override,
-                variables=ctx.variables,           # shared — additive merging
-                event_db=ctx.event_db,             # shared — additive merging
-                wildcards=list(ctx.wildcards),
-                output_zones=list(ctx.output_zones),
-                scenarios=list(ctx.scenarios),
-                projection_wkt=ctx.projection_wkt,
-                tif_projection=ctx.tif_projection,
-                gis_format=ctx.gis_format,
-                grid_format=ctx.grid_format,
-                check_file_prefix_1d=ctx.check_file_prefix_1d,
-                check_file_prefix_2d=ctx.check_file_prefix_2d,
-                model_name=ctx.model_name,
-            )
+            override_ctx = _copy_parse_context(ctx)
             ctx = self._run_tcf_passes(override_ctx)
 
         return ctx
@@ -265,24 +240,10 @@ class TCFConfig:
         stores into a single C-level dict update, reducing the window during
         which another thread could observe a partially-initialised instance.
         """
-        self.__dict__.update({
-            'control_file': ctx.tcf,
-            'variables': ctx.variables,
-            'event_db': ctx.event_db,
-            'spatial_database': ctx.spatial_database,
-            'spatial_database_tcf': ctx.spatial_database_tcf,
-            'projection_wkt': ctx.projection_wkt,
-            'tif_projection': ctx.tif_projection,
-            'root_folder': ctx.root_folder,
-            'output_folder': ctx.output_folder,
-            'gis_format': ctx.gis_format,
-            'grid_format': ctx.grid_format,
-            'wildcards': ctx.wildcards,
-            'output_zones': ctx.output_zones,
-            'scenarios': ctx.scenarios,
-            'check_file_prefix_1d': ctx.check_file_prefix_1d,
-            'check_file_prefix_2d': ctx.check_file_prefix_2d,
-        })
+        kwargs = {
+            field: (getattr(ctx, field) if field in ['variables', 'event_db'] else (getattr(ctx, field).copy() if isinstance(getattr(ctx, field), (list, dict)) else getattr(ctx, field))) for field in _TCF_CONFIG_FIELDS
+        }
+        self.__dict__.update(kwargs)
 
     # ------------------------------------------------------------------
     # Parsing passes  (accept an explicit ctx so they do not mutate self)
@@ -368,6 +329,9 @@ class TCFConfig:
         if tcf_override.exists():
             return tcf_override
         return None
+    
+    def _process_command(self, control_file: Path, command: 'Command', event_command: 'EventCommand', ctx: _ParseContext) -> bool:
+        return False  # for overriding in subclasses without copy-pasting the entire method
 
     def read_file_for_config(self, control_file: Path, ctx: _ParseContext):
         """Scan *control_file* for projection, format, zone, and wildcard
@@ -379,8 +343,13 @@ class TCFConfig:
         gis_format = {'GPKG': GisFormat.GPKG, 'SHP': GisFormat.SHP, 'ASC': GisFormat.ASC,
                       'TIF': GisFormat.TIF, 'FLT': GisFormat.FLT, 'NC': GisFormat.NC,
                       'MIF': GisFormat.MIF}
-        for command in get_commands(control_file, ctx):
+        for command in self._parser()(control_file, ctx):
             event_command = EventCommand(command.original_text, ctx)
+
+            # for overriding in subclasses without copy-pasting the entire method
+            if self._process_command(control_file, command, event_command, ctx):
+                continue
+
             # spatial database
             if command.is_spatial_database_command():
                 ctx.set_spatial_database(command.value)
@@ -404,6 +373,12 @@ class TCFConfig:
             # grid format
             elif command.is_grid_format():
                 ctx.grid_format = gis_format.get(command.value.upper(), GisFormat.Unknown)
+            # time format
+            elif command.is_time_format_command():
+                if command.value.upper() in ['HOURS', 'ISODATE']:
+                    ctx.time_format = command.value.upper()
+                else:
+                    logger.warning(f'Unrecognised time format "{command.value}" in {ctx.control_file} - ignoring')
             # event source
             elif event_command.is_event_source():
                 event_wildcard, _ = event_command.get_event_source()
@@ -415,3 +390,73 @@ class TCFConfig:
             # read file / event file
             elif command.is_read_file() or command.is_event_file():
                 self.read_file_for_config(ctx.control_file.parent / command.value, ctx)
+
+@dataclass
+class FVCConfig(TCFConfig):
+    """Config class for parsing FVC files. Inherits from TCFConfig as FVC files can have similar settings to TCF files."""
+    ISODATE_FORMAT: typing.ClassVar[str] = '%d/%m/%Y %H:%M:%S'
+    wq_model_directories: list = field(default_factory=list, repr=False)
+
+    def _parse_context_class(self):
+        return _FVParseContext
+    
+    def _parser(self):
+        """Return the appropriate parser function for this config class."""
+        from .parsers.non_recursive_basic_parser import get_fv_commands
+        return get_fv_commands
+    
+    def _apply_context(self, ctx: _ParseContext):
+        kwargs = {
+            field: (getattr(ctx, field) if field == 'variables' else (getattr(ctx, field).copy() if isinstance(getattr(ctx, field), (list, dict)) else getattr(ctx, field))) for field in _FVC_CONFIG_FIELDS
+        }
+        self.__dict__.update(kwargs)
+
+    def _process_command(self, control_file: Path, command: 'Command', event_command: 'EventCommand', ctx: _ParseContext) -> bool:
+        from .parsers.fvcommand import FVCommand
+        if super()._process_command(control_file, command, event_command, ctx):
+            return True
+        if isinstance(command, FVCommand) and command.is_wq_model_directory() and isinstance(ctx, _FVParseContext):
+            ctx.wq_model_directories.append(command)
+            return True
+        return False
+    
+
+_tcf_config_dummy = TCFConfig()  # for accessing TCFConfig.__dataclass_fields__ without an instance
+_TCF_CONFIG_FIELDS = set(x for x in TCFConfig.__dataclass_fields__.keys() if not x.startswith('__') and not re.findall(r'[A-Z]', x[0]) and not callable(getattr(_tcf_config_dummy, x)) and x not in ['init_from_tcf'])
+
+_fvc_config_dummy = FVCConfig()  # for accessing FVCConfig.__dataclass_fields__ without an instance
+_FVC_CONFIG_FIELDS = set(x for x in FVCConfig.__dataclass_fields__.keys() if not x.startswith('__') and not re.findall(r'[A-Z]', x[0]) and not callable(getattr(_fvc_config_dummy, x)) and x not in ['init_from_tcf'])
+
+
+def from_config(config: 'TCFConfig | _ParseContext') -> 'TCFConfig':
+    """Create a new config snapshot (TCFConfig or FVCConfig) from an existing instance or _ParseContext.
+
+    ``variables`` is passed by reference so that variable definitions
+    accumulated during pass 1 remain visible to later commands in the same
+    pass (see :class:`TuflowValueExpander`).
+
+    All other mutable collections are shallow-copied so that subsequent
+    mutations to the source do not affect the snapshot.
+    """
+    if isinstance(config, TCFConfig):
+        cls = config.__class__
+        config_fields = _FVC_CONFIG_FIELDS if cls is FVCConfig else _TCF_CONFIG_FIELDS
+    else:
+        cls = FVCConfig if isinstance(config, _FVParseContext) else TCFConfig
+        config_fields = _FVC_CONFIG_FIELDS if cls is FVCConfig else _TCF_CONFIG_FIELDS
+
+    # return a new instance of the appropriate class, using the CONFIG_FIELDS to determine which fields to copy from the source config
+    # "variables" is intentionally passed by reference so that variable definitions accumulate. Otherwise mutable objects are copied.
+    kwargs = {
+        field: (getattr(config, field) if field == 'variables' else (getattr(config, field).copy() if isinstance(getattr(config, field), (list, dict)) else getattr(config, field))) for field in config_fields
+    }
+    kwargs['init_from_tcf'] = False  # ensure the new config does not attempt to re-read the TCF
+    return cls(**kwargs)
+
+
+def _copy_parse_context(ctx: _ParseContext) -> _ParseContext:
+    cls = _FVParseContext if isinstance(ctx, _FVParseContext) else _ParseContext
+    config_fields = _FVC_CONFIG_FIELDS if cls is _FVParseContext else _TCF_CONFIG_FIELDS
+    return cls(
+        **{field: (getattr(ctx, field) if field == 'variables' else (getattr(ctx, field).copy() if isinstance(getattr(ctx, field), (list, dict)) else getattr(ctx, field))) for field in config_fields}
+    )

@@ -38,13 +38,13 @@ class GisInputBase(FileInput):
     """
     TUFLOW_TYPE = const.UNKNOWN_TYPE
 
-    def __init__(self, parent: 'ControlFileBuildState', command: Command) -> None:
+    def __init__(self, parent: 'ControlFileBuildState', command: Command, load_control_files: bool = True) -> None:
         # docstring inherited
         self._prev_val = None
         self._rhs = []
         self._attr_idx = 0
         self._attr_idx_found = False
-        super().__init__(parent, command)
+        super().__init__(parent, command, load_control_files)
 
     @property
     def value(self) -> TuflowPath | float | int | list[TuflowPath | float | int]:
@@ -125,14 +125,14 @@ class GisInput(GisInputBase):
     """
     TUFLOW_TYPE = const.INPUT.GIS
 
-    def __init__(self, parent: 'ControlFileBuildState', command: Command):
+    def __init__(self, parent: 'ControlFileBuildState', command: Command, load_control_files: bool = True):
         self._attr_idx = 0
         self._attr_idx_found = False
         self._geoms = []
         self._cf = []
         self._cf_loaded = False
         self.mod_conveyance_grid = None
-        super().__init__(parent, command)
+        super().__init__(parent, command, load_control_files)
 
     @property
     def geoms(self) -> list[int]:

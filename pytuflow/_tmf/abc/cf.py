@@ -28,10 +28,10 @@ class ControlFile(ControlBase):
         self.config = TCFConfig()
         #: Inputs: The list of inputs and comments in the control file
         self.inputs = Inputs()
-
+        
     @property
-    def tcf(self):
-        """ControlFile: The parent TCF control file object"""
+    def root_cf(self):
+        """Allows overriding by FVC to be the fvc rather than the tcf."""
         if not self.parent:
             return self
         else:
@@ -183,7 +183,7 @@ class ControlFile(ControlBase):
         for inp in inputs:
             if inp.is_match(filter_by, lhs, rhs, regex, regex_flags, attrs, callback, comments):
                 ret_inputs.append(inp)
-            if recursive and inp.TUFLOW_TYPE == const.INPUT.CF and inp.cf:
+            if recursive and inp.TUFLOW_TYPE in [const.INPUT.CF, const.INPUT.BLOCK, const.INPUT.BC_BLOCK, const.INPUT.GRID_DEFINITION_FILE_INPUT] and inp.cf:
                 for cf in inp.cf:
                     ret_inputs.extend(cf.find_input(filter_by, lhs, rhs, recursive, regex, regex_flags, attrs,
                                                     callback, comments))

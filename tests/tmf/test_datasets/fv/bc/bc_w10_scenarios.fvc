@@ -1,0 +1,12 @@
+BC == W10, bc_dbase\global_wind.csv
+    If Scenario == SCENA
+        BC Header == time, WIND_X_A, WIND_Y_A
+        BC Update dt == 7200.
+    Else if scenario == SCENB
+        BC Header == time, WIND_X, WIND_Y
+        BC Update dt == 7200.
+    Else
+        BC Header == time, WIND_X_C, WIND_Y_C
+        BC Update dt == 7200.
+    End if
+End BC

@@ -1,0 +1,3 @@
+bc == QCM, bc_dbase\moving_point_inflow.csv
+  bc header == Time,X,Y,Main_Inflow
+end bc

@@ -1,0 +1,7 @@
+material == 0 														!Default material definition
+	suspended Load Scale == 1.0 									!Calibration Factor for suspended load
+	Layer == 1 														!Begin Layer Definition
+		Dry density == 1890. 										!Dry Density of Sediment Fractions [kg/m3]
+		initial mass == 1000. 										!Initial mass of sediment fractions [kg/m2]
+	end layer 														!End layer definition
+end material 

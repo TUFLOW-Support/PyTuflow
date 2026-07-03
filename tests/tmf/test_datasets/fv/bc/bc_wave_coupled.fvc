@@ -1,0 +1,2 @@
+BC == WAVE_COUPLED, ..\..\SWAN\input\MB_002.swn ! boundary_type, swc_filepath
+End BC

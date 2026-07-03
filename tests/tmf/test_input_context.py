@@ -11,6 +11,7 @@ from ...pytuflow._tmf.inp.get_input_class import get_input_class
 from ...pytuflow._tmf.settings import TCFConfig
 from ...pytuflow._tmf.parsers.command import Command
 from ...pytuflow._tmf.tfpathlib import TuflowPath
+from ...pytuflow._tmf.abc.run_state import ResolveError
 
 
 def test_input_ctx_init():
@@ -331,7 +332,7 @@ def test_input_ctx_not_resolved_error():
     line = 'Read TIN Zpts == <<~s1~>>_<<~s2~>>.12da'
     command = Command(line, config)
     input = get_input_class(command)(None, command)
-    with pytest.raises(ValueError):
+    with pytest.raises(ResolveError):
         input.context('-s1 DEM')
 
 

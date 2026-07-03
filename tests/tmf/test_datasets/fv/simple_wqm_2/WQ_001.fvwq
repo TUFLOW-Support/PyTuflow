@@ -1,0 +1,30 @@
+! DISSOLVED OXYGEN SIMULATION CLASS
+!_________________________________________________________________
+! SIMULATION CONTROLS
+Simulation Class == do
+WQ dt == 1800.0
+WQ Units == mgl
+!_________________________________________________________________
+! CONSTITUENT MODEL SETTINGS
+! Oxygen
+Oxygen Model == O2
+	Oxygen Min Max == 0.0, 16.0
+	Oxygen Benthic == 0.5, 1.08
+End Oxygen Model
+!_________________________________________________________________
+! MATERIAL SPECIFICATIONS
+Material == default
+	Oxygen Flux == -10.0
+End Material
+
+Material == 1
+	Oxygen Flux == -550.0
+End Material
+
+Material == 2 ! Mudflats
+	Oxygen Flux == 0.0
+End Material
+
+Material == 4 ! Deep channel
+	Oxygen Flux == -3500.0
+End Material

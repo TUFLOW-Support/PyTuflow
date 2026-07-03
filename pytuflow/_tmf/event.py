@@ -37,6 +37,7 @@ class EventDatabase(CaseInsDict):
         new_db = EventDatabase()
         for key, value in self.items():
             new_db[key] = value.copy() if isinstance(value, dict) else value
+        new_db.inputs = self.inputs.copy()
         return new_db
 
     def event_variables(self) -> AppendDict:

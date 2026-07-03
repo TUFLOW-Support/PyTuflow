@@ -9,6 +9,7 @@ from ..abc.tcf_base import TCFBase
 from ..tmf_types import PathLike
 from ..tuflow_binaries import tuflow_binaries
 from ..context import Context
+from ..abc.tf_cf_base_mixin import TuflowControlFileMixin
 
 
 
@@ -24,7 +25,7 @@ if typing.TYPE_CHECKING:
     from ..db.db_run_state import DatabaseRunState
 
 
-class TCFRunState(ControlFileRunState, TCFBase):
+class TCFRunState(ControlFileRunState, TuflowControlFileMixin, TCFBase):
     """Class for storing the run state of a TCF file.
 
     This class should not be instantiated directly, but rather it should be created from an instance

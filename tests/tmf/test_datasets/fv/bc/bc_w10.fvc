@@ -1,0 +1,4 @@
+BC == W10, bc_dbase\global_wind.csv
+  BC Header == time, WIND_X, WIND_Y
+  BC Update dt == 7200.
+End BC

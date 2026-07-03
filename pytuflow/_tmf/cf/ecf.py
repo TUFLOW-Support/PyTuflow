@@ -5,13 +5,14 @@ from .cf_build_state import ControlFileBuildState
 from .cf_run_state import ControlFileRunState
 from .cf_load_factory import ControlFileLoadMixin
 from ..context import Context
+from ..abc.tf_cf_base_mixin import TuflowControlFileMixin
 from .. import const
 
 if typing.TYPE_CHECKING:
     from ..db.pit_inlet import PitInletDatabase, PitInletDatabaseRunState
 
 
-class ECFRunState(ControlFileRunState):
+class ECFRunState(ControlFileRunState, TuflowControlFileMixin):
 
     def pit_dbase(self) -> 'PitInletDatabaseRunState':
         """Returns the model's PitInletDatabaseRunState instance.
@@ -34,7 +35,7 @@ class ECFRunState(ControlFileRunState):
         return self._find_control_file('pit inlet database|depth discharge database', None, regex=True, regex_flags=re.IGNORECASE)
 
 
-class ECF(ControlFileLoadMixin, ControlFileBuildState):
+class ECF(ControlFileLoadMixin, TuflowControlFileMixin, ControlFileBuildState):
     """Initialises the ECF class in a build state.
 
     If the class is initialised with the :code:`fpath` parameter set to ``None``, an empty class will be initialised.

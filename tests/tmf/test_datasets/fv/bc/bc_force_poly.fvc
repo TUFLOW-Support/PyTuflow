@@ -1,0 +1,5 @@
+BC == FORCE_POLY, Inflow_Region_001, bc_dbase\FORCE_008.csv						! Force boundary - distrubute force over cells in the polygon
+   BC Header == Time, Force_X, Force_Y												! Time, Force x-component (N) -  (100 m^3 * 1000 kg/m^3 * 10 m/s^2) * cos(45)), Force y-component (N)  -  (100 m^3 * 1000 kg/m^3 * 10 m/s^2)^0.5 * sin(45))
+   Vertical Coordinate Type == Sigma												! Sigma coordinates to define the vertical location of applied force
+   Vertical Distribution File == ..\bc_dbase\FORCE_Distribution_008.csv				! Sigma (0 bed -1 water surface), Weight (0 no weighting - 1 full weighting) - 	Assign force to the bottom 15% of the water depth (closest to the bed)
+End BC

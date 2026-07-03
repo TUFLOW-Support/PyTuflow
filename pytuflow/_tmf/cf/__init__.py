@@ -15,6 +15,12 @@ TOC = "TuflowOperatingControl"
 TRD = "TuflowReadFile"
 TRFC = "TuflowRainfallControl"
 TSCF = "TuflowSWMMControl"
+FVC = "TUFLOWFVControlFile"
+FVWQ = "TUFLOWFVWaterQualityControlFile"
+FVSED = "TUFLOWFVSedimentControlFile"
+FVPTM = "TUFLOWFVParticleTrackingControlFile"
+BLOCK = "BlockControl"
+BC_BLOCK = "BCBlockControl"
 # Default
 CONTROLFILE = "ControlFile"
 
@@ -31,6 +37,12 @@ SHORT_TYPES = {
     "TuflowReadFile": "TRD",
     "TuflowRainfallControl": "TRFC",
     "TuflowSWMMControl": "TSCF",
+    "TUFLOWFVControlFile": "FVC",
+    "TUFLOWFVWaterQualityControlFile": "FVWQ",
+    "TUFLOWFVSedimentControlFile": "FVSED",
+    "TUFLOWFVParticleTrackingControlFile": "FVPTM",
+    "BlockControl": "BLOCK",
+    "BCBlockControl": "BC_BLOCK",
     # Default
     "ControlFile": "",
 }

@@ -17,7 +17,7 @@ class MatDBEntry(DBEntry):
     def __init__(self, index: typing.Hashable, values: list[str | int | float], config: TCFConfig, parent: 'Database'):
         super().__init__(index, values, config, parent)
         source_part = [x for x in self.line.parts()][self.SOURCE_INDEX]
-        self.uses_source_file = source_part and not source_part.is_number(source_part.value, source_part.part_index, source_part.part_count)
+        self.uses_source_file = bool(source_part) and not source_part.is_number(source_part.value, source_part.part_index, source_part.part_count)
 
     def is_list(self) -> bool:
         source_part = [x for x in self.line.parts()][self.SOURCE_INDEX]

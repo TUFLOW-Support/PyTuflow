@@ -1,8 +1,9 @@
 from .cf_run_state import ControlFileRunState
 from ..abc.tef_base import TEFBase
+from ..abc.tf_cf_base_mixin import TuflowControlFileMixin
 
 
-class TEFRunState(ControlFileRunState, TEFBase):
+class TEFRunState(ControlFileRunState, TuflowControlFileMixin, TEFBase):
     """Class for storing the run state of the TEF file.
 
     This class should not be instantiated directly, but rather it should be created from an instance

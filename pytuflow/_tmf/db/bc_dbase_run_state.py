@@ -87,9 +87,9 @@ class BCDatabaseRunState(DatabaseRunState):
                     value_factor = 1.0
             except (ValueError, TypeError):
                 value_factor = 1.0
-            if is_df:
+            if is_df and val_col in df.columns:
                 df.loc[:, val_col] *= value_factor
-            else:
+            elif not is_df:
                 df *= value_factor
         if len(entry) > self.bs.VALUE_ADD_INDEX and self.bs.VALUE_ADD_INDEX > -1:
             value_add = entry[self.bs.VALUE_ADD_INDEX].value
@@ -99,9 +99,9 @@ class BCDatabaseRunState(DatabaseRunState):
                     value_add = 0.0
             except (ValueError, TypeError):
                 value_add = 0.0
-            if is_df:
+            if is_df and val_col in df.columns:
                 df.loc[:, val_col] += value_add
-            else:
+            elif not is_df:
                 df += value_add
 
         if isinstance(df, pd.DataFrame):

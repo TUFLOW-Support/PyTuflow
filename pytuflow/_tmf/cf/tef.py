@@ -3,10 +3,11 @@ from .tef_run_state import TEFRunState
 from .cf_load_factory import ControlFileLoadMixin
 from ..context import Context
 from .cf_run_state import ControlFileRunState
+from ..abc.tf_cf_base_mixin import TuflowControlFileMixin
 from .. import const
 
 
-class TEF(ControlFileLoadMixin, TEFBuildState):
+class TEF(ControlFileLoadMixin, TuflowControlFileMixin, TEFBuildState):
     """Initialises the TEF class in a build state.
 
     If the class is initialised with the :code:`fpath` parameter set to ``None``, an empty class will be initialised.

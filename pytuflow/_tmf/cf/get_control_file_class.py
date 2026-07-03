@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from . import tcf, tgc, ecf, tbc, qcf, tef, tesf, toc, trd, trfc, tscf, adcf, cf_build_state
+from . import tcf, tgc, ecf, tbc, qcf, tef, tesf, toc, trd, trfc, tscf, adcf, fvc, fvwq, fvsed, fvptm, cf_build_state
 
 
 def get_control_file_class(fpath: str | Path) -> type[cf_build_state.ControlFileBuildState]:
@@ -30,5 +30,12 @@ def get_control_file_class(fpath: str | Path) -> type[cf_build_state.ControlFile
         return tscf.TSCF
     elif fpath.suffix.lower() == '.adcf':
         return adcf.ADCF
-
+    elif fpath.suffix.lower() == '.fvc':
+        return fvc.FVC
+    elif fpath.suffix.lower() == '.fvwq':
+        return fvwq.FVWQ
+    elif fpath.suffix.lower() == '.fvsed':
+        return fvsed.FVSed
+    elif fpath.suffix.lower() == '.fvptm':
+        return fvptm.FVPTM
     raise ValueError(f'Unsupported or unrecognised control file with extension {fpath.suffix}.')

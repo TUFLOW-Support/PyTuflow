@@ -17,13 +17,14 @@ from ..tmf_types import PathLike
 from ..abc.bld_state import BuildState
 from ..abc.db import Database
 
-from ..settings import TCFConfig
+from ..settings import TCFConfig, from_config
 from .db_entry import DBEntry
 from ..tfstrings.increment_number import increment_fpath
 from ..misc.dataframe_wrapper import DataFrameWrapper
 from ..inp.altered_input import AlteredInputs
 from ..context import Context
 from ..tfpathlib import TuflowPath
+from ..abc.run_state import ResolveError
 
 if TYPE_CHECKING:
     # noinspection PyUnusedImports
@@ -71,7 +72,7 @@ class DatabaseBuildState(BuildState, Database):
         #: ControlFile: Parent control that this database belongs to.
         self.parent = parent
         #: TCFConfig: Configuration object for the TUFLOW control file.
-        self.config = TCFConfig.from_tcf_config(config) if config is not None else TCFConfig()
+        self.config = from_config(config) if config is not None else TCFConfig()
         #: AlteredInputs: a list of all changes made to the control file since the last write
         self.altered_inputs = AlteredInputs()
         #: bool: whether the database has been loaded from disk or not.
@@ -132,11 +133,11 @@ class DatabaseBuildState(BuildState, Database):
         self.entries.clear()
         self._load_from_df(self._df_wrapped)
         self.dirty = True
-        self.tcf.altered_inputs.add(self, -1, -1, uuid4(), 'database', self._df)
+        self.root_cf.altered_inputs.add(self, -1, -1, uuid4(), 'database', self._df)
         self._df = pd.DataFrame(data=self._df_wrapped.copy())
 
     def undo(self):
-        return self.tcf.altered_inputs.undo(self, False)
+        return self.root_cf.altered_inputs.undo(self, False)
 
     def value(self, item: str | int) -> typing.Any:
         # docstring inherited
@@ -145,8 +146,8 @@ class DatabaseBuildState(BuildState, Database):
             raise KeyError(f'Item {item} not found in database')
         try:
             db_ctx = self.context()
-        except Exception as e:
-            raise ValueError('Database requires a context to resolve value.') from e
+        except ResolveError as e:
+            raise ResolveError('Database requires a context to resolve value.') from e
         return db_ctx.value(item)
 
     def write(self, inc: str) -> 'DatabaseBuildState':
