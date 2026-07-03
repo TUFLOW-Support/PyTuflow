@@ -1,6 +1,7 @@
 import typing
 import pandas as pd
 import logging
+import re
 from pathlib import Path
 
 from .. import const
@@ -165,7 +166,7 @@ class _Mat(FVMatMixin):
             for control in self.controls:
                 if isinstance(control.parent_input.command(), FVSedCommand):
                     has_sediment_mat = True
-                for inp in control.find_input(lhs=cmd):
+                for inp in control.find_input(lhs=f'^{cmd}$', regex=True, regex_flags=re.IGNORECASE):
                     d[col] = inp.value
         if has_sediment_mat and d['Sed Nlayer'] == '':
             d['Sed Nlayer'] = 1
@@ -188,14 +189,17 @@ class _GlobalMat(_Mat):
         # search for global commands
         for cmd, col in zip(self.global_mat_commands(self.fvc), self.mat_columns(self.fvc)):
             for control in self.controls:
-                for inp in control.find_input(lhs=cmd):
+                for inp in control.find_input(lhs=f'^{cmd}$', regex=True, regex_flags=re.IGNORECASE):
                     d[col] = inp.value
 
         # search for material blocks with id 0 (zero) or 'default'
         inps = self.fvc.find_input(callback=is_default_mat_block)
         controls = [inp.block_control() for inp in inps]
         mat_class = _Mat(self.parent, self.id, controls)
-        d.update(mat_class.bc_dbase_entry())
+        d2 = mat_class.bc_dbase_entry()
+        for k in d:
+            if d2.get(k):
+                d[k] = d2.get(k)
 
         return d
 

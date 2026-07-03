@@ -817,6 +817,7 @@ def test_mat_2d_hd():
     mat = fvc.mat_file()
     assert mat.df.shape == (2, 5)
     assert mat.value(1) == 0.05
+    assert mat.df.loc['DEFAULT', 'Horiz Visc'] == 0.4
 
 
 def test_mat_2d_hd_include_file():
