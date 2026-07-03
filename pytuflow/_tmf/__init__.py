@@ -33,6 +33,7 @@ from .db.drivers.xsdat import FmCrossSection, FmCrossSectionDatabaseDriver
 # base classes
 from .abc.bld_state import BuildState
 from .abc.run_state import RunState
+from .abc.fvc_base import FVBaseMixin
 # from .abc.cf import ControlFile
 # from .abc.db import Database
 # from .abc.input import Input
