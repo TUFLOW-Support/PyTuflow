@@ -1,0 +1,224 @@
+from __future__ import annotations
+
+import re
+from pathlib import Path
+from string import Template
+from typing import TYPE_CHECKING
+
+from ..abc.project import BaseProject
+from ..config.settings import Settings
+from ..template.engine import TemplateEngine
+from ..template.manager import TemplateManager
+
+if TYPE_CHECKING:
+    pass
+
+# Registry of available HPC modules
+_MODULE_REGISTRY: dict[str, type] = {}
+
+
+def _register_modules():
+    from .modules.estry import EstryModule
+    from .modules.quadtree import QuadtreeModule
+    from .modules.soils import SoilsModule
+    from .modules.ad import ADModule
+    from .modules.toc import TOCModule
+    from .modules.rf import RFModule
+    from .modules.events import EventsModule
+    _MODULE_REGISTRY.update({
+        'estry': EstryModule,
+        'quadtree': QuadtreeModule,
+        'soils': SoilsModule,
+        'ad': ADModule,
+        'toc': TOCModule,
+        'rf': RFModule,
+        'events': EventsModule,
+    })
+
+
+def get_available_modules() -> dict[str, type]:
+    if not _MODULE_REGISTRY:
+        _register_modules()
+    return dict(_MODULE_REGISTRY)
+
+
+# Base templates that are always created
+_BASE_TEMPLATES = [
+    ('runs/${model_name}_${iter}.tcf', 'runs/${model_name}_${iter}.tcf'),
+    ('model/${model_name}_${iter}.tgc', 'model/${model_name}_${iter}.tgc'),
+    ('model/${model_name}_${iter}.tbc', 'model/${model_name}_${iter}.tbc'),
+    ('bc_dbase/bc_dbase.csv', 'bc_dbase/bc_dbase.csv'),
+    ('model/${model_name}_mat.csv', 'model/${model_name}_mat.csv'),
+]
+
+
+class HPCProject(BaseProject):
+    
+    def __init__(
+        self,
+        name: str,
+        output_dir: str | Path,
+        modules: list[str] | None = None,
+        *,
+        iter: str | None = None,
+        gis_format: str | None = None,
+        cell_size: str | float | None = None,
+        map_output_formats: list[str] | None = None,
+        **kwargs,
+    ):
+        self.name = name
+        self.output_dir = Path(output_dir)
+        self.module_names: list[str] = list(modules or [])
+
+        overrides = {k: v for k, v in {
+            'model_name': name,
+            'iter': iter,
+            'gis_format': gis_format,
+            'cell_size': str(cell_size) if cell_size is not None else None,
+            'map_output_formats': map_output_formats,
+            **kwargs,
+        }.items() if v is not None}
+
+        self.settings = Settings(**overrides)
+        self._engine = TemplateEngine()
+        self._manager = TemplateManager('hpc')
+
+    def validate(self) -> list[str]:
+        errors = []
+        if not self.name:
+            errors.append("'name' must be provided")
+        if not self.output_dir:
+            errors.append("'output_dir' must be provided")
+        return errors
+
+    def create(self) -> Path:
+        errors = self.validate()
+        if errors:
+            raise ValueError('\n'.join(errors))
+
+        # Use raw settings dict so lists stay as lists for the template engine
+        variables = dict(self.settings._settings)
+        variables['model_name'] = self.name
+        active_modules = list(self.module_names)
+
+        # Create output directories
+        for d in ['runs', 'model', 'bc_dbase', 'results', 'check', 'log']:
+            (self.output_dir / d).mkdir(parents=True, exist_ok=True)
+
+        # Render and write base templates
+        tcf_path = None
+        for template_key, output_rel in _BASE_TEMPLATES:
+            rendered_key = Template(template_key).safe_substitute(variables)
+            rendered_out = Template(output_rel).safe_substitute(variables)
+            text = self._manager.get_template(template_key)
+            rendered_text = self._engine.render(text, variables, active_modules)
+            out_path = self.output_dir / rendered_out
+            out_path.write_text(rendered_text, encoding='utf-8')
+            if template_key.startswith('runs/') and template_key.endswith('.tcf'):
+                tcf_path = out_path
+
+        # Render and write module template files
+        modules = self._get_module_instances()
+        for module in modules:
+            for template_key, output_rel in module.get_template_files(variables):
+                rendered_out = Template(output_rel).safe_substitute(variables)
+                text = self._manager.get_template(template_key)
+                rendered_text = self._engine.render(text, variables, active_modules)
+                out_path = self.output_dir / rendered_out
+                out_path.parent.mkdir(parents=True, exist_ok=True)
+                out_path.write_text(rendered_text, encoding='utf-8')
+
+        # Apply modules to TCF
+        if tcf_path is not None:
+            from pytuflow import TCF
+            tcf = TCF(tcf_path)
+            for module in modules:
+                module.apply_to_tcf(tcf, variables)
+            tcf.write('inplace')
+
+        return self.output_dir
+
+    def insert_module(self, module_name: str) -> None:
+        variables = dict(self.settings._settings)
+        variables['model_name'] = self.name
+
+        tcf_rel = Template('runs/${model_name}_${iter}.tcf').safe_substitute(variables)
+        tcf_path = self.output_dir / tcf_rel
+        if not tcf_path.exists():
+            raise FileNotFoundError(f"TCF not found: {tcf_path}")
+
+        self.__class__.insert_module_into(module_name, tcf_path, **{
+            'model_name': self.name,
+            'iter': variables.get('iter', '001'),
+        })
+        if module_name not in self.module_names:
+            self.module_names.append(module_name)
+
+    @classmethod
+    def insert_module_into(cls, module_name: str, tcf_path: str | Path, **kwargs) -> None:
+        from pytuflow import TCF
+        tcf_path = Path(tcf_path)
+        project_dir = tcf_path.parent.parent  # runs/ -> project root
+
+        registry = get_available_modules()
+        if module_name not in registry:
+            raise ValueError(
+                f"Unknown module '{module_name}'. Available: {list(registry.keys())}"
+            )
+
+        module_cls = registry[module_name]
+        module = module_cls()
+
+        # Build variables from TCF path + overrides
+        variables = _variables_from_tcf_path(tcf_path, **kwargs)
+        settings = Settings(
+            model_name=variables.get('model_name', ''),
+            **{k: v for k, v in kwargs.items() if v},
+        )
+        variables = dict(settings._settings)
+        if 'model_name' in kwargs:
+            variables['model_name'] = kwargs['model_name']
+
+        # Create module template files
+        engine = TemplateEngine()
+        manager = TemplateManager('hpc')
+
+        for template_key, output_rel in module.get_template_files(variables):
+            rendered_out = Template(output_rel).safe_substitute(variables)
+            out_path = project_dir / rendered_out
+            if not out_path.exists():
+                text = manager.get_template(template_key)
+                rendered_text = engine.render(text, variables, [module_name])
+                out_path.parent.mkdir(parents=True, exist_ok=True)
+                out_path.write_text(rendered_text, encoding='utf-8')
+
+        # Apply module to TCF
+        tcf = TCF(tcf_path)
+        module.apply_to_tcf(tcf, variables)
+        tcf.write('inplace')
+
+    def _get_module_instances(self):
+        registry = get_available_modules()
+        instances = []
+        for name in self.module_names:
+            if name not in registry:
+                raise ValueError(
+                    f"Unknown module '{name}'. Available: {list(registry.keys())}"
+                )
+            instances.append(registry[name]())
+        return instances
+
+
+def _variables_from_tcf_path(tcf_path: Path, **overrides) -> dict:
+    """Try to infer model_name and iter from TCF filename."""
+    stem = tcf_path.stem  # e.g. mymodel_001
+    variables = {}
+    m = re.match(r'^(.+)_(\d+)$', stem)
+    if m:
+        variables['model_name'] = m.group(1)
+        variables['iter'] = m.group(2)
+    else:
+        variables['model_name'] = stem
+        variables['iter'] = '001'
+    variables.update({k: v for k, v in overrides.items() if v is not None})
+    return variables

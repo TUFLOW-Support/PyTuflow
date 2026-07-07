@@ -21,6 +21,7 @@ from ._outputs import *
 from ._tmf import *
 from ._fm import GXY, FMDAT
 from .util import TuflowBinaries, pytuflow_logging, misc
+from .project import HPCProject
 
 
 name = 'PyTuflow'

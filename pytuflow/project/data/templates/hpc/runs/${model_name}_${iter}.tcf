@@ -1,0 +1,97 @@
+!_______________________________________________________
+! GIS
+GIS Format == ${gis_format}
+GRID Format == TIF
+${gis_projection_command}
+
+!_______________________________________________________
+! SOLVER
+Tutorial Model == OFF
+Solution scheme == HPC
+Hardware == GPU
+
+!_______________________________________________________
+! SGS SETTINGS
+SGS == ON
+SGS Sample Target Distance == <distance>  ! TODO update to appropriate value based on model cell size
+
+!_______________________________________________________
+! SCENARIOS / EVENTS
+##IF module:events##
+! Model event == <event_name>
+! Model scenario == <scenario_name>
+Event File == ..\model\${model_name}_events.tef
+##ENDIF##
+##IF not:module:events##
+! Model event == <event_name>
+! Model scenario == <scenario_name>
+! Event File == ..\model\${model_name}_events.tef
+##ENDIF##
+
+!_______________________________________________________
+! CONTROL FILES
+Geometry Control File == ..\model\${model_name}_${iter}.tgc
+BC Control File == ..\model\${model_name}_${iter}.tbc
+BC Database == ..\bc_dbase\bc_dbase.csv
+Read Materials File == ..\model\${model_name}_mat.csv
+##IF module:estry##
+Estry Control File == ..\model\${model_name}_${iter}.ecf
+##ENDIF##
+##IF not:module:estry##
+! Estry Control File == ..\model\${model_name}_${iter}.ecf
+##ENDIF##
+##IF module:soils##
+Read Soils File == ..\model\${model_name}_soils.tsoilf
+##ENDIF##
+##IF not:module:soils##
+! Read Soils File == ..\model\${model_name}_soils.tsoilf
+##ENDIF##
+##IF module:quadtree##
+Quadtree Control File == ..\model\${model_name}_${iter}.qcf
+##ENDIF##
+##IF module:ad##
+AD Control File == ..\model\${model_name}_${iter}.adcf
+##ENDIF##
+##IF module:toc##
+Read Operational Controls == ..\model\${model_name}.toc
+##ENDIF##
+##IF module:rf##
+Read Rainfall File == ..\model\${model_name}_${iter}.rf
+##ENDIF##
+! ##INSERT_POINT control_files##
+
+!_______________________________________________________
+! INITIAL WATER LEVEL - uncomment if required
+! Set IWL == <Value>
+
+!_______________________________________________________
+! SIMULATION CONTROLS
+Start Time == 0
+End Time == <hrs>  ! TODO
+! Timestep == <sec>  ! TODO uncomment if using Classic
+! Timestep Initial == <sec>  ! TODO uncomment if using HPC
+! Timestep Maximum == <sec>  ! uncomment if required (value should be based on cell size)
+
+!_______________________________________________________
+! OUTPUT FOLDERS
+Log Folder == log
+Output Folder == ..\results\
+Write Check Files == ..\check\
+! Write Check Files Exclude == ZPT GRD UVPT
+
+!_______________________________________________________
+! MAP OUTPUT FORMATS
+##LOOP map_output_formats##
+Map Output Format == ${format}
+##ENDLOOP##
+
+!_______________________________________________________
+! MAP OUTPUT SETTINGS
+SGS Map Extent Trim == All
+SGS Depth Output == Cell Average
+! Map Cutoff Depth == 0.01  ! uncomment if required
+
+!_______________________________________________________
+! PLOT OUTPUT - uncomment as required
+! Time Series Output Interval == 60  ! TODO requires updating to sensible value to match simulation duration
+! Read GIS PO == <path/to/2d_po>
