@@ -7,6 +7,7 @@ import re
 import numpy as np
 import sys
 import inspect
+import os
 
 from .bc_dbase import BCDatabase
 from .bc_dbase_run_state import BCDatabaseRunState
@@ -144,6 +145,20 @@ class _BC:
         self._init_headers('Scale', self.bc_scale)
         self._init_headers('Offset', self.bc_offset)
 
+    def _get_source(self, source_ref: str) -> str:
+        """Generate a source reference. The virtual bc_dbase will assume to be the same path as the fvc, so need to consider
+        modifying path references if the bc source is referenced from an include file in a different location."""
+        source = source_ref
+        if not self.parent or self.parent_input.parent == self.parent.fvc:
+            pass
+        else:
+            try:
+                source_file = self.parent_input.parent.fpath.parent / source_ref
+                source = os.path.relpath(source_file, self.parent.fpath.parent)
+            except Exception:
+                pass
+        return source
+
     def bc_dbase_entry(self) -> dict:
         """Returns bc_dbase entry(ies). Items such as salinity, temp, sed, tracer, and wq each get their own line per constituent"""
         if len(self.parent_input.value) != 3:
@@ -153,7 +168,7 @@ class _BC:
         rhs = [x.strip() for x in self.parent_input.rhs.split(',')]
         name = self.id
         type_ = rhs[0]
-        source = rhs[2]
+        source = self._get_source(rhs[2])
         time_header = self.bc_header[0]
 
         return self._bc_dbase_entry(name, type_, source, time_header, start_header_index=1)
@@ -338,7 +353,7 @@ class _WLCurtain(_WLS):
         rhs = [x.strip() for x in self.parent_input.rhs.split(',')]
         name = self.id
         type_ = rhs[0]
-        source = rhs[2]
+        source = self._get_source(rhs[2])
         time_header = self.bc_header[0]
 
         return self._bc_dbase_entry(name, type_, source, time_header, start_header_index=3)
@@ -398,7 +413,7 @@ class _QCGrid(_BC):
         rhs = [x.strip() for x in self.parent_input.rhs.split(',')]
         name = self.id
         type_ = rhs[0]
-        source = rhs[2]
+        source = self._get_source(rhs[2])
         time_header = self.bc_header[0]
 
         return self._bc_dbase_entry(name, type_, source, time_header, start_header_index=2)
@@ -435,7 +450,7 @@ class _QCM(_Q):
         rhs = [x.strip() for x in self.parent_input.rhs.split(',')]
         name = self.id
         type_ = rhs[0]
-        source = rhs[1]
+        source = self._get_source(rhs[1])
         time_header = self.bc_header[0]
 
         return self._bc_dbase_entry(name, type_, source, time_header, start_header_index=3)
@@ -463,7 +478,7 @@ class _QG(_Q):
         rhs = [x.strip() for x in self.parent_input.rhs.split(',')]
         name = self.id
         type_ = rhs[0]
-        source = rhs[1]
+        source = self._get_source(rhs[1])
         time_header = self.bc_header[0]
 
         return self._bc_dbase_entry(name, type_, source, time_header, start_header_index=1)
@@ -555,7 +570,7 @@ class _W10(_BC):
         rhs = [x.strip() for x in self.parent_input.rhs.split(',')]
         name = self.id
         type_ = rhs[0]
-        source = rhs[1]
+        source = self._get_source(rhs[1])
         time_header = self.bc_header[0]
 
         return self._bc_dbase_entry(name, type_, source, time_header, start_header_index=1)
@@ -589,7 +604,7 @@ class _Precip(_BC):
         rhs = [x.strip() for x in self.parent_input.rhs.split(',')]
         name = self.id
         type_ = rhs[0]
-        source = rhs[1]
+        source = self._get_source(rhs[1])
         time_header = self.bc_header[0]
 
         return self._bc_dbase_entry(name, type_, source, time_header, start_header_index=1)
@@ -623,7 +638,7 @@ class _AtmosGrid(_Precip):
         rhs = [x.strip() for x in self.parent_input.rhs.split(',')]
         name = self.id
         type_ = rhs[0]
-        source = rhs[2]
+        source = self._get_source(rhs[2])
         time_header = self.bc_header[0]
 
         return self._bc_dbase_entry(name, type_, source, time_header, start_header_index=1)
@@ -853,7 +868,7 @@ class _CycHolland(_BC):
         rhs = [x.strip() for x in self.parent_input.rhs.split(',')]
         name = self.id
         type_ = rhs[0]
-        source = rhs[1]
+        source = self._get_source(rhs[1])
         time_header = self.bc_header[0]
 
         return self._bc_dbase_entry(name, type_, source, time_header, start_header_index=1)
@@ -889,7 +904,7 @@ class _WaveCoupled(_BC):
         rhs = [x.strip() for x in self.parent_input.rhs.split(',')]
         name = self.id
         type_ = rhs[0]
-        source = rhs[1]
+        source = self._get_source(rhs[1])
         time_header = self.bc_header[0]
 
         return self._bc_dbase_entry(name, type_, source, time_header, start_header_index=1)
@@ -954,7 +969,7 @@ class _ForceM(_Force):
             self.parent.forcem_count += 1
         name = self.id
         type_ = rhs[0]
-        source = rhs[1]
+        source = self._get_source(rhs[1])
         time_header = self.bc_header[0]
 
         return self._bc_dbase_entry(name, type_, source, time_header, start_header_index=4)
@@ -1023,7 +1038,7 @@ class _Atmos(_BC):
         rhs = [x.strip() for x in self.parent_input.rhs.split(',')]
         name = self.id
         type_ = rhs[0]
-        source = rhs[1]
+        source = self._get_source(rhs[1])
         time_header = self.bc_header[0]
 
         return self._bc_dbase_entry(name, type_, source, time_header, start_header_index=1)
@@ -1176,7 +1191,7 @@ class _FCM(_FC):
         rhs = [x.strip() for x in self.parent_input.rhs.split(',')]
         name = self.id
         type_ = rhs[0]
-        source = rhs[1]
+        source = self._get_source(rhs[1])
         time_header = self.bc_header[0]
 
         return self._bc_dbase_entry(name, type_, source, time_header, start_header_index=3)
@@ -1241,7 +1256,7 @@ class _FBM(_FB):
         rhs = [x.strip() for x in self.parent_input.rhs.split(',')]
         name = self.id
         type_ = rhs[0]
-        source = rhs[1]
+        source = self._get_source(rhs[1])
         time_header = self.bc_header[0]
 
         return self._bc_dbase_entry(name, type_, source, time_header, start_header_index=3)
@@ -1269,7 +1284,7 @@ class _Scalar(_BC):
         rhs = [x.strip() for x in self.parent_input.rhs.split(',')]
         name = rhs[1]
         type_ = rhs[0]
-        source = rhs[2]
+        source = self._get_source(rhs[2])
         time_header = self.bc_header[0]
 
         return self._bc_dbase_entry(name, type_, source, time_header, start_header_index=1)
@@ -1323,7 +1338,7 @@ class _Transport(_BC):
         rhs = [x.strip() for x in self.parent_input.rhs.split(',')]
         name = self.id
         type_ = rhs[0]
-        source = rhs[1]
+        source = self._get_source(rhs[1])
         time_header = self.bc_header[0]
 
         return self._bc_dbase_entry(name, type_, source, time_header, start_header_index=1)

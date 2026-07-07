@@ -817,7 +817,7 @@ def test_mat_2d_hd():
     mat = fvc.mat_file()
     assert mat.df.shape == (2, 5)
     assert mat.value(1) == 0.05
-    assert mat.df.loc['DEFAULT', 'Horiz Visc'] == 0.4
+    assert mat.df.loc['DEFAULT', 'Horiz Visc'] == 0.5
 
 
 def test_mat_2d_hd_include_file():
@@ -951,3 +951,11 @@ def test_bc_is_not_plottable():
     fvc = FVC(p)
     bc_dbase = fvc.bc_dbase()
     assert not bc_dbase.is_plottable('Downstream')
+
+
+def test_bc_include_file():
+    p = './tests/tmf/test_datasets/fv/bc/bc_wl_include.fvc'
+    fvc = FVC(p)
+    bc_dbase = fvc.bc_dbase()
+    df = bc_dbase.value('2')
+    assert df.shape == (744, 1)
