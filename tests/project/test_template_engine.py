@@ -201,3 +201,53 @@ class TestSortOrder:
             instances = proj._get_module_instances()
             orders = [m._get_config().get('sort_order') for m in instances]
             assert orders == sorted(orders), f"Modules not in sort_order: {orders}"
+
+
+class TestNormalizeSlashes:
+    """Tests for the _normalize_slashes helper in HPCBaseModule."""
+
+    def test_backslash_converted_on_current_os(self):
+        import os
+        from pytuflow.project.hpc.modules._base import _normalize_slashes
+        result = _normalize_slashes('..\\model\\mymodel_001.ecf')
+        assert '\\' not in result or os.sep == '\\'
+        assert os.sep in result
+
+    def test_forward_slash_converted_on_current_os(self):
+        import os
+        from pytuflow.project.hpc.modules._base import _normalize_slashes
+        result = _normalize_slashes('../model/mymodel_001.ecf')
+        assert '/' not in result or os.sep == '/'
+        assert os.sep in result
+
+    def test_mixed_slashes_normalized(self):
+        import os
+        from pytuflow.project.hpc.modules._base import _normalize_slashes
+        result = _normalize_slashes('..\\model/mymodel_001.ecf')
+        assert result == f'..{os.sep}model{os.sep}mymodel_001.ecf'
+
+    def test_no_slashes_unchanged(self):
+        from pytuflow.project.hpc.modules._base import _normalize_slashes
+        assert _normalize_slashes('SGS == ON') == 'SGS == ON'
+
+    def test_commands_use_os_sep(self, tmp_path):
+        """Integration: commands written to a CF use the OS path separator."""
+        import os
+        from pytuflow.project.hpc.modules.estry import EstryModule
+        from pytuflow import TCF
+
+        tcf_dir = tmp_path / 'runs'
+        tcf_dir.mkdir()
+        (tmp_path / 'model').mkdir()
+        tcf_path = tcf_dir / 'mymodel_001.tcf'
+        tcf_path.write_text('Read Materials File == ..\\model\\mymodel_mat.csv\n', encoding='utf-8')
+
+        tcf = TCF(tcf_path)
+        EstryModule().apply_to_control_files({'tcf': tcf}, {'model_name': 'mymodel', 'iter': '001'})
+        tcf.write('inplace')
+
+        content = tcf_path.read_text(encoding='utf-8')
+        ecf_line = next(l for l in content.splitlines() if 'estry control file' in l.lower())
+        assert os.sep in ecf_line, f"Expected {os.sep!r} in: {ecf_line}"
+        wrong_sep = '/' if os.sep == '\\' else '\\'
+        assert wrong_sep not in ecf_line, f"Unexpected {wrong_sep!r} in: {ecf_line}"

@@ -1,10 +1,22 @@
 from __future__ import annotations
 
+import os
 import re
 from string import Template
 
 from ...abc.module import BaseModule
 from ...template.manager import TemplateManager
+
+
+def _normalize_slashes(cmd: str) -> str:
+    """Normalize all path separators in *cmd* to the OS-native separator.
+
+    Both ``/`` and ``\\`` are replaced with ``os.sep``, so commands authored
+    with Windows-style backslashes work correctly on Linux/macOS and vice versa.
+    TUFLOW command names (LHS) never contain slashes, so normalizing the full
+    command string is safe.
+    """
+    return cmd.replace('\\', os.sep).replace('/', os.sep)
 
 
 def _parse_filter(value: str) -> tuple[str, bool, int]:
@@ -112,7 +124,7 @@ class HPCBaseModule(BaseModule):
         if not raw_commands:
             return
 
-        commands = [Template(cmd).safe_substitute(variables) for cmd in raw_commands]
+        commands = [_normalize_slashes(Template(cmd).safe_substitute(variables)) for cmd in raw_commands]
 
         # Verify there is at least one real command worth processing.
         if not any(c.strip() and not c.strip().startswith('!') for c in commands):
