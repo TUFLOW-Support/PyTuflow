@@ -64,6 +64,8 @@ def main():
     p_create.add_argument('--map-output-formats', dest='map_output_formats', nargs='*', default=None)
     p_create.add_argument('--cell-size', dest='cell_size', default=None)
     p_create.add_argument('--iter', default=None, help='Iteration string (e.g. 001)')
+    p_create.add_argument('--engine', default=None, help='engine to use for Classic/HPC models (e.g. HPC or Classic)')
+    p_create.add_argument('--hardware', default=None, help='Hardware to run the model on (e.g. CPU or GPU)')
 
     # insert
     p_insert = sub.add_parser('insert', help='Insert a module into an existing project')
