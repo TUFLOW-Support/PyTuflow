@@ -11,7 +11,6 @@
       "target_cf": "tcf",
       "placement_rule": "hpc_control_files",
       "commented_lhs": "read operational controls",
-      "insert_after_lhs": "Read Materials File",
       "commands": [
         "!________________________________________________________",
         "! OPERATING CONTROL FILE",

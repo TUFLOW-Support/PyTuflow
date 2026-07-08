@@ -11,7 +11,6 @@
       "target_cf": "tcf",
       "placement_rule": "hpc_control_files",
       "commented_lhs": "ad control file",
-      "insert_after_lhs": "BC Control File",
       "commands": [
         "AD Control File == ..\\model\\${model_name}_${iter}.adcf"
       ]

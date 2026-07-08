@@ -13,7 +13,6 @@
       "id": "events_tcf",
       "target_cf": "tcf",
       "commented_lhs": "event file",
-      "insert_after_lhs": null,
       "commands": [
         "!_______________________________________________________",
         "! SCENARIOS / EVENTS",

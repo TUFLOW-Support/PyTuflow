@@ -8,7 +8,6 @@
       "id": "po_commands",
       "target_cf": "tcf",
       "commented_lhs": "time series output interval",
-      "insert_after_lhs": null,
       "commands": [
         "\n!_______________________________________________________",
         "! PLOT OUTPUT",

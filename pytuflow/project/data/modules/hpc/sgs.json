@@ -9,7 +9,6 @@
       "target_cf": "tcf",
       "placement_rule": "hpc_solution_scheme",
       "commented_lhs": "sgs",
-      "insert_after_lhs": null,
       "commands": [
         "\n!_______________________________________________________",
         "! SGS SETTINGS",
@@ -22,7 +21,6 @@
       "target_cf": "tcf",
       "placement_rule": "map_outputs",
       "commented_lhs": "sgs map extent trim",
-      "insert_after_lhs": null,
       "commands": [
         "\n!_______________________________________________________",
         "! MAP OUTPUT SETTINGS",
