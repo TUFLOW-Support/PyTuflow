@@ -1,10 +1,10 @@
 !_______________________________________________________
 ! 2D DOMAIN SETUP - TODO Uncomment commands as required (not all commands are required depending on which ones are used)
-Origin == ${model_domain_origin}
-Orientation Angle == ${model_domain_angle}
-Grid Size (X,Y) == ${model_domain_size}  ! size of domain in metres (not required if using "Read GIS Location == <polygon layer>")
+Origin == 0, 0
+Orientation Angle == 0
+Grid Size (X,Y) == <X, Y>  ! TODO  ! size of domain in metres (not required if using "Read GIS Location == <polygon layer>")
 
-Cell Size == ${cell_size}
+Cell Size == 5
 
 !_______________________________________________________
 ! MODEL ACTIVE CELLS
@@ -19,9 +19,12 @@ Set Zpts == 0
 !_______________________________________________________
 ! MODEL MATERIAL (LANDUSE)
 Set Mat == 1
+!_______________________________________________________
+! Soil - Infiltration commands
+Set Soil == 1  ! defines top layer
+! Set Soil Layer 2 == 1  ! defines a second vertical layer
+! Read GIS Soil == <path/to/2d_soil>  ! e.g. of reading vector layer
+! Read GRID Soil == <path/to/soil.tif>  ! e.g. of reading raster layer
 ! Read GIS Mat == <path/to/2d_mat>  ! e.g. of reading vector layer
 ! Read GRID Mat == <path/to/landuse.tif>  ! e.g. of reading raster layer
 
-##IF module:soils##
-##COMMANDS soils_tgc##
-##ENDIF##

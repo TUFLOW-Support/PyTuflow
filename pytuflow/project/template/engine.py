@@ -3,30 +3,57 @@ from string import Template
 
 
 class TemplateEngine:
-    def render(self, template_text: str, variables: dict, active_modules: list[str] = None) -> str:
+    def render(
+        self,
+        template_text: str,
+        variables: dict,
+        active_modules: list[str] = None,
+        module_configs: dict[str, dict] = None,
+    ) -> str:
+        """Render a template.
+
+        Parameters
+        ----------
+        template_text : str
+            Raw template content.
+        variables : dict
+            Variable substitutions (${var} style).
+        active_modules : list[str], optional
+            Module names that are active (used for ##IF module:X## conditions).
+        module_configs : dict[str, dict], optional
+            Mapping of module name → parsed JSON config dict.  Required for
+            ##COMMANDS block_id## directives to be resolved.  If omitted the
+            directive is left as a comment in the output.
+        """
         if active_modules is None:
             active_modules = []
+        if module_configs is None:
+            module_configs = {}
+
+        # Build a flat lookup: block_id -> commands list
+        block_lookup = _build_block_lookup(module_configs)
+
         lines = template_text.splitlines(keepends=True)
-        # Ensure trailing newline
         if template_text and not template_text.endswith('\n'):
             lines[-1] = lines[-1] + '\n'
-        processed = self._process_directives(lines, variables, active_modules)
+
+        processed = self._process_directives(lines, variables, active_modules, block_lookup)
         result = ''.join(processed)
-        # For substitution, convert list values to strings
+
         str_vars = {
             k: (', '.join(str(i) for i in v) if isinstance(v, list) else str(v))
             for k, v in variables.items()
         }
         return Template(result).safe_substitute(str_vars)
 
-    def _process_directives(self, lines, variables, active_modules):
+    def _process_directives(self, lines, variables, active_modules, block_lookup):
         result = []
         i = 0
         while i < len(lines):
             line = lines[i]
             stripped = line.strip()
 
-            # Handle ##IF ...##
+            # ##IF ...## / ##ENDIF##
             m = re.match(r'^##IF\s+(.+?)##\s*$', stripped)
             if m:
                 condition = m.group(1).strip()
@@ -43,13 +70,12 @@ class TemplateEngine:
                             break
                     block_lines.append(lines[i])
                     i += 1
-                # i now points to ##ENDIF##
                 if self._eval_condition(condition, active_modules, variables):
-                    result.extend(self._process_directives(block_lines, variables, active_modules))
+                    result.extend(self._process_directives(block_lines, variables, active_modules, block_lookup))
                 i += 1
                 continue
 
-            # Handle ##LOOP var##
+            # ##LOOP var## / ##ENDLOOP##
             m = re.match(r'^##LOOP\s+(.+?)##\s*$', stripped)
             if m:
                 var_name = m.group(1).strip()
@@ -61,7 +87,6 @@ class TemplateEngine:
                         break
                     block_lines.append(lines[i])
                     i += 1
-                # i now points to ##ENDLOOP##
                 items = variables.get(var_name, [])
                 if isinstance(items, str):
                     items = [items]
@@ -69,23 +94,39 @@ class TemplateEngine:
                     loop_vars = dict(variables)
                     loop_vars['format'] = item
                     loop_vars['item'] = item
-                    expanded = self._process_directives(block_lines, loop_vars, active_modules)
-                    # Substitute loop-local variables immediately so ${format}/${item} resolve
+                    expanded = self._process_directives(block_lines, loop_vars, active_modules, block_lookup)
                     str_loop_vars = {
-                        k: (', '.join(str(i) for i in v) if isinstance(v, list) else str(v))
+                        k: (', '.join(str(x) for x in v) if isinstance(v, list) else str(v))
                         for k, v in loop_vars.items()
                     }
-                    result.extend(
-                        Template(line).safe_substitute(str_loop_vars) for line in expanded
-                    )
+                    result.extend(Template(ln).safe_substitute(str_loop_vars) for ln in expanded)
                 i += 1
                 continue
 
-            # Handle ##INSERT_POINT label##
+            # ##INSERT_POINT label##
             m = re.match(r'^##INSERT_POINT\s+(.+?)##\s*$', stripped)
             if m:
                 label = m.group(1).strip()
                 result.append(f'! ##INSERT_POINT {label}##\n')
+                i += 1
+                continue
+
+            # ##COMMANDS block_id##
+            m = re.match(r'^##COMMANDS\s+(.+?)##\s*$', stripped)
+            if m:
+                block_id = m.group(1).strip()
+                commands = block_lookup.get(block_id, [])
+                if commands:
+                    str_vars = {
+                        k: (', '.join(str(x) for x in v) if isinstance(v, list) else str(v))
+                        for k, v in variables.items()
+                    }
+                    for cmd in commands:
+                        rendered_cmd = Template(cmd).safe_substitute(str_vars)
+                        result.append(rendered_cmd + '\n')
+                else:
+                    # Block ID not found — leave as a comment for visibility
+                    result.append(f'! ##COMMANDS {block_id}## (unresolved)\n')
                 i += 1
                 continue
 
@@ -107,3 +148,14 @@ class TemplateEngine:
             result = bool(val)
 
         return (not result) if negated else result
+
+
+def _build_block_lookup(module_configs: dict[str, dict]) -> dict[str, list[str]]:
+    """Build a flat {block_id: [commands]} dict from all module configs."""
+    lookup: dict[str, list[str]] = {}
+    for config in module_configs.values():
+        for block in config.get('command_blocks', []):
+            block_id = block.get('id')
+            if block_id:
+                lookup[block_id] = block.get('commands', [])
+    return lookup

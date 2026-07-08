@@ -1,6 +1,7 @@
 {
   "name": "po",
   "display_name": "Plot Output (PO)",
+  "sort_order": 80,
   "template_files": [],
   "command_blocks": []
 }

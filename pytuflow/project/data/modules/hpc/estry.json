@@ -1,11 +1,13 @@
 {
   "name": "estry",
   "display_name": "Estry (1D Drainage)",
+  "sort_order": 20,
   "template_files": [
     {"template_key": "model/${model_name}_${iter}.ecf", "output_subdir": "model"}
   ],
   "command_blocks": [
     {
+      "id": "estry_tcf",
       "target_cf": "tcf",
       "insert_point": "control_files",
       "commented_lhs": "estry control file",

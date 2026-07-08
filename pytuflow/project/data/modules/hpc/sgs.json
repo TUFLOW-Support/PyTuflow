@@ -1,6 +1,7 @@
 {
   "name": "sgs",
   "display_name": "Sub-grid Sampling (SGS)",
+  "sort_order": 5,
   "template_files": [],
   "command_blocks": []
 }

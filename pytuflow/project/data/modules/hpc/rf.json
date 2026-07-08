@@ -1,11 +1,13 @@
 {
   "name": "rf",
   "display_name": "RF (Rainfall)",
+  "sort_order": 70,
   "template_files": [
     {"template_key": "model/${model_name}_${iter}.trfc", "output_subdir": "model"}
   ],
   "command_blocks": [
     {
+      "id": "rf_tcf",
       "target_cf": "tcf",
       "insert_point": "control_files",
       "commented_lhs": "rainfall control file",

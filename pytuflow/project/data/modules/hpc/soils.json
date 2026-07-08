@@ -1,11 +1,13 @@
 {
   "name": "soils",
   "display_name": "Soils (Infiltration)",
+  "sort_order": 30,
   "template_files": [
     {"template_key": "model/${model_name}_soils.tsoilf", "output_subdir": "model"}
   ],
   "command_blocks": [
     {
+      "id": "soils_tcf",
       "target_cf": "tcf",
       "insert_point": "control_files",
       "commented_lhs": "read soils file",
@@ -15,6 +17,7 @@
       ]
     },
     {
+      "id": "soils_tgc",
       "target_cf": "tgc",
       "insert_point": null,
       "commented_lhs": "set soil",

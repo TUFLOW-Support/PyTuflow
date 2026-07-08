@@ -20,9 +20,7 @@ SGS Sample Target Distance == <distance>  ! TODO update to appropriate value bas
 ##IF module:events##
 !_______________________________________________________
 ! SCENARIOS / EVENTS
-! Model event == <event_name>
-! Model scenario == <scenario_name>
-Event File == ..\model\${model_name}_events.tef
+##COMMANDS events_tcf##
 
 ##ENDIF##
 !_______________________________________________________
@@ -32,19 +30,22 @@ BC Control File == ..\model\${model_name}_${iter}.tbc
 BC Database == ..\bc_dbase\bc_dbase.csv
 Read Materials File == ..\model\${model_name}_mat.csv
 ##IF module:estry##
-Estry Control File == ..\model\${model_name}_${iter}.ecf
+##COMMANDS estry_tcf##
 ##ENDIF##
 ##IF module:soils##
-Read Soils File == ..\model\${model_name}_soils.tsoilf
+##COMMANDS soils_tcf##
 ##ENDIF##
 ##IF module:quadtree##
-Quadtree Control File == ..\model\${model_name}_${iter}.qcf
+##COMMANDS quadtree_tcf##
 ##ENDIF##
 ##IF module:ad##
-AD Control File == ..\model\${model_name}_${iter}.adcf
+##COMMANDS ad_tcf##
 ##ENDIF##
 ##IF module:rf##
-Rainfall Control File == ..\model\${model_name}_${iter}.trfc
+##COMMANDS rf_tcf##
+##ENDIF##
+##IF module:toc##
+##COMMANDS toc_tcf##
 ##ENDIF##
 ! ##INSERT_POINT control_files##
 

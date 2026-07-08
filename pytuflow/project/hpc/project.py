@@ -113,33 +113,37 @@ class HPCProject(BaseProject):
         variables['model_name'] = self.name
         active_modules = list(self.module_names)
 
+        # Load and sort module instances (sort_order controls render + apply order)
+        modules = self._get_module_instances()
+        module_configs = {m.NAME: m._get_config() for m in modules}
+
         # Create output directories
         for d in ['runs', 'model', 'bc_dbase', 'results', 'check', 'log']:
             (self.output_dir / d).mkdir(parents=True, exist_ok=True)
 
-        # Render and write base templates
+        # Render and write base templates (pass module configs so ##COMMANDS## resolves)
         tcf_path = None
         for template_key, output_rel in _BASE_TEMPLATES:
             rendered_out = Template(output_rel).safe_substitute(variables)
             text = self._manager.get_template(template_key)
-            rendered_text = self._engine.render(text, variables, active_modules)
+            rendered_text = self._engine.render(text, variables, active_modules, module_configs)
             out_path = self.output_dir / rendered_out
             out_path.write_text(rendered_text, encoding='utf-8')
             if template_key.startswith('runs/') and template_key.endswith('.tcf'):
                 tcf_path = out_path
 
         # Render and write module template files
-        modules = self._get_module_instances()
         for module in modules:
             for template_key, output_rel in module.get_template_files(variables):
                 rendered_out = Template(output_rel).safe_substitute(variables)
                 text = self._manager.get_template(template_key)
-                rendered_text = self._engine.render(text, variables, active_modules)
+                rendered_text = self._engine.render(text, variables, active_modules, module_configs)
                 out_path = self.output_dir / rendered_out
                 out_path.parent.mkdir(parents=True, exist_ok=True)
                 out_path.write_text(rendered_text, encoding='utf-8')
 
-        # Apply modules to control files
+        # Apply modules to control files (already-exists check makes this a no-op
+        # for commands the template already rendered; handles fallback for insert)
         if tcf_path is not None:
             from pytuflow import TCF
             tcf = TCF(tcf_path)
@@ -150,9 +154,8 @@ class HPCProject(BaseProject):
             for module in modules:
                 module.apply_to_control_files(control_files, variables)
 
-            # Write TCF and any modified secondary CFs
             tcf.write('inplace')
-            for cf_key, cf in secondary_cfs.items():
+            for cf in secondary_cfs.values():
                 if cf.dirty:
                     cf.write('inplace')
 
@@ -188,6 +191,7 @@ class HPCProject(BaseProject):
 
         module_cls = registry[module_name]
         module = module_cls()
+        module_config = module._get_config()
 
         # Build variables from TCF path + overrides
         variables = _variables_from_tcf_path(tcf_path, **kwargs)
@@ -199,16 +203,17 @@ class HPCProject(BaseProject):
         if 'model_name' in kwargs:
             variables['model_name'] = kwargs['model_name']
 
-        # Create module template files
+        # Create module template files (pass module config so ##COMMANDS## resolves)
         engine = TemplateEngine()
         manager = TemplateManager('hpc')
+        module_configs = {module_name: module_config}
 
         for template_key, output_rel in module.get_template_files(variables):
             rendered_out = Template(output_rel).safe_substitute(variables)
             out_path = project_dir / rendered_out
             if not out_path.exists():
                 text = manager.get_template(template_key)
-                rendered_text = engine.render(text, variables, [module_name])
+                rendered_text = engine.render(text, variables, [module_name], module_configs)
                 out_path.parent.mkdir(parents=True, exist_ok=True)
                 out_path.write_text(rendered_text, encoding='utf-8')
 
@@ -221,11 +226,12 @@ class HPCProject(BaseProject):
         module.apply_to_control_files(control_files, variables)
 
         tcf.write('inplace')
-        for cf_key, cf in secondary_cfs.items():
+        for cf in secondary_cfs.values():
             if cf.dirty:
                 cf.write('inplace')
 
     def _get_module_instances(self):
+        """Return module instances sorted by sort_order (ascending)."""
         registry = get_available_modules()
         instances = []
         for name in self.module_names:
@@ -234,6 +240,7 @@ class HPCProject(BaseProject):
                     f"Unknown module '{name}'. Available: {list(registry.keys())}"
                 )
             instances.append(registry[name]())
+        instances.sort(key=lambda m: m._get_config().get('sort_order', 50))
         return instances
 
 

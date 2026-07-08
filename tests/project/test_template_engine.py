@@ -119,3 +119,84 @@ class TestMapOutputLoop:
         )
         assert 'Map Output Format == XMDF' in result
         assert 'Map Output Format == SHP' in result
+
+
+class TestCommandsDirective:
+    """Tests for the ##COMMANDS block_id## directive."""
+
+    def _make_config(self, block_id, commands):
+        return {
+            'command_blocks': [
+                {'id': block_id, 'commands': commands}
+            ]
+        }
+
+    def test_commands_resolved_from_module_config(self, engine):
+        tmpl = "##IF module:estry##\n##COMMANDS estry_tcf##\n##ENDIF##\n"
+        cfg = self._make_config('estry_tcf', ['Estry Control File == ..\\model\\m.ecf'])
+        result = engine.render(tmpl, {}, active_modules=['estry'], module_configs={'estry': cfg})
+        assert 'Estry Control File == ..\\model\\m.ecf' in result
+        assert '##COMMANDS' not in result
+
+    def test_commands_variable_substitution(self, engine):
+        tmpl = "##COMMANDS test_block##\n"
+        cfg = self._make_config('test_block', ['Model == ${model_name}'])
+        result = engine.render(tmpl, {'model_name': 'mymodel'}, module_configs={'test': cfg})
+        assert 'Model == mymodel' in result
+
+    def test_commands_unresolved_becomes_comment(self, engine):
+        """Block ID with no matching config emits a visible comment."""
+        tmpl = "##COMMANDS unknown_block##\n"
+        result = engine.render(tmpl, {}, module_configs={})
+        assert '! ##COMMANDS unknown_block## (unresolved)' in result
+
+    def test_commands_not_rendered_when_module_inactive(self, engine):
+        tmpl = "##IF module:estry##\n##COMMANDS estry_tcf##\n##ENDIF##\n"
+        cfg = self._make_config('estry_tcf', ['Estry Control File == ..\\model\\m.ecf'])
+        result = engine.render(tmpl, {}, active_modules=[], module_configs={'estry': cfg})
+        assert 'Estry Control File' not in result
+
+    def test_commands_multiple_commands(self, engine):
+        tmpl = "##COMMANDS block##\n"
+        cfg = self._make_config('block', ['Line1 == a', 'Line2 == b'])
+        result = engine.render(tmpl, {}, module_configs={'mod': cfg})
+        assert 'Line1 == a' in result
+        assert 'Line2 == b' in result
+
+    def test_commands_multiple_modules(self, engine):
+        """Block IDs from multiple modules are all resolved."""
+        tmpl = "##COMMANDS a_block##\n##COMMANDS b_block##\n"
+        configs = {
+            'mod_a': self._make_config('a_block', ['A == 1']),
+            'mod_b': self._make_config('b_block', ['B == 2']),
+        }
+        result = engine.render(tmpl, {}, module_configs=configs)
+        assert 'A == 1' in result
+        assert 'B == 2' in result
+
+
+class TestSortOrder:
+    """Tests that sort_order controls module application order."""
+
+    def test_sort_order_in_module_configs(self):
+        """All bundled module JSONs should have a sort_order field."""
+        from pytuflow.project.template.manager import TemplateManager
+        manager = TemplateManager('hpc')
+        from pytuflow.project.hpc.project import get_available_modules
+        for name in get_available_modules():
+            cfg = manager.get_module_config(name)
+            assert 'sort_order' in cfg, f"Module '{name}' missing sort_order"
+
+    def test_get_module_instances_sorted(self):
+        """_get_module_instances() returns modules sorted by sort_order."""
+        import tempfile, os
+        from pytuflow.project import HPCProject
+        with tempfile.TemporaryDirectory() as tmp:
+            proj = HPCProject(
+                name='test',
+                output_dir=tmp,
+                modules=['po', 'sgs', 'estry'],  # unsorted: po=80, sgs=5, estry=20
+            )
+            instances = proj._get_module_instances()
+            orders = [m._get_config().get('sort_order') for m in instances]
+            assert orders == sorted(orders), f"Modules not in sort_order: {orders}"
