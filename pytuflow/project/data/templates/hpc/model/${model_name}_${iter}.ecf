@@ -3,9 +3,7 @@
 ! Read GIS Network == <path/to/1d_nwk>
 
 ##IF module:toc##
-!________________________________________________________
-! OPERATING CONTROL FILE
-Read Operating Controls File == ${model_name}.toc
+##COMMANDS toc_ecf##
 
 ##ENDIF##
 !________________________________________________________

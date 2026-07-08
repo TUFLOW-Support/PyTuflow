@@ -14,5 +14,20 @@
       "Rainfall Control File",
       "Event File"
     ]
+  },
+  "hpc_solution_scheme": {
+    "description": "Insert after the last command in the solution scheme/hardware section.",
+    "rule": "after",
+    "commands": [
+      "solution scheme",
+      "hardware"
+    ]
+  },
+  "map_outputs": {
+    "description": "Insert after all the map output commands.",
+    "rule": "after",
+    "commands": [
+      "map output"
+    ]
   }
 }

@@ -3,5 +3,18 @@
   "display_name": "Plot Output (PO)",
   "sort_order": 80,
   "template_files": [],
-  "command_blocks": []
+  "command_blocks": [
+    {
+      "id": "po_commands",
+      "target_cf": "tcf",
+      "commented_lhs": "time series output interval",
+      "insert_after_lhs": null,
+      "commands": [
+        "\n!_______________________________________________________",
+        "! PLOT OUTPUT",
+        "Time Series Output Interval == 60  ! TODO requires updating to sensible value to match simulation duration",
+        "! Read GIS PO == <path/to/2d_po>"
+      ]
+    }
+  ]
 }

@@ -11,17 +11,10 @@ Solution scheme == HPC
 Hardware == GPU
 
 ##IF module:sgs##
-!_______________________________________________________
-! SGS SETTINGS
-SGS == ON
-SGS Sample Target Distance == <distance>  ! TODO update to appropriate value based on model cell size
-
+##COMMANDS sgs_on##
 ##ENDIF##
 ##IF module:events##
-!_______________________________________________________
-! SCENARIOS / EVENTS
 ##COMMANDS events_tcf##
-
 ##ENDIF##
 !_______________________________________________________
 ! CONTROL FILES
@@ -43,9 +36,6 @@ Read Materials File == ..\model\${model_name}_mat.csv
 ##ENDIF##
 ##IF module:rf##
 ##COMMANDS rf_tcf##
-##ENDIF##
-##IF module:toc##
-##COMMANDS toc_tcf##
 ##ENDIF##
 
 !_______________________________________________________
@@ -74,16 +64,8 @@ Map Output Format == ${format}
 ##ENDLOOP##
 
 ##IF module:sgs##
-!_______________________________________________________
-! MAP OUTPUT SETTINGS
-SGS Map Extent Trim == All
-SGS Depth Output == Cell Average
-! Map Cutoff Depth == 0.01  ! uncomment if required
-
+##COMMANDS sgs_output_settings##
 ##ENDIF##
 ##IF module:po##
-!_______________________________________________________
-! PLOT OUTPUT
-Time Series Output Interval == 60  ! TODO requires updating to sensible value to match simulation duration
-Read GIS PO == <path/to/2d_po>
+##COMMANDS po_commands##
 ##ENDIF##

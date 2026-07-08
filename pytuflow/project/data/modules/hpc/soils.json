@@ -23,14 +23,12 @@
       "id": "soils_tgc",
       "target_cf": "tgc",
       "commented_lhs": "set soil",
-      "insert_after_lhs": "Set Mat",
+      "insert_after_lhs": null,
       "commands": [
         "!_______________________________________________________",
         "! Soil - Infiltration commands",
         "Set Soil == 1  ! defines top layer",
-        "! Set Soil Layer 2 == 1  ! defines a second vertical layer",
-        "! Read GIS Soil == <path/to/2d_soil>  ! e.g. of reading vector layer",
-        "! Read GRID Soil == <path/to/soil.tif>  ! e.g. of reading raster layer"
+        "! Read GIS Soil == <path/to/2d_soil>  ! e.g. of reading vector layer"
       ]
     }
   ]

@@ -13,8 +13,10 @@
       "id": "events_tcf",
       "target_cf": "tcf",
       "commented_lhs": "event file",
-      "insert_after_lhs": "Hardware",
+      "insert_after_lhs": null,
       "commands": [
+        "!_______________________________________________________",
+        "! SCENARIOS / EVENTS",
         "! Model event == <event_name>",
         "! Model scenario == <scenario_name>",
         "Event File == ..\\model\\${model_name}_events.tef"
