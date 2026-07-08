@@ -21,7 +21,7 @@
     {
       "id": "soils_tgc",
       "target_cf": "tgc",
-      "commented_lhs": "set soil",
+      "commented_lhs": "/^set soil\\s*==/i",
       "commands": [
         "!_______________________________________________________",
         "! Soil - Infiltration commands",

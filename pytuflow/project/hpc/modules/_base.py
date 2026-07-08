@@ -1,9 +1,38 @@
 from __future__ import annotations
 
+import re
 from string import Template
 
 from ...abc.module import BaseModule
 from ...template.manager import TemplateManager
+
+
+def _parse_filter(value: str) -> tuple[str, bool, int]:
+    """Parse a filter string that may use ``/pattern/flags`` regex syntax.
+
+    Returns ``(pattern, is_regex, flags)``.  Supported flag characters:
+    ``i`` (IGNORECASE), ``m`` (MULTILINE), ``s`` (DOTALL).
+
+    Plain strings are returned unchanged with ``is_regex=False, flags=0``.
+
+    Examples
+    --------
+    >>> _parse_filter("set soil")
+    ('set soil', False, 0)
+    >>> _parse_filter("/^set soil\\\\s*==/i")
+    ('^set soil\\\\s*==', True, re.IGNORECASE)
+    """
+    if value.startswith('/'):
+        last_slash = value.rfind('/', 1)
+        if last_slash > 0:
+            pattern = value[1:last_slash]
+            flag_chars = value[last_slash + 1:]
+            flags = 0
+            for char, flag in (('i', re.IGNORECASE), ('m', re.MULTILINE), ('s', re.DOTALL)):
+                if char in flag_chars:
+                    flags |= flag
+            return pattern, True, flags
+    return value, False, 0
 
 
 class HPCBaseModule(BaseModule):
@@ -105,7 +134,14 @@ class HPCBaseModule(BaseModule):
         # 3. A commented-out version of the first active command exists — uncomment it.
         commented_lhs = block.get('commented_lhs')
         if commented_lhs:
-            commented = cf.find_input(filter_by=commented_lhs, comments=True, recursive=False)
+            pattern, is_regex, flags = _parse_filter(commented_lhs)
+            commented = cf.find_input(
+                filter_by=pattern,
+                comments=True,
+                recursive=False,
+                regex=is_regex,
+                regex_flags=flags,
+            )
             if commented:
                 cf.uncomment(commented[0])
                 return

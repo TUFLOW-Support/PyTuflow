@@ -294,6 +294,65 @@ class TestHPCBaseModuleApplyToControlFiles:
         assert active, "Estry Control File should be uncommented"
 
 
+class TestParseFilter:
+    """Unit tests for the _parse_filter helper."""
+
+    def test_plain_string_unchanged(self):
+        from pytuflow.project.hpc.modules._base import _parse_filter
+        pattern, is_regex, flags = _parse_filter("estry control file")
+        assert pattern == "estry control file"
+        assert is_regex is False
+        assert flags == 0
+
+    def test_regex_basic(self):
+        import re
+        from pytuflow.project.hpc.modules._base import _parse_filter
+        pattern, is_regex, flags = _parse_filter("/^SGS$/i")
+        assert pattern == "^SGS$"
+        assert is_regex is True
+        assert flags == re.IGNORECASE
+
+    def test_regex_multiple_flags(self):
+        import re
+        from pytuflow.project.hpc.modules._base import _parse_filter
+        pattern, is_regex, flags = _parse_filter("/^set soil\\s*==/im")
+        assert pattern == "^set soil\\s*=="
+        assert is_regex is True
+        assert flags == re.IGNORECASE | re.MULTILINE
+
+    def test_regex_no_flags(self):
+        from pytuflow.project.hpc.modules._base import _parse_filter
+        pattern, is_regex, flags = _parse_filter("/^exact$/")
+        assert pattern == "^exact$"
+        assert is_regex is True
+        assert flags == 0
+
+    def test_regex_commented_lhs_avoids_false_match(self, tmp_path):
+        """Regex commented_lhs '/^set soil\\s*==/i' should NOT match 'Set Soil Layer 2'."""
+        from pytuflow.project.hpc.modules.soils import SoilsModule
+        from pytuflow import TGC
+
+        tgc_dir = tmp_path / 'model'
+        tgc_dir.mkdir()
+        tgc_path = tgc_dir / 'mymodel_001.tgc'
+        # Has a commented "Set Soil Layer 2" but NOT a plain "Set Soil"
+        tgc_path.write_text(
+            'Set Mat == 1\n'
+            '! Set Soil Layer 2 == 1\n',
+            encoding='utf-8',
+        )
+
+        tgc = TGC(tgc_path)
+        module = SoilsModule()
+        # Should NOT uncomment "Set Soil Layer 2" — it doesn't match /^set soil\s*==/i
+        module.apply_to_control_files({'tgc': tgc}, {'model_name': 'mymodel', 'iter': '001'})
+        tgc.write('inplace')
+
+        content = tgc_path.read_text(encoding='utf-8')
+        # "Set Soil Layer 2" should still be commented
+        assert '! Set Soil Layer 2' in content, "Set Soil Layer 2 should remain commented"
+
+
 class TestPlacementRules:
     """Tests for the rules.json placement-rule system."""
 
