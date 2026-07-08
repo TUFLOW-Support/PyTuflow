@@ -11,8 +11,7 @@
       "Read Soils File",
       "Quadtree Control File",
       "AD Control File",
-      "Rainfall Control File",
-      "Event File"
+      "Rainfall Control File"
     ]
   },
   "hpc_solution_scheme": {
