@@ -9,7 +9,7 @@
     {
       "id": "estry_tcf",
       "target_cf": "tcf",
-      "insert_point": "control_files",
+      "placement_rule": "control_files",
       "commented_lhs": "estry control file",
       "insert_after_lhs": "BC Control File",
       "commands": [

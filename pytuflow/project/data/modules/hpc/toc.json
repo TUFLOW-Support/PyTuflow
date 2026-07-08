@@ -9,7 +9,7 @@
     {
       "id": "toc_tcf",
       "target_cf": "tcf",
-      "insert_point": "control_files",
+      "placement_rule": "control_files",
       "commented_lhs": "read operational controls",
       "insert_after_lhs": "Read Materials File",
       "commands": [

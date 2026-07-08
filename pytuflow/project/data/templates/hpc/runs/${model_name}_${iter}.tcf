@@ -47,7 +47,6 @@ Read Materials File == ..\model\${model_name}_mat.csv
 ##IF module:toc##
 ##COMMANDS toc_tcf##
 ##ENDIF##
-! ##INSERT_POINT control_files##
 
 !_______________________________________________________
 ! INITIAL WATER LEVEL

@@ -72,7 +72,6 @@ class HPCBaseModule(BaseModule):
         # Find the first non-comment command (used for existence checks).
         first_active = next((c for c in commands if not c.strip().startswith('!')), None)
         if first_active is None:
-            # All commands are comments — nothing meaningful to apply.
             return
 
         first_lhs = first_active.split('==')[0].strip().lower()
@@ -81,17 +80,21 @@ class HPCBaseModule(BaseModule):
         if cf.find_input(lhs=first_lhs, recursive=False):
             return
 
-        # 2. ##INSERT_POINT <label>## marker exists in the CF.
-        insert_point_label = block.get('insert_point')
-        if insert_point_label:
-            markers = cf.find_input(
-                filter_by=f'##INSERT_POINT {insert_point_label}##',
-                comments=True,
-                recursive=False,
-            )
-            if markers:
-                self._insert_block_after(cf, markers[0], commands)
-                return
+        # 2. Placement rule — insert after the last command in the named section.
+        placement_rule = block.get('placement_rule')
+        if placement_rule:
+            rules = TemplateManager.get_rules()
+            rule = rules.get(placement_rule, {})
+            rule_lhs = [lhs.lower() for lhs in rule.get('commands', [])]
+            if rule_lhs:
+                last_ref = None
+                for lhs in rule_lhs:
+                    matches = cf.find_input(lhs=lhs, recursive=False)
+                    if matches:
+                        last_ref = matches[-1]
+                if last_ref is not None:
+                    self._insert_block_after(cf, last_ref, commands)
+                    return
 
         # 3. A commented-out version of the first active command exists — uncomment it.
         commented_lhs = block.get('commented_lhs')

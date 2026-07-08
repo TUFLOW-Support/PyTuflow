@@ -1,0 +1,20 @@
+{
+  "control_files": {
+    "description": "Insert after the last command in the control files section. Any new control file command is placed at the bottom of the existing control file commands group.",
+    "commands": [
+      "Geometry Control File",
+      "BC Control File",
+      "BC Database",
+      "Read Materials File",
+      "Estry Control File",
+      "Read Soils File",
+      "Quadtree Control File",
+      "AD Control File",
+      "Rainfall Control File",
+      "TOBC Control File",
+      "Read Operational Controls",
+      "1D Domain",
+      "Event File"
+    ]
+  }
+}

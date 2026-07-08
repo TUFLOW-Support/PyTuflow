@@ -163,11 +163,12 @@ class TestHPCProjectWithEventsModule:
 
 
 class TestHPCProjectInsertPoint:
-    def test_insert_point_in_tcf(self, project_dir):
+    def test_insert_point_not_in_tcf(self, project_dir):
+        """##INSERT_POINT is a silent no-op — must NOT appear in rendered output."""
         p = HPCProject('mymodel', project_dir)
         p.create()
         tcf_text = (project_dir / 'runs' / 'mymodel_001.tcf').read_text()
-        assert '! ##INSERT_POINT control_files##' in tcf_text
+        assert '##INSERT_POINT' not in tcf_text
 
 
 class TestHPCProjectUnknownModule:
@@ -237,32 +238,33 @@ class TestHPCBaseModuleApplyToControlFiles:
         after_lines = list(tcf.find_input(lhs='estry control file', recursive=False))
         assert len(before_lines) == len(after_lines)
 
-    def test_apply_inserts_via_insert_point(self, project_dir):
-        """apply_to_control_files uses ##INSERT_POINT## when present."""
+    def test_apply_inserts_via_placement_rule(self, project_dir):
+        """apply_to_control_files uses placement_rule to find the last control-file command."""
         from pytuflow.project.hpc.modules.estry import EstryModule
         from pytuflow import TCF
 
-        # Create bare-bones project (no estry — line omitted by template)
+        # Create bare-bones project (no estry)
         p = HPCProject('mymodel', project_dir, modules=[])
         p.create()
 
         tcf_path = project_dir / 'runs' / 'mymodel_001.tcf'
         tcf = TCF(tcf_path)
 
-        # ##INSERT_POINT control_files## should be present from template
-        assert tcf.find_input(filter_by='##INSERT_POINT control_files##', comments=True, recursive=False), \
-            "INSERT_POINT marker should be present"
+        # No INSERT_POINT comment should exist (directive is now a silent no-op)
+        assert not tcf.find_input(
+            filter_by='##INSERT_POINT control_files##', comments=True, recursive=False
+        ), "INSERT_POINT comment must not appear in rendered TCF"
 
-        # Apply estry module
+        # Apply estry module — should insert via placement_rule
+        (project_dir / 'model').mkdir(parents=True, exist_ok=True)
         module = EstryModule()
         variables = {'model_name': 'mymodel', 'iter': '001'}
         module.apply_to_control_files({'tcf': tcf}, variables)
         tcf.write('inplace')
 
-        # Verify estry command now present
         tcf2 = TCF(tcf_path)
         active = tcf2.find_input(lhs='estry control file', recursive=False)
-        assert active, "Estry Control File should have been inserted"
+        assert active, "Estry Control File should have been inserted via placement rule"
 
     def test_apply_uncomments_manually_added_comment(self, tmp_path):
         """apply_to_control_files can uncomment an existing commented line."""
@@ -290,6 +292,62 @@ class TestHPCBaseModuleApplyToControlFiles:
         tcf2 = TCF(tcf_path)
         active = tcf2.find_input(lhs='estry control file', recursive=False)
         assert active, "Estry Control File should be uncommented"
+
+
+class TestPlacementRules:
+    """Tests for the rules.json placement-rule system."""
+
+    def test_rules_json_loadable(self):
+        from pytuflow.project.template.manager import TemplateManager
+        rules = TemplateManager.get_rules()
+        assert 'control_files' in rules
+        assert 'commands' in rules['control_files']
+        assert len(rules['control_files']['commands']) > 0
+
+    def test_control_files_rule_contains_expected_lhs(self):
+        from pytuflow.project.template.manager import TemplateManager
+        commands = TemplateManager.get_rules()['control_files']['commands']
+        for expected in ['Geometry Control File', 'BC Control File', 'Read Materials File']:
+            assert expected in commands, f"'{expected}' missing from control_files rule"
+
+    def test_module_jsons_use_placement_rule(self):
+        """All modules that previously used insert_point now use placement_rule."""
+        from pytuflow.project.template.manager import TemplateManager
+        manager = TemplateManager('hpc')
+        for name in ['estry', 'soils', 'ad', 'rf', 'quadtree', 'toc']:
+            cfg = manager.get_module_config(name)
+            for block in cfg.get('command_blocks', []):
+                assert 'insert_point' not in block, (
+                    f"Module '{name}' block '{block.get('id')}' still uses deprecated 'insert_point'"
+                )
+
+    def test_placement_rule_inserts_after_last_cf_command(self, tmp_path):
+        """Placement rule inserts after the last matching command in the CF section."""
+        from pytuflow.project.hpc.modules.estry import EstryModule
+        from pytuflow import TCF
+
+        tcf_dir = tmp_path / 'runs'
+        tcf_dir.mkdir()
+        (tmp_path / 'model').mkdir()
+        tcf_path = tcf_dir / 'mymodel_001.tcf'
+        # A TCF with existing control file commands but no estry
+        tcf_path.write_text(
+            'Geometry Control File == ..\\model\\mymodel_001.tgc\n'
+            'BC Control File == ..\\model\\mymodel_001.tbc\n'
+            'BC Database == ..\\bc_dbase\\bc_dbase.csv\n'
+            'Read Materials File == ..\\model\\mymodel_mat.csv\n',
+            encoding='utf-8',
+        )
+
+        tcf = TCF(tcf_path)
+        module = EstryModule()
+        module.apply_to_control_files({'tcf': tcf}, {'model_name': 'mymodel', 'iter': '001'})
+        tcf.write('inplace')
+
+        content = tcf_path.read_text(encoding='utf-8')
+        ecf_pos = content.lower().find('estry control file')
+        mat_pos = content.lower().find('read materials file')
+        assert ecf_pos > mat_pos, "Estry Control File should appear after Read Materials File"
 
 
 class TestTemplateManagerIntegration:

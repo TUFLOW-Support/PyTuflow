@@ -3,13 +3,14 @@ import shutil
 from pathlib import Path
 
 CACHE_ROOT = Path.home() / '.tuflow_model_files' / 'project_templates'
+_BUNDLED_DATA_DIR = Path(__file__).parent.parent / 'data'
 
 
 class TemplateManager:
     def __init__(self, engine_type: str = 'hpc'):
         self.engine_type = engine_type
-        self._bundled_templates_dir = Path(__file__).parent.parent / 'data' / 'templates' / engine_type
-        self._bundled_modules_dir = Path(__file__).parent.parent / 'data' / 'modules' / engine_type
+        self._bundled_templates_dir = _BUNDLED_DATA_DIR / 'templates' / engine_type
+        self._bundled_modules_dir = _BUNDLED_DATA_DIR / 'modules' / engine_type
         self._cache_dir = CACHE_ROOT / engine_type
         self._cache_modules_dir = CACHE_ROOT / 'modules' / engine_type
 
@@ -41,10 +42,23 @@ class TemplateManager:
         if cached.exists():
             with open(cached, encoding='utf-8') as f:
                 return json.load(f)
-        # Fallback to bundled if cache not populated for this module
         bundled = self._bundled_modules_dir / f'{module_name}.json'
         if bundled.exists():
             with open(bundled, encoding='utf-8') as f:
+                return json.load(f)
+        return {}
+
+    @staticmethod
+    def get_rules() -> dict:
+        """Load the shared placement rules from the bundled rules.json.
+
+        Returns a dict keyed by rule name, each value having a ``commands``
+        list of LHS strings that define a logical section in a control file.
+        Falls back to an empty dict if the file is missing.
+        """
+        rules_path = _BUNDLED_DATA_DIR / 'rules.json'
+        if rules_path.exists():
+            with open(rules_path, encoding='utf-8') as f:
                 return json.load(f)
         return {}
 

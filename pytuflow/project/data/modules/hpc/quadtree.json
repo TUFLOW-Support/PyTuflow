@@ -9,7 +9,7 @@
     {
       "id": "quadtree_tcf",
       "target_cf": "tcf",
-      "insert_point": "control_files",
+      "placement_rule": "control_files",
       "commented_lhs": "quadtree control file",
       "insert_after_lhs": "Geometry Control File",
       "commands": [

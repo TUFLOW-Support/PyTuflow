@@ -103,11 +103,11 @@ class TemplateEngine:
                 i += 1
                 continue
 
-            # ##INSERT_POINT label##
+            # ##INSERT_POINT label##  — silent no-op; eaten so it never appears in output.
+            # (Kept as a recognised directive so custom templates can use it as a
+            # logical marker without producing comment noise.)
             m = re.match(r'^##INSERT_POINT\s+(.+?)##\s*$', stripped)
             if m:
-                label = m.group(1).strip()
-                result.append(f'! ##INSERT_POINT {label}##\n')
                 i += 1
                 continue
 

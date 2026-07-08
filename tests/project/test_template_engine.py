@@ -74,17 +74,18 @@ class TestLoopDirective:
 
 
 class TestInsertPoint:
-    def test_insert_point_becomes_comment(self, engine):
+    def test_insert_point_is_silent_noop(self, engine):
+        """##INSERT_POINT## is eaten — produces no output at all."""
         tmpl = "line1\n##INSERT_POINT control_files##\nline3\n"
         result = engine.render(tmpl, {}, active_modules=[])
-        assert '! ##INSERT_POINT control_files##' in result
+        assert '##INSERT_POINT' not in result
         assert 'line1' in result
         assert 'line3' in result
 
-    def test_insert_point_original_removed(self, engine):
+    def test_insert_point_leaves_no_comment(self, engine):
         tmpl = "##INSERT_POINT my_label##\n"
         result = engine.render(tmpl, {}, active_modules=[])
-        assert result.strip() == '! ##INSERT_POINT my_label##'
+        assert result.strip() == ''
 
 
 class TestVariableSubstitution:

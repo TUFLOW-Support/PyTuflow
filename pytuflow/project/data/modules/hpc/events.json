@@ -3,13 +3,15 @@
   "display_name": "Events (Scenario/Event File)",
   "sort_order": 10,
   "template_files": [
-    {"template_key": "model/${model_name}_events.tef", "output_subdir": "model"}
+    {
+      "template_key": "model/${model_name}_events.tef",
+      "output_subdir": "model"
+    }
   ],
   "command_blocks": [
     {
       "id": "events_tcf",
       "target_cf": "tcf",
-      "insert_point": null,
       "commented_lhs": "event file",
       "insert_after_lhs": "Hardware",
       "commands": [

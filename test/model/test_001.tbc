@@ -1,0 +1,8 @@
+!_______________________________________________________
+! EXTERNAL BOUNDARIES
+! Read GIS BC == <path/to/2d_bc>
+
+!_______________________________________________________
+! INTERNAL BOUNDARIES
+! Read GIS SA == <path/to/2d_sa>
+
