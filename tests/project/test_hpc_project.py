@@ -350,6 +350,34 @@ class TestPlacementRules:
         mat_pos = content.lower().find('read materials file')
         assert ecf_pos > mat_pos, "Estry Control File should appear after Read Materials File"
 
+    def test_unsupported_rule_type_raises(self, tmp_path):
+        """An unimplemented rule type in rules.json raises NotImplementedError."""
+        from pytuflow.project.hpc.modules.estry import EstryModule
+        from pytuflow import TCF
+        import pytuflow.project.template.manager as mgr_mod
+
+        tcf_dir = tmp_path / 'runs'
+        tcf_dir.mkdir()
+        (tmp_path / 'model').mkdir()
+        tcf_path = tcf_dir / 'mymodel_001.tcf'
+        tcf_path.write_text(
+            'Geometry Control File == ..\\model\\mymodel_001.tgc\n'
+            'Read Materials File == ..\\model\\mymodel_mat.csv\n',
+            encoding='utf-8',
+        )
+
+        fake_rules = {'hpc_control_files': {'rule': 'before', 'commands': ['Read Materials File']}}
+        original_get_rules = mgr_mod.TemplateManager.get_rules
+
+        mgr_mod.TemplateManager.get_rules = staticmethod(lambda: fake_rules)
+        try:
+            tcf = TCF(tcf_path)
+            module = EstryModule()
+            with pytest.raises(NotImplementedError, match="'before'.*not implemented"):
+                module.apply_to_control_files({'tcf': tcf}, {'model_name': 'mymodel', 'iter': '001'})
+        finally:
+            mgr_mod.TemplateManager.get_rules = staticmethod(original_get_rules)
+
 
 class TestTemplateManagerIntegration:
     def test_list_templates_includes_tcf(self):

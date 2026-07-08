@@ -80,11 +80,17 @@ class HPCBaseModule(BaseModule):
         if cf.find_input(lhs=first_lhs, recursive=False):
             return
 
-        # 2. Placement rule — insert after the last command in the named section.
+        # 2. Placement rule — insert using the strategy specified by rule["rule"].
         placement_rule = block.get('placement_rule')
         if placement_rule:
             rules = TemplateManager.get_rules()
             rule = rules.get(placement_rule, {})
+            rule_type = rule.get('rule', 'after')
+            if rule_type != 'after':
+                raise NotImplementedError(
+                    f"Placement rule strategy '{rule_type}' (from rule '{placement_rule}') "
+                    f"is not implemented. Only 'after' is currently supported."
+                )
             rule_lhs = [lhs.lower() for lhs in rule.get('commands', [])]
             if rule_lhs:
                 last_ref = None
