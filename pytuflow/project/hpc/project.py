@@ -155,9 +155,6 @@ class HPCProject(BaseProject):
                 module.apply_to_control_files(control_files, variables)
 
             tcf.write('inplace')
-            for cf in secondary_cfs.values():
-                if cf.dirty:
-                    cf.write('inplace')
 
         return self.output_dir
 
