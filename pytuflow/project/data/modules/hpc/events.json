@@ -1,0 +1,20 @@
+{
+  "name": "events",
+  "display_name": "Events (Scenario/Event File)",
+  "template_files": [
+    {"template_key": "model/${model_name}_events.tef", "output_subdir": "model"}
+  ],
+  "command_blocks": [
+    {
+      "target_cf": "tcf",
+      "insert_point": null,
+      "commented_lhs": "event file",
+      "insert_after_lhs": "Hardware",
+      "commands": [
+        "! Model event == <event_name>",
+        "! Model scenario == <scenario_name>",
+        "Event File == ..\\model\\${model_name}_events.tef"
+      ]
+    }
+  ]
+}

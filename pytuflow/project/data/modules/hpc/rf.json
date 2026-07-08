@@ -1,0 +1,18 @@
+{
+  "name": "rf",
+  "display_name": "RF (Rainfall)",
+  "template_files": [
+    {"template_key": "model/${model_name}_${iter}.trfc", "output_subdir": "model"}
+  ],
+  "command_blocks": [
+    {
+      "target_cf": "tcf",
+      "insert_point": "control_files",
+      "commented_lhs": "rainfall control file",
+      "insert_after_lhs": "Read Materials File",
+      "commands": [
+        "Rainfall Control File == ..\\model\\${model_name}_${iter}.trfc"
+      ]
+    }
+  ]
+}

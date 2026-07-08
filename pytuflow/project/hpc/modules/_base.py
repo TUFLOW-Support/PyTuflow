@@ -3,59 +3,121 @@ from __future__ import annotations
 from string import Template
 
 from ...abc.module import BaseModule
+from ...template.manager import TemplateManager
 
 
 class HPCBaseModule(BaseModule):
-    """Shared base for all HPC modules."""
+    """Shared base for all HPC modules. Command configuration is driven by a JSON file
+    cached at ``~/.tuflow_model_files/project_templates/modules/hpc/<name>.json``."""
 
     NAME: str = ''
     DISPLAY_NAME: str = ''
-    _TEMPLATE_KEY: str = ''        # e.g. 'model/${model_name}_${iter}.ecf'
-    _OUTPUT_SUBDIR: str = 'model'  # subdirectory within project
-    _TCF_COMMAND: str = ''         # full command line to add
-    _TCF_COMMENTED_LHS: str = ''   # lowercase lhs to search for commented-out version
-    _TCF_INSERT_AFTER_LHS: str = '' # fallback: insert after this lhs
+
+    def _get_config(self) -> dict:
+        """Load this module's JSON config via the TemplateManager (reads from cache)."""
+        manager = TemplateManager('hpc')
+        return manager.get_module_config(self.NAME)
+
+    # ------------------------------------------------------------------
+    # BaseModule interface
+    # ------------------------------------------------------------------
 
     def get_template_files(self, variables: dict) -> list[tuple[str, str]]:
-        if not self._TEMPLATE_KEY:
-            return []
-        template_key = self._TEMPLATE_KEY
-        filename = Template(self._TEMPLATE_KEY.split('/')[-1]).safe_substitute(variables)
-        output_rel = f'{self._OUTPUT_SUBDIR}/{filename}'
-        return [(template_key, output_rel)]
+        config = self._get_config()
+        result = []
+        for tf in config.get('template_files', []):
+            template_key = tf['template_key']
+            subdir = tf.get('output_subdir', 'model')
+            filename = Template(template_key.split('/')[-1]).safe_substitute(variables)
+            output_rel = f'{subdir}/{filename}'
+            result.append((template_key, output_rel))
+        return result
 
+    def apply_to_control_files(self, control_files: dict, variables: dict) -> None:
+        """Apply this module's command blocks to the supplied control file objects.
+
+        Parameters
+        ----------
+        control_files : dict[str, ControlFile]
+            Mapping of CF type key (e.g. ``'tcf'``, ``'tgc'``) to the loaded
+            control file build-state object.
+        variables : dict
+            Template variable substitutions (model_name, iter, …).
+        """
+        config = self._get_config()
+        for block in config.get('command_blocks', []):
+            target = block.get('target_cf', 'tcf')
+            cf = control_files.get(target)
+            if cf is None:
+                continue
+            self._apply_block(cf, block, variables)
+
+    # Legacy shim so any code that still calls apply_to_tcf keeps working.
     def apply_to_tcf(self, tcf, variables: dict) -> None:
-        command = Template(self._TCF_COMMAND).safe_substitute(variables)
-        lhs = command.split('==')[0].strip().lower()
+        self.apply_to_control_files({'tcf': tcf}, variables)
 
-        # 1. Check if command already exists (not commented)
-        existing = tcf.find_input(lhs=lhs, recursive=False)
-        if existing:
-            return  # already present, skip
+    # ------------------------------------------------------------------
+    # Internal helpers
+    # ------------------------------------------------------------------
 
-        # 2. Find ##INSERT_POINT control_files## comment
-        insert_point = tcf.find_input(
-            filter_by='##INSERT_POINT control_files##', comments=True, recursive=False
-        )
-        if insert_point:
-            tcf.insert_input(insert_point[0], command, after=True)
+    def _apply_block(self, cf, block: dict, variables: dict) -> None:
+        """Apply a single command block to a control file."""
+        raw_commands: list[str] = block.get('commands', [])
+        if not raw_commands:
             return
 
-        # 3. Find commented-out version and uncomment it
-        if self._TCF_COMMENTED_LHS:
-            commented = tcf.find_input(
-                filter_by=self._TCF_COMMENTED_LHS, comments=True, recursive=False
+        # Substitute template variables in each command.
+        commands = [Template(cmd).safe_substitute(variables) for cmd in raw_commands]
+
+        # Find the first non-comment command (used for existence checks).
+        first_active = next((c for c in commands if not c.strip().startswith('!')), None)
+        if first_active is None:
+            # All commands are comments — nothing meaningful to apply.
+            return
+
+        first_lhs = first_active.split('==')[0].strip().lower()
+
+        # 1. Already exists (uncommented) — skip the whole block.
+        if cf.find_input(lhs=first_lhs, recursive=False):
+            return
+
+        # 2. ##INSERT_POINT <label>## marker exists in the CF.
+        insert_point_label = block.get('insert_point')
+        if insert_point_label:
+            markers = cf.find_input(
+                filter_by=f'##INSERT_POINT {insert_point_label}##',
+                comments=True,
+                recursive=False,
             )
+            if markers:
+                self._insert_block_after(cf, markers[0], commands)
+                return
+
+        # 3. A commented-out version of the first active command exists — uncomment it.
+        commented_lhs = block.get('commented_lhs')
+        if commented_lhs:
+            commented = cf.find_input(filter_by=commented_lhs, comments=True, recursive=False)
             if commented:
-                tcf.uncomment(commented[0])
+                cf.uncomment(commented[0])
                 return
 
-        # 4. Find _TCF_INSERT_AFTER_LHS and insert after it
-        if self._TCF_INSERT_AFTER_LHS:
-            ref = tcf.find_input(lhs=self._TCF_INSERT_AFTER_LHS, recursive=False)
-            if ref:
-                tcf.insert_input(ref[-1], command, after=True)
+        # 4. Insert the block after a reference command.
+        insert_after_lhs = block.get('insert_after_lhs')
+        if insert_after_lhs:
+            refs = cf.find_input(lhs=insert_after_lhs, recursive=False)
+            if refs:
+                self._insert_block_after(cf, refs[-1], commands)
                 return
 
-        # 5. Append to TCF
-        tcf.append_input(command)
+        # 5. Fallback — append the whole block to the end of the file.
+        for cmd in commands:
+            if cmd.strip():
+                cf.append_input(cmd)
+
+    @staticmethod
+    def _insert_block_after(cf, ref_inp, commands: list[str]) -> None:
+        """Insert *commands* into *cf* sequentially after *ref_inp*."""
+        current_ref = ref_inp
+        for cmd in commands:
+            if cmd.strip():
+                current_ref = cf.insert_input(current_ref, cmd, after=True)

@@ -114,14 +114,15 @@ class TestHPCProjectWithEstryModule:
         lines = [l for l in tcf_text.splitlines() if 'Estry Control File' in l]
         assert any(not l.strip().startswith('!') for l in lines)
 
-    def test_tcf_no_estry_commented(self, project_dir):
-        """Without estry module, estry line should be commented."""
+    def test_tcf_no_estry_when_inactive(self, project_dir):
+        """Without estry module, estry line should be absent from TCF (template omits it)."""
         p = HPCProject('mymodel', project_dir, modules=[])
         p.create()
         tcf_text = (project_dir / 'runs' / 'mymodel_001.tcf').read_text()
-        lines = [l for l in tcf_text.splitlines() if 'Estry Control File' in l]
-        assert lines, "Estry Control File line should exist (commented)"
-        assert all(l.strip().startswith('!') for l in lines)
+        # Template uses ##IF module:estry## — line should be absent entirely
+        active_lines = [l for l in tcf_text.splitlines()
+                        if 'Estry Control File' in l and not l.strip().startswith('!')]
+        assert not active_lines, "Estry Control File should not be active when module is off"
 
 
 class TestHPCProjectWithSoilsModule:
@@ -151,13 +152,14 @@ class TestHPCProjectWithEventsModule:
         lines = [l for l in tcf_text.splitlines() if 'Event File' in l]
         assert any(not l.strip().startswith('!') for l in lines)
 
-    def test_tcf_events_commented_when_inactive(self, project_dir):
+    def test_tcf_events_absent_when_inactive(self, project_dir):
+        """Without events module, Event File line should be absent from TCF."""
         p = HPCProject('mymodel', project_dir, modules=[])
         p.create()
         tcf_text = (project_dir / 'runs' / 'mymodel_001.tcf').read_text()
-        lines = [l for l in tcf_text.splitlines() if 'Event File' in l]
-        assert lines
-        assert all(l.strip().startswith('!') for l in lines)
+        active_lines = [l for l in tcf_text.splitlines()
+                        if 'Event File' in l and not l.strip().startswith('!')]
+        assert not active_lines, "Event File should not be active when module is off"
 
 
 class TestHPCProjectInsertPoint:
@@ -178,7 +180,7 @@ class TestHPCProjectUnknownModule:
 class TestGetAvailableModules:
     def test_returns_all_modules(self):
         modules = get_available_modules()
-        expected = {'estry', 'quadtree', 'soils', 'ad', 'toc', 'rf', 'events'}
+        expected = {'estry', 'quadtree', 'soils', 'ad', 'toc', 'rf', 'events', 'sgs', 'po'}
         assert set(modules.keys()) == expected
 
     def test_modules_have_name(self):
@@ -211,15 +213,15 @@ class TestVariablesFromTcfPath:
         assert v['model_name'] == 'override'
 
 
-class TestHPCBaseModuleApplyToTcf:
-    """Tests for HPCBaseModule.apply_to_tcf logic."""
+class TestHPCBaseModuleApplyToControlFiles:
+    """Tests for HPCBaseModule.apply_to_control_files logic."""
 
     def test_apply_skips_if_already_present(self, project_dir):
-        """If command already exists in TCF, apply_to_tcf should skip."""
+        """If command already exists in TCF, apply_to_control_files should skip."""
         from pytuflow.project.hpc.modules.estry import EstryModule
         from pytuflow import TCF
 
-        # Create project with estry already
+        # Create project with estry already active
         p = HPCProject('mymodel', project_dir, modules=['estry'])
         p.create()
 
@@ -227,40 +229,67 @@ class TestHPCBaseModuleApplyToTcf:
         tcf = TCF(tcf_path)
         before_lines = list(tcf.find_input(lhs='estry control file', recursive=False))
 
-        # Apply again - should be a no-op
+        # Apply again — should be a no-op
         module = EstryModule()
         variables = {'model_name': 'mymodel', 'iter': '001'}
-        module.apply_to_tcf(tcf, variables)
+        module.apply_to_control_files({'tcf': tcf}, variables)
 
         after_lines = list(tcf.find_input(lhs='estry control file', recursive=False))
         assert len(before_lines) == len(after_lines)
 
-    def test_apply_uncomments_existing_comment(self, project_dir):
-        """apply_to_tcf should uncomment an existing commented line."""
+    def test_apply_inserts_via_insert_point(self, project_dir):
+        """apply_to_control_files uses ##INSERT_POINT## when present."""
         from pytuflow.project.hpc.modules.estry import EstryModule
         from pytuflow import TCF
 
-        # Create project WITHOUT estry (so estry line is commented)
+        # Create bare-bones project (no estry — line omitted by template)
         p = HPCProject('mymodel', project_dir, modules=[])
         p.create()
 
         tcf_path = project_dir / 'runs' / 'mymodel_001.tcf'
         tcf = TCF(tcf_path)
 
-        # Verify the estry line is commented
-        commented = tcf.find_input(filter_by='estry control file', comments=True, recursive=False)
-        assert commented, "Estry line should be commented"
+        # ##INSERT_POINT control_files## should be present from template
+        assert tcf.find_input(filter_by='##INSERT_POINT control_files##', comments=True, recursive=False), \
+            "INSERT_POINT marker should be present"
 
-        # Now apply the estry module
+        # Apply estry module
         module = EstryModule()
         variables = {'model_name': 'mymodel', 'iter': '001'}
-        module.apply_to_tcf(tcf, variables)
+        module.apply_to_control_files({'tcf': tcf}, variables)
         tcf.write('inplace')
 
-        # Re-read and verify it's now uncommented
+        # Verify estry command now present
         tcf2 = TCF(tcf_path)
         active = tcf2.find_input(lhs='estry control file', recursive=False)
-        assert active, "Estry Control File should now be active"
+        assert active, "Estry Control File should have been inserted"
+
+    def test_apply_uncomments_manually_added_comment(self, tmp_path):
+        """apply_to_control_files can uncomment an existing commented line."""
+        from pytuflow.project.hpc.modules.estry import EstryModule
+        from pytuflow import TCF
+
+        # Write a minimal TCF with a commented Estry line (simulating a hand-edited file)
+        tcf_dir = tmp_path / 'runs'
+        tcf_dir.mkdir()
+        (tmp_path / 'model').mkdir()  # needed so TCF.write() can create the ECF
+        tcf_path = tcf_dir / 'mymodel_001.tcf'
+        tcf_path.write_text(
+            'Solution scheme == HPC\n'
+            'Geometry Control File == ..\\model\\mymodel_001.tgc\n'
+            '! Estry Control File == ..\\model\\mymodel_001.ecf\n',
+            encoding='utf-8',
+        )
+
+        tcf = TCF(tcf_path)
+        module = EstryModule()
+        variables = {'model_name': 'mymodel', 'iter': '001'}
+        module.apply_to_control_files({'tcf': tcf}, variables)
+        tcf.write('inplace')
+
+        tcf2 = TCF(tcf_path)
+        active = tcf2.find_input(lhs='estry control file', recursive=False)
+        assert active, "Estry Control File should be uncommented"
 
 
 class TestTemplateManagerIntegration:
@@ -320,3 +349,129 @@ class TestCLICommands:
         )
         assert result.returncode == 0, result.stderr
         assert (tmp_path / 'out' / 'runs' / 'testmodel_001.tcf').exists()
+
+
+class TestModuleJsonConfig:
+    """Tests for module JSON config loading via TemplateManager."""
+
+    def test_module_config_loaded(self, tmp_path, monkeypatch):
+        import pytuflow.project.template.manager as mgr_mod
+        monkeypatch.setattr(mgr_mod, 'CACHE_ROOT', tmp_path / 'cache')
+        manager = TemplateManager('hpc')
+        config = manager.get_module_config('estry')
+        assert config['name'] == 'estry'
+        assert 'command_blocks' in config
+        assert 'template_files' in config
+
+    def test_soils_config_has_tgc_block(self, tmp_path, monkeypatch):
+        import pytuflow.project.template.manager as mgr_mod
+        monkeypatch.setattr(mgr_mod, 'CACHE_ROOT', tmp_path / 'cache')
+        manager = TemplateManager('hpc')
+        config = manager.get_module_config('soils')
+        targets = [b['target_cf'] for b in config['command_blocks']]
+        assert 'tcf' in targets
+        assert 'tgc' in targets
+
+    def test_module_config_cached(self, tmp_path, monkeypatch):
+        import pytuflow.project.template.manager as mgr_mod
+        monkeypatch.setattr(mgr_mod, 'CACHE_ROOT', tmp_path / 'cache')
+        manager = TemplateManager('hpc')
+        manager.init_cache()
+        cached_path = manager._cache_modules_dir / 'estry.json'
+        assert cached_path.exists()
+
+    def test_module_config_cache_reset(self, tmp_path, monkeypatch):
+        import json
+        import pytuflow.project.template.manager as mgr_mod
+        monkeypatch.setattr(mgr_mod, 'CACHE_ROOT', tmp_path / 'cache')
+        manager = TemplateManager('hpc')
+        manager.init_cache()
+        # Modify cached config
+        cached_path = manager._cache_modules_dir / 'estry.json'
+        cached_path.write_text('{"name": "modified"}')
+        # Reset should restore original
+        manager.reset_cache()
+        with open(cached_path) as f:
+            data = json.load(f)
+        assert data['name'] == 'estry'
+
+    def test_unknown_module_returns_empty(self, tmp_path, monkeypatch):
+        import pytuflow.project.template.manager as mgr_mod
+        monkeypatch.setattr(mgr_mod, 'CACHE_ROOT', tmp_path / 'cache')
+        manager = TemplateManager('hpc')
+        config = manager.get_module_config('nonexistent')
+        assert config == {}
+
+    def test_list_module_configs(self, tmp_path, monkeypatch):
+        import pytuflow.project.template.manager as mgr_mod
+        monkeypatch.setattr(mgr_mod, 'CACHE_ROOT', tmp_path / 'cache')
+        manager = TemplateManager('hpc')
+        names = manager.list_module_configs()
+        assert 'estry' in names
+        assert 'soils' in names
+
+
+class TestSoilsMultiCFModule:
+    """Tests that the soils module applies commands to both TCF and TGC."""
+
+    def test_soils_adds_set_soil_to_tgc(self, project_dir):
+        """Creating a project with soils should result in Set Soil in TGC."""
+        p = HPCProject('mymodel', project_dir, modules=['soils'])
+        p.create()
+        tgc_text = (project_dir / 'model' / 'mymodel_001.tgc').read_text()
+        active_lines = [l for l in tgc_text.splitlines()
+                        if 'Set Soil' in l and not l.strip().startswith('!')]
+        assert active_lines, "TGC should contain active Set Soil command"
+
+    def test_soils_tgc_content_without_soils(self, project_dir):
+        """Without soils module, TGC should have no soil section."""
+        p = HPCProject('mymodel', project_dir, modules=[])
+        p.create()
+        tgc_text = (project_dir / 'model' / 'mymodel_001.tgc').read_text()
+        assert 'Set Soil' not in tgc_text
+
+    def test_insert_soils_into_existing_project(self, project_dir):
+        """Inserting soils into an existing bare-bones project modifies both TCF and TGC."""
+        from pytuflow import TCF, TGC
+
+        # Create bare-bones project
+        p = HPCProject('mymodel', project_dir)
+        p.create()
+
+        tcf_path = project_dir / 'runs' / 'mymodel_001.tcf'
+        tgc_path = project_dir / 'model' / 'mymodel_001.tgc'
+
+        # Sanity check: soils not present yet
+        tcf_before = TCF(tcf_path)
+        assert not tcf_before.find_input(lhs='read soils file', recursive=False)
+
+        # Insert soils module
+        HPCProject.insert_module_into('soils', tcf_path)
+
+        # TCF should now have Read Soils File
+        tcf_after = TCF(tcf_path)
+        assert tcf_after.find_input(lhs='read soils file', recursive=False), \
+            "TCF should have Read Soils File after insert"
+
+        # TGC should now have Set Soil
+        tgc_after = TGC(tgc_path)
+        soil_inps = tgc_after.find_input(lhs='set soil', recursive=False)
+        assert soil_inps, "TGC should have Set Soil after insert"
+
+        # tsoilf file should have been created
+        assert (project_dir / 'model' / 'mymodel_soils.tsoilf').exists()
+
+    def test_insert_soils_idempotent(self, project_dir):
+        """Inserting soils twice should not duplicate commands."""
+        from pytuflow import TCF
+
+        p = HPCProject('mymodel', project_dir)
+        p.create()
+        tcf_path = project_dir / 'runs' / 'mymodel_001.tcf'
+
+        HPCProject.insert_module_into('soils', tcf_path)
+        HPCProject.insert_module_into('soils', tcf_path)
+
+        tcf = TCF(tcf_path)
+        soils_inps = tcf.find_input(lhs='read soils file', recursive=False)
+        assert len(soils_inps) == 1, "Read Soils File should appear exactly once"

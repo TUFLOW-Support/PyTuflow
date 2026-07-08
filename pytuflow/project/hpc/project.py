@@ -16,6 +16,15 @@ if TYPE_CHECKING:
 # Registry of available HPC modules
 _MODULE_REGISTRY: dict[str, type] = {}
 
+# Maps CF type key → TCF command lhs that references it, and the pytuflow class to use.
+_CF_TYPE_MAP: dict[str, dict] = {
+    'tgc': {'lhs': 'geometry control file', 'class': 'TGC'},
+    'tbc': {'lhs': 'bc control file', 'class': 'TBC'},
+    'ecf': {'lhs': 'estry control file', 'class': 'ECF'},
+    'qcf': {'lhs': 'quadtree control file', 'class': 'QCF'},
+    'adcf': {'lhs': 'ad control file', 'class': 'ADCF'},
+}
+
 
 def _register_modules():
     from .modules.estry import EstryModule
@@ -57,7 +66,7 @@ _BASE_TEMPLATES = [
 
 
 class HPCProject(BaseProject):
-    
+
     def __init__(
         self,
         name: str,
@@ -100,7 +109,6 @@ class HPCProject(BaseProject):
         if errors:
             raise ValueError('\n'.join(errors))
 
-        # Use raw settings dict so lists stay as lists for the template engine
         variables = dict(self.settings._settings)
         variables['model_name'] = self.name
         active_modules = list(self.module_names)
@@ -112,7 +120,6 @@ class HPCProject(BaseProject):
         # Render and write base templates
         tcf_path = None
         for template_key, output_rel in _BASE_TEMPLATES:
-            rendered_key = Template(template_key).safe_substitute(variables)
             rendered_out = Template(output_rel).safe_substitute(variables)
             text = self._manager.get_template(template_key)
             rendered_text = self._engine.render(text, variables, active_modules)
@@ -132,13 +139,22 @@ class HPCProject(BaseProject):
                 out_path.parent.mkdir(parents=True, exist_ok=True)
                 out_path.write_text(rendered_text, encoding='utf-8')
 
-        # Apply modules to TCF
+        # Apply modules to control files
         if tcf_path is not None:
             from pytuflow import TCF
             tcf = TCF(tcf_path)
+            needed_types = _needed_cf_types(modules)
+            secondary_cfs = _load_secondary_cfs(tcf, tcf_path, needed_types)
+            control_files = {'tcf': tcf, **secondary_cfs}
+
             for module in modules:
-                module.apply_to_tcf(tcf, variables)
+                module.apply_to_control_files(control_files, variables)
+
+            # Write TCF and any modified secondary CFs
             tcf.write('inplace')
+            for cf_key, cf in secondary_cfs.items():
+                if cf.dirty:
+                    cf.write('inplace')
 
         return self.output_dir
 
@@ -196,10 +212,18 @@ class HPCProject(BaseProject):
                 out_path.parent.mkdir(parents=True, exist_ok=True)
                 out_path.write_text(rendered_text, encoding='utf-8')
 
-        # Apply module to TCF
+        # Apply module to TCF and any secondary CFs
         tcf = TCF(tcf_path)
-        module.apply_to_tcf(tcf, variables)
+        needed_types = _needed_cf_types([module])
+        secondary_cfs = _load_secondary_cfs(tcf, tcf_path, needed_types)
+        control_files = {'tcf': tcf, **secondary_cfs}
+
+        module.apply_to_control_files(control_files, variables)
+
         tcf.write('inplace')
+        for cf_key, cf in secondary_cfs.items():
+            if cf.dirty:
+                cf.write('inplace')
 
     def _get_module_instances(self):
         registry = get_available_modules()
@@ -211,6 +235,38 @@ class HPCProject(BaseProject):
                 )
             instances.append(registry[name]())
         return instances
+
+
+def _needed_cf_types(modules) -> set[str]:
+    """Collect all non-TCF target_cf values across all modules' command blocks."""
+    needed = set()
+    for module in modules:
+        config = module._get_config()
+        for block in config.get('command_blocks', []):
+            target = block.get('target_cf', 'tcf')
+            if target != 'tcf':
+                needed.add(target)
+    return needed
+
+
+def _load_secondary_cfs(tcf, tcf_path: Path, needed_types: set[str]) -> dict:
+    """Load secondary CFs (TGC, TBC, etc.) referenced in the TCF."""
+    import pytuflow as pt
+
+    cf_classes = {k: getattr(pt, v['class']) for k, v in _CF_TYPE_MAP.items()}
+    result = {}
+    for cf_type in needed_types:
+        if cf_type not in _CF_TYPE_MAP:
+            continue
+        lhs = _CF_TYPE_MAP[cf_type]['lhs']
+        inps = tcf.find_input(lhs=lhs, recursive=False)
+        if not inps:
+            continue
+        cf_rel = str(inps[0].rhs).replace('\\', '/')
+        cf_path = (tcf_path.parent / cf_rel).resolve()
+        if cf_path.exists():
+            result[cf_type] = cf_classes[cf_type](cf_path)
+    return result
 
 
 def _variables_from_tcf_path(tcf_path: Path, **overrides) -> dict:

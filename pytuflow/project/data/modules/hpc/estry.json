@@ -1,0 +1,18 @@
+{
+  "name": "estry",
+  "display_name": "Estry (1D Drainage)",
+  "template_files": [
+    {"template_key": "model/${model_name}_${iter}.ecf", "output_subdir": "model"}
+  ],
+  "command_blocks": [
+    {
+      "target_cf": "tcf",
+      "insert_point": "control_files",
+      "commented_lhs": "estry control file",
+      "insert_after_lhs": "BC Control File",
+      "commands": [
+        "Estry Control File == ..\\model\\${model_name}_${iter}.ecf"
+      ]
+    }
+  ]
+}

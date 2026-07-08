@@ -1,0 +1,32 @@
+{
+  "name": "soils",
+  "display_name": "Soils (Infiltration)",
+  "template_files": [
+    {"template_key": "model/${model_name}_soils.tsoilf", "output_subdir": "model"}
+  ],
+  "command_blocks": [
+    {
+      "target_cf": "tcf",
+      "insert_point": "control_files",
+      "commented_lhs": "read soils file",
+      "insert_after_lhs": "Read Materials File",
+      "commands": [
+        "Read Soils File == ..\\model\\${model_name}_soils.tsoilf"
+      ]
+    },
+    {
+      "target_cf": "tgc",
+      "insert_point": null,
+      "commented_lhs": "set soil",
+      "insert_after_lhs": "Set Mat",
+      "commands": [
+        "!_______________________________________________________",
+        "! Soil - Infiltration commands",
+        "Set Soil == 1  ! defines top layer",
+        "! Set Soil Layer 2 == 1  ! defines a second vertical layer",
+        "! Read GIS Soil == <path/to/2d_soil>  ! e.g. of reading vector layer",
+        "! Read GRID Soil == <path/to/soil.tif>  ! e.g. of reading raster layer"
+      ]
+    }
+  ]
+}
