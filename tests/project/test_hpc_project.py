@@ -412,6 +412,63 @@ class TestHPCBaseModuleApplyToControlFiles:
         assert content.count('SECTION HEADER') == 0, \
             "Decorator comment must not be inserted when all commands already exist"
 
+    def test_trailing_comment_after_real_command_is_inserted(self, tmp_path):
+        """Comment lines that follow a real command (e.g. placeholders) are always inserted."""
+        from pytuflow.project.hpc.modules._base import HPCBaseModule
+        from pytuflow import TCF
+
+        class TrailingCommentModule(HPCBaseModule):
+            NAME = '_test'
+            DISPLAY_NAME = 'Test'
+            def _get_config(self):
+                return {
+                    'command_blocks': [{
+                        'id': 'trailing',
+                        'target_cf': 'tcf',
+                        'insert_after_lhs': 'Solution Scheme',
+                        'commands': [
+                            'Real Command == 60',
+                            '! Read GIS Layer == <path/to/layer>',
+                        ]
+                    }]
+                }
+
+        tcf_dir = tmp_path / 'runs'
+        tcf_dir.mkdir()
+        tcf_path = tcf_dir / 'test_001.tcf'
+        tcf_path.write_text('Solution Scheme == HPC\n', encoding='utf-8')
+
+        tcf = TCF(tcf_path)
+        TrailingCommentModule().apply_to_control_files({'tcf': tcf}, {})
+        tcf.write('inplace')
+
+        content = tcf_path.read_text(encoding='utf-8')
+        assert 'Real Command == 60' in content
+        assert '! Read GIS Layer == <path/to/layer>' in content, \
+            "Trailing placeholder comment should be inserted after the real command"
+
+    def test_po_module_inserts_placeholder_comment(self, tmp_path):
+        """Regression: po module's '! Read GIS PO' placeholder must appear in the TCF."""
+        from pytuflow.project.hpc.modules.po import POModule
+        from pytuflow import TCF
+
+        tcf_dir = tmp_path / 'runs'
+        tcf_dir.mkdir()
+        tcf_path = tcf_dir / 'test_001.tcf'
+        tcf_path.write_text(
+            'Output Folder == ..\\results\\\n',
+            encoding='utf-8',
+        )
+
+        tcf = TCF(tcf_path)
+        POModule().apply_to_control_files({'tcf': tcf}, {'model_name': 'test', 'iter': '001'})
+        tcf.write('inplace')
+
+        content = tcf_path.read_text(encoding='utf-8')
+        assert 'Time Series Output Interval' in content
+        assert '! Read GIS PO' in content, \
+            "Placeholder '! Read GIS PO' must be inserted after Time Series Output Interval"
+
 
 class TestParseFilter:
     """Unit tests for the _parse_filter helper."""

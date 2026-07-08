@@ -99,9 +99,14 @@ class HPCBaseModule(BaseModule):
         * Commented version found → uncomment; advance cursor.
         * Neither → insert after cursor; advance cursor.
 
-        Pure comment / blank lines are buffered as *decorators* and flushed
-        immediately before the next real command that actually needs inserting.
-        This ensures section headers appear only when something new is added.
+        Comment / blank lines before the first real command are buffered as
+        *decorators* and flushed only if the following real command needs
+        inserting — so section headers are not duplicated when all commands
+        already exist.
+
+        Comment / blank lines that appear *after* a real command have already
+        been processed and are inserted immediately (e.g. placeholder lines
+        like ``! Read GIS PO == <path>`` that follow a real command).
         """
         raw_commands: list[str] = block.get('commands', [])
         if not raw_commands:
@@ -116,17 +121,26 @@ class HPCBaseModule(BaseModule):
         # Find the initial insertion anchor for this block.
         current_ref = self._find_block_anchor(cf, block)
 
-        # Decorator lines (comments/blanks) buffered until a real insert happens.
+        # Before the first real command, comments are decorators (section headers
+        # etc.) — only inserted when a real command needs inserting.
+        # After a real command has been processed, comments are trailing content
+        # and are inserted immediately after the cursor.
         pending_decorators: list[str] = []
+        past_first_real_command = False
 
         for cmd in commands:
             stripped = cmd.strip()
 
-            # Pure comment or blank line — buffer as a decorator.
             if not stripped or stripped.startswith('!'):
-                pending_decorators.append(cmd)
+                if past_first_real_command:
+                    # Trailing comment — insert immediately after cursor.
+                    current_ref = self._insert_or_append(cf, current_ref, cmd)
+                else:
+                    # Pre-command decorator — buffer until we know if real cmd needs inserting.
+                    pending_decorators.append(cmd)
                 continue
 
+            past_first_real_command = True
             lhs = stripped.split('==')[0].strip()
 
             # Already exists uncommented — skip; advance cursor to keep order.
