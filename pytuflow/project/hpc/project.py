@@ -25,6 +25,8 @@ def _register_modules():
     from .modules.toc import TOCModule
     from .modules.rf import RFModule
     from .modules.events import EventsModule
+    from .modules.sgs import SGSModule
+    from .modules.po import POModule
     _MODULE_REGISTRY.update({
         'estry': EstryModule,
         'quadtree': QuadtreeModule,
@@ -33,6 +35,8 @@ def _register_modules():
         'toc': TOCModule,
         'rf': RFModule,
         'events': EventsModule,
+        'sgs': SGSModule,
+        'po': POModule,
     })
 
 

@@ -1,8 +1,8 @@
 !_______________________________________________________
 ! GIS
-GIS Format == ${gis_format}
+GIS Format == shp
 GRID Format == TIF
-${gis_projection_command}
+! Projection == <path/to/projection>  ! TODO
 
 !_______________________________________________________
 ! SOLVER
@@ -10,42 +10,17 @@ Tutorial Model == OFF
 Solution scheme == HPC
 Hardware == GPU
 
-##IF module:sgs##
 !_______________________________________________________
 ! SGS SETTINGS
 SGS == ON
 SGS Sample Target Distance == <distance>  ! TODO update to appropriate value based on model cell size
 
-##ENDIF##
-##IF module:events##
-!_______________________________________________________
-! SCENARIOS / EVENTS
-! Model event == <event_name>
-! Model scenario == <scenario_name>
-Event File == ..\model\${model_name}_events.tef
-
-##ENDIF##
 !_______________________________________________________
 ! CONTROL FILES
-Geometry Control File == ..\model\${model_name}_${iter}.tgc
-BC Control File == ..\model\${model_name}_${iter}.tbc
+Geometry Control File == ..\model\test_001.tgc
+BC Control File == ..\model\test_001.tbc
 BC Database == ..\bc_dbase\bc_dbase.csv
-Read Materials File == ..\model\${model_name}_mat.csv
-##IF module:estry##
-Estry Control File == ..\model\${model_name}_${iter}.ecf
-##ENDIF##
-##IF module:soils##
-Read Soils File == ..\model\${model_name}_soils.tsoilf
-##ENDIF##
-##IF module:quadtree##
-Quadtree Control File == ..\model\${model_name}_${iter}.qcf
-##ENDIF##
-##IF module:ad##
-AD Control File == ..\model\${model_name}_${iter}.adcf
-##ENDIF##
-##IF module:rf##
-Rainfall Control File == ..\model\${model_name}_${iter}.trfc
-##ENDIF##
+Read Materials File == ..\model\test_mat.csv
 
 !_______________________________________________________
 ! INITIAL WATER LEVEL
@@ -68,21 +43,15 @@ Write Check Files == ..\check\
 
 !_______________________________________________________
 ! MAP OUTPUT FORMATS
-##LOOP map_output_formats##
-Map Output Format == ${format}
-##ENDLOOP##
+Map Output Format == XMDF
 
-##IF module:sgs##
 !_______________________________________________________
 ! MAP OUTPUT SETTINGS
 SGS Map Extent Trim == All
 SGS Depth Output == Cell Average
 ! Map Cutoff Depth == 0.01  ! uncomment if required
 
-##ENDIF##
-##IF module:po##
 !_______________________________________________________
-! PLOT OUTPUT
-Time Series Output Interval == 60  ! TODO requires updating to sensible value to match simulation duration
-Read GIS PO == <path/to/2d_po>
-##ENDIF##
+! PLOT OUTPUT - uncomment as required
+! Time Series Output Interval == 60  ! TODO requires updating to sensible value to match simulation duration
+! Read GIS PO == <path/to/2d_po>
