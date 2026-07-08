@@ -60,6 +60,7 @@ class Settings:
             self._settings['map_output_formats'] = fmts
             self._settings['output_formats'] = {fmt: {} for fmt in fmts}
             self._settings['output_format_setting_lines'] = ''
+            self._settings['map_output_formats_str'] = ' '.join(fmts)
             return
 
         # Use output_formats dict (either from override or defaults).
@@ -90,6 +91,10 @@ class Settings:
                 lines.append(f'{fmt} Map Output Data Types == {data_types}')
 
         self._settings['output_format_setting_lines'] = '\n'.join(lines)
+        # Space-joined string for the single "Map Output Formats ==" command.
+        self._settings['map_output_formats_str'] = ' '.join(
+            self._settings['map_output_formats']
+        )
 
     def __getattr__(self, name: str) -> Any:
         try:

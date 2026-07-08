@@ -62,9 +62,7 @@ Write Check Files == ..\check\
 
 !_______________________________________________________
 ! MAP OUTPUT FORMATS
-##LOOP map_output_formats##
-Map Output Format == ${format}
-##ENDLOOP##
+Map Output Formats == ${map_output_formats_str}
 ${output_format_setting_lines}
 
 ##IF module:sgs##
