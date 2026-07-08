@@ -78,6 +78,8 @@ class HPCProject(BaseProject):
         iter: str | None = None,
         gis_format: str | None = None,
         cell_size: str | float | None = None,
+        engine: str | None = None,
+        hardware: str | None = None,
         map_output_formats: list[str] | None = None,
         **kwargs,
     ):
@@ -91,6 +93,8 @@ class HPCProject(BaseProject):
             'gis_format': gis_format,
             'cell_size': str(cell_size) if cell_size is not None else None,
             'map_output_formats': map_output_formats,
+            'engine': engine,
+            'hardware': hardware,
             **kwargs,
         }.items() if v is not None}
 
