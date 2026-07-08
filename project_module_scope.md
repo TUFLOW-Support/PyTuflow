@@ -44,3 +44,18 @@
 ## Addendum
 
 - Modules may contain multiple commands, or even blocks of commands. These blocks could be placed in different locations or different control files. E.g. the 'soils' module will generate a command in the TCF with the soils.tsoilf, and I would like it to also add soil commands in the TGC file (e.g. Set Soil == 1). Each module should also have a json file, that is cached for customisation by the user, that sets the command block(s) and each block can be multiple commands. Command blocks that are not associated with the control file can be appended to the bottom of the control file.
+
+## Outputs
+
+- Multiple outputs can be added with their own settings
+- In TUFLOW HPC this is done with a global command "Map Output Formats == XMDF TIF" with XMDF and TIF as examples
+- The specific commands are then in the form of:
+    - XMDF Map Output Data Types == h v d
+    - XMDF Map Output Interval == 60
+    - XMDF is an example, this would match the type name in the "Map Output Formats" command and appear for each format
+    - h v d are also examples of types, there are more options
+- I think the API for outputs should be similar as modules, but there needs to be more construction.
+    - I think the CLI API should look something like: --add-output XMDF:60:h,v,d --add-output TIF:0:h,v,d
+    - where multiple outputs are added with the same command
+    - The hpc project would need to construct the commands from this.
+    - Maybe internally, these should be converted to modules

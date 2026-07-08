@@ -30,14 +30,66 @@ class Settings:
         settings.update({k: v for k, v in overrides.items() if v is not None})
 
         self._settings = settings
+        # Track which keys were explicitly passed so _compute_output_settings
+        # can resolve the output_formats vs map_output_formats priority.
+        self._override_keys = {k for k, v in overrides.items() if v is not None}
+        self._compute_output_settings()
 
-        # Compute output_commands from map_output_formats (kept for legacy string use)
-        fmts = self._settings.get('map_output_formats', ['XMDF'])
-        if isinstance(fmts, str):
-            fmts = [fmts]
-        self._settings['output_commands'] = '\n'.join(
-            f'Map Output Format == {fmt}' for fmt in fmts
-        )
+    def _compute_output_settings(self) -> None:
+        """Derive ``map_output_formats`` and ``output_format_setting_lines`` from
+        ``output_formats``.
+
+        Priority (highest wins):
+        * ``output_formats`` explicitly passed → use dict; derive format name list.
+        * ``map_output_formats`` explicitly passed (legacy) → use list; no per-format settings.
+        * Neither explicitly passed → use ``output_formats`` from defaults if present,
+          otherwise fall back to ``map_output_formats`` list from defaults.
+
+        The computed ``output_format_setting_lines`` is a multi-line string of
+        ``<FMT> Map Output <Key> == <value>`` commands ready for insertion into
+        the TCF template via ``${output_format_setting_lines}``.
+        """
+        explicit_output_formats = 'output_formats' in self._override_keys
+        explicit_map_formats = 'map_output_formats' in self._override_keys
+
+        if explicit_map_formats and not explicit_output_formats:
+            # Legacy override: list of format names, no per-format settings.
+            fmts = self._settings.get('map_output_formats', ['XMDF'])
+            if isinstance(fmts, str):
+                fmts = [fmts]
+            self._settings['map_output_formats'] = fmts
+            self._settings['output_formats'] = {fmt: {} for fmt in fmts}
+            self._settings['output_format_setting_lines'] = ''
+            return
+
+        # Use output_formats dict (either from override or defaults).
+        output_formats = self._settings.get('output_formats')
+        if output_formats and isinstance(output_formats, dict):
+            self._settings['map_output_formats'] = list(output_formats.keys())
+        else:
+            # Ultimate fallback: bare map_output_formats list from defaults.
+            fmts = self._settings.get('map_output_formats', ['XMDF'])
+            if isinstance(fmts, str):
+                fmts = [fmts]
+            output_formats = {fmt: {} for fmt in fmts}
+            self._settings['map_output_formats'] = fmts
+            self._settings['output_formats'] = output_formats
+
+        # Build per-format setting lines.
+        lines: list[str] = []
+        for fmt, fmt_settings in output_formats.items():
+            if not isinstance(fmt_settings, dict):
+                continue
+            interval = fmt_settings.get('interval')
+            data_types = fmt_settings.get('data_types')
+            if interval is not None:
+                lines.append(f'{fmt} Map Output Interval == {interval}')
+            if data_types:
+                if isinstance(data_types, list):
+                    data_types = ' '.join(str(t) for t in data_types)
+                lines.append(f'{fmt} Map Output Data Types == {data_types}')
+
+        self._settings['output_format_setting_lines'] = '\n'.join(lines)
 
     def __getattr__(self, name: str) -> Any:
         try:
@@ -54,6 +106,8 @@ class Settings:
         for k, v in self._settings.items():
             if isinstance(v, list):
                 result[k] = ', '.join(str(i) for i in v)
+            elif isinstance(v, dict):
+                continue  # skip nested dicts (e.g. output_formats)
             else:
                 result[k] = str(v)
         return result

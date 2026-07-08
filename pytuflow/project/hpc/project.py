@@ -81,6 +81,7 @@ class HPCProject(BaseProject):
         engine: str | None = None,
         hardware: str | None = None,
         map_output_formats: list[str] | None = None,
+        output_formats: dict | None = None,
         **kwargs,
     ):
         self.name = name
@@ -93,6 +94,7 @@ class HPCProject(BaseProject):
             'gis_format': gis_format,
             'cell_size': str(cell_size) if cell_size is not None else None,
             'map_output_formats': map_output_formats,
+            'output_formats': output_formats,
             'engine': engine,
             'hardware': hardware,
             **kwargs,

@@ -3,17 +3,28 @@
 Usage:
     python -m pytuflow.project create --name NAME --output-dir DIR [--modules M1 M2 ...]
                                        [--gis-format FMT] [--map-output-formats F1 F2 ...]
+                                       [--output-formats '{"XMDF": {"interval": 60, "data_types": ["h","v","d"]}}']
                                        [--cell-size N] [--iter ITER]
     python -m pytuflow.project insert --tcf TCF_PATH --module MODULE_NAME
     python -m pytuflow.project init-templates [--force]
     python -m pytuflow.project list-modules
 """
 import argparse
+import json
 import sys
 
 
 def cmd_create(args):
     from .hpc.project import HPCProject
+
+    output_formats = None
+    if args.output_formats:
+        try:
+            output_formats = json.loads(args.output_formats)
+        except json.JSONDecodeError as e:
+            print(f"Invalid --output-formats JSON: {e}", file=sys.stderr)
+            sys.exit(1)
+
     project = HPCProject(
         name=args.name,
         output_dir=args.output_dir,
@@ -22,6 +33,7 @@ def cmd_create(args):
         gis_format=args.gis_format,
         cell_size=args.cell_size,
         map_output_formats=args.map_output_formats,
+        output_formats=output_formats,
     )
     errors = project.validate()
     if errors:
@@ -61,7 +73,16 @@ def main():
     p_create.add_argument('--output-dir', required=True, dest='output_dir', help='Output directory')
     p_create.add_argument('--modules', nargs='*', default=[], help='Optional modules to include')
     p_create.add_argument('--gis-format', dest='gis_format', default=None)
-    p_create.add_argument('--map-output-formats', dest='map_output_formats', nargs='*', default=None)
+    p_create.add_argument('--map-output-formats', dest='map_output_formats', nargs='*', default=None,
+                          help='Output format names only, e.g. XMDF TIF (no per-format settings)')
+    p_create.add_argument(
+        '--output-formats', dest='output_formats', default=None,
+        metavar='JSON',
+        help=(
+            'Per-format output settings as a JSON object, e.g. '
+            '\'{"XMDF": {"interval": 60, "data_types": ["h","v","d"]}, "TIF": {"interval": 0}}\''
+        ),
+    )
     p_create.add_argument('--cell-size', dest='cell_size', default=None)
     p_create.add_argument('--iter', default=None, help='Iteration string (e.g. 001)')
     p_create.add_argument('--engine', default=None, help='engine to use for Classic/HPC models (e.g. HPC or Classic)')

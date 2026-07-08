@@ -7,7 +7,11 @@ FACTORY_DEFAULTS = {
 
 FACTORY_HPC_DEFAULTS = {
     "cell_size": "<cell size>  ! TODO populate with appropriate value",
-    "map_output_formats": ["XMDF"],
+    "output_formats": {
+        "XMDF": {
+            "data_types": ["h", "v", "d", "q", "V", "Z"]
+        }
+    },
     "engine": "HPC",
     "model_domain_origin": "0, 0",
     "model_domain_angle": "0",

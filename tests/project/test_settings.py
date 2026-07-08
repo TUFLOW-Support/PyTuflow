@@ -16,7 +16,6 @@ class TestSettingsDefaults:
     def test_hpc_defaults_present(self):
         s = Settings()
         assert s.map_output_formats == ['XMDF']
-
     def test_override_iter(self):
         s = Settings(iter='002')
         assert s.iter == '002'
@@ -33,14 +32,40 @@ class TestSettingsDefaults:
         s = Settings(iter=None)
         assert s.iter == '001'
 
-    def test_output_commands_computed(self):
-        s = Settings(map_output_formats=['XMDF', 'CSV'])
-        assert 'Map Output Format == XMDF' in s.output_commands
-        assert 'Map Output Format == CSV' in s.output_commands
-
-    def test_output_commands_single(self):
+    def test_output_formats_default(self):
+        """Default output_formats has XMDF with data_types."""
         s = Settings()
-        assert s.output_commands == 'Map Output Format == XMDF'
+        assert 'XMDF' in s.output_formats
+        assert 'data_types' in s.output_formats['XMDF']
+
+    def test_output_format_setting_lines_default(self):
+        """Default XMDF settings produce Map Output Data Types line."""
+        s = Settings()
+        assert 'XMDF Map Output Data Types' in s.output_format_setting_lines
+
+    def test_output_formats_override_full(self):
+        """output_formats override replaces defaults; map_output_formats derived from keys."""
+        s = Settings(output_formats={
+            'XMDF': {'interval': 60, 'data_types': ['h', 'v', 'd']},
+            'TIF':  {'interval': 0},
+        })
+        assert s.map_output_formats == ['XMDF', 'TIF']
+        lines = s.output_format_setting_lines
+        assert 'XMDF Map Output Interval == 60' in lines
+        assert 'XMDF Map Output Data Types == h v d' in lines
+        assert 'TIF Map Output Interval == 0' in lines
+
+    def test_map_output_formats_legacy_still_works(self):
+        """Legacy map_output_formats list builds format names with no per-format settings."""
+        s = Settings(map_output_formats=['XMDF', 'SHP'])
+        assert s.map_output_formats == ['XMDF', 'SHP']
+        assert s.output_format_setting_lines == ''
+
+    def test_output_format_interval_only(self):
+        s = Settings(output_formats={'XMDF': {'interval': 300}})
+        lines = s.output_format_setting_lines
+        assert 'XMDF Map Output Interval == 300' in lines
+        assert 'Data Types' not in lines
 
 
 class TestSettingsAsDict:
