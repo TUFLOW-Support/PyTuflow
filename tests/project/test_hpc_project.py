@@ -300,15 +300,16 @@ class TestPlacementRules:
     def test_rules_json_loadable(self):
         from pytuflow.project.template.manager import TemplateManager
         rules = TemplateManager.get_rules()
-        assert 'control_files' in rules
-        assert 'commands' in rules['control_files']
-        assert len(rules['control_files']['commands']) > 0
+        assert 'hpc_control_files' in rules
+        assert 'commands' in rules['hpc_control_files']
+        assert len(rules['hpc_control_files']['commands']) > 0
+        assert rules['hpc_control_files'].get('rule') == 'after'
 
     def test_control_files_rule_contains_expected_lhs(self):
         from pytuflow.project.template.manager import TemplateManager
-        commands = TemplateManager.get_rules()['control_files']['commands']
+        commands = TemplateManager.get_rules()['hpc_control_files']['commands']
         for expected in ['Geometry Control File', 'BC Control File', 'Read Materials File']:
-            assert expected in commands, f"'{expected}' missing from control_files rule"
+            assert expected in commands, f"'{expected}' missing from hpc_control_files rule"
 
     def test_module_jsons_use_placement_rule(self):
         """All modules that previously used insert_point now use placement_rule."""

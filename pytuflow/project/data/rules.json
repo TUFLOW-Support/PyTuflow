@@ -1,6 +1,7 @@
 {
-  "control_files": {
+  "hpc_control_files": {
     "description": "Insert after the last command in the control files section. Any new control file command is placed at the bottom of the existing control file commands group.",
+    "rule": "after",
     "commands": [
       "Geometry Control File",
       "BC Control File",
