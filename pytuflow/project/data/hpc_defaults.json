@@ -6,7 +6,12 @@
   "model_domain_size": "<X, Y>  ! TODO",
   "output_formats": {
     "XMDF": {
-      "data_types": ["h", "v", "d", "q", "V", "Z"]
+      "data_types": ["h", "v", "d", "q"],
+      "interval": 3600
+    },
+    "TIF": {
+      "data_types": ["h", "v", "d"],
+      "interval": 0
     }
   }
 }
