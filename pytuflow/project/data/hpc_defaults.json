@@ -1,5 +1,8 @@
 {
   "engine": "HPC",
   "cell_size": "<cell size>  ! TODO populate with appropriate value",
+  "model_domain_origin": "0, 0",
+  "model_domain_angle": "0",
+  "model_domain_size": "<X, Y>  ! TODO",
   "map_output_formats": ["XMDF"]
 }
