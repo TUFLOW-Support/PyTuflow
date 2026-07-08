@@ -36,6 +36,7 @@ def _register_modules():
     from .modules.events import EventsModule
     from .modules.sgs import SGSModule
     from .modules.po import POModule
+    from .modules.tutorial import TutorialModule
     _MODULE_REGISTRY.update({
         'estry': EstryModule,
         'quadtree': QuadtreeModule,
@@ -46,6 +47,7 @@ def _register_modules():
         'events': EventsModule,
         'sgs': SGSModule,
         'po': POModule,
+        'tutorial': TutorialModule,
     })
 
 

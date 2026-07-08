@@ -6,9 +6,11 @@ ${gis_projection_command}
 
 !_______________________________________________________
 ! SOLVER
-Tutorial Model == OFF
-Solution scheme == HPC
-Hardware == GPU
+##IF module:tutorial##
+##COMMANDS tutorial_model_activate##
+##ENDIF##
+Solution scheme == ${engine}
+Hardware == ${hardware}
 
 ##IF module:sgs##
 ##COMMANDS sgs_on##
@@ -16,6 +18,7 @@ Hardware == GPU
 ##IF module:events##
 ##COMMANDS events_tcf##
 ##ENDIF##
+
 !_______________________________________________________
 ! CONTROL FILES
 Geometry Control File == ..\model\${model_name}_${iter}.tgc

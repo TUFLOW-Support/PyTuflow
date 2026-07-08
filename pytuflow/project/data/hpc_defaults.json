@@ -1,4 +1,5 @@
 {
+  "engine": "HPC",
   "cell_size": "<cell size>  ! TODO populate with appropriate value",
   "map_output_formats": ["XMDF"]
 }

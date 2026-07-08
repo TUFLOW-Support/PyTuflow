@@ -181,7 +181,7 @@ class TestHPCProjectUnknownModule:
 class TestGetAvailableModules:
     def test_returns_all_modules(self):
         modules = get_available_modules()
-        expected = {'estry', 'quadtree', 'soils', 'ad', 'toc', 'rf', 'events', 'sgs', 'po'}
+        expected = {'estry', 'quadtree', 'soils', 'ad', 'toc', 'rf', 'events', 'sgs', 'po', 'tutorial'}
         assert set(modules.keys()) == expected
 
     def test_modules_have_name(self):

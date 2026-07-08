@@ -1,0 +1,16 @@
+{
+  "name": "tutorial",
+  "display_name": "Tutorial Model",
+  "sort_order": 2,
+  "template_files": [],
+  "command_blocks": [
+    {
+      "id": "tutorial_model_activate",
+      "target_cf": "tcf",
+      "placement_rule": "hpc_solution_scheme",
+      "commands": [
+        "Tutorial Model == On"
+    ]
+    }
+  ]
+}
