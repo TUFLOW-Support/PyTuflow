@@ -12,7 +12,6 @@
     {
       "id": "events_tcf",
       "target_cf": "tcf",
-      "commented_lhs": "event file",
       "commands": [
         "!_______________________________________________________",
         "! SCENARIOS / EVENTS",

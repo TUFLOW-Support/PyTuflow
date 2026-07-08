@@ -13,7 +13,6 @@
       "id": "soils_tcf",
       "target_cf": "tcf",
       "placement_rule": "hpc_control_files",
-      "commented_lhs": "read soils file",
       "commands": [
         "Read Soils File == ..\\model\\${model_name}_soils.tsoilf"
       ]
@@ -21,7 +20,6 @@
     {
       "id": "soils_tgc",
       "target_cf": "tgc",
-      "commented_lhs": "/^set soil\\s*==/i",
       "commands": [
         "!_______________________________________________________",
         "! Soil - Infiltration commands",

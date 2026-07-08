@@ -98,12 +98,14 @@ class HPCBaseModule(BaseModule):
         # Substitute template variables in each command.
         commands = [Template(cmd).safe_substitute(variables) for cmd in raw_commands]
 
-        # Find the first non-comment command (used for existence checks).
-        first_active = next((c for c in commands if not c.strip().startswith('!')), None)
+        # Find the first non-comment, non-blank command (used for existence/search).
+        first_active = next(
+            (c for c in commands if c.strip() and not c.strip().startswith('!')), None
+        )
         if first_active is None:
             return
 
-        first_lhs = first_active.split('==')[0].strip().lower()
+        first_lhs = first_active.split('==')[0].strip()
 
         # 1. Already exists (uncommented) — skip the whole block.
         if cf.find_input(lhs=first_lhs, recursive=False):
@@ -120,31 +122,33 @@ class HPCBaseModule(BaseModule):
                     f"Placement rule strategy '{rule_type}' (from rule '{placement_rule}') "
                     f"is not implemented. Only 'after' is currently supported."
                 )
-            rule_lhs = [lhs.lower() for lhs in rule.get('commands', [])]
-            if rule_lhs:
-                last_ref = None
-                for lhs in rule_lhs:
-                    matches = cf.find_input(lhs=lhs, recursive=False)
-                    if matches:
-                        last_ref = matches[-1]
-                if last_ref is not None:
-                    self._insert_block_after(cf, last_ref, commands)
-                    return
-
-        # 3. A commented-out version of the first active command exists — uncomment it.
-        commented_lhs = block.get('commented_lhs')
-        if commented_lhs:
-            pattern, is_regex, flags = _parse_filter(commented_lhs)
-            commented = cf.find_input(
-                filter_by=pattern,
-                comments=True,
-                recursive=False,
-                regex=is_regex,
-                regex_flags=flags,
-            )
-            if commented:
-                cf.uncomment(commented[0])
+            last_ref = None
+            for cmd_entry in rule.get('commands', []):
+                pattern, is_regex, flags = _parse_filter(cmd_entry)
+                matches = cf.find_input(
+                    lhs=pattern, recursive=False, regex=is_regex, regex_flags=flags
+                )
+                if matches:
+                    last_ref = matches[-1]
+            if last_ref is not None:
+                self._insert_block_after(cf, last_ref, commands)
                 return
+
+        # 3. Auto-detect a commented-out version of the first active command.
+        #    Build a precise regex: ^\s*!\s*<lhs>\s*== (case-insensitive) so that
+        #    e.g. "SGS ==" is matched but not "SGS Sample Target Distance ==".
+        escaped_lhs = re.escape(first_lhs)
+        auto_pattern = rf'^\s*!\s*{escaped_lhs}\s*=='
+        commented = cf.find_input(
+            filter_by=auto_pattern,
+            comments=True,
+            recursive=False,
+            regex=True,
+            regex_flags=re.IGNORECASE,
+        )
+        if commented:
+            cf.uncomment(commented[0])
+            return
 
         # 4. Insert the block after a reference command.
         insert_after_lhs = block.get('insert_after_lhs')

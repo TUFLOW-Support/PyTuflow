@@ -327,15 +327,41 @@ class TestParseFilter:
         assert is_regex is True
         assert flags == 0
 
-    def test_regex_commented_lhs_avoids_false_match(self, tmp_path):
-        """Regex commented_lhs '/^set soil\\s*==/i' should NOT match 'Set Soil Layer 2'."""
+
+class TestAutoCommentDetection:
+    """Tests for automatic detection of commented-out command variants."""
+
+    def test_auto_uncomments_exact_command(self, tmp_path):
+        """Auto-detection finds and uncomments '! Estry Control File ==' precisely."""
+        from pytuflow.project.hpc.modules.estry import EstryModule
+        from pytuflow import TCF
+
+        tcf_dir = tmp_path / 'runs'
+        tcf_dir.mkdir()
+        (tmp_path / 'model').mkdir()
+        tcf_path = tcf_dir / 'mymodel_001.tcf'
+        tcf_path.write_text(
+            'Geometry Control File == ..\\model\\mymodel_001.tgc\n'
+            '! Estry Control File == ..\\model\\mymodel_001.ecf\n',
+            encoding='utf-8',
+        )
+
+        tcf = TCF(tcf_path)
+        EstryModule().apply_to_control_files({'tcf': tcf}, {'model_name': 'mymodel', 'iter': '001'})
+        tcf.write('inplace')
+
+        tcf2 = TCF(tcf_path)
+        assert tcf2.find_input(lhs='estry control file', recursive=False), \
+            "Estry Control File should be uncommented"
+
+    def test_auto_detect_avoids_false_prefix_match(self, tmp_path):
+        """Auto-detection must NOT match 'Set Soil Layer 2' when looking for 'Set Soil'."""
         from pytuflow.project.hpc.modules.soils import SoilsModule
         from pytuflow import TGC
 
         tgc_dir = tmp_path / 'model'
         tgc_dir.mkdir()
         tgc_path = tgc_dir / 'mymodel_001.tgc'
-        # Has a commented "Set Soil Layer 2" but NOT a plain "Set Soil"
         tgc_path.write_text(
             'Set Mat == 1\n'
             '! Set Soil Layer 2 == 1\n',
@@ -343,14 +369,22 @@ class TestParseFilter:
         )
 
         tgc = TGC(tgc_path)
-        module = SoilsModule()
-        # Should NOT uncomment "Set Soil Layer 2" — it doesn't match /^set soil\s*==/i
-        module.apply_to_control_files({'tgc': tgc}, {'model_name': 'mymodel', 'iter': '001'})
+        SoilsModule().apply_to_control_files({'tgc': tgc}, {'model_name': 'mymodel', 'iter': '001'})
         tgc.write('inplace')
 
         content = tgc_path.read_text(encoding='utf-8')
-        # "Set Soil Layer 2" should still be commented
         assert '! Set Soil Layer 2' in content, "Set Soil Layer 2 should remain commented"
+
+    def test_no_commented_lhs_in_module_jsons(self):
+        """No module JSON should contain a 'commented_lhs' key — it is now auto-derived."""
+        from pytuflow.project.template.manager import TemplateManager
+        from pytuflow.project.hpc.project import get_available_modules
+        manager = TemplateManager('hpc')
+        for name in get_available_modules():
+            cfg = manager.get_module_config(name)
+            for block in cfg.get('command_blocks', []):
+                assert 'commented_lhs' not in block, \
+                    f"Module '{name}' block '{block.get('id')}' still has deprecated 'commented_lhs'"
 
 
 class TestPlacementRules:
@@ -369,6 +403,43 @@ class TestPlacementRules:
         commands = TemplateManager.get_rules()['hpc_control_files']['commands']
         for expected in ['Geometry Control File', 'BC Control File', 'Read Materials File']:
             assert expected in commands, f"'{expected}' missing from hpc_control_files rule"
+
+    def test_regex_command_in_rules_is_recognised(self, tmp_path):
+        """A /pattern/flags entry in a rule's commands list is used as a regex match."""
+        from pytuflow.project.hpc.modules.estry import EstryModule
+        from pytuflow import TCF
+        import pytuflow.project.template.manager as mgr_mod
+
+        tcf_dir = tmp_path / 'runs'
+        tcf_dir.mkdir()
+        (tmp_path / 'model').mkdir()
+        tcf_path = tcf_dir / 'mymodel_001.tcf'
+        tcf_path.write_text(
+            'Geometry Control File == ..\\model\\mymodel_001.tgc\n'
+            'Read Materials File == ..\\model\\mymodel_mat.csv\n',
+            encoding='utf-8',
+        )
+
+        # Override rule to use a regex entry for "Read Materials File"
+        fake_rules = {
+            'hpc_control_files': {
+                'rule': 'after',
+                'commands': ['/^read materials file$/i'],
+            }
+        }
+        original_get_rules = mgr_mod.TemplateManager.get_rules
+        mgr_mod.TemplateManager.get_rules = staticmethod(lambda: fake_rules)
+        try:
+            tcf = TCF(tcf_path)
+            EstryModule().apply_to_control_files({'tcf': tcf}, {'model_name': 'mymodel', 'iter': '001'})
+            tcf.write('inplace')
+        finally:
+            mgr_mod.TemplateManager.get_rules = staticmethod(original_get_rules)
+
+        content = tcf_path.read_text(encoding='utf-8')
+        ecf_pos = content.lower().find('estry control file')
+        mat_pos = content.lower().find('read materials file')
+        assert ecf_pos > mat_pos, "Estry should be inserted after Read Materials File via regex rule"
 
     def test_module_jsons_use_placement_rule(self):
         """All modules that previously used insert_point now use placement_rule."""

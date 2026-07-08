@@ -3,14 +3,16 @@
   "display_name": "Quadtree (Variable Resolution)",
   "sort_order": 40,
   "template_files": [
-    {"template_key": "model/${model_name}_${iter}.qcf", "output_subdir": "model"}
+    {
+      "template_key": "model/${model_name}_${iter}.qcf",
+      "output_subdir": "model"
+    }
   ],
   "command_blocks": [
     {
       "id": "quadtree_tcf",
       "target_cf": "tcf",
       "placement_rule": "hpc_control_files",
-      "commented_lhs": "quadtree control file",
       "commands": [
         "Quadtree Control File == ..\\model\\${model_name}_${iter}.qcf"
       ]
