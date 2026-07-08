@@ -293,6 +293,125 @@ class TestHPCBaseModuleApplyToControlFiles:
         active = tcf2.find_input(lhs='estry control file', recursive=False)
         assert active, "Estry Control File should be uncommented"
 
+    def test_partial_block_some_commands_exist(self, tmp_path):
+        """Commands that already exist are skipped individually; missing ones are inserted."""
+        from pytuflow.project.hpc.modules._base import HPCBaseModule
+        from pytuflow import TCF
+
+        # Create a minimal module-like block with two real commands
+        class TwoCommandModule(HPCBaseModule):
+            NAME = '_test'
+            DISPLAY_NAME = 'Test'
+            def _get_config(self):
+                return {
+                    'command_blocks': [{
+                        'id': 'two_cmds',
+                        'target_cf': 'tcf',
+                        'insert_after_lhs': 'Solution Scheme',
+                        'commands': [
+                            'Cmd One == value_one',
+                            'Cmd Two == value_two',
+                        ]
+                    }]
+                }
+
+        tcf_dir = tmp_path / 'runs'
+        tcf_dir.mkdir()
+        tcf_path = tcf_dir / 'test_001.tcf'
+        # 'Cmd One' already present; 'Cmd Two' is absent
+        tcf_path.write_text(
+            'Solution Scheme == HPC\n'
+            'Cmd One == value_one\n',
+            encoding='utf-8',
+        )
+
+        tcf = TCF(tcf_path)
+        TwoCommandModule().apply_to_control_files({'tcf': tcf}, {})
+        tcf.write('inplace')
+
+        content = tcf_path.read_text(encoding='utf-8')
+        assert content.count('Cmd One') == 1, "Cmd One should appear exactly once"
+        assert 'Cmd Two' in content, "Cmd Two should have been inserted"
+
+    def test_partial_block_some_commands_commented(self, tmp_path):
+        """Commented commands are uncommented individually; others are inserted."""
+        from pytuflow.project.hpc.modules._base import HPCBaseModule
+        from pytuflow import TCF
+
+        class TwoCommandModule(HPCBaseModule):
+            NAME = '_test'
+            DISPLAY_NAME = 'Test'
+            def _get_config(self):
+                return {
+                    'command_blocks': [{
+                        'id': 'two_cmds',
+                        'target_cf': 'tcf',
+                        'insert_after_lhs': 'Solution Scheme',
+                        'commands': [
+                            'Cmd Alpha == 1',
+                            'Cmd Beta == 2',
+                        ]
+                    }]
+                }
+
+        tcf_dir = tmp_path / 'runs'
+        tcf_dir.mkdir()
+        tcf_path = tcf_dir / 'test_001.tcf'
+        # 'Cmd Alpha' is commented; 'Cmd Beta' is absent
+        tcf_path.write_text(
+            'Solution Scheme == HPC\n'
+            '! Cmd Alpha == 1\n',
+            encoding='utf-8',
+        )
+
+        tcf = TCF(tcf_path)
+        TwoCommandModule().apply_to_control_files({'tcf': tcf}, {})
+        tcf.write('inplace')
+
+        tcf2 = TCF(tcf_path)
+        assert tcf2.find_input(lhs='cmd alpha', recursive=False), "Cmd Alpha should be uncommented"
+        assert tcf2.find_input(lhs='cmd beta', recursive=False), "Cmd Beta should be inserted"
+
+    def test_decorator_comments_not_inserted_when_all_commands_exist(self, tmp_path):
+        """Section-header decorator comments are NOT inserted when all real commands exist."""
+        from pytuflow.project.hpc.modules._base import HPCBaseModule
+        from pytuflow import TCF
+
+        class DecoratedModule(HPCBaseModule):
+            NAME = '_test'
+            DISPLAY_NAME = 'Test'
+            def _get_config(self):
+                return {
+                    'command_blocks': [{
+                        'id': 'decorated',
+                        'target_cf': 'tcf',
+                        'insert_after_lhs': 'Solution Scheme',
+                        'commands': [
+                            '!_______',
+                            '! SECTION HEADER',
+                            'My Command == value',
+                        ]
+                    }]
+                }
+
+        tcf_dir = tmp_path / 'runs'
+        tcf_dir.mkdir()
+        tcf_path = tcf_dir / 'test_001.tcf'
+        # 'My Command' already present
+        tcf_path.write_text(
+            'Solution Scheme == HPC\n'
+            'My Command == value\n',
+            encoding='utf-8',
+        )
+
+        tcf = TCF(tcf_path)
+        DecoratedModule().apply_to_control_files({'tcf': tcf}, {})
+        tcf.write('inplace')
+
+        content = tcf_path.read_text(encoding='utf-8')
+        assert content.count('SECTION HEADER') == 0, \
+            "Decorator comment must not be inserted when all commands already exist"
+
 
 class TestParseFilter:
     """Unit tests for the _parse_filter helper."""

@@ -90,28 +90,84 @@ class HPCBaseModule(BaseModule):
     # ------------------------------------------------------------------
 
     def _apply_block(self, cf, block: dict, variables: dict) -> None:
-        """Apply a single command block to a control file."""
+        """Apply a single command block to a control file, checking each command
+        individually.
+
+        For each non-comment command:
+
+        * Already exists (uncommented) → skip; advance cursor to its position.
+        * Commented version found → uncomment; advance cursor.
+        * Neither → insert after cursor; advance cursor.
+
+        Pure comment / blank lines are buffered as *decorators* and flushed
+        immediately before the next real command that actually needs inserting.
+        This ensures section headers appear only when something new is added.
+        """
         raw_commands: list[str] = block.get('commands', [])
         if not raw_commands:
             return
 
-        # Substitute template variables in each command.
         commands = [Template(cmd).safe_substitute(variables) for cmd in raw_commands]
 
-        # Find the first non-comment, non-blank command (used for existence/search).
-        first_active = next(
-            (c for c in commands if c.strip() and not c.strip().startswith('!')), None
-        )
-        if first_active is None:
+        # Verify there is at least one real command worth processing.
+        if not any(c.strip() and not c.strip().startswith('!') for c in commands):
             return
 
-        first_lhs = first_active.split('==')[0].strip()
+        # Find the initial insertion anchor for this block.
+        current_ref = self._find_block_anchor(cf, block)
 
-        # 1. Already exists (uncommented) — skip the whole block.
-        if cf.find_input(lhs=first_lhs, recursive=False):
-            return
+        # Decorator lines (comments/blanks) buffered until a real insert happens.
+        pending_decorators: list[str] = []
 
-        # 2. Placement rule — insert using the strategy specified by rule["rule"].
+        for cmd in commands:
+            stripped = cmd.strip()
+
+            # Pure comment or blank line — buffer as a decorator.
+            if not stripped or stripped.startswith('!'):
+                pending_decorators.append(cmd)
+                continue
+
+            lhs = stripped.split('==')[0].strip()
+
+            # Already exists uncommented — skip; advance cursor to keep order.
+            existing = cf.find_input(lhs=lhs, recursive=False)
+            if existing:
+                pending_decorators.clear()
+                current_ref = existing[0]
+                continue
+
+            # Auto-detect a commented version: ^\s*!\s*<lhs>\s*== (case-insensitive).
+            escaped_lhs = re.escape(lhs)
+            auto_pattern = rf'^\s*!\s*{escaped_lhs}\s*=='
+            commented = cf.find_input(
+                filter_by=auto_pattern,
+                comments=True,
+                recursive=False,
+                regex=True,
+                regex_flags=re.IGNORECASE,
+            )
+            if commented:
+                cf.uncomment(commented[0])
+                pending_decorators.clear()
+                current_ref = commented[0]
+                continue
+
+            # Command needs inserting — flush buffered decorators first.
+            for dec in pending_decorators:
+                if dec.strip():
+                    current_ref = self._insert_or_append(cf, current_ref, dec)
+            pending_decorators.clear()
+
+            current_ref = self._insert_or_append(cf, current_ref, cmd)
+
+    def _find_block_anchor(self, cf, block: dict):
+        """Return the input after which to start inserting, or ``None`` (append mode).
+
+        Priority:
+        1. Placement rule (scans CF for last matching command in the rule's list).
+        2. ``insert_after_lhs`` fallback.
+        3. ``None`` — commands are appended to the end of the file.
+        """
         placement_rule = block.get('placement_rule')
         if placement_rule:
             rules = TemplateManager.get_rules()
@@ -131,42 +187,20 @@ class HPCBaseModule(BaseModule):
                 if matches:
                     last_ref = matches[-1]
             if last_ref is not None:
-                self._insert_block_after(cf, last_ref, commands)
-                return
+                return last_ref
 
-        # 3. Auto-detect a commented-out version of the first active command.
-        #    Build a precise regex: ^\s*!\s*<lhs>\s*== (case-insensitive) so that
-        #    e.g. "SGS ==" is matched but not "SGS Sample Target Distance ==".
-        escaped_lhs = re.escape(first_lhs)
-        auto_pattern = rf'^\s*!\s*{escaped_lhs}\s*=='
-        commented = cf.find_input(
-            filter_by=auto_pattern,
-            comments=True,
-            recursive=False,
-            regex=True,
-            regex_flags=re.IGNORECASE,
-        )
-        if commented:
-            cf.uncomment(commented[0])
-            return
-
-        # 4. Insert the block after a reference command.
         insert_after_lhs = block.get('insert_after_lhs')
         if insert_after_lhs:
             refs = cf.find_input(lhs=insert_after_lhs, recursive=False)
             if refs:
-                self._insert_block_after(cf, refs[-1], commands)
-                return
+                return refs[-1]
 
-        # 5. Fallback — append the whole block to the end of the file.
-        for cmd in commands:
-            if cmd.strip():
-                cf.append_input(cmd)
+        return None  # append mode
 
     @staticmethod
-    def _insert_block_after(cf, ref_inp, commands: list[str]) -> None:
-        """Insert *commands* into *cf* sequentially after *ref_inp*."""
-        current_ref = ref_inp
-        for cmd in commands:
-            if cmd.strip():
-                current_ref = cf.insert_input(current_ref, cmd, after=True)
+    def _insert_or_append(cf, ref_inp, cmd: str):
+        """Insert *cmd* after *ref_inp*, or append when *ref_inp* is ``None``."""
+        if ref_inp is None:
+            cf.append_input(cmd)
+            return None  # can't track position after a bare append
+        return cf.insert_input(ref_inp, cmd, after=True)
