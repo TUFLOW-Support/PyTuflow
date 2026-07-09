@@ -10,6 +10,26 @@ _HPC_EMPTY_SCHEMA_PATH = Path(__file__).parents[1] / 'data' / 'empties' / 'hpc_e
 # Maps single-char geometry code (used in TUFLOW file naming) to open_gis geometry type string.
 _GEOM_CHAR_MAP = {'P': 'Point', 'L': 'LineString', 'R': 'Polygon'}
 
+_SHP_MAX_FIELD_LEN = 10
+
+
+def _shorten_field_names(schema: list[dict]) -> list[dict]:
+    """Return a copy of schema with field names truncated to 10 characters for SHP compatibility.
+
+    Collisions are resolved by appending ``_N`` (using 8 prefix chars + suffix)."""
+    result = []
+    seen: dict[str, int] = {}
+    for field in schema:
+        name = field['name']
+        short = name[:_SHP_MAX_FIELD_LEN]
+        if short in seen:
+            count = seen[short] = seen[short] + 1
+            short = f"{name[:8]}_{count}"[:_SHP_MAX_FIELD_LEN]
+        else:
+            seen[short] = 0
+        result.append({**field, 'name': short})
+    return result
+
 
 class TuflowEmptyFiles:
 
@@ -139,7 +159,8 @@ class TuflowEmptyType:
             raise NotImplementedError(f'Unrecognised GIS format: {self.gis_format}')
 
         for uri, geom_type in uris:
-            self.create_empty(uri, geom_type, schema, self.projection_wkt)
+            effective_schema = _shorten_field_names(schema) if self.gis_format == 'shp' else schema
+            self.create_empty(uri, geom_type, effective_schema, self.projection_wkt)
 
     @staticmethod
     def create_empty(uri: str, geom_type: str, schema: list[dict], projection_wkt: str | None):
@@ -147,8 +168,6 @@ class TuflowEmptyType:
         with warnings.catch_warnings():
             # No-CRS warning is expected when projection_wkt is None (intentionally unprojected).
             warnings.filterwarnings('ignore', message=".*crs.*was not provided.*", category=UserWarning)
-            # SHP field name truncation is an inherent limitation; callers using SHP accept it.
-            warnings.filterwarnings('ignore', message=".*Column names longer than 10 characters.*", category=UserWarning)
             with p.open_gis('w', geom_type, projection_wkt) as gis:
                 for field in schema:
                     # Strip prec=-1 sentinel (means "not applicable") before passing to create_field

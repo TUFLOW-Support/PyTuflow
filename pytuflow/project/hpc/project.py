@@ -135,7 +135,7 @@ class HPCProject(BaseProject):
         if self.create_empties:
             from ..template.empties import TuflowEmptyFiles
             gis_format = variables.get('gis_format', 'SHP')
-            empties_dir = self.output_dir / 'gis' / 'empty'
+            empties_dir = self.output_dir / 'model' / 'gis' / 'empty'
             empties_dir.mkdir(parents=True, exist_ok=True)
             TuflowEmptyFiles('hpc', gis_format).write_empties(empties_dir)
 

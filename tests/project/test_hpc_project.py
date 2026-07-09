@@ -899,19 +899,19 @@ class TestTuflowEmptyFiles:
     def test_empties_dir_created(self, project_dir):
         p = HPCProject('mymodel', project_dir, gis_format='GPKG', create_empties=True)
         p.create()
-        assert (project_dir / 'gis' / 'empty').is_dir()
+        assert (project_dir / 'model' / 'gis' / 'empty').is_dir()
 
     def test_empties_created_for_gpkg(self, project_dir):
         p = HPCProject('mymodel', project_dir, gis_format='GPKG', create_empties=True)
         p.create()
-        empties_dir = project_dir / 'gis' / 'empty'
+        empties_dir = project_dir / 'model' / 'gis' / 'empty'
         gpkg_files = list(empties_dir.glob('*.gpkg'))
         assert len(gpkg_files) > 0, 'Expected GPKG empty files to be created'
 
     def test_no_empties_when_disabled(self, project_dir):
         p = HPCProject('mymodel', project_dir, gis_format='GPKG', create_empties=False)
         p.create()
-        assert not (project_dir / 'gis' / 'empty').exists()
+        assert not (project_dir / 'model' / 'gis' / 'empty').exists()
 
     def test_empty_schema_fields(self, tmp_path):
         """Each TuflowEmptyType should resolve its schema correctly."""
