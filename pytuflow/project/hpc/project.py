@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 
 from ..abc.project import BaseProject
 from ..config.settings import Settings
+from ..hpc.modules._base import _normalize_slashes
 from ..template.engine import TemplateEngine
 from ..template.manager import TemplateManager
 
@@ -145,6 +146,7 @@ class HPCProject(BaseProject):
             rendered_out = Template(output_rel).safe_substitute(variables)
             text = self._manager.get_template(template_key)
             rendered_text = self._engine.render(text, variables, active_modules, module_configs)
+            rendered_text = _normalize_rendered(rendered_text)
             out_path = self.output_dir / rendered_out
             out_path.write_text(rendered_text, encoding='utf-8')
             if template_key.startswith('runs/') and template_key.endswith('.tcf'):
@@ -156,6 +158,7 @@ class HPCProject(BaseProject):
                 rendered_out = Template(output_rel).safe_substitute(variables)
                 text = self._manager.get_template(template_key)
                 rendered_text = self._engine.render(text, variables, active_modules, module_configs)
+                rendered_text = _normalize_rendered(rendered_text)
                 out_path = self.output_dir / rendered_out
                 out_path.parent.mkdir(parents=True, exist_ok=True)
                 out_path.write_text(rendered_text, encoding='utf-8')
@@ -304,3 +307,12 @@ def _variables_from_tcf_path(tcf_path: Path, **overrides) -> dict:
         variables['iter'] = '001'
     variables.update({k: v for k, v in overrides.items() if v is not None})
     return variables
+
+
+def _normalize_rendered(text: str) -> str:
+    """Apply OS-native path separators to every line of a rendered template.
+
+    Delegates to ``_normalize_slashes`` so the behaviour is identical to what
+    ``_apply_block`` does when inserting module commands at runtime.
+    """
+    return '\n'.join(_normalize_slashes(line) for line in text.split('\n'))
