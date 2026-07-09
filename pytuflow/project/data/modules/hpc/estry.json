@@ -20,6 +20,7 @@
     {
       "id": "estry_tbc",
       "target_cf": "tbc",
+      "existence_check": "! 1D/2D LINKING",
       "commands": [
         "\n!_______________________________________________________",
         "! 1D/2D LINKING",

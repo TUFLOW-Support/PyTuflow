@@ -7,7 +7,5 @@
 ! Read GIS SA == <path/to/2d_sa>
 
 ##IF module:estry##
-!_______________________________________________________
-! 1D/2D LINKING COMMANDS
-! Read GIS BC == <path/to/2d_bc>
+##COMMANDS estry_tbc##
 ##ENDIF##
