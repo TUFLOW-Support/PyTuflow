@@ -41,7 +41,7 @@ class TestHPCProjectCreate:
 
     def test_standard_directories_created(self, basic_project, project_dir):
         basic_project.create()
-        for d in ['runs', 'model', 'bc_dbase', 'results', 'check', 'log']:
+        for d in ['runs', 'model', 'bc_dbase', 'results', 'check', 'runs/log']:
             assert (project_dir / d).is_dir(), f"Missing directory: {d}"
 
     def test_tcf_created(self, basic_project, project_dir):

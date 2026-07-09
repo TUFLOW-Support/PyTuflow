@@ -143,20 +143,19 @@ class HPCBaseModule(BaseModule):
         for cmd in commands:
             stripped = cmd.strip()
 
-            if not stripped or stripped.startswith('!'):
-                if past_first_real_command:
-                    # Trailing comment — insert immediately after cursor.
-                    current_ref = self._insert_or_append(cf, current_ref, cmd)
-                else:
-                    # Pre-command decorator — buffer until we know if real cmd needs inserting.
-                    pending_decorators.append(cmd)
+            if not stripped or (stripped.startswith('!') and not past_first_real_command):
+                # Pre-command decorator — buffer until we know if real cmd needs inserting.
+                pending_decorators.append(cmd)
                 continue
 
             past_first_real_command = True
             lhs = stripped.split('==')[0].strip()
 
             # Already exists uncommented — skip; advance cursor to keep order.
-            existing = cf.find_input(lhs=lhs, recursive=False)
+            if stripped.startswith('!'):
+                existing = cf.find_input(stripped, comments=True)
+            else:
+                existing = cf.find_input(lhs=lhs, recursive=False)
             if existing:
                 pending_decorators.clear()
                 current_ref = existing[0]
