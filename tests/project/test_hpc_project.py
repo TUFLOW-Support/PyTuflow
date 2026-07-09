@@ -916,7 +916,7 @@ class TestTuflowEmptyFiles:
     def test_empty_schema_fields(self, tmp_path):
         """Each TuflowEmptyType should resolve its schema correctly."""
         from pytuflow.project.template.empties import TuflowEmptyType
-        et = TuflowEmptyType('hpc', '1d_nwk', ['P', 'L'], 'GPKG')
+        et = TuflowEmptyType('hpc', '1d_nwk', 'PL', 'GPKG')
         schema = et.get_schema('1d_nwk')
         assert schema is not None
         names = [f['name'] for f in schema]
@@ -926,7 +926,7 @@ class TestTuflowEmptyFiles:
     def test_empty_schema_append_inheritance(self, tmp_path):
         """1d_nwke extends 1d_nwk with extra fields appended."""
         from pytuflow.project.template.empties import TuflowEmptyType
-        et = TuflowEmptyType('hpc', '1d_nwke', ['P', 'L'], 'GPKG')
+        et = TuflowEmptyType('hpc', '1d_nwke', 'PL', 'GPKG')
         base_schema = et.get_schema('1d_nwk')
         ext_schema = et.get_schema('1d_nwke')
         assert ext_schema is not None
@@ -937,7 +937,7 @@ class TestTuflowEmptyFiles:
     def test_empty_schema_replace_inheritance(self, tmp_path):
         """1d_nwkb replaces the pBlockage field in 1d_nwk."""
         from pytuflow.project.template.empties import TuflowEmptyType
-        et = TuflowEmptyType('hpc', '1d_nwkb', ['P', 'L'], 'GPKG')
+        et = TuflowEmptyType('hpc', '1d_nwkb', 'PL', 'GPKG')
         schema = et.get_schema('1d_nwkb')
         assert schema is not None
         pb = next(f for f in schema if f['name'] == 'pBlockage')
@@ -946,5 +946,5 @@ class TestTuflowEmptyFiles:
     def test_geom_normalization(self):
         """Multi-char geom elements like ['PL'] are split into individual chars."""
         from pytuflow.project.template.empties import TuflowEmptyType
-        et = TuflowEmptyType('hpc', '2d_po', ['PLR'], 'GPKG')
+        et = TuflowEmptyType('hpc', '2d_po', 'PLR', 'GPKG')
         assert et.geom == ['P', 'L', 'R']
