@@ -50,6 +50,7 @@ include = [
   "pytuflow/project/data/*.json",
   "pytuflow/project/data/templates/**/*",
   "pytuflow/project/data/modules/**/*.json",
+  "pytuflow/project/data/empties/**/*.json",
 ]
 
 [tool.pytest.ini_options]
