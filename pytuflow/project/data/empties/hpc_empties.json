@@ -1,0 +1,1689 @@
+[
+  {
+    "name": "1d_nwk",
+    "schema": [
+      {
+        "name": "ID",
+        "field_type": "string",
+        "width": 36,
+        "prec": -1
+      },
+      {
+        "name": "Type",
+        "field_type": "string",
+        "width": 8,
+        "prec": -1
+      },
+      {
+        "name": "Ignore",
+        "field_type": "string",
+        "width": 1,
+        "prec": -1
+      },
+      {
+        "name": "UCS",
+        "field_type": "string",
+        "width": 1,
+        "prec": -1
+      },
+      {
+        "name": "Len_or_ANA",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      },
+      {
+        "name": "n_nF_Cd",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      },
+      {
+        "name": "US_Invert",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      },
+      {
+        "name": "DS_Invert",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      },
+      {
+        "name": "Form_Loss",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      },
+      {
+        "name": "pBlockage",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      },
+      {
+        "name": "Inlet_Type",
+        "field_type": "string",
+        "width": 12,
+        "prec": -1
+      },
+      {
+        "name": "Conn_1D_2D",
+        "field_type": "string",
+        "width": 4,
+        "prec": -1
+      },
+      {
+        "name": "Conn_No",
+        "field_type": "int",
+        "width": 8,
+        "prec": -1
+      },
+      {
+        "name": "Width_or_Dia",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      },
+      {
+        "name": "Height_or_WF",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      },
+      {
+        "name": "Number_of",
+        "field_type": "int",
+        "width": 8,
+        "prec": -1
+      },
+      {
+        "name": "HConF_or_WC",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      },
+      {
+        "name": "WConF_or_WEx",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      },
+      {
+        "name": "EntryC_or_WSa",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      },
+      {
+        "name": "ExitC_or_WSb",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      }
+    ]
+  },
+  {
+    "name": "1d_nwke",
+    "schema": [
+      {
+        "name": "eS1",
+        "field_type": "string",
+        "width": 50,
+        "prec": -1
+      },
+      {
+        "name": "eS2",
+        "field_type": "string",
+        "width": 50,
+        "prec": -1
+      },
+      {
+        "name": "eN1",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      },
+      {
+        "name": "eN2",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      },
+      {
+        "name": "eN3",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      },
+      {
+        "name": "eN4",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      },
+      {
+        "name": "eN5",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      },
+      {
+        "name": "eN6",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      },
+      {
+        "name": "eN7",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      },
+      {
+        "name": "eN8",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      }
+    ],
+    "base_schema": "1d_nwk",
+    "extend_by": "append"
+  },
+  {
+    "name": "1d_nwkb",
+    "schema": [
+      {
+        "name": "pBlockage",
+        "field_type": "string",
+        "width": 12,
+        "prec": -1
+      }
+    ],
+    "base_schema": "1d_nwk",
+    "extend_by": "replace"
+  },
+  {
+    "name": "1d_nd",
+    "schema": [
+      {
+        "name": "ID",
+        "field_type": "string",
+        "width": 36,
+        "prec": -1
+      },
+      {
+        "name": "Type",
+        "field_type": "string",
+        "width": 8,
+        "prec": -1
+      },
+      {
+        "name": "Ignore",
+        "field_type": "string",
+        "width": 1,
+        "prec": -1
+      },
+      {
+        "name": "Bed_Level",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      },
+      {
+        "name": "ANA",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      },
+      {
+        "name": "Conn_1D_2D",
+        "field_type": "string",
+        "width": 4,
+        "prec": -1
+      },
+      {
+        "name": "Conn_Width",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      },
+      {
+        "name": "R1",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      },
+      {
+        "name": "R2",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      },
+      {
+        "name": "R3",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      }
+    ]
+  },
+  {
+    "name": "1d_mh",
+    "schema": [
+      {
+        "name": "ID",
+        "field_type": "string",
+        "width": 36,
+        "prec": -1
+      },
+      {
+        "name": "Type",
+        "field_type": "string",
+        "width": 8,
+        "prec": -1
+      },
+      {
+        "name": "Loss_Approach",
+        "field_type": "string",
+        "width": 4,
+        "prec": -1
+      },
+      {
+        "name": "Ignore",
+        "field_type": "string",
+        "width": 1,
+        "prec": -1
+      },
+      {
+        "name": "Invert_Level",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      },
+      {
+        "name": "Flow_Width",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      },
+      {
+        "name": "Flow_Length",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      },
+      {
+        "name": "ANA",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      },
+      {
+        "name": "K_Fixed",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      },
+      {
+        "name": "Km",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      },
+      {
+        "name": "K_Bend_Max",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      },
+      {
+        "name": "C_reserved",
+        "field_type": "string",
+        "width": 12,
+        "prec": -1
+      },
+      {
+        "name": "N1_reserved",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      },
+      {
+        "name": "N2_reserved",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      },
+      {
+        "name": "N3_reserved",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      }
+    ]
+  },
+  {
+    "name": "1d_bc",
+    "schema": [
+      {
+        "name": "Type",
+        "field_type": "string",
+        "width": 2,
+        "prec": -1
+      },
+      {
+        "name": "Flags",
+        "field_type": "string",
+        "width": 6,
+        "prec": -1
+      },
+      {
+        "name": "Name",
+        "field_type": "string",
+        "width": 50,
+        "prec": -1
+      },
+      {
+        "name": "Description",
+        "field_type": "string",
+        "width": 250,
+        "prec": -1
+      }
+    ]
+  },
+  {
+    "name": "1d_tab",
+    "schema": [
+      {
+        "name": "Source",
+        "field_type": "string",
+        "width": 50,
+        "prec": -1
+      },
+      {
+        "name": "Type",
+        "field_type": "string",
+        "width": 2,
+        "prec": -1
+      },
+      {
+        "name": "Flags",
+        "field_type": "string",
+        "width": 8,
+        "prec": -1
+      },
+      {
+        "name": "Column_1",
+        "field_type": "string",
+        "width": 20,
+        "prec": -1
+      },
+      {
+        "name": "Column_2",
+        "field_type": "string",
+        "width": 20,
+        "prec": -1
+      },
+      {
+        "name": "Column_3",
+        "field_type": "string",
+        "width": 20,
+        "prec": -1
+      },
+      {
+        "name": "Column_4",
+        "field_type": "string",
+        "width": 20,
+        "prec": -1
+      },
+      {
+        "name": "Column_5",
+        "field_type": "string",
+        "width": 20,
+        "prec": -1
+      },
+      {
+        "name": "Column_6",
+        "field_type": "string",
+        "width": 20,
+        "prec": -1
+      },
+      {
+        "name": "Z_Increment",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      },
+      {
+        "name": "Z_Maximum",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      },
+      {
+        "name": "Skew",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      }
+    ]
+  },
+  {
+    "name": "1d_xs",
+    "schema": [
+      {
+        "name": "Source",
+        "field_type": "string",
+        "width": 50,
+        "prec": -1
+      },
+      {
+        "name": "Type",
+        "field_type": "string",
+        "width": 2,
+        "prec": -1
+      },
+      {
+        "name": "Flags",
+        "field_type": "string",
+        "width": 8,
+        "prec": -1
+      },
+      {
+        "name": "Column_1",
+        "field_type": "string",
+        "width": 20,
+        "prec": -1
+      },
+      {
+        "name": "Column_2",
+        "field_type": "string",
+        "width": 20,
+        "prec": -1
+      },
+      {
+        "name": "Column_3",
+        "field_type": "string",
+        "width": 20,
+        "prec": -1
+      },
+      {
+        "name": "Column_4",
+        "field_type": "string",
+        "width": 20,
+        "prec": -1
+      },
+      {
+        "name": "Column_5",
+        "field_type": "string",
+        "width": 20,
+        "prec": -1
+      },
+      {
+        "name": "Column_6",
+        "field_type": "string",
+        "width": 20,
+        "prec": -1
+      },
+      {
+        "name": "Z_Increment",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      },
+      {
+        "name": "Z_Maximum",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      },
+      {
+        "name": "Skew",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      }
+    ]
+  },
+  {
+    "name": "1d_na",
+    "schema": [
+      {
+        "name": "Source",
+        "field_type": "string",
+        "width": 50,
+        "prec": -1
+      },
+      {
+        "name": "Type",
+        "field_type": "string",
+        "width": 2,
+        "prec": -1
+      },
+      {
+        "name": "Flags",
+        "field_type": "string",
+        "width": 8,
+        "prec": -1
+      },
+      {
+        "name": "Column_1",
+        "field_type": "string",
+        "width": 20,
+        "prec": -1
+      },
+      {
+        "name": "Column_2",
+        "field_type": "string",
+        "width": 20,
+        "prec": -1
+      },
+      {
+        "name": "not_used_6",
+        "field_type": "string",
+        "width": 20,
+        "prec": -1
+      },
+      {
+        "name": "not_used_7",
+        "field_type": "string",
+        "width": 20,
+        "prec": -1
+      },
+      {
+        "name": "not_used_8",
+        "field_type": "string",
+        "width": 20,
+        "prec": -1
+      },
+      {
+        "name": "not_used_9",
+        "field_type": "string",
+        "width": 20,
+        "prec": -1
+      },
+      {
+        "name": "not_used_10",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      },
+      {
+        "name": "not_used_11",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      },
+      {
+        "name": "not_used_12",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      }
+    ]
+  },
+  {
+    "name": "1d_WLL",
+    "schema": [
+      {
+        "name": "Dist_for_Add_Points",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      }
+    ]
+  },
+  {
+    "name": "1d_iwl",
+    "schema": [
+      {
+        "name": "IWL",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      }
+    ]
+  },
+  {
+    "name": "1d_pit",
+    "schema": [
+      {
+        "name": "ID",
+        "field_type": "string",
+        "width": 12,
+        "prec": -1
+      },
+      {
+        "name": "Type",
+        "field_type": "string",
+        "width": 4,
+        "prec": -1
+      },
+      {
+        "name": "VP_Network_ID",
+        "field_type": "int",
+        "width": 8,
+        "prec": -1
+      },
+      {
+        "name": "Inlet_Type",
+        "field_type": "string",
+        "width": 32,
+        "prec": -1
+      },
+      {
+        "name": "VP_Sur_Index",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      },
+      {
+        "name": "VP_QMax",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      },
+      {
+        "name": "Width",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      },
+      {
+        "name": "Conn_2D",
+        "field_type": "string",
+        "width": 8,
+        "prec": -1
+      },
+      {
+        "name": "Conn_No",
+        "field_type": "int",
+        "width": 8,
+        "prec": -1
+      },
+      {
+        "name": "pBlockage",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      },
+      {
+        "name": "Number_of",
+        "field_type": "int",
+        "width": 8,
+        "prec": -1
+      }
+    ]
+  },
+  {
+    "name": "2d_po",
+    "schema": [
+      {
+        "name": "Type",
+        "field_type": "string",
+        "width": 20,
+        "prec": -1
+      },
+      {
+        "name": "Label",
+        "field_type": "string",
+        "width": 30,
+        "prec": -1
+      },
+      {
+        "name": "Comment",
+        "field_type": "string",
+        "width": 250,
+        "prec": -1
+      }
+    ]
+  },
+  {
+    "name": "2d_lp",
+    "schema": [
+      {
+        "name": "Type",
+        "field_type": "string",
+        "width": 20,
+        "prec": -1
+      },
+      {
+        "name": "Label",
+        "field_type": "string",
+        "width": 30,
+        "prec": -1
+      },
+      {
+        "name": "Comment",
+        "field_type": "string",
+        "width": 250,
+        "prec": -1
+      }
+    ]
+  },
+  {
+    "name": "2d_loc",
+    "schema": [
+      {
+        "name": "Comment",
+        "field_type": "string",
+        "width": 250,
+        "prec": -1
+      }
+    ]
+  },
+  {
+    "name": "2d_code",
+    "schema": [
+      {
+        "name": "Code",
+        "field_type": "int",
+        "width": 8,
+        "prec": -1
+      }
+    ]
+  },
+  {
+    "name": "2d_mat",
+    "schema": [
+      {
+        "name": "Material",
+        "field_type": "int",
+        "width": 8,
+        "prec": -1
+      }
+    ]
+  },
+  {
+    "name": "2d_z__",
+    "schema": [
+      {
+        "name": "Elevation",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      }
+    ]
+  },
+  {
+    "name": "2d_zsh",
+    "schema": [
+      {
+        "name": "Z",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      },
+      {
+        "name": "dZ",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      },
+      {
+        "name": "Shape_Width_or_dMax",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      },
+      {
+        "name": "Shape_Options",
+        "field_type": "string",
+        "width": 20,
+        "prec": -1
+      }
+    ]
+  },
+  {
+    "name": "2d_zshr",
+    "schema": [
+      {
+        "name": "Route_Name",
+        "field_type": "string",
+        "width": 40,
+        "prec": -1
+      },
+      {
+        "name": "Cut_Off_Type",
+        "field_type": "string",
+        "width": 40,
+        "prec": -1
+      },
+      {
+        "name": "Cut_Off_Values",
+        "field_type": "string",
+        "width": 80,
+        "prec": -1
+      }
+    ],
+    "base_schema": "2d_zsh",
+    "extend_by": "append"
+  },
+  {
+    "name": "2d_ztin",
+    "schema": [
+      {
+        "name": "Z",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      },
+      {
+        "name": "dZ",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      }
+    ]
+  },
+  {
+    "name": "2d_vzsh",
+    "schema": [
+      {
+        "name": "Trigger_1",
+        "field_type": "string",
+        "width": 20,
+        "prec": -1
+      },
+      {
+        "name": "Trigger_2",
+        "field_type": "string",
+        "width": 20,
+        "prec": -1
+      },
+      {
+        "name": "Trigger_Value",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      },
+      {
+        "name": "Period",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      },
+      {
+        "name": "Restore_Interval",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      },
+      {
+        "name": "Restore_Period",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      }
+    ],
+    "base_schema": "2d_zsh",
+    "extend_by": "append"
+  },
+  {
+    "name": "2d_fcsh",
+    "schema": [
+      {
+        "name": "Invert",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      },
+      {
+        "name": "Obvert_or_BC_Height",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      },
+      {
+        "name": "Shape_Width_or_dMax",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      },
+      {
+        "name": "Shape_Options",
+        "field_type": "string",
+        "width": 20,
+        "prec": -1
+      },
+      {
+        "name": "FC_Type",
+        "field_type": "string",
+        "width": 2,
+        "prec": -1
+      },
+      {
+        "name": "pBlockage",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      },
+      {
+        "name": "FLC_or_FLCpm_below_Obv",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      },
+      {
+        "name": "FLC_or_FLCpm_above_Obv",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      },
+      {
+        "name": "Mannings_n",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      },
+      {
+        "name": "BC_Width",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      }
+    ]
+  },
+  {
+    "name": "2d_lfcsh",
+    "schema": [
+      {
+        "name": "Invert",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      },
+      {
+        "name": "dZ",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      },
+      {
+        "name": "Shape_Width_or_dMax",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      },
+      {
+        "name": "Shape_Options",
+        "field_type": "string",
+        "width": 20,
+        "prec": -1
+      },
+      {
+        "name": "L1_Obvert",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      },
+      {
+        "name": "L1_pBlockage",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      },
+      {
+        "name": "L1_FLC",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      },
+      {
+        "name": "L2_Depth",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      },
+      {
+        "name": "L2_pBlockage",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      },
+      {
+        "name": "L2_or_L23_FLC",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      },
+      {
+        "name": "L3_Depth",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      },
+      {
+        "name": "L3_pBlockage",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      },
+      {
+        "name": "L3_FLC_or_fIP",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      },
+      {
+        "name": "Notes",
+        "field_type": "string",
+        "width": 40,
+        "prec": -1
+      }
+    ]
+  },
+  {
+    "name": "2d_lfcsh_pts",
+    "schema": [
+      {
+        "name": "Invert",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      },
+      {
+        "name": "L1_Obvert",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      },
+      {
+        "name": "L2_Depth",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      },
+      {
+        "name": "L3_Depth",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      }
+    ]
+  },
+  {
+    "name": "2d_iwl",
+    "schema": [
+      {
+        "name": "IWL",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      }
+    ]
+  },
+  {
+    "name": "2d_fc",
+    "schema": [
+      {
+        "name": "Type",
+        "field_type": "string",
+        "width": 2,
+        "prec": -1
+      },
+      {
+        "name": "Invert",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      },
+      {
+        "name": "Obvert_or_BC_height",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      },
+      {
+        "name": "u_width_factor",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      },
+      {
+        "name": "v_width_factor",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      },
+      {
+        "name": "Add_form_loss",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      },
+      {
+        "name": "Mannings_n",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      },
+      {
+        "name": "No_walls_or_neg_width",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      },
+      {
+        "name": "Blocked_sides",
+        "field_type": "string",
+        "width": 10,
+        "prec": -1
+      },
+      {
+        "name": "Invert_2",
+        "field_type": "string",
+        "width": 10,
+        "prec": -1
+      },
+      {
+        "name": "Obvert_2",
+        "field_type": "string",
+        "width": 10,
+        "prec": -1
+      },
+      {
+        "name": "Comment",
+        "field_type": "string",
+        "width": 250,
+        "prec": -1
+      }
+    ]
+  },
+  {
+    "name": "2d_glo",
+    "schema": [
+      {
+        "name": "Datafile",
+        "field_type": "string",
+        "width": 254,
+        "prec": -1
+      },
+      {
+        "name": "Bottom_Elevation",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      },
+      {
+        "name": "Top_Elevation",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      },
+      {
+        "name": "Increment",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      }
+    ]
+  },
+  {
+    "name": "2d_bc",
+    "schema": [
+      {
+        "name": "Type",
+        "field_type": "string",
+        "width": 2,
+        "prec": -1
+      },
+      {
+        "name": "Flags",
+        "field_type": "string",
+        "width": 3,
+        "prec": -1
+      },
+      {
+        "name": "Name",
+        "field_type": "string",
+        "width": 100,
+        "prec": -1
+      },
+      {
+        "name": "f",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      },
+      {
+        "name": "d",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      },
+      {
+        "name": "td",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      },
+      {
+        "name": "a",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      },
+      {
+        "name": "b",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      }
+    ]
+  },
+  {
+    "name": "2d_sa",
+    "schema": [
+      {
+        "name": "Name",
+        "field_type": "string",
+        "width": 100,
+        "prec": -1
+      }
+    ]
+  },
+  {
+    "name": "2d_sa_rf",
+    "schema": [
+      {
+        "name": "Catchment_Area",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      },
+      {
+        "name": "Rain_Gauge_Factor",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      },
+      {
+        "name": "IL",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      },
+      {
+        "name": "CL",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      }
+    ],
+    "base_schema": "2d_sa",
+    "extend_by": "append"
+  },
+  {
+    "name": "2d_sa_tr",
+    "schema": [
+      {
+        "name": "Trigger_Type",
+        "field_type": "string",
+        "width": 40,
+        "prec": -1
+      },
+      {
+        "name": "Trigger_Location",
+        "field_type": "string",
+        "width": 40,
+        "prec": -1
+      },
+      {
+        "name": "Trigger_Value",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      }
+    ],
+    "base_schema": "2d_sa",
+    "extend_by": "append"
+  },
+  {
+    "name": "2d_rf",
+    "schema": [
+      {
+        "name": "Name",
+        "field_type": "string",
+        "width": 100,
+        "prec": -1
+      },
+      {
+        "name": "f1",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      },
+      {
+        "name": "f2",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      }
+    ]
+  },
+  {
+    "name": "2d_oz",
+    "schema": [
+      {
+        "name": "Not_Used",
+        "field_type": "string",
+        "width": 20,
+        "prec": -1
+      }
+    ]
+  },
+  {
+    "name": "2d_soil",
+    "schema": [
+      {
+        "name": "SoilID",
+        "field_type": "int",
+        "width": 8,
+        "prec": -1
+      }
+    ]
+  },
+  {
+    "name": "2d_gw",
+    "schema": [
+      {
+        "name": "Groundwater",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      }
+    ]
+  },
+  {
+    "name": "0d_rl",
+    "schema": [
+      {
+        "name": "Name",
+        "field_type": "string",
+        "width": 32,
+        "prec": -1
+      }
+    ]
+  },
+  {
+    "name": "2d_at",
+    "schema": [
+      {
+        "name": "AT",
+        "field_type": "int",
+        "width": 8,
+        "prec": -1
+      }
+    ]
+  },
+  {
+    "name": "2d_qnl",
+    "schema": [
+      {
+        "name": "Nest_Level",
+        "field_type": "int",
+        "width": 8,
+        "prec": -1
+      }
+    ]
+  },
+  {
+    "name": "2d_cwf",
+    "schema": [
+      {
+        "name": "CWF",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      }
+    ]
+  },
+  {
+    "name": "2d_flc",
+    "schema": [
+      {
+        "name": "FLC",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      }
+    ]
+  },
+  {
+    "name": "2d_obj",
+    "schema": [
+      {
+        "name": "Trigger_Level",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      }
+    ]
+  },
+  {
+    "name": "2d_rec",
+    "schema": [
+      {
+        "name": "Trigger_Level",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      }
+    ]
+  },
+  {
+    "name": "2d_wrf",
+    "schema": [
+      {
+        "name": "WrF",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      }
+    ]
+  },
+  {
+    "name": "2d_bg",
+    "schema": [
+      {
+        "name": "ID",
+        "field_type": "string",
+        "width": 32,
+        "prec": -1
+      },
+      {
+        "name": "Options",
+        "field_type": "string",
+        "width": 32,
+        "prec": -1
+      },
+      {
+        "name": "Pier_pBlockage",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      },
+      {
+        "name": "Pier_FLC",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      },
+      {
+        "name": "Deck_Soffit",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      },
+      {
+        "name": "Deck_Depth",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      },
+      {
+        "name": "Deck_width",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      },
+      {
+        "name": "Deck_pBlockage",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      },
+      {
+        "name": "Rail_Depth",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      },
+      {
+        "name": "Rail_pBlockage",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      },
+      {
+        "name": "SuperS_FLC",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      },
+      {
+        "name": "SuperS_IPf",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      },
+      {
+        "name": "Notes",
+        "field_type": "string",
+        "width": 64,
+        "prec": -1
+      }
+    ]
+  },
+  {
+    "name": "2d_bg_pts",
+    "schema": [
+      {
+        "name": "Deck_Soffit",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      },
+      {
+        "name": "Deck_Depth",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      },
+      {
+        "name": "Rail_Depth",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      },
+      {
+        "name": "R1",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      },
+      {
+        "name": "R2",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      },
+      {
+        "name": "R3",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      }
+    ]
+  },
+  {
+    "name": "swmm_iu",
+    "schema": [
+      {
+        "name": "Inlet",
+        "field_type": "string",
+        "width": 50,
+        "prec": -1
+      },
+      {
+        "name": "StreetXSEC",
+        "field_type": "string",
+        "width": 50,
+        "prec": -1
+      },
+      {
+        "name": "Elevation",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      },
+      {
+        "name": "SlopePct_Longitudinal",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      },
+      {
+        "name": "Number",
+        "field_type": "int",
+        "width": 8,
+        "prec": -1
+      },
+      {
+        "name": "CloggedPct",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      },
+      {
+        "name": "Qmax",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      },
+      {
+        "name": "aLocal",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      },
+      {
+        "name": "wLocal",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      },
+      {
+        "name": "Placement",
+        "field_type": "string",
+        "width": 10,
+        "prec": -1
+      },
+      {
+        "name": "Conn1D_2D",
+        "field_type": "string",
+        "width": 10,
+        "prec": -1
+      },
+      {
+        "name": "Conn_Width",
+        "field_type": "real",
+        "width": 15,
+        "prec": 5
+      }
+    ]
+  }
+]

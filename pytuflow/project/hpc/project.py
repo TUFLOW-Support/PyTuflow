@@ -82,11 +82,13 @@ class HPCProject(BaseProject):
         hardware: str | None = None,
         map_output_formats: list[str] | None = None,
         output_formats: dict | None = None,
+        create_empties: bool = True,
         **kwargs,
     ):
         self.name = name
         self.output_dir = Path(output_dir)
         self.module_names: list[str] = list(modules or [])
+        self.create_empties = create_empties
 
         overrides = {k: v for k, v in {
             'model_name': name,
@@ -128,6 +130,14 @@ class HPCProject(BaseProject):
         # Create output directories
         for d in ['runs', 'model', 'bc_dbase', 'results', 'check', 'log']:
             (self.output_dir / d).mkdir(parents=True, exist_ok=True)
+
+        # Create empty GIS files (unless explicitly disabled)
+        if self.create_empties:
+            from ..template.empties import TuflowEmptyFiles
+            gis_format = variables.get('gis_format', 'SHP')
+            empties_dir = self.output_dir / 'gis' / 'empty'
+            empties_dir.mkdir(parents=True, exist_ok=True)
+            TuflowEmptyFiles('hpc', gis_format).write_empties(empties_dir)
 
         # Render and write base templates (pass module configs so ##COMMANDS## resolves)
         tcf_path = None

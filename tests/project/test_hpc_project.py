@@ -20,6 +20,7 @@ def basic_project(project_dir):
         iter='001',
         gis_format='SHP',
         map_output_formats=['XMDF'],
+        create_empties=False,
     )
 
 
@@ -890,3 +891,60 @@ class TestSoilsMultiCFModule:
         tcf = TCF(tcf_path)
         soils_inps = tcf.find_input(lhs='read soils file', recursive=False)
         assert len(soils_inps) == 1, "Read Soils File should appear exactly once"
+
+
+class TestTuflowEmptyFiles:
+    """Tests for empty GIS file creation."""
+
+    def test_empties_dir_created(self, project_dir):
+        p = HPCProject('mymodel', project_dir, gis_format='GPKG', create_empties=True)
+        p.create()
+        assert (project_dir / 'gis' / 'empty').is_dir()
+
+    def test_empties_created_for_gpkg(self, project_dir):
+        p = HPCProject('mymodel', project_dir, gis_format='GPKG', create_empties=True)
+        p.create()
+        empties_dir = project_dir / 'gis' / 'empty'
+        gpkg_files = list(empties_dir.glob('*.gpkg'))
+        assert len(gpkg_files) > 0, 'Expected GPKG empty files to be created'
+
+    def test_no_empties_when_disabled(self, project_dir):
+        p = HPCProject('mymodel', project_dir, gis_format='GPKG', create_empties=False)
+        p.create()
+        assert not (project_dir / 'gis' / 'empty').exists()
+
+    def test_empty_schema_fields(self, tmp_path):
+        """Each TuflowEmptyType should resolve its schema correctly."""
+        from pytuflow.project.template.empties import TuflowEmptyType
+        et = TuflowEmptyType('hpc', '1d_nwk', ['P', 'L'], 'GPKG')
+        schema = et.get_schema('1d_nwk')
+        assert schema is not None
+        names = [f['name'] for f in schema]
+        assert 'ID' in names
+        assert 'Type' in names
+
+    def test_empty_schema_append_inheritance(self, tmp_path):
+        """1d_nwke extends 1d_nwk with extra fields appended."""
+        from pytuflow.project.template.empties import TuflowEmptyType
+        et = TuflowEmptyType('hpc', '1d_nwke', ['P', 'L'], 'GPKG')
+        base_schema = et.get_schema('1d_nwk')
+        ext_schema = et.get_schema('1d_nwke')
+        assert ext_schema is not None
+        assert len(ext_schema) > len(base_schema)
+        ext_names = [f['name'] for f in ext_schema]
+        assert 'eS1' in ext_names
+
+    def test_empty_schema_replace_inheritance(self, tmp_path):
+        """1d_nwkb replaces the pBlockage field in 1d_nwk."""
+        from pytuflow.project.template.empties import TuflowEmptyType
+        et = TuflowEmptyType('hpc', '1d_nwkb', ['P', 'L'], 'GPKG')
+        schema = et.get_schema('1d_nwkb')
+        assert schema is not None
+        pb = next(f for f in schema if f['name'] == 'pBlockage')
+        assert pb['field_type'] == 'string', 'pBlockage should be replaced with string type'
+
+    def test_geom_normalization(self):
+        """Multi-char geom elements like ['PL'] are split into individual chars."""
+        from pytuflow.project.template.empties import TuflowEmptyType
+        et = TuflowEmptyType('hpc', '2d_po', ['PLR'], 'GPKG')
+        assert et.geom == ['P', 'L', 'R']
