@@ -119,6 +119,11 @@ class HPCBaseModule(BaseModule):
         Comment / blank lines that appear *after* a real command have already
         been processed and are inserted immediately (e.g. placeholder lines
         like ``! Read GIS PO == <path>`` that follow a real command).
+
+        If ``existence_check`` is configured in the block, the block is treated
+        **atomically**: the sentinel is checked once; if found the entire block
+        is skipped; if absent all commands are inserted unconditionally (bypassing
+        per-command exists/uncomment logic).
         """
         raw_commands: list[str] = block.get('commands', [])
         if not raw_commands:
@@ -129,6 +134,27 @@ class HPCBaseModule(BaseModule):
         # Verify there is at least one real command worth processing.
         if not any(c.strip() and not c.strip().startswith('!') for c in commands):
             return
+
+        # ── Atomic block mode (existence_check configured) ───────────────────
+        existence_check = block.get('existence_check')
+        if existence_check is not None:
+            is_comment = existence_check.strip().startswith('!')
+            pattern, is_regex, flags = _parse_filter(existence_check)
+            if is_comment:
+                found = cf.find_input(filter_by=pattern, comments=True, regex=is_regex, regex_flags=flags)
+            else:
+                found = cf.find_input(lhs=pattern, recursive=False, regex=is_regex, regex_flags=flags)
+            if found:
+                return  # sentinel present — block already inserted, skip entirely
+
+            # Sentinel absent — insert all non-blank commands unconditionally.
+            current_ref = self._find_block_anchor(cf, block)
+            for cmd in commands:
+                if cmd.strip():
+                    current_ref = self._insert_or_append(cf, current_ref, cmd)
+            return
+
+        # ── Per-command mode (no existence_check) ────────────────────────────
 
         # Find the initial insertion anchor for this block.
         current_ref = self._find_block_anchor(cf, block)

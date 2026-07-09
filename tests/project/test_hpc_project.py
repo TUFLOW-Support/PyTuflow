@@ -708,6 +708,87 @@ class TestPlacementRules:
             mgr_mod.TemplateManager.get_rules = staticmethod(original_get_rules)
 
 
+class TestExistenceCheck:
+    """Tests for the existence_check atomic block-guard feature."""
+
+    def _make_tbc(self, tmp_path, content: str):
+        from pytuflow import TBC
+        tbc_path = tmp_path / 'mymodel_001.tbc'
+        tbc_path.write_text(content, encoding='utf-8')
+        return TBC(tbc_path), tbc_path
+
+    def _make_block(self, existence_check: str, commands: list[str]) -> dict:
+        return {
+            'target_cf': 'tbc',
+            'existence_check': existence_check,
+            'commands': commands,
+        }
+
+    def _module(self):
+        from pytuflow.project.hpc.modules._base import HPCBaseModule
+        m = HPCBaseModule.__new__(HPCBaseModule)
+        return m
+
+    def test_comment_guard_inserts_when_absent(self, tmp_path):
+        """Block is inserted when the comment sentinel is not present."""
+        tbc, tbc_path = self._make_tbc(
+            tmp_path,
+            '! BOUNDARY CONDITIONS\nRead GIS BC == ..\\model\\inflow_L.shp\n',
+        )
+        block = self._make_block(
+            '! 1D/2D LINKING',
+            ['! 1D/2D LINKING', 'Read GIS BC == ..\\model\\2d_bc_L.shp'],
+        )
+        self._module()._apply_block(tbc, block, {})
+        tbc.write('inplace')
+        content = tbc_path.read_text(encoding='utf-8')
+        assert '1D/2D LINKING' in content
+        assert content.count('Read GIS BC') == 2
+
+    def test_comment_guard_skips_when_present(self, tmp_path):
+        """Block is skipped entirely when the comment sentinel already exists."""
+        tbc, tbc_path = self._make_tbc(
+            tmp_path,
+            '! BOUNDARY CONDITIONS\nRead GIS BC == ..\\model\\inflow_L.shp\n'
+            '! 1D/2D LINKING\nRead GIS BC == ..\\model\\2d_bc_L.shp\n',
+        )
+        block = self._make_block(
+            '! 1D/2D LINKING',
+            ['! 1D/2D LINKING', 'Read GIS BC == ..\\model\\2d_bc_L.shp'],
+        )
+        self._module()._apply_block(tbc, block, {})
+        tbc.write('inplace')
+        content = tbc_path.read_text(encoding='utf-8')
+        assert content.count('Read GIS BC') == 2  # still only 2 — no duplicate inserted
+
+    def test_lhs_guard_inserts_when_absent(self, tmp_path):
+        """Block with an lhs existence_check is inserted when sentinel command is absent."""
+        tbc, tbc_path = self._make_tbc(tmp_path, '')
+        block = self._make_block(
+            'Read GIS BC Linking',
+            ['Read GIS BC Linking == ..\\model\\linking_L.shp'],
+        )
+        self._module()._apply_block(tbc, block, {})
+        tbc.write('inplace')
+        content = tbc_path.read_text(encoding='utf-8')
+        assert 'Read GIS BC Linking' in content
+
+    def test_lhs_guard_skips_when_present(self, tmp_path):
+        """Block with an lhs existence_check is skipped when sentinel command exists."""
+        tbc, tbc_path = self._make_tbc(
+            tmp_path,
+            'Read GIS BC Linking == ..\\model\\linking_L.shp\n',
+        )
+        block = self._make_block(
+            'Read GIS BC Linking',
+            ['Read GIS BC Linking == ..\\model\\linking_L.shp'],
+        )
+        self._module()._apply_block(tbc, block, {})
+        tbc.write('inplace')
+        content = tbc_path.read_text(encoding='utf-8')
+        assert content.count('Read GIS BC Linking') == 1  # not duplicated
+
+
 class TestTemplateManagerIntegration:
     def test_list_templates_includes_tcf(self):
         manager = TemplateManager('hpc')
