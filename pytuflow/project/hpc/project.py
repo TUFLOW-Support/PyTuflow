@@ -128,7 +128,7 @@ class HPCProject(BaseProject):
         module_configs = {m.NAME: m._get_config() for m in modules}
 
         # Create output directories
-        for d in ['runs', 'model', 'bc_dbase', 'results', 'check', 'log']:
+        for d in ['runs', 'model', 'bc_dbase', 'results', 'check', 'runs/log']:
             (self.output_dir / d).mkdir(parents=True, exist_ok=True)
 
         # Create empty GIS files (unless explicitly disabled)
