@@ -16,6 +16,15 @@
       "commands": [
         "Estry Control File == ..\\model\\${model_name}_${iter}.ecf"
       ]
+    },
+    {
+      "id": "estry_tbc",
+      "target_cf": "tbc",
+      "commands": [
+        "\n!_______________________________________________________",
+        "! 1D/2D LINKING",
+        "Read GIS BC == </path/to/2d_bc_link>"
+      ]
     }
   ]
 }
