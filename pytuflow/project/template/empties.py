@@ -5,7 +5,7 @@ import warnings
 from ..._tmf import TuflowPath
 
 
-_HPC_EMPTY_SCHEMA_PATH = Path(__file__).parents[1] / 'data' / 'empties' / 'hpc_empties.json'
+_EMPTIES_DIR = Path(__file__).parents[1] / 'data' / 'empties'
 
 # Maps single-char geometry code (used in TUFLOW file naming) to open_gis geometry type string.
 _GEOM_CHAR_MAP = {'P': 'Point', 'L': 'LineString', 'R': 'Polygon'}
@@ -31,57 +31,32 @@ def _shorten_field_names(schema: list[dict]) -> list[dict]:
     return result
 
 
+def _load_empties_json(engine: str) -> dict:
+    """Load the empties JSON for *engine* and normalise to ``{"types": [...], "schemas": [...]}``.
+
+    Handles both the legacy flat-list format (schemas only) and the current
+    dict format that carries an explicit ``types`` list alongside schemas.
+    """
+    path = _EMPTIES_DIR / f'{engine}_empties.json'
+    try:
+        with path.open() as f:
+            data = json.load(f)
+    except Exception:
+        return {'types': [], 'schemas': []}
+
+    if isinstance(data, list):
+        # Legacy format — flat list of schema objects, no type metadata
+        return {'types': [], 'schemas': data}
+    return data
+
+
 class TuflowEmptyFiles:
 
     def __init__(self, engine: str, gis_format: str, projection_wkt: str | None = None):
+        data = _load_empties_json(engine)
         self.empty_types = [
-            TuflowEmptyType(engine, '1d_nd', 'P', gis_format, projection_wkt),
-            TuflowEmptyType(engine, '1d_nwk', 'PL', gis_format, projection_wkt),
-            TuflowEmptyType(engine, '1d_nwke', 'PL', gis_format, projection_wkt),
-            TuflowEmptyType(engine, '1d_nwkb', 'PL', gis_format, projection_wkt),
-            TuflowEmptyType(engine, '1d_mh', 'P', gis_format, projection_wkt),
-            TuflowEmptyType(engine, '1d_bc', 'PR', gis_format, projection_wkt),
-            TuflowEmptyType(engine, '1d_iwl', 'P', gis_format, projection_wkt),
-            TuflowEmptyType(engine, '1d_tab', 'PL', gis_format, projection_wkt),
-            TuflowEmptyType(engine, '1d_xs', 'L', gis_format, projection_wkt),
-            TuflowEmptyType(engine, '1d_na', 'P', gis_format, projection_wkt),
-            TuflowEmptyType(engine, '1d_WLL', 'LR', gis_format, projection_wkt),
-            TuflowEmptyType(engine, '1d_pit', 'P', gis_format, projection_wkt),
-            TuflowEmptyType(engine, '2d_po', 'PLR', gis_format, projection_wkt),
-            TuflowEmptyType(engine, '2d_lp', 'L', gis_format, projection_wkt),
-            TuflowEmptyType(engine, '2d_fc', 'PLR', gis_format, projection_wkt),
-            TuflowEmptyType(engine, '2d_glo', 'P', gis_format, projection_wkt),
-            TuflowEmptyType(engine, '2d_bc', 'PLR', gis_format, projection_wkt),
-            TuflowEmptyType(engine, '2d_code', 'R', gis_format, projection_wkt),
-            TuflowEmptyType(engine, '2d_mat', 'R', gis_format, projection_wkt),
-            TuflowEmptyType(engine, '2d_sa', 'R', gis_format, projection_wkt),
-            TuflowEmptyType(engine, '2d_rf', 'PR', gis_format, projection_wkt),
-            TuflowEmptyType(engine, '2d_sa_rf', 'R', gis_format, projection_wkt),
-            TuflowEmptyType(engine, '2d_sa_tr', 'R', gis_format, projection_wkt),
-            TuflowEmptyType(engine, '2d_z__', 'PLR', gis_format, projection_wkt),
-            TuflowEmptyType(engine, '2d_zsh', 'PLR', gis_format, projection_wkt),
-            TuflowEmptyType(engine, '2d_zshr', 'PLR', gis_format, projection_wkt),
-            TuflowEmptyType(engine, '2d_ztin', 'PLR', gis_format, projection_wkt),
-            TuflowEmptyType(engine, '2d_vzsh', 'PLR', gis_format, projection_wkt),
-            TuflowEmptyType(engine, '2d_fcsh', 'PLR', gis_format, projection_wkt),
-            TuflowEmptyType(engine, '2d_lfcsh', 'PLR', gis_format, projection_wkt),
-            TuflowEmptyType(engine, '2d_lfcsh_pts', 'P', gis_format, projection_wkt),
-            TuflowEmptyType(engine, '2d_iwl', 'R', gis_format, projection_wkt),
-            TuflowEmptyType(engine, '2d_loc', 'LR', gis_format, projection_wkt),
-            TuflowEmptyType(engine, '2d_oz', 'R', gis_format, projection_wkt),
-            TuflowEmptyType(engine, '2d_soil', 'R', gis_format, projection_wkt),
-            TuflowEmptyType(engine, '2d_gw', 'R', gis_format, projection_wkt),
-            TuflowEmptyType(engine, '0d_rl', 'PLR', gis_format, projection_wkt),
-            TuflowEmptyType(engine, '2d_at', 'R', gis_format, projection_wkt),
-            TuflowEmptyType(engine, '2d_qnl', 'R', gis_format, projection_wkt),
-            TuflowEmptyType(engine, '2d_cwf', 'R', gis_format, projection_wkt),
-            TuflowEmptyType(engine, '2d_flc', 'R', gis_format, projection_wkt),
-            TuflowEmptyType(engine, '2d_obj', 'PR', gis_format, projection_wkt),
-            TuflowEmptyType(engine, '2d_rec', 'PR', gis_format, projection_wkt),
-            TuflowEmptyType(engine, '2d_wrf', 'PLR', gis_format, projection_wkt),
-            TuflowEmptyType(engine, '2d_bg', 'PLR', gis_format, projection_wkt),
-            TuflowEmptyType(engine, '2d_bg_pts', 'P', gis_format, projection_wkt),
-            TuflowEmptyType(engine, 'swmm_iu', 'P', gis_format, projection_wkt),
+            TuflowEmptyType(engine, t['name'], t['geom'], gis_format, projection_wkt)
+            for t in data.get('types', [])
         ]
 
     def write_empties(self, dir_path: str):
@@ -103,13 +78,11 @@ class TuflowEmptyType:
         return len(self.geom)
 
     def get_schema(self, name: str) -> list[dict] | None:
-        schema_path = _HPC_EMPTY_SCHEMA_PATH if self.engine == 'hpc' else Path()
-        try:
-            with schema_path.open() as f:
-                empty_schemas = json.load(f)
-        except Exception:
+        data = _load_empties_json(self.engine)
+        schemas_list = data.get('schemas', [])
+        if not schemas_list:
             return None
-        empty_schemas = {x['name']: x for x in empty_schemas}
+        empty_schemas = {x['name']: x for x in schemas_list}
         empty_schema = empty_schemas.get(name)
         if not empty_schema:
             return None

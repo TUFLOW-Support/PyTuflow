@@ -2,17 +2,9 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
-from string import Template
-from typing import TYPE_CHECKING
 
-from ..abc.project import BaseProject
-from ..config.settings import Settings
-from ..hpc.modules._base import _normalize_slashes
-from ..template.engine import TemplateEngine
-from ..template.manager import TemplateManager
-
-if TYPE_CHECKING:
-    pass
+from .._common.project import BaseEngineProject
+from .._common.utils import _variables_from_cf_path  # noqa: F401 — kept for back-compat
 
 # Maps CF type key → TCF command lhs that references it, and the pytuflow class to use.
 _CF_TYPE_MAP: dict[str, dict] = {
@@ -31,20 +23,9 @@ def get_available_modules() -> dict[str, type]:
     :class:`HPCBaseModule`.  Adding a new module requires only a JSON file
     in ``data/modules/hpc/`` — no Python code changes needed.
     """
-    from .modules._base import HPCBaseModule
-    manager = TemplateManager('hpc')
-    result = {}
-    for name in manager.list_module_configs():
-        cls = type(
-            f'{name.title()}Module',
-            (HPCBaseModule,),
-            {'NAME': name, 'DISPLAY_NAME': name.replace('_', ' ').title()},
-        )
-        result[name] = cls
-    return result
+    return HPCProject.get_available_modules()
 
 
-# Base templates that are always created
 _BASE_TEMPLATES = [
     ('runs/${model_name}_${iter}.tcf', 'runs/${model_name}_${iter}.tcf'),
     ('model/${model_name}_${iter}.tgc', 'model/${model_name}_${iter}.tgc'),
@@ -54,195 +35,37 @@ _BASE_TEMPLATES = [
 ]
 
 
-class HPCProject(BaseProject):
+class HPCProject(BaseEngineProject):
 
-    def __init__(
-        self,
-        name: str,
-        output_dir: str | Path,
-        modules: list[str] | None = None,
-        *,
-        crs: str,
-        create_empties: bool = True,
-        **kwargs,
-    ):
-        self.name = name
-        self.output_dir = Path(output_dir)
-        self.module_names: list[str] = list(modules or [])
-        self.create_empties = create_empties
-        self.crs = crs
-
-        # Normalize gis_format to uppercase (SHP, GPKG, MIF)
-        if 'gis_format' in kwargs and kwargs['gis_format'] is not None:
-            kwargs['gis_format'] = kwargs['gis_format'].upper()
-
-        overrides = {k: v for k, v in {'model_name': name, **kwargs}.items() if v is not None}
-        self.settings = Settings(**overrides)
-        self._engine = TemplateEngine()
-        self._manager = TemplateManager('hpc')
-
-    def validate(self) -> list[str]:
-        errors = []
-        if not self.name:
-            errors.append("'name' must be provided")
-        if not self.output_dir:
-            errors.append("'output_dir' must be provided")
-        return errors
-
-    def create(self) -> Path:
-        errors = self.validate()
-        if errors:
-            raise ValueError('\n'.join(errors))
-
-        variables = dict(self.settings._settings)
-        variables['model_name'] = self.name
-        active_modules = list(self.module_names)
-
-        # Load and sort module instances (sort_order controls render + apply order)
-        modules = self._get_module_instances()
-        module_configs = {m.NAME: m._get_config() for m in modules}
-
-        # Create output directories
-        for d in ['runs', 'model', 'bc_dbase', 'results', 'check', 'runs/log']:
-            (self.output_dir / d).mkdir(parents=True, exist_ok=True)
-
-        # Create empty GIS files (unless explicitly disabled)
-        if self.create_empties:
-            from ..template.empties import TuflowEmptyFiles
-            gis_format = variables.get('gis_format', 'SHP')
-            empties_dir = self.output_dir / 'model' / 'gis' / 'empty'
-            empties_dir.mkdir(parents=True, exist_ok=True)
-            TuflowEmptyFiles('hpc', gis_format, self.crs).write_empties(empties_dir)
-
-        # Create projection / spatial database file under model/gis/
-        gis_dir = self.output_dir / 'model' / 'gis'
-        gis_dir.mkdir(parents=True, exist_ok=True)
-        _create_projection_file(gis_dir, variables.get('gis_format', 'SHP'), self.name, variables.get('iter', '001'), self.crs)
-
-        # Render and write base templates (pass module configs so ##COMMANDS## resolves)
-        tcf_path = None
-        for template_key, output_rel in _BASE_TEMPLATES:
-            rendered_out = Template(output_rel).safe_substitute(variables)
-            text = self._manager.get_template(template_key)
-            rendered_text = self._engine.render(text, variables, active_modules, module_configs)
-            rendered_text = _normalize_rendered(rendered_text)
-            out_path = self.output_dir / rendered_out
-            out_path.write_text(rendered_text, encoding='utf-8')
-            if template_key.startswith('runs/') and template_key.endswith('.tcf'):
-                tcf_path = out_path
-
-        # Render and write module template files
-        for module in modules:
-            for template_key, output_rel in module.get_template_files(variables):
-                rendered_out = Template(output_rel).safe_substitute(variables)
-                text = self._manager.get_template(template_key)
-                rendered_text = self._engine.render(text, variables, active_modules, module_configs)
-                rendered_text = _normalize_rendered(rendered_text)
-                out_path = self.output_dir / rendered_out
-                out_path.parent.mkdir(parents=True, exist_ok=True)
-                out_path.write_text(rendered_text, encoding='utf-8')
-
-        # Apply modules to control files (already-exists check makes this a no-op
-        # for commands the template already rendered; handles fallback for insert)
-        if tcf_path is not None:
-            from pytuflow import TCF
-            tcf = TCF(tcf_path)
-            needed_types = _needed_cf_types(modules)
-            secondary_cfs = _load_secondary_cfs(tcf, tcf_path, needed_types)
-            control_files = {'tcf': tcf, **secondary_cfs}
-
-            for module in modules:
-                module.apply_to_control_files(control_files, variables)
-
-            tcf.write('inplace')
-
-        return self.output_dir
-
-    def insert_module(self, module_name: str) -> None:
-        variables = dict(self.settings._settings)
-        variables['model_name'] = self.name
-
-        tcf_rel = Template('runs/${model_name}_${iter}.tcf').safe_substitute(variables)
-        tcf_path = self.output_dir / tcf_rel
-        if not tcf_path.exists():
-            raise FileNotFoundError(f"TCF not found: {tcf_path}")
-
-        self.__class__.insert_module_into(module_name, tcf_path, **{
-            'model_name': self.name,
-            'iter': variables.get('iter', '001'),
-        })
-        if module_name not in self.module_names:
-            self.module_names.append(module_name)
+    ENGINE_TYPE = 'hpc'
+    MAIN_CF_EXT = 'tcf'
+    MAIN_CF_CLASS = 'TCF'
+    BASE_TEMPLATES = _BASE_TEMPLATES
+    OUTPUT_DIRS = ['runs', 'model', 'bc_dbase', 'results', 'check', 'runs/log']
+    EMPTIES_KEY = 'hpc'
+    SUPPORTED_GIS_FORMATS = frozenset({'SHP', 'MIF', 'GPKG'})
 
     @classmethod
-    def insert_module_into(cls, module_name: str, tcf_path: str | Path, **kwargs) -> None:
-        from pytuflow import TCF
-        tcf_path = Path(tcf_path)
-        project_dir = tcf_path.parent.parent  # runs/ -> project root
+    def _get_module_base_class(cls):
+        from .modules._base import HPCBaseModule
+        return HPCBaseModule
 
-        registry = get_available_modules()
-        if module_name not in registry:
-            raise ValueError(
-                f"Unknown module '{module_name}'. Available: {list(registry.keys())}"
-            )
+    # ------------------------------------------------------------------
+    # Secondary CF loading (HPC-specific — TGC, TBC, ECF, QCF, ADCF)
+    # ------------------------------------------------------------------
 
-        module_cls = registry[module_name]
-        module = module_cls()
-        module_config = module._get_config()
+    def _load_secondary_cfs(self, main_cf, main_cf_path: Path, modules) -> dict:
+        needed = _needed_cf_types(modules)
+        return _load_secondary_cfs(main_cf, main_cf_path, needed)
 
-        # Build variables from TCF path + overrides
-        variables = _variables_from_tcf_path(tcf_path, **kwargs)
-        settings = Settings(
-            model_name=variables.get('model_name', ''),
-            **{k: v for k, v in kwargs.items() if v},
-        )
-        variables = dict(settings._settings)
-        if 'model_name' in kwargs:
-            variables['model_name'] = kwargs['model_name']
-
-        # Create module template files (pass module config so ##COMMANDS## resolves)
-        engine = TemplateEngine()
-        manager = TemplateManager('hpc')
-        module_configs = {module_name: module_config}
-
-        for template_key, output_rel in module.get_template_files(variables):
-            rendered_out = Template(output_rel).safe_substitute(variables)
-            out_path = project_dir / rendered_out
-            if not out_path.exists():
-                text = manager.get_template(template_key)
-                rendered_text = engine.render(text, variables, [module_name], module_configs)
-                out_path.parent.mkdir(parents=True, exist_ok=True)
-                out_path.write_text(rendered_text, encoding='utf-8')
-
-        # Apply module to TCF and any secondary CFs
-        tcf = TCF(tcf_path)
-        needed_types = _needed_cf_types([module])
-        secondary_cfs = _load_secondary_cfs(tcf, tcf_path, needed_types)
-        control_files = {'tcf': tcf, **secondary_cfs}
-
-        module.apply_to_control_files(control_files, variables)
-
-        tcf.write('inplace')
-        for cf in secondary_cfs.values():
-            if cf.dirty:
-                cf.write('inplace')
-
-    def _get_module_instances(self):
-        """Return module instances sorted by sort_order (ascending)."""
-        registry = get_available_modules()
-        instances = []
-        for name in self.module_names:
-            if name not in registry:
-                raise ValueError(
-                    f"Unknown module '{name}'. Available: {list(registry.keys())}"
-                )
-            instances.append(registry[name]())
-        instances.sort(key=lambda m: m._get_config().get('sort_order', 50))
-        return instances
+    @classmethod
+    def _load_secondary_cfs_cls(cls, main_cf, main_cf_path: Path, modules) -> dict:
+        needed = _needed_cf_types(modules)
+        return _load_secondary_cfs(main_cf, main_cf_path, needed)
 
 
 def _needed_cf_types(modules) -> set[str]:
-    """Collect all non-TCF target_cf values across all modules' command blocks."""
+    """Collect all non-primary target_cf values across all modules' command blocks."""
     needed = set()
     for module in modules:
         config = module._get_config()
@@ -273,52 +96,5 @@ def _load_secondary_cfs(tcf, tcf_path: Path, needed_types: set[str]) -> dict:
     return result
 
 
-def _variables_from_tcf_path(tcf_path: Path, **overrides) -> dict:
-    """Try to infer model_name and iter from TCF filename."""
-    stem = tcf_path.stem  # e.g. mymodel_001
-    variables = {}
-    m = re.match(r'^(.+)_(\d+)$', stem)
-    if m:
-        variables['model_name'] = m.group(1)
-        variables['iter'] = m.group(2)
-    else:
-        variables['model_name'] = stem
-        variables['iter'] = '001'
-    variables.update({k: v for k, v in overrides.items() if v is not None})
-    return variables
-
-
-def _normalize_rendered(text: str) -> str:
-    """Apply OS-native path separators to every line of a rendered template.
-
-    Delegates to ``_normalize_slashes`` so the behaviour is identical to what
-    ``_apply_block`` does when inserting module commands at runtime.
-    """
-    return '\n'.join(_normalize_slashes(line) for line in text.split('\n'))
-
-
-def _create_projection_file(gis_dir: Path, gis_format: str, model_name: str, iter_: str, crs: str) -> None:
-    """Create a projection / spatial-database reference file in *gis_dir*.
-
-    * SHP → ``projection.shp`` (empty Point layer carrying the CRS)
-    * MIF → ``projection.mif`` (same)
-    * GPKG → ``{model_name}_{iter}.gpkg`` with a ``projection`` layer
-    """
-    import warnings
-    from ..._tmf import TuflowPath
-
-    fmt = gis_format.upper()
-    if fmt == 'SHP':
-        uri = f'{gis_dir / "projection.shp"} >> projection'
-    elif fmt == 'MIF':
-        uri = f'{gis_dir / "projection.mif"} >> projection'
-    elif fmt == 'GPKG':
-        uri = f'{gis_dir / f"{model_name}_{iter_}.gpkg"} >> projection'
-    else:
-        return  # unknown format — skip silently
-
-    with warnings.catch_warnings():
-        warnings.filterwarnings('ignore', message=".*Column names longer than 10 characters.*", category=UserWarning)
-        p = TuflowPath(uri)
-        with p.open_gis('w', 'Point', crs):
-            pass  # no fields or features needed — CRS is embedded in the file
+# Keep old name available for any code that imported it directly
+_variables_from_tcf_path = _variables_from_cf_path

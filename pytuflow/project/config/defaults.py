@@ -16,3 +16,8 @@ FACTORY_HPC_DEFAULTS = {
     "model_domain_angle": "0",
     "model_domain_size": "<X, Y>  ! TODO",
 }
+
+FACTORY_FV_DEFAULTS = {
+    "spherical": "0",
+    "latitude": "0.0",
+}

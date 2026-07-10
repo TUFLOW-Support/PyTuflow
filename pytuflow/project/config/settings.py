@@ -2,29 +2,36 @@ import json
 from pathlib import Path
 from typing import Any
 
-from .defaults import FACTORY_DEFAULTS, FACTORY_HPC_DEFAULTS
+from .defaults import FACTORY_DEFAULTS, FACTORY_FV_DEFAULTS, FACTORY_HPC_DEFAULTS
 
 CACHE_ROOT = Path.home() / '.tuflow_model_files' / 'project_templates'
 
 
 class Settings:
-    
-    def __init__(self, **overrides):
+
+    def __init__(self, engine_type: str = 'hpc', **overrides):
         settings = {}
         settings.update(FACTORY_DEFAULTS)
 
-        # Try loading user defaults.json
+        # Try loading user defaults.json (shared across engines)
         user_defaults = CACHE_ROOT / 'defaults.json'
         if user_defaults.exists():
             with open(user_defaults) as f:
                 settings.update(json.load(f))
 
-        settings.update(FACTORY_HPC_DEFAULTS)
+        # Engine-specific factory defaults
+        if engine_type == 'hpc':
+            settings.update(FACTORY_HPC_DEFAULTS)
+            user_engine_defaults = CACHE_ROOT / 'hpc' / 'hpc_defaults.json'
+        elif engine_type == 'fv':
+            settings.update(FACTORY_FV_DEFAULTS)
+            user_engine_defaults = CACHE_ROOT / 'fv' / 'fv_defaults.json'
+        else:
+            user_engine_defaults = None
 
-        # Try loading user hpc_defaults.json
-        user_hpc_defaults = CACHE_ROOT / 'hpc' / 'hpc_defaults.json'
-        if user_hpc_defaults.exists():
-            with open(user_hpc_defaults) as f:
+        # Try loading user engine-specific defaults
+        if user_engine_defaults and user_engine_defaults.exists():
+            with open(user_engine_defaults) as f:
                 settings.update(json.load(f))
 
         settings.update({k: v for k, v in overrides.items() if v is not None})
@@ -33,7 +40,9 @@ class Settings:
         # Track which keys were explicitly passed so _compute_output_settings
         # can resolve the output_formats vs map_output_formats priority.
         self._override_keys = {k for k, v in overrides.items() if v is not None}
-        self._compute_output_settings()
+
+        if engine_type == 'hpc':
+            self._compute_output_settings()
 
     def _compute_output_settings(self) -> None:
         """Derive ``map_output_formats`` and ``output_format_setting_lines`` from
