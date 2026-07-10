@@ -170,24 +170,6 @@ class BaseEngineProject(BaseProject):
 
         return self.output_dir
 
-    def insert_module(self, module_name: str) -> None:
-        variables = dict(self.settings._settings)
-        variables['model_name'] = self.name
-
-        cf_rel = Template(
-            f'{self.MAIN_CF_SUBDIR}/${{model_name}}_${{iter}}.{self.MAIN_CF_EXT}'
-        ).safe_substitute(variables)
-        cf_path = self.output_dir / cf_rel
-        if not cf_path.exists():
-            raise FileNotFoundError(f"Main control file not found: {cf_path}")
-
-        self.__class__.insert_module_into(module_name, cf_path, **{
-            'model_name': self.name,
-            'iter': variables.get('iter', '001'),
-        })
-        if module_name not in self.module_names:
-            self.module_names.append(module_name)
-
     @classmethod
     def insert_module_into(cls, module_name: str, cf_path: str | Path, **kwargs) -> None:
         import pytuflow
