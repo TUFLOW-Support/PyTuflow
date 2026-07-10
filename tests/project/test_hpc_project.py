@@ -243,7 +243,8 @@ class TestHPCBaseModuleApplyToControlFiles:
 
     def test_apply_skips_if_already_present(self, project_dir):
         """If command already exists in TCF, apply_to_control_files should skip."""
-        from pytuflow.project.hpc.modules.estry import EstryModule
+        from pytuflow.project.hpc.project import get_available_modules
+        EstryModule = get_available_modules()['estry']
         from pytuflow import TCF
 
         # Create project with estry already active
@@ -264,7 +265,8 @@ class TestHPCBaseModuleApplyToControlFiles:
 
     def test_apply_inserts_via_placement_rule(self, project_dir):
         """apply_to_control_files uses placement_rule to find the last control-file command."""
-        from pytuflow.project.hpc.modules.estry import EstryModule
+        from pytuflow.project.hpc.project import get_available_modules
+        EstryModule = get_available_modules()['estry']
         from pytuflow import TCF
 
         # Create bare-bones project (no estry)
@@ -292,7 +294,8 @@ class TestHPCBaseModuleApplyToControlFiles:
 
     def test_apply_uncomments_manually_added_comment(self, tmp_path):
         """apply_to_control_files can uncomment an existing commented line."""
-        from pytuflow.project.hpc.modules.estry import EstryModule
+        from pytuflow.project.hpc.project import get_available_modules
+        EstryModule = get_available_modules()['estry']
         from pytuflow import TCF
 
         # Write a minimal TCF with a commented Estry line (simulating a hand-edited file)
@@ -473,7 +476,8 @@ class TestHPCBaseModuleApplyToControlFiles:
 
     def test_po_module_inserts_placeholder_comment(self, tmp_path):
         """Regression: po module's '! Read GIS PO' placeholder must appear in the TCF."""
-        from pytuflow.project.hpc.modules.po import POModule
+        from pytuflow.project.hpc.project import get_available_modules
+        POModule = get_available_modules()['po']
         from pytuflow import TCF
 
         tcf_dir = tmp_path / 'runs'
@@ -533,7 +537,8 @@ class TestAutoCommentDetection:
 
     def test_auto_uncomments_exact_command(self, tmp_path):
         """Auto-detection finds and uncomments '! Estry Control File ==' precisely."""
-        from pytuflow.project.hpc.modules.estry import EstryModule
+        from pytuflow.project.hpc.project import get_available_modules
+        EstryModule = get_available_modules()['estry']
         from pytuflow import TCF
 
         tcf_dir = tmp_path / 'runs'
@@ -556,7 +561,8 @@ class TestAutoCommentDetection:
 
     def test_auto_detect_avoids_false_prefix_match(self, tmp_path):
         """Auto-detection must NOT match 'Set Soil Layer 2' when looking for 'Set Soil'."""
-        from pytuflow.project.hpc.modules.soils import SoilsModule
+        from pytuflow.project.hpc.project import get_available_modules
+        SoilsModule = get_available_modules()['soils']
         from pytuflow import TGC
 
         tgc_dir = tmp_path / 'model'
@@ -606,7 +612,8 @@ class TestPlacementRules:
 
     def test_regex_command_in_rules_is_recognised(self, tmp_path):
         """A /pattern/flags entry in a rule's commands list is used as a regex match."""
-        from pytuflow.project.hpc.modules.estry import EstryModule
+        from pytuflow.project.hpc.project import get_available_modules
+        EstryModule = get_available_modules()['estry']
         from pytuflow import TCF
         import pytuflow.project.template.manager as mgr_mod
 
@@ -654,7 +661,8 @@ class TestPlacementRules:
 
     def test_placement_rule_inserts_after_last_cf_command(self, tmp_path):
         """Placement rule inserts after the last matching command in the CF section."""
-        from pytuflow.project.hpc.modules.estry import EstryModule
+        from pytuflow.project.hpc.project import get_available_modules
+        EstryModule = get_available_modules()['estry']
         from pytuflow import TCF
 
         tcf_dir = tmp_path / 'runs'
@@ -682,7 +690,8 @@ class TestPlacementRules:
 
     def test_unsupported_rule_type_raises(self, tmp_path):
         """An unimplemented rule type in rules.json raises NotImplementedError."""
-        from pytuflow.project.hpc.modules.estry import EstryModule
+        from pytuflow.project.hpc.project import get_available_modules
+        EstryModule = get_available_modules()['estry']
         from pytuflow import TCF
         import pytuflow.project.template.manager as mgr_mod
 

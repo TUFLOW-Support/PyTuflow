@@ -1,40 +1,76 @@
 """CLI for pytuflow.project.
 
 Usage:
-    python -m pytuflow.project create --name NAME --output-dir DIR [--modules M1 M2 ...]
-                                       [--gis-format FMT] [--map-output-formats F1 F2 ...]
-                                       [--output-formats '{"XMDF": {"interval": 60, "data_types": ["h","v","d"]}}']
-                                       [--cell-size N] [--iter ITER]
+    python -m pytuflow.project create --name NAME --output-dir DIR --crs EPSG:XXXX
+                                       [--modules M1 M2 ...] [--<variable> VALUE ...]
     python -m pytuflow.project insert --tcf TCF_PATH --module MODULE_NAME
     python -m pytuflow.project init-templates [--force]
     python -m pytuflow.project list-modules
+
+Dynamic variables (--<variable>) are discovered from defaults.json / hpc_defaults.json
+and can be extended by the user without modifying this file.
 """
 import argparse
 import json
 import sys
 
 
-def cmd_create(args):
+# Fixed args that are NOT driven by defaults.json
+_FIXED_ARGS = {'name', 'output_dir', 'output-dir', 'crs', 'modules', 'create_empties'}
+
+
+def _add_dynamic_args(parser) -> list[str]:
+    """Add one --arg per variable in the factory defaults.
+
+    Returns a list of dest names for all dynamic args added.
+    """
+    from .config.defaults import FACTORY_DEFAULTS, FACTORY_HPC_DEFAULTS
+
+    dests = []
+    for defaults in (FACTORY_DEFAULTS, FACTORY_HPC_DEFAULTS):
+        for key, value in defaults.items():
+            if key.startswith('_') or key in _FIXED_ARGS:
+                continue
+            flag = f'--{key.replace("_", "-")}'
+            dest = key
+            if isinstance(value, dict):
+                parser.add_argument(
+                    flag, dest=dest, default=None, metavar='JSON',
+                    help=f'{key} as a JSON object',
+                )
+            elif isinstance(value, list):
+                parser.add_argument(flag, dest=dest, nargs='*', default=None)
+            else:
+                parser.add_argument(flag, dest=dest, default=None)
+            dests.append(dest)
+    return dests
+
+
+def cmd_create(args, dynamic_dests: list[str]):
     from .hpc.project import HPCProject
 
-    output_formats = None
-    if args.output_formats:
-        try:
-            output_formats = json.loads(args.output_formats)
-        except json.JSONDecodeError as e:
-            print(f"Invalid --output-formats JSON: {e}", file=sys.stderr)
-            sys.exit(1)
+    kwargs = {}
+    for dest in dynamic_dests:
+        val = getattr(args, dest, None)
+        if val is None:
+            continue
+        # Detect if the arg was declared as JSON (dest corresponds to a dict default)
+        from .config.defaults import FACTORY_DEFAULTS, FACTORY_HPC_DEFAULTS
+        all_defaults = {**FACTORY_DEFAULTS, **FACTORY_HPC_DEFAULTS}
+        if isinstance(all_defaults.get(dest), dict):
+            try:
+                val = json.loads(val)
+            except json.JSONDecodeError as e:
+                print(f"Invalid --{dest.replace('_', '-')} JSON: {e}", file=sys.stderr)
+                sys.exit(1)
+        kwargs[dest] = val
 
     project = HPCProject(
         name=args.name,
         output_dir=args.output_dir,
         modules=args.modules or [],
         crs=args.crs,
-        iter=args.iter,
-        gis_format=args.gis_format,
-        cell_size=args.cell_size,
-        map_output_formats=args.map_output_formats,
-        output_formats=output_formats,
+        **kwargs,
     )
     errors = project.validate()
     if errors:
@@ -68,27 +104,13 @@ def main():
     parser = argparse.ArgumentParser(prog='python -m pytuflow.project')
     sub = parser.add_subparsers(dest='command')
 
-    # create
+    # create — fixed args + dynamic args from defaults
     p_create = sub.add_parser('create', help='Create a new HPC project skeleton')
     p_create.add_argument('--name', required=True, help='Model name')
     p_create.add_argument('--output-dir', required=True, dest='output_dir', help='Output directory')
     p_create.add_argument('--crs', required=True, help='Coordinate reference system (e.g. EPSG:32760)')
     p_create.add_argument('--modules', nargs='*', default=[], help='Optional modules to include')
-    p_create.add_argument('--gis-format', dest='gis_format', default=None)
-    p_create.add_argument('--map-output-formats', dest='map_output_formats', nargs='*', default=None,
-                          help='Output format names only, e.g. XMDF TIF (no per-format settings)')
-    p_create.add_argument(
-        '--output-formats', dest='output_formats', default=None,
-        metavar='JSON',
-        help=(
-            'Per-format output settings as a JSON object, e.g. '
-            '\'{"XMDF": {"interval": 60, "data_types": ["h","v","d"]}, "TIF": {"interval": 0}}\''
-        ),
-    )
-    p_create.add_argument('--cell-size', dest='cell_size', default=None)
-    p_create.add_argument('--iter', default=None, help='Iteration string (e.g. 001)')
-    p_create.add_argument('--engine', default=None, help='engine to use for Classic/HPC models (e.g. HPC or Classic)')
-    p_create.add_argument('--hardware', default=None, help='Hardware to run the model on (e.g. CPU or GPU)')
+    dynamic_dests = _add_dynamic_args(p_create)
 
     # insert
     p_insert = sub.add_parser('insert', help='Insert a module into an existing project')
@@ -105,7 +127,7 @@ def main():
     args = parser.parse_args()
 
     if args.command == 'create':
-        cmd_create(args)
+        cmd_create(args, dynamic_dests)
     elif args.command == 'insert':
         cmd_insert(args)
     elif args.command == 'init-templates':

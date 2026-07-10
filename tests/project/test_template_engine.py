@@ -264,9 +264,10 @@ class TestNormalizeSlashes:
     def test_commands_use_os_sep(self, tmp_path):
         """Integration: commands written to a CF use the OS path separator."""
         import os
-        from pytuflow.project.hpc.modules.estry import EstryModule
+        from pytuflow.project.hpc.project import get_available_modules
         from pytuflow import TCF
 
+        EstryModule = get_available_modules()['estry']
         tcf_dir = tmp_path / 'runs'
         tcf_dir.mkdir()
         (tmp_path / 'model').mkdir()

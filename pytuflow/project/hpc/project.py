@@ -14,9 +14,6 @@ from ..template.manager import TemplateManager
 if TYPE_CHECKING:
     pass
 
-# Registry of available HPC modules
-_MODULE_REGISTRY: dict[str, type] = {}
-
 # Maps CF type key → TCF command lhs that references it, and the pytuflow class to use.
 _CF_TYPE_MAP: dict[str, dict] = {
     'tgc': {'lhs': 'geometry control file', 'class': 'TGC'},
@@ -27,35 +24,24 @@ _CF_TYPE_MAP: dict[str, dict] = {
 }
 
 
-def _register_modules():
-    from .modules.estry import EstryModule
-    from .modules.quadtree import QuadtreeModule
-    from .modules.soils import SoilsModule
-    from .modules.ad import ADModule
-    from .modules.toc import TOCModule
-    from .modules.rf import RFModule
-    from .modules.events import EventsModule
-    from .modules.sgs import SGSModule
-    from .modules.po import POModule
-    from .modules.tutorial import TutorialModule
-    _MODULE_REGISTRY.update({
-        'estry': EstryModule,
-        'quadtree': QuadtreeModule,
-        'soils': SoilsModule,
-        'ad': ADModule,
-        'toc': TOCModule,
-        'rf': RFModule,
-        'events': EventsModule,
-        'sgs': SGSModule,
-        'po': POModule,
-        'tutorial': TutorialModule,
-    })
-
-
 def get_available_modules() -> dict[str, type]:
-    if not _MODULE_REGISTRY:
-        _register_modules()
-    return dict(_MODULE_REGISTRY)
+    """Discover all available HPC modules from JSON files in the module cache.
+
+    Returns a dict mapping module name → dynamically-created subclass of
+    :class:`HPCBaseModule`.  Adding a new module requires only a JSON file
+    in ``data/modules/hpc/`` — no Python code changes needed.
+    """
+    from .modules._base import HPCBaseModule
+    manager = TemplateManager('hpc')
+    result = {}
+    for name in manager.list_module_configs():
+        cls = type(
+            f'{name.title()}Module',
+            (HPCBaseModule,),
+            {'NAME': name, 'DISPLAY_NAME': name.replace('_', ' ').title()},
+        )
+        result[name] = cls
+    return result
 
 
 # Base templates that are always created
@@ -77,13 +63,6 @@ class HPCProject(BaseProject):
         modules: list[str] | None = None,
         *,
         crs: str,
-        iter: str | None = None,
-        gis_format: str | None = None,
-        cell_size: str | float | None = None,
-        engine: str | None = None,
-        hardware: str | None = None,
-        map_output_formats: list[str] | None = None,
-        output_formats: dict | None = None,
         create_empties: bool = True,
         **kwargs,
     ):
@@ -94,21 +73,10 @@ class HPCProject(BaseProject):
         self.crs = crs
 
         # Normalize gis_format to uppercase (SHP, GPKG, MIF)
-        if gis_format is not None:
-            gis_format = gis_format.upper()
+        if 'gis_format' in kwargs and kwargs['gis_format'] is not None:
+            kwargs['gis_format'] = kwargs['gis_format'].upper()
 
-        overrides = {k: v for k, v in {
-            'model_name': name,
-            'iter': iter,
-            'gis_format': gis_format,
-            'cell_size': str(cell_size) if cell_size is not None else None,
-            'map_output_formats': map_output_formats,
-            'output_formats': output_formats,
-            'engine': engine,
-            'hardware': hardware,
-            **kwargs,
-        }.items() if v is not None}
-
+        overrides = {k: v for k, v in {'model_name': name, **kwargs}.items() if v is not None}
         self.settings = Settings(**overrides)
         self._engine = TemplateEngine()
         self._manager = TemplateManager('hpc')
