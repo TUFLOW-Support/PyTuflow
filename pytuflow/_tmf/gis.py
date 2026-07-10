@@ -204,10 +204,10 @@ def ogr_projection(filepath):
 
     db, layername = get_database_name(filepath)
 
-    if not TuflowPath(db).exists():
+    if not Path(db).exists():
         raise FileNotFoundError(f'File {db} does not exist.')
 
-    if TuflowPath(db).suffix.upper() == '.PRJ':
+    if Path(db).suffix.upper() == '.PRJ':
         with open(db, 'r') as f:
             return f.readline()
 
