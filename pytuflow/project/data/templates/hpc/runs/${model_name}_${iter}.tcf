@@ -1,3 +1,7 @@
+##IF ${gis_format}:GPKG##
+Spatial Database == ..\model\gis\${model_name}_${iter}.gpkg
+##ENIF##
+
 !_______________________________________________________
 ! GIS
 GIS Format == ${gis_format}
@@ -5,12 +9,11 @@ GRID Format == TIF
 ##IF ${gis_format}:SHP##
 SHP Projection == ..\model\gis\projection.shp
 ##ENDIF##
+##IF ${gis_format}:GPKG##
+GPKG Projection == projection
+##ENDIF##
 ##IF ${gis_format}:MIF##
 MI Projection == ..\model\gis\projection.mif
-##ENDIF##
-##IF ${gis_format}:GPKG##
-GPKG Projection == ..\model\gis\${model_name}_${iter}.gpkg
-Spatial Database == ..\model\gis\${model_name}_${iter}.gpkg
 ##ENDIF##
 
 !_______________________________________________________
