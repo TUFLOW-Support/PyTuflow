@@ -17,6 +17,7 @@ def basic_project(project_dir):
     return HPCProject(
         name='mymodel',
         output_dir=project_dir,
+        crs='EPSG:32760',
         iter='001',
         gis_format='SHP',
         map_output_formats=['XMDF'],
@@ -29,7 +30,7 @@ class TestHPCProjectValidation:
         assert basic_project.validate() == []
 
     def test_empty_name_raises(self, project_dir):
-        p = HPCProject(name='', output_dir=project_dir)
+        p = HPCProject(name='', output_dir=project_dir, crs='EPSG:32760')
         errors = p.validate()
         assert any('name' in e for e in errors)
 
@@ -80,7 +81,7 @@ class TestHPCProjectCreate:
         assert 'Map Output Formats == XMDF' in tcf_text
 
     def test_tcf_multiple_map_output_formats(self, project_dir):
-        p = HPCProject('mymodel', project_dir, map_output_formats=['XMDF', 'SHP'])
+        p = HPCProject('mymodel', project_dir, crs='EPSG:32760', map_output_formats=['XMDF', 'SHP'])
         p.create()
         tcf_text = (project_dir / 'runs' / 'mymodel_001.tcf').read_text()
         assert 'Map Output Formats == XMDF SHP' in tcf_text
@@ -89,7 +90,7 @@ class TestHPCProjectCreate:
 
     def test_tcf_output_formats_per_format_settings(self, project_dir):
         """output_formats dict generates a single Map Output Formats line plus per-format settings."""
-        p = HPCProject('mymodel', project_dir, output_formats={
+        p = HPCProject('mymodel', project_dir, crs='EPSG:32760', output_formats={
             'XMDF': {'interval': 60, 'data_types': ['h', 'v', 'd']},
             'TIF':  {'interval': 0},
         })
@@ -103,7 +104,7 @@ class TestHPCProjectCreate:
 
     def test_tcf_default_output_formats_has_data_types(self, project_dir):
         """Default XMDF output config includes Map Output Data Types."""
-        p = HPCProject('mymodel', project_dir)
+        p = HPCProject('mymodel', project_dir, crs='EPSG:32760')
         p.create()
         tcf_text = (project_dir / 'runs' / 'mymodel_001.tcf').read_text()
         assert 'XMDF Map Output Data Types' in tcf_text
@@ -117,19 +118,19 @@ class TestHPCProjectCreate:
         assert '##ENDLOOP##' not in tcf_text
 
     def test_validation_error_raises(self, project_dir):
-        p = HPCProject(name='', output_dir=project_dir)
+        p = HPCProject(name='', output_dir=project_dir, crs='EPSG:32760')
         with pytest.raises(ValueError):
             p.create()
 
 
 class TestHPCProjectWithEstryModule:
     def test_ecf_created(self, project_dir):
-        p = HPCProject('mymodel', project_dir, modules=['estry'])
+        p = HPCProject('mymodel', project_dir, crs='EPSG:32760', modules=['estry'])
         p.create()
         assert (project_dir / 'model' / 'mymodel_001.ecf').exists()
 
     def test_tcf_contains_estry_command(self, project_dir):
-        p = HPCProject('mymodel', project_dir, modules=['estry'])
+        p = HPCProject('mymodel', project_dir, crs='EPSG:32760', modules=['estry'])
         p.create()
         tcf_text = (project_dir / 'runs' / 'mymodel_001.tcf').read_text()
         assert 'Estry Control File' in tcf_text
@@ -139,7 +140,7 @@ class TestHPCProjectWithEstryModule:
 
     def test_tcf_no_estry_when_inactive(self, project_dir):
         """Without estry module, estry line should be absent from TCF (template omits it)."""
-        p = HPCProject('mymodel', project_dir, modules=[])
+        p = HPCProject('mymodel', project_dir, crs='EPSG:32760', modules=[])
         p.create()
         tcf_text = (project_dir / 'runs' / 'mymodel_001.tcf').read_text()
         # Template uses ##IF module:estry## — line should be absent entirely
@@ -150,12 +151,12 @@ class TestHPCProjectWithEstryModule:
 
 class TestHPCProjectWithSoilsModule:
     def test_soils_file_created(self, project_dir):
-        p = HPCProject('mymodel', project_dir, modules=['soils'])
+        p = HPCProject('mymodel', project_dir, crs='EPSG:32760', modules=['soils'])
         p.create()
         assert (project_dir / 'model' / 'mymodel_soils.tsoilf').exists()
 
     def test_tcf_contains_soils_command(self, project_dir):
-        p = HPCProject('mymodel', project_dir, modules=['soils'])
+        p = HPCProject('mymodel', project_dir, crs='EPSG:32760', modules=['soils'])
         p.create()
         tcf_text = (project_dir / 'runs' / 'mymodel_001.tcf').read_text()
         lines = [l for l in tcf_text.splitlines() if 'Read Soils File' in l]
@@ -164,12 +165,12 @@ class TestHPCProjectWithSoilsModule:
 
 class TestHPCProjectWithEventsModule:
     def test_tef_created(self, project_dir):
-        p = HPCProject('mymodel', project_dir, modules=['events'])
+        p = HPCProject('mymodel', project_dir, crs='EPSG:32760', modules=['events'])
         p.create()
         assert (project_dir / 'model' / 'mymodel_events.tef').exists()
 
     def test_tcf_events_uncommented_when_active(self, project_dir):
-        p = HPCProject('mymodel', project_dir, modules=['events'])
+        p = HPCProject('mymodel', project_dir, crs='EPSG:32760', modules=['events'])
         p.create()
         tcf_text = (project_dir / 'runs' / 'mymodel_001.tcf').read_text()
         lines = [l for l in tcf_text.splitlines() if 'Event File' in l]
@@ -177,7 +178,7 @@ class TestHPCProjectWithEventsModule:
 
     def test_tcf_events_absent_when_inactive(self, project_dir):
         """Without events module, Event File line should be absent from TCF."""
-        p = HPCProject('mymodel', project_dir, modules=[])
+        p = HPCProject('mymodel', project_dir, crs='EPSG:32760', modules=[])
         p.create()
         tcf_text = (project_dir / 'runs' / 'mymodel_001.tcf').read_text()
         active_lines = [l for l in tcf_text.splitlines()
@@ -188,7 +189,7 @@ class TestHPCProjectWithEventsModule:
 class TestHPCProjectInsertPoint:
     def test_insert_point_not_in_tcf(self, project_dir):
         """##INSERT_POINT is a silent no-op — must NOT appear in rendered output."""
-        p = HPCProject('mymodel', project_dir)
+        p = HPCProject('mymodel', project_dir, crs='EPSG:32760')
         p.create()
         tcf_text = (project_dir / 'runs' / 'mymodel_001.tcf').read_text()
         assert '##INSERT_POINT' not in tcf_text
@@ -196,7 +197,7 @@ class TestHPCProjectInsertPoint:
 
 class TestHPCProjectUnknownModule:
     def test_unknown_module_raises(self, project_dir):
-        p = HPCProject('mymodel', project_dir, modules=['nonexistent'])
+        p = HPCProject('mymodel', project_dir, crs='EPSG:32760', modules=['nonexistent'])
         with pytest.raises(ValueError, match="Unknown module"):
             p.create()
 
@@ -246,7 +247,7 @@ class TestHPCBaseModuleApplyToControlFiles:
         from pytuflow import TCF
 
         # Create project with estry already active
-        p = HPCProject('mymodel', project_dir, modules=['estry'])
+        p = HPCProject('mymodel', project_dir, crs='EPSG:32760', modules=['estry'])
         p.create()
 
         tcf_path = project_dir / 'runs' / 'mymodel_001.tcf'
@@ -267,7 +268,7 @@ class TestHPCBaseModuleApplyToControlFiles:
         from pytuflow import TCF
 
         # Create bare-bones project (no estry)
-        p = HPCProject('mymodel', project_dir, modules=[])
+        p = HPCProject('mymodel', project_dir, crs='EPSG:32760', modules=[])
         p.create()
 
         tcf_path = project_dir / 'runs' / 'mymodel_001.tcf'
@@ -839,6 +840,7 @@ class TestCLICommands:
                 sys.executable, '-m', 'pytuflow.project', 'create',
                 '--name', 'testmodel',
                 '--output-dir', str(tmp_path / 'out'),
+                '--crs', 'EPSG:32760',
                 '--iter', '001',
             ],
             capture_output=True, text=True,
@@ -913,7 +915,7 @@ class TestSoilsMultiCFModule:
 
     def test_soils_adds_set_soil_to_tgc(self, project_dir):
         """Creating a project with soils should result in Set Soil in TGC."""
-        p = HPCProject('mymodel', project_dir, modules=['soils'])
+        p = HPCProject('mymodel', project_dir, crs='EPSG:32760', modules=['soils'])
         p.create()
         tgc_text = (project_dir / 'model' / 'mymodel_001.tgc').read_text()
         active_lines = [l for l in tgc_text.splitlines()
@@ -922,7 +924,7 @@ class TestSoilsMultiCFModule:
 
     def test_soils_tgc_content_without_soils(self, project_dir):
         """Without soils module, TGC should have no soil section."""
-        p = HPCProject('mymodel', project_dir, modules=[])
+        p = HPCProject('mymodel', project_dir, crs='EPSG:32760', modules=[])
         p.create()
         tgc_text = (project_dir / 'model' / 'mymodel_001.tgc').read_text()
         assert 'Set Soil' not in tgc_text
@@ -932,7 +934,7 @@ class TestSoilsMultiCFModule:
         from pytuflow import TCF, TGC
 
         # Create bare-bones project
-        p = HPCProject('mymodel', project_dir)
+        p = HPCProject('mymodel', project_dir, crs='EPSG:32760')
         p.create()
 
         tcf_path = project_dir / 'runs' / 'mymodel_001.tcf'
@@ -962,7 +964,7 @@ class TestSoilsMultiCFModule:
         """Inserting soils twice should not duplicate commands."""
         from pytuflow import TCF
 
-        p = HPCProject('mymodel', project_dir)
+        p = HPCProject('mymodel', project_dir, crs='EPSG:32760')
         p.create()
         tcf_path = project_dir / 'runs' / 'mymodel_001.tcf'
 
@@ -978,19 +980,19 @@ class TestTuflowEmptyFiles:
     """Tests for empty GIS file creation."""
 
     def test_empties_dir_created(self, project_dir):
-        p = HPCProject('mymodel', project_dir, gis_format='GPKG', create_empties=True)
+        p = HPCProject('mymodel', project_dir, crs='EPSG:32760', gis_format='GPKG', create_empties=True)
         p.create()
         assert (project_dir / 'model' / 'gis' / 'empty').is_dir()
 
     def test_empties_created_for_gpkg(self, project_dir):
-        p = HPCProject('mymodel', project_dir, gis_format='GPKG', create_empties=True)
+        p = HPCProject('mymodel', project_dir, crs='EPSG:32760', gis_format='GPKG', create_empties=True)
         p.create()
         empties_dir = project_dir / 'model' / 'gis' / 'empty'
         gpkg_files = list(empties_dir.glob('*.gpkg'))
         assert len(gpkg_files) > 0, 'Expected GPKG empty files to be created'
 
     def test_no_empties_when_disabled(self, project_dir):
-        p = HPCProject('mymodel', project_dir, gis_format='GPKG', create_empties=False)
+        p = HPCProject('mymodel', project_dir, crs='EPSG:32760', gis_format='GPKG', create_empties=False)
         p.create()
         assert not (project_dir / 'model' / 'gis' / 'empty').exists()
 
@@ -1029,3 +1031,38 @@ class TestTuflowEmptyFiles:
         from pytuflow.project.template.empties import TuflowEmptyType
         et = TuflowEmptyType('hpc', '2d_po', 'PLR', 'GPKG')
         assert et.geom == ['P', 'L', 'R']
+
+
+class TestProjectionFile:
+    """Tests for projection/spatial-database file creation."""
+
+    def test_shp_projection_file_created(self, project_dir):
+        p = HPCProject('mymodel', project_dir, crs='EPSG:32760', gis_format='SHP', create_empties=False)
+        p.create()
+        assert (project_dir / 'model' / 'gis' / 'projection.shp').exists()
+
+    def test_mif_projection_file_created(self, project_dir):
+        p = HPCProject('mymodel', project_dir, crs='EPSG:32760', gis_format='MIF', create_empties=False)
+        p.create()
+        assert (project_dir / 'model' / 'gis' / 'projection.mif').exists()
+
+    def test_gpkg_central_db_created(self, project_dir):
+        p = HPCProject('mymodel', project_dir, crs='EPSG:32760', gis_format='GPKG', create_empties=False)
+        p.create()
+        assert (project_dir / 'model' / 'gis' / 'mymodel_001.gpkg').exists()
+
+    def test_tcf_shp_projection_command(self, project_dir):
+        p = HPCProject('mymodel', project_dir, crs='EPSG:32760', gis_format='SHP', create_empties=False)
+        p.create()
+        tcf = (project_dir / 'runs' / 'mymodel_001.tcf').read_text(encoding='utf-8')
+        assert 'SHP Projection ==' in tcf
+        assert 'MI Projection ==' not in tcf
+        assert 'GPKG Projection ==' not in tcf
+
+    def test_tcf_gpkg_projection_and_spatial_db_commands(self, project_dir):
+        p = HPCProject('mymodel', project_dir, crs='EPSG:32760', gis_format='GPKG', create_empties=False)
+        p.create()
+        tcf = (project_dir / 'runs' / 'mymodel_001.tcf').read_text(encoding='utf-8')
+        assert 'GPKG Projection ==' in tcf
+        assert 'Spatial Database ==' in tcf
+        assert 'SHP Projection ==' not in tcf

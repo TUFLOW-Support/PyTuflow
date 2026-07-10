@@ -29,6 +29,7 @@ def cmd_create(args):
         name=args.name,
         output_dir=args.output_dir,
         modules=args.modules or [],
+        crs=args.crs,
         iter=args.iter,
         gis_format=args.gis_format,
         cell_size=args.cell_size,
@@ -71,6 +72,7 @@ def main():
     p_create = sub.add_parser('create', help='Create a new HPC project skeleton')
     p_create.add_argument('--name', required=True, help='Model name')
     p_create.add_argument('--output-dir', required=True, dest='output_dir', help='Output directory')
+    p_create.add_argument('--crs', required=True, help='Coordinate reference system (e.g. EPSG:32760)')
     p_create.add_argument('--modules', nargs='*', default=[], help='Optional modules to include')
     p_create.add_argument('--gis-format', dest='gis_format', default=None)
     p_create.add_argument('--map-output-formats', dest='map_output_formats', nargs='*', default=None,

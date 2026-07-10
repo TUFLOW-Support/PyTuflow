@@ -76,6 +76,7 @@ class HPCProject(BaseProject):
         output_dir: str | Path,
         modules: list[str] | None = None,
         *,
+        crs: str,
         iter: str | None = None,
         gis_format: str | None = None,
         cell_size: str | float | None = None,
@@ -90,6 +91,11 @@ class HPCProject(BaseProject):
         self.output_dir = Path(output_dir)
         self.module_names: list[str] = list(modules or [])
         self.create_empties = create_empties
+        self.crs = crs
+
+        # Normalize gis_format to uppercase (SHP, GPKG, MIF)
+        if gis_format is not None:
+            gis_format = gis_format.upper()
 
         overrides = {k: v for k, v in {
             'model_name': name,
@@ -138,7 +144,12 @@ class HPCProject(BaseProject):
             gis_format = variables.get('gis_format', 'SHP')
             empties_dir = self.output_dir / 'model' / 'gis' / 'empty'
             empties_dir.mkdir(parents=True, exist_ok=True)
-            TuflowEmptyFiles('hpc', gis_format).write_empties(empties_dir)
+            TuflowEmptyFiles('hpc', gis_format, self.crs).write_empties(empties_dir)
+
+        # Create projection / spatial database file under model/gis/
+        gis_dir = self.output_dir / 'model' / 'gis'
+        gis_dir.mkdir(parents=True, exist_ok=True)
+        _create_projection_file(gis_dir, variables.get('gis_format', 'SHP'), self.name, variables.get('iter', '001'), self.crs)
 
         # Render and write base templates (pass module configs so ##COMMANDS## resolves)
         tcf_path = None
@@ -316,3 +327,30 @@ def _normalize_rendered(text: str) -> str:
     ``_apply_block`` does when inserting module commands at runtime.
     """
     return '\n'.join(_normalize_slashes(line) for line in text.split('\n'))
+
+
+def _create_projection_file(gis_dir: Path, gis_format: str, model_name: str, iter_: str, crs: str) -> None:
+    """Create a projection / spatial-database reference file in *gis_dir*.
+
+    * SHP → ``projection.shp`` (empty Point layer carrying the CRS)
+    * MIF → ``projection.mif`` (same)
+    * GPKG → ``{model_name}_{iter}.gpkg`` with a ``projection`` layer
+    """
+    import warnings
+    from ..._tmf import TuflowPath
+
+    fmt = gis_format.upper()
+    if fmt == 'SHP':
+        uri = f'{gis_dir / "projection.shp"} >> projection'
+    elif fmt == 'MIF':
+        uri = f'{gis_dir / "projection.mif"} >> projection'
+    elif fmt == 'GPKG':
+        uri = f'{gis_dir / f"{model_name}_{iter_}.gpkg"} >> projection'
+    else:
+        return  # unknown format — skip silently
+
+    with warnings.catch_warnings():
+        warnings.filterwarnings('ignore', message=".*Column names longer than 10 characters.*", category=UserWarning)
+        p = TuflowPath(uri)
+        with p.open_gis('w', 'Point', crs):
+            pass  # no fields or features needed — CRS is embedded in the file

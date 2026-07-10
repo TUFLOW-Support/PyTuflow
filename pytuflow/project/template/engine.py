@@ -144,8 +144,15 @@ class TemplateEngine:
             module_name = condition[7:]
             result = module_name in active_modules
         else:
-            val = variables.get(condition)
-            result = bool(val)
+            # ${var}:value — variable equality check (case-insensitive)
+            m = re.match(r'^\$\{(\w+)\}:(.+)$', condition)
+            if m:
+                var_name, expected = m.group(1), m.group(2)
+                actual = str(variables.get(var_name, ''))
+                result = actual.upper() == expected.upper()
+            else:
+                val = variables.get(condition)
+                result = bool(val)
 
         return (not result) if negated else result
 

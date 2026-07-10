@@ -46,6 +46,36 @@ class TestIfDirective:
         assert '##IF' not in result
         assert '##ENDIF##' not in result
 
+    def test_if_var_value_match(self, engine):
+        """##IF ${var}:value## includes block when variable matches value (case-insensitive)."""
+        tmpl = "##IF ${gis_format}:SHP##\nSHP line\n##ENDIF##\n"
+        result = engine.render(tmpl, {'gis_format': 'SHP'}, active_modules=[])
+        assert 'SHP line' in result
+
+    def test_if_var_value_no_match(self, engine):
+        """##IF ${var}:value## excludes block when variable does not match."""
+        tmpl = "##IF ${gis_format}:GPKG##\nGPKG line\n##ENDIF##\n"
+        result = engine.render(tmpl, {'gis_format': 'SHP'}, active_modules=[])
+        assert 'GPKG line' not in result
+
+    def test_if_var_value_case_insensitive(self, engine):
+        """Comparison is case-insensitive on both sides."""
+        tmpl = "##IF ${gis_format}:shp##\nSHP line\n##ENDIF##\n"
+        result = engine.render(tmpl, {'gis_format': 'SHP'}, active_modules=[])
+        assert 'SHP line' in result
+
+    def test_if_var_value_not_negated(self, engine):
+        """##IF not:${var}:value## includes block when variable does NOT match."""
+        tmpl = "##IF not:${gis_format}:GPKG##\nnot gpkg\n##ENDIF##\n"
+        result = engine.render(tmpl, {'gis_format': 'SHP'}, active_modules=[])
+        assert 'not gpkg' in result
+
+    def test_if_var_value_not_suppressed(self, engine):
+        """##IF not:${var}:value## excludes block when variable matches."""
+        tmpl = "##IF not:${gis_format}:GPKG##\nnot gpkg\n##ENDIF##\n"
+        result = engine.render(tmpl, {'gis_format': 'GPKG'}, active_modules=[])
+        assert 'not gpkg' not in result
+
 
 class TestLoopDirective:
     def test_loop_list_values(self, engine):
@@ -196,6 +226,7 @@ class TestSortOrder:
             proj = HPCProject(
                 name='test',
                 output_dir=tmp,
+                crs='EPSG:32760',
                 modules=['po', 'sgs', 'estry'],  # unsorted: po=80, sgs=5, estry=20
             )
             instances = proj._get_module_instances()

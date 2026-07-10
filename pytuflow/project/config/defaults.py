@@ -1,7 +1,6 @@
 FACTORY_DEFAULTS = {
     "iter": "001",
     "gis_format": "SHP",
-    "gis_projection_command": "! Projection == <path/to/projection>  ! TODO",
     "hardware": "GPU"
 }
 

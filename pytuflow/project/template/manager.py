@@ -30,10 +30,22 @@ class TemplateManager:
             shutil.copytree(self._bundled_modules_dir, self._cache_modules_dir)
 
     def get_template(self, relative_key: str) -> str:
-        """Read template text from cache (initialising cache first if needed)."""
+        """Read template text from cache (initialising cache first if needed).
+
+        If the bundled template is newer than the cached copy (e.g. after a
+        package update), the cached copy is refreshed from the bundle so
+        callers always get up-to-date defaults.
+        """
         self.init_cache()
-        path = self._cache_dir / relative_key
-        return path.read_text(encoding='utf-8')
+        cached_path = self._cache_dir / relative_key
+        bundled_path = self._bundled_templates_dir / relative_key
+        if (
+            bundled_path.exists()
+            and cached_path.exists()
+            and bundled_path.stat().st_mtime > cached_path.stat().st_mtime
+        ):
+            shutil.copy2(bundled_path, cached_path)
+        return cached_path.read_text(encoding='utf-8')
 
     def get_module_config(self, module_name: str) -> dict:
         """Load a module's JSON config from cache, falling back to bundled."""
