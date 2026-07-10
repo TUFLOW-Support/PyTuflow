@@ -59,7 +59,7 @@ class TuflowEmptyFiles:
             for t in data.get('types', [])
         ]
 
-    def write_empties(self, dir_path: str):
+    def write_empties(self, dir_path: str | Path):
         for empty_type in self.empty_types:
             empty_type.write_empty(dir_path)
 
