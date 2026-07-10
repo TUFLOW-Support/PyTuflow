@@ -1,6 +1,6 @@
 ##IF ${gis_format}:GPKG##
 Spatial Database == ..\model\gis\${model_name}_${iter}.gpkg
-##ENIF##
+##ENDIF##
 
 !_______________________________________________________
 ! GIS
