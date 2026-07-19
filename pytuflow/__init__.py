@@ -25,4 +25,4 @@ from .project import HPCProject
 
 
 name = 'PyTuflow'
-__version__ = '1.2-dev.3'
+__version__ = '1.2-dev.4'
