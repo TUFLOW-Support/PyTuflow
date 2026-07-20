@@ -37,6 +37,13 @@ Changelog
 
 Release date: XX XXX 2026
 
+.. _fv_changelog_entry:
+
+TUFLOW FV
+^^^^^^^^^
+
+Support has been added for TUFLOW FV control files. The workflow and data structures are very similar to Classic/HPC with a few minor differences. See :doc:`Working with TUFLOW FV<examples/working_with_fv>` for examples.
+
 .. _flux:
 
 Flux
