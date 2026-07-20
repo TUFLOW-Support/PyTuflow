@@ -149,7 +149,64 @@ New blocks can easily be added by adding the header command (e.g. ``BC == ...``)
 Include Files
 -------------
 
-How include files are treated
+Include files are treated as separate control files that are of the same type as the calling control file. This is different to how PyTUFLOW treats TUFLOW Classic read files. Include files (FV) and Read files (Classic) differ in one significant way: relative paths.
+
+- Relative paths in TUFLOW FV include files are relative to the include file. 
+- Relative paths in TUFLOW Classic read files are relative to the calling control file.
+
+As an example, all the include files in the FVC can be found using :meth:`~pytuflow.FVC.find_input` and the include file(s) are loaded into the input's :attr:`~pytuflow.ControlFileInput.cf` attribute (this how all inputs link to their respective control files). This attribue is a list as with the use of variables in the file name, this could be expanded to more than one valid control file.
+
+.. code-block:: pycon
+
+    >>> include_files = fvc.find_input('include')
+    >>> for inp in include_files:
+    ...     print(inp)
+    Include == Materials_Manning_001.fvc
+    Include == Structures_001.fvc
+    Include == Outputs_001.fvc
+
+    >>> output_include = include_files[-1]
+    >>> output_fvc = output_include.cf[0]
+    >>> output_fvc.preview()
+    ! Output Data Type Definition
+
+    !______________________________________________________________________________
+    ! Flow cross section locations - In addition to boundary and structure nodestrings
+    Read GIS Nodestring == ..\model\gis\2d_ns_Flux_Monitoring_001_L.shp
+
+    !______________________________________________________________________________
+    ! Output Format and Parameters
+    Output == netcdf                                                                                                ! TUFLOW FV NetCDF map output format
+        Output Parameters == h,v,d,zb                                                                       ! Water level, velocity, depth, bed elevation
+        Output Interval == 300.                                                                             ! Ouptut interval (s) 5 minutes
+    End Output
+
+    Output == flux                                                                                                  ! Timeseries of net flow across each nodestring
+            Output Interval == 300.                                                                         ! Ouptut interval (s) 5 minutes
+    End Output
+
+    Output == structflux                                                                                    ! Timeseries of net flow through structures (culverts, weirs, bridges)
+            Output Interval == 300.                                                                         ! Ouptut interval (s) 5 minutes
+    End Output
+
+    Output == mass                                                                                                  ! Timeseries of total mass in model
+            Output Interval == 300.                                                                         ! Ouptut interval (s) 5 minutes
+    End Output
+
+    Output == points                                                        ! Time series output at points
+        Read GIS PO == ..\model\gis\3d_po_Monitoring_001_P.shp              ! Location of points
+        Output Parameters == h, v, d                                                                ! Water level, velocity, depth
+        Output Interval == 300.                                                                             ! Ouptut interval (s) 5 minutes
+    End Output
+
+Creating a new include file is as simple as instatiating the relevant class and then referencing it in the FVC.
+
+.. code-block:: pycon
+
+    >>> new_output_fvc = FVC(None)
+    >>> new_output_fvc.fpath = 'runs/new_outputs.fvc'
+    >>> new_output_fvc.write()
+    >>> fvc.append_input('Include == new_outputs.fvc')
 
 Boundary and Material Databases
 -------------------------------
