@@ -28,6 +28,9 @@ class TuflowBinaries:
     >>> tuflow_binaries.get('2023-03-AE')
     'C:/TUFLOW/releases/2023-03-AE/TUFLOW_iSP_w64.exe'
     """
+    WINDOWS_BIN_NAME = 'TUFLOW_iSP_w64'
+    LINUX_BIN_NAME = 'tuflow-isp'
+    NAME = 'tuflow'
 
     def __init__(self):
         self._tuflow_version_json = self.tuflow_version_json()
@@ -163,9 +166,9 @@ class TuflowBinaries:
                 return TuflowBinaries.load_rpm_tuflow()
             return {}
 
-    @staticmethod
-    def _load_tuflow_folders(folders: list[str | Path]) -> dict:
-        tuflow = 'TUFLOW_iSP_w64' if os.name == 'nt' else 'tuflow-isp'
+    @classmethod
+    def _load_tuflow_folders(cls, folders: list[str | Path]) -> dict:
+        tuflow = cls.WINDOWS_BIN_NAME if os.name == 'nt' else cls.LINUX_BIN_NAME
         d = OrderedDict()
         for folder in folders:
             p = Path(folder)
@@ -176,8 +179,8 @@ class TuflowBinaries:
                 d[version] = str(f)
         return d
 
-    @staticmethod
-    def tuflow_version_query(bin_path: str) -> str | None:
+    @classmethod
+    def tuflow_version_query(cls, bin_path: str) -> str | None:
         """Only tested post 2026."""
         import subprocess
         try:
@@ -203,28 +206,31 @@ class TuflowBinaries:
             return 'rpm'
         return None
 
-    @staticmethod
-    def load_dpkg_tuflow() -> dict:
+    @classmethod
+    def load_dpkg_tuflow(cls) -> dict:
         import subprocess
         versions = {}
         try:
-            output = subprocess.check_output(['dpkg-query', '-L', 'tuflow'], text=True)
-            bins = [x for x in output.splitlines() if 'tuflow-isp' in x]
-            for bin in bins:
-                version = TuflowBinaries.tuflow_version_query(bin)
-                if version:
-                    versions[version] = bin
+            output = subprocess.check_output(['dpkg-query', '-W', f'{cls.NAME}*'], text=True)
+            bin_names = [x.split('\t')[0] for x in output.splitlines()]
+            for bin_name in bin_names:
+                output = subprocess.check_output(['dpkg-query', '-L', bin_name], text=True)
+                bins = [x for x in output.splitlines() if (cls.LINUX_BIN_NAME if cls.LINUX_BIN_NAME else f'bin/{bin_name}') in x]
+                for bin in bins:
+                    version = cls.tuflow_version_query(bin)
+                    if version:
+                        versions[version] = bin
             return versions
         except subprocess.CalledProcessError:
             return {}
 
-    @staticmethod
-    def load_rpm_tuflow() -> dict:
+    @classmethod
+    def load_rpm_tuflow(cls) -> dict:
         import subprocess
         versions = {}
         try:
             output = subprocess.check_output(['rpm', '-ql', 'tuflow'], text=True)
-            bins = [x for x in output.splitlines() if 'tuflow-isp' in x]
+            bins = [x for x in output.splitlines() if cls.LINUX_BIN_NAME in x]
             for bin in bins:
                 version = TuflowBinaries.tuflow_version_query(bin)
                 if version:
@@ -278,7 +284,6 @@ class TuflowBinaries:
                     continue
 
         return versions
-
 
 
 #: TuflowBinaries: Global instance of the TuflowBinaries class. See :class:`TuflowBinaries` for class information.

@@ -28,3 +28,4 @@ from ..._tmf.tuflow_binaries import (tuflow_binaries,
                                     register_tuflow_binary,
                                     register_tuflow_binary_folder,
                                     TuflowBinaries)
+from ... _tmf.tuflowfv_binaries import TuflowFVBinaries
