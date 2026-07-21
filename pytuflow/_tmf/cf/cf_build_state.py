@@ -20,7 +20,7 @@ from ..abc.cf import ControlFile
 from ..abc.bld_state import BuildState
 from ..tfstrings.increment_number import increment_fpath, get_iter_number
 from ..tfstrings.geom_suffix import get_geom_suffix
-from ..settings import from_config, TCFConfig
+from ..settings import from_config, TCFConfig, FVCConfig
 from ..parsers.command import Command
 from ..parsers.non_recursive_basic_parser import get_commands
 from ..scope_writer import ScopeWriter
@@ -123,7 +123,7 @@ class ControlFileBuildState(BuildState, ControlFile):
         value = Path(value)
         self._fpath = value
         self.config.control_file = value
-        if self.TUFLOW_TYPE == const.CONTROLFILE.TCF:
+        if self.TUFLOW_TYPE == self._parent_tuflow_type() and self.root_cf == self:
             self.config.tcf = value
             for inp in self.inputs:
                 inp.config.control_file = value
@@ -634,18 +634,23 @@ class ControlFileBuildState(BuildState, ControlFile):
         if not self.fpath or self.fpath == Path():
             inc = 'inplace'
 
-        self_fpath = increment_fpath(self.fpath, inc)
-        geom_ext = get_geom_suffix(self_fpath.stem)
-        inc_children = inc if inc is None else get_iter_number(self_fpath.stem, geom_ext)
+        if self.loaded:  # if not loaded, don't increment because the user has probably specified the filepath manually
+            self.fpath = increment_fpath(self.fpath, inc)
+        geom_ext = get_geom_suffix(self.fpath.stem)
+        inc_children = inc if inc is None else get_iter_number(self.fpath.stem, geom_ext)
         if inc == 'inplace' and not inc_children:
             inc_children = 'inplace'
 
         # write children first so that path references are updated
         for inp in self.find_input(callback=lambda x: x.TUFLOW_TYPE in [const.INPUT.CF, const.INPUT.DB]):
             if inp.dirty:
+                inc_rhs = True
                 for cf in inp.cf:
+                    if not cf.loaded:
+                        inc_rhs = False
                     cf.write(inc_children)
-                inp.rhs = increment_fpath(inp.rhs, inc_children)
+                if inc_rhs:
+                    inp.rhs = increment_fpath(inp.rhs, inc_children)
 
         inputs, trds = self._get_trd_inputs(self)
 
@@ -665,10 +670,10 @@ class ControlFileBuildState(BuildState, ControlFile):
                     inp.trd = trd_fpath
 
         # write self
-        with self_fpath.open('w') as fo:
+        with self.fpath.open('w') as fo:
             self._write(fo, inputs)
 
-        self.fpath = self_fpath
+        self.fpath = self.fpath
         self.loaded = True
         self.altered_inputs.clear()
         return self
