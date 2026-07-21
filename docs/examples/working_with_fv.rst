@@ -154,7 +154,7 @@ Include files are treated as separate control files that are of the same type as
 - Relative paths in TUFLOW FV include files are relative to the include file. 
 - Relative paths in TUFLOW Classic read files are relative to the calling control file.
 
-As an example, all the include files in the FVC can be found using :meth:`~pytuflow.FVC.find_input` and the include file(s) are loaded into the input's :attr:`~pytuflow.ControlFileInput.cf` attribute (this how all inputs link to their respective control files). This attribue is a list as with the use of variables in the file name, this could be expanded to more than one valid control file.
+As an example, all the include files in the FVC can be found using :meth:`~pytuflow.FVC.find_input` and the include file(s) are loaded into the input's :attr:`~pytuflow.ControlFileInput.cf` attribute (this how all inputs link to their respective control files). This attribute is a list as it is possible to use variables in the file name which could be expanded to more than one valid control file.
 
 .. code-block:: pycon
 
@@ -199,14 +199,32 @@ As an example, all the include files in the FVC can be found using :meth:`~pytuf
         Output Interval == 300.                                                                             ! Ouptut interval (s) 5 minutes
     End Output
 
-Creating a new include file is as simple as instatiating the relevant class and then referencing it in the FVC.
+The simplest way to create a new include file is to instantiate an empty version of the relevant class, populate it with commands, and separately add the include command into the FVC (or whichever control file will reference the include file).
+
+As an example, we will add a new include file containing new output commands which will be referenced in the FVC control file. The first step is to create the include file, set the file path, and set the parent.
 
 .. code-block:: pycon
 
-    >>> new_output_fvc = FVC(None)
+    >>> new_output_fvc = FVC()
     >>> new_output_fvc.fpath = 'runs/new_outputs.fvc'
-    >>> new_output_fvc.write()
-    >>> fvc.append_input('Include == new_outputs.fvc')
+    >>> new_output_fvc.parent = fvc
+    
+We will populate the new output file with a flux output block. This is just a demonstration and this isn't a complete setup for this output type.
+
+.. code-block:: pycon
+
+    >>> new_output_fvc.append_input('Output == Flux')
+
+Finally, we will add the include file into the FVC control file and then append the new include control file into the :attr:`~pytuflow.ControlFileInput.cf` list. Adding the already instantiated include file to the ``cf`` list is important, otherwise a new file will automatically be created when it writes to disk rather than use the include file we have already created.
+
+.. note::
+
+    Adding the "Include" command like this, pointing to a file that does not exist, will cause an error to be logged stating that the file does not exist. We can ignore this error in this instance since it isn't supposed to exist yet. It will be written to disk the next time we call the ``write`` method.
+
+.. code-block:: pycon
+
+    >>> inp = fvc.append_input('Include == new_outputs.fvc')
+    >>> inp.cf.append(new_output_fvc)
 
 Boundary and Material Databases
 -------------------------------
