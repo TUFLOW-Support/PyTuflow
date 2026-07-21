@@ -32,6 +32,13 @@ Check out the :doc:`usage` section for further information, including how to :re
 Changelog
 ---------
 
+1.1.9
+"""""
+
+Release date: XX July 2026
+
+- Fixed a bug where vector types that were not the "velocity" data type in the :class:`~pytuflow.NCMesh` format could cause an error when loading the results.
+
 1.1.8
 """""
 
