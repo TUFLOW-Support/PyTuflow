@@ -205,17 +205,31 @@ class TuflowBinaries:
         if shutil.which('rpm'):
             return 'rpm'
         return None
-
+    
     @classmethod
-    def load_dpkg_tuflow(cls) -> dict:
+    def _custom_filter(cls, path: str) -> bool:
+        return 'tuflowfv' not in Path(path).parts[-1]
+    
+    @classmethod
+    def _filter(cls, path: str, bin_name) -> bool:
+        return (cls.LINUX_BIN_NAME if cls.LINUX_BIN_NAME else f'bin/{bin_name}') in path and Path(path).suffix != '.sh' and cls._custom_filter(path)
+    
+    @classmethod
+    def _find_bins_from_paths(cls, paths: list[str], bin_name: str) -> list[str]:
+        return [x for x in paths if cls._filter(x, bin_name)]
+    
+    @classmethod
+    def _load_linux_packaged_tuflow(cls, cmd_search: list[str], cmd_query: list[str]) -> dict:
         import subprocess
         versions = {}
+        search = cmd_search + [f'{cls.NAME}*']
         try:
-            output = subprocess.check_output(['dpkg-query', '-W', f'{cls.NAME}*'], text=True)
+            output = subprocess.check_output(search, stderr=subprocess.PIPE, text=True)
             bin_names = [x.split('\t')[0] for x in output.splitlines()]
             for bin_name in bin_names:
-                output = subprocess.check_output(['dpkg-query', '-L', bin_name], text=True)
-                bins = [x for x in output.splitlines() if (cls.LINUX_BIN_NAME if cls.LINUX_BIN_NAME else f'bin/{bin_name}') in x and Path(x).suffix != '.sh']
+                query = cmd_query + [bin_name]
+                output = subprocess.check_output(query, stderr=subprocess.PIPE, text=True)
+                bins = cls._find_bins_from_paths(output.splitlines(), bin_name)
                 for bin in bins:
                     version = cls.tuflow_version_query(bin)
                     if version and version not in versions:
@@ -225,19 +239,12 @@ class TuflowBinaries:
             return {}
 
     @classmethod
+    def load_dpkg_tuflow(cls) -> dict:
+        return cls._load_linux_packaged_tuflow(['dpkg-query', '-W'], ['dpkg-query', '-L'])
+
+    @classmethod
     def load_rpm_tuflow(cls) -> dict:
-        import subprocess
-        versions = {}
-        try:
-            output = subprocess.check_output(['rpm', '-ql', 'tuflow'], text=True)
-            bins = [x for x in output.splitlines() if cls.LINUX_BIN_NAME in x]
-            for bin in bins:
-                version = TuflowBinaries.tuflow_version_query(bin)
-                if version:
-                    versions[version] = bin
-            return versions
-        except subprocess.CalledProcessError:
-            return {}
+        return cls._load_linux_packaged_tuflow(['rpm', '-qa'], ['rpm', '-ql'])
 
     @staticmethod
     def enum_msi_tuflow() -> dict:

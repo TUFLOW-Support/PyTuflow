@@ -30,3 +30,7 @@ class TuflowFVBinaries(TuflowBinaries):
                     return line[0].split(':')[-1].strip()
             except (subprocess.CalledProcessError, FileNotFoundError):
                 pass
+
+    @classmethod
+    def _custom_filter(cls, path: str) -> bool:
+        return True
