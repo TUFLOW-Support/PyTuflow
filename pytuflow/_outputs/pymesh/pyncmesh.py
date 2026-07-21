@@ -57,6 +57,6 @@ class PyNCMesh(PyMesh, Mesh3DMixin, GLTFMixin):
             data_type = tuple([self.extractor.long_name_to_variable.get(x, x) for x in data_type])
         if self.extractor.NAME == 'QgisDataExtractor':
             return data_type
-        if len(data_type) == 1 and data_type[0].lower() == 'v':
-            return 'V_x', 'V_y'
+        if len(data_type) == 1 and self.extractor.is_vector(data_type[0]) and f'{data_type[0]}_x' in self.extractor.long_name_to_variable.values():
+            return f'{data_type[0]}_x', f'{data_type[0]}_y'
         return data_type
