@@ -173,7 +173,7 @@ class TuflowBinaries:
         d = OrderedDict()
         for folder in folders:
             p = Path(folder)
-            for f in p.glob(f'**/{tuflow}*'):
+            for f in p.glob(f'**/{tuflow}.exe' if os.name == 'nt' else f'**/{tuflow}'):
                 version = f.parent.name
                 if os.name != 'nt':
                     version = version.replace(f'{tuflow}_', '')
