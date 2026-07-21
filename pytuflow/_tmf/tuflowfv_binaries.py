@@ -2,9 +2,10 @@ from .tuflow_binaries import TuflowBinaries
 
 
 class TuflowFVBinaries(TuflowBinaries):
-    WINDOWS_BIN_NAME = 'TUFLOW_iSP_w64'
+    WINDOWS_BIN_NAME = 'TUFLOWFV'
     LINUX_BIN_NAME = ''
     NAME = 'tuflowfv'
+    MSI_NAME = 'TUFLOW FV'
     STANDARD_LINUX_LOCATIONS = ('/opt/tuflowfv',)
 
     @classmethod

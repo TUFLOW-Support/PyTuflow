@@ -31,6 +31,7 @@ class TuflowBinaries:
     WINDOWS_BIN_NAME = 'TUFLOW_iSP_w64'
     LINUX_BIN_NAME = 'tuflow-isp'
     NAME = 'tuflow'
+    MSI_NAME = 'TUFLOW'
     STANDARD_LINUX_LOCATIONS = ('/opt/tuflow',)
 
     def __init__(self):
@@ -246,8 +247,8 @@ class TuflowBinaries:
     def load_rpm_tuflow(cls) -> dict:
         return cls._load_linux_packaged_tuflow(['rpm', '-qa', '--qf', '%{NAME}\n'], ['rpm', '-ql'])
 
-    @staticmethod
-    def enum_msi_tuflow() -> dict:
+    @classmethod
+    def enum_msi_tuflow(cls) -> dict:
         """no-doc"""
         import winreg
         roots = [
@@ -274,13 +275,13 @@ class TuflowBinaries:
                     subkey_name = winreg.EnumKey(key, i)
 
                     # Example: "TUFLOW 2026.0"
-                    if subkey_name.startswith("TUFLOW"):
+                    if subkey_name.startswith(cls.MSI_NAME):
                         subkey = winreg.OpenKey(key, subkey_name)
                         path, _ = winreg.QueryValueEx(subkey, "Path")
                         version, _ = winreg.QueryValueEx(subkey, "Version")
                         exe = None
                         for p in Path(path).glob('*.exe'):
-                            if 'isp' in p.stem.lower():
+                            if p.stem.lower() == cls.WINDOWS_BIN_NAME.lower():
                                 exe = str(p)
                                 break
                         if exe:
