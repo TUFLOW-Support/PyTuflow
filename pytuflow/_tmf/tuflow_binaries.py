@@ -215,10 +215,10 @@ class TuflowBinaries:
             bin_names = [x.split('\t')[0] for x in output.splitlines()]
             for bin_name in bin_names:
                 output = subprocess.check_output(['dpkg-query', '-L', bin_name], text=True)
-                bins = [x for x in output.splitlines() if (cls.LINUX_BIN_NAME if cls.LINUX_BIN_NAME else f'bin/{bin_name}') in x]
+                bins = [x for x in output.splitlines() if (cls.LINUX_BIN_NAME if cls.LINUX_BIN_NAME else f'bin/{bin_name}') in x and Path(x).suffix != '.sh']
                 for bin in bins:
                     version = cls.tuflow_version_query(bin)
-                    if version:
+                    if version and version not in versions:
                         versions[version] = bin
             return versions
         except subprocess.CalledProcessError:

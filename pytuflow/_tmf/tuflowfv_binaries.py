@@ -11,7 +11,7 @@ class TuflowFVBinaries(TuflowBinaries):
         """Only tested post 2026."""
         import subprocess
         try:
-            output = subprocess.check_output([bin_path, '-version'], text=True)
+            output = subprocess.check_output([bin_path, '-version'], stderr=subprocess.PIPE, text=True)
             version_text = [x for x in output.splitlines() if x.startswith('TUFLOW Build:')]
             if not version_text:
                 return None
