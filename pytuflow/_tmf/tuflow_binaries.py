@@ -244,7 +244,7 @@ class TuflowBinaries:
 
     @classmethod
     def load_rpm_tuflow(cls) -> dict:
-        return cls._load_linux_packaged_tuflow(['rpm', '-qa'], ['rpm', '-ql'])
+        return cls._load_linux_packaged_tuflow(['rpm', '-qa', '--qf', '%{NAME}\n'], ['rpm', '-ql'])
 
     @staticmethod
     def enum_msi_tuflow() -> dict:
