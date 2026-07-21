@@ -31,6 +31,7 @@ class TuflowBinaries:
     WINDOWS_BIN_NAME = 'TUFLOW_iSP_w64'
     LINUX_BIN_NAME = 'tuflow-isp'
     NAME = 'tuflow'
+    STANDARD_LINUX_LOCATIONS = ('/opt/tuflow',)
 
     def __init__(self):
         self._tuflow_version_json = self.tuflow_version_json()
@@ -53,7 +54,7 @@ class TuflowBinaries:
         return self._version2bin
 
     def __repr__(self):
-        return '<TuflowBinaries>'
+        return f'<{self.__class__.__name__}>'
 
     def __contains__(self, item):
         return item in self.version2bin
@@ -143,31 +144,30 @@ class TuflowBinaries:
 
         self._version2bin = d
 
-    @staticmethod
-    def load_installed_tuflow_versions():
+    @classmethod
+    def load_installed_tuflow_versions(cls):
         if os.name == 'nt':
-            return TuflowBinaries.enum_msi_tuflow()
+            return cls.enum_msi_tuflow()
         else:
             # quick check
-            folders = ['/opt/tuflow']
-            versions = TuflowBinaries._load_tuflow_folders(folders)
+            versions = cls._load_tuflow_folders(cls.STANDARD_LINUX_LOCATIONS)
             if versions:
                 for version, bin in versions.copy().items():
-                    actual_version = TuflowBinaries.tuflow_version_query(bin)
+                    actual_version = cls.tuflow_version_query(bin)
                     if actual_version:
                         versions.pop(version)
                         versions[actual_version] = bin
                 return versions
             # query package managers
-            pkg_manager = TuflowBinaries.package_manager()
+            pkg_manager = cls.package_manager()
             if pkg_manager == 'dpkg':
-                return TuflowBinaries.load_dpkg_tuflow()
+                return cls.load_dpkg_tuflow()
             elif pkg_manager == 'rpm':
-                return TuflowBinaries.load_rpm_tuflow()
+                return cls.load_rpm_tuflow()
             return {}
 
     @classmethod
-    def _load_tuflow_folders(cls, folders: list[str | Path]) -> dict:
+    def _load_tuflow_folders(cls, folders: list[str | Path] | tuple[str | Path]) -> dict:
         tuflow = cls.WINDOWS_BIN_NAME if os.name == 'nt' else cls.LINUX_BIN_NAME
         d = OrderedDict()
         for folder in folders:
@@ -175,7 +175,7 @@ class TuflowBinaries:
             for f in p.glob(f'**/{tuflow}*'):
                 version = f.parent.name
                 if os.name != 'nt':
-                    version = version.replace('tuflow_', '')
+                    version = version.replace(f'{tuflow}_', '')
                 d[version] = str(f)
         return d
 

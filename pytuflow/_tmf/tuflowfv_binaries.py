@@ -5,6 +5,7 @@ class TuflowFVBinaries(TuflowBinaries):
     WINDOWS_BIN_NAME = 'TUFLOW_iSP_w64'
     LINUX_BIN_NAME = ''
     NAME = 'tuflowfv'
+    STANDARD_LINUX_LOCATIONS = ('/opt/tuflowfv',)
 
     @classmethod
     def tuflow_version_query(cls, bin_path: str) -> str | None:
