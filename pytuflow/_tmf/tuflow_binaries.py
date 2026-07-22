@@ -1,5 +1,6 @@
 import logging
 import os
+import re
 import shutil
 import typing
 from typing import TYPE_CHECKING
@@ -169,14 +170,24 @@ class TuflowBinaries:
 
     @classmethod
     def _load_tuflow_folders(cls, folders: list[str | Path] | tuple[str | Path]) -> dict:
-        tuflow = cls.WINDOWS_BIN_NAME if os.name == 'nt' else cls.LINUX_BIN_NAME
+        if os.name == 'nt':
+            tuflow = cls.WINDOWS_BIN_NAME
+        elif cls.LINUX_BIN_NAME:
+            tuflow = cls.LINUX_BIN_NAME
+        else:
+            tuflow = f'{cls.NAME}-*'
         d = OrderedDict()
         for folder in folders:
             p = Path(folder)
             for f in p.glob(f'**/{tuflow}.exe' if os.name == 'nt' else f'**/{tuflow}'):
+                if not f.is_file() or (os.name != 'nt' and f.suffix == '.sh'):
+                    continue
                 version = f.parent.name
                 if os.name != 'nt':
-                    version = version.replace(f'{tuflow}_', '')
+                    version = re.sub(rf'{cls.NAME}[-_]', '', version, flags=re.IGNORECASE)
+                match = re.match(r'\d{4}[-\.]\d+[-\.](?:\d+)?', version) or re.match(r'\d{4}[-\.]\d+[-\.][A-Z]{2}', version)
+                if not match:
+                    version = cls.tuflow_version_query(str(f))
                 d[version] = str(f)
         return d
 
