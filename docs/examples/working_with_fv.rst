@@ -276,4 +276,28 @@ Boundary values can be extracted by using the :meth:`~pytuflow.BCDatabase.value`
 Running a TUFLOW FV Model
 -------------------------
 
-Ipsem lorem.
+To run an TUFLOW FV model, the first thing to do is to install TUFLOW FV via the ``.deb``, ``.rpm``, or ``.msi`` installers. PyTUFLOW will automatically find TUFLOW FV binaries installed this way.
+
+Alternatively, binaries or directories containing one or more portable TUFLOW FV versions can be manually registered. For example, registering a directory such as ``C:\TUFLOWFV\releases`` where portable versions are unpacked:
+
+.. code-block:: pycon
+
+    >>> from pytuflow import tuflowfv_binaries
+    >>> tuflowfv_binaries.register_tuflowfv_binary_folder(r'C:\TUFLOWFV\releases')
+
+It's possible to check the available TUFLOW FV versions from installed versions and registered directories:
+
+.. code-block:: pycon
+
+    >>> for version, path in tuflowfv_binaries.items():
+    ...     print(version)
+    ... 2026.0.1 /opt/tuflow/tuflowfv-2026.0/bin/tuflowfv-2026.0
+
+Running a TUFLOW FV model is done by using a run context (to resolve scenarios and events) and using the :meth:`~pytuflow.FVCRunState.run` method.
+
+.. code-block:: pycon
+
+    >>> from pytuflow import FVC
+    >>> fvc = FVC('runs/FLD000_2D_001.fvc')
+    >>> proc = fvc.context().run('2026.0.1')
+

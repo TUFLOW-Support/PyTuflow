@@ -34,6 +34,7 @@ class TuflowBinaries:
     NAME = 'tuflow'
     MSI_NAME = 'TUFLOW'
     STANDARD_LINUX_LOCATIONS = ('/opt/tuflow',)
+    CACHE_NAME = 'tuflow_versions.json'
 
     def __init__(self):
         self._tuflow_version_json = self.tuflow_version_json()
@@ -87,8 +88,8 @@ class TuflowBinaries:
     def get(self, item: str, default: typing.Any = None) -> str:
         return self.version2bin.get(item, default)
 
-    @staticmethod
-    def tuflow_version_json() -> Path:
+    @classmethod
+    def tuflow_version_json(cls) -> Path:
         """Returns the path to the JSON file containing stored TUFLOW version info.
 
         Returns
@@ -96,7 +97,7 @@ class TuflowBinaries:
         Path
             Path to the JSON file containing stored TUFLOW version info.
         """
-        return Path(get_cache_dir()) / 'tuflow_versions.json'
+        return Path(get_cache_dir()) / cls.CACHE_NAME
 
     def refresh_from_settings(self):
         """Updates the internal state based on the setting cache (JSON file) in case it was modified from a separate pytuflow process."""
