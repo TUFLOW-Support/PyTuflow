@@ -379,8 +379,10 @@ class TCFRunState(ControlFileRunState, TuflowControlFileMixin, ModelRunMixin, TC
         >>> print(stderr)
         NoXY: ERROR 2131 - Reading parameter(s) or option for .tcf command below, or command is ambiguous.
         """
-        proc = self.run(tuflow_bin, prec, add_cli_args=['-t', '-nmb'], stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                        creationflags=subprocess.CREATE_NO_WINDOW)
+        kwargs = {}
+        if os.name == 'nt':
+            kwargs['creationflags'] = subprocess.CREATE_NO_WINDOW
+        proc = self.run(tuflow_bin, prec, add_cli_args=['-t', '-nmb'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, **kwargs)
         out, err = proc.communicate()
         if isinstance(out, bytes):
             out = out.decode('utf-8')

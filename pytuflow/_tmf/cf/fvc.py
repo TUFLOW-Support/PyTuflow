@@ -1,6 +1,7 @@
 from pathlib import Path
 import logging
 import os
+import subprocess
 
 from .cf_load_factory import ControlFileLoadMixin
 from .fvc_build_state import FVCControlFileBuildState, FVCBase
@@ -69,11 +70,11 @@ class FVC(ControlFileLoadMixin, FVCControlFileBuildState):
 class FVCRunState(ControlFileRunState, ModelRunMixin, FVCBase):
 
     def run(self, tuflowfv_bin: PathLike, add_cli_args: list[str] = (), *args, **kwargs):
-        """Run the control file in context using the specified TUFLOW binary.
+        """Run the control file in context using the specified TUFLOWFV binary.
 
-        * TUFLOW binary can be a file path to the executable or a version name that has been registered using
-            the :func:`register_tuflow_binary function()<pytuflow.register_tuflow_binary>`
-            or the :func:`register_tuflow_binary_folder()<pytuflow.register_tuflow_binary_folder>`.
+        * TUFLOWFV binary can be a file path to the executable or a version name that has been registered using
+            the :func:`~pytuflow.register_tuflowfv_binary`
+            or the :func:`~pytuflow.register_tuflow_binary_folder`.
 
         Additional arguments can be passed in and will be passed to the subprocess.Popen() call. By default,
         a new console will be created for the subprocess.
@@ -85,7 +86,6 @@ class FVCRunState(ControlFileRunState, ModelRunMixin, FVCBase):
         add_cli_args : list[str]
             A list of additional command line arguments specific to TUFLOW that will be passed directly to the
             subprocess.Popen() call. e.g. ``add_cli_args=['-t']`` to pass in the ``-t`` flag to run TUFLOW in test mode,
-            or ``add_cli_args=['-cs1']`` to pass in the ``-cs1`` flag to run TUFLOW with case-insensitive file paths.
         *args, **kwargs:
             Will be passed to subprocess.Popen() call.
 
@@ -96,10 +96,41 @@ class FVCRunState(ControlFileRunState, ModelRunMixin, FVCBase):
 
         Examples
         --------
-        >>> tcf = ... # assuming is an instance of TCF
-        >>> tcf.context().run('2025.1.2')
-        <Popen: returncode: None args: ['C:\\TUFLOW\\releases\\2025.1.2\\TUFLOW_iSP_...>
+        >>> fvc = ... # assuming is an instance of FVC
+        >>> fvc.context().run('2026.0.1')
         """
         fv_bin = self._find_tuflow_bin(tuflowfv_binaries, tuflowfv_bin, prec='SP')
         os.chdir(str(self.fpath.parent))
         return self._run(self.fpath, fv_bin, self.ctx.context_args, add_cli_args, *args, **kwargs)
+
+    def test(self, tuflow_bin: PathLike) -> tuple[str, str]:
+            """Run the control file in context using the specified TUFLOWFV binary in test mode.
+    
+            The stdout and stderr are automatically captured (no console window is produced) and once complete, the
+            return values are the captured stdout and stderr.
+    
+            Parameters
+            ----------
+            tuflowfv_bin : PathLike
+                File path to the TUFLOW binary or a registered version name.
+    
+            Returns
+            -------
+            tuple[str, str]
+                Captured stdout and stderr from the run.
+    
+            Examples
+            --------
+            >>> fvc = ... # assuming is an instance of FVC
+            >>> stdout, stderr = tcf.context().test('2026.0.1')
+            """
+            kwargs = {}
+            if os.name == 'nt':
+                kwargs['creationflags'] = subprocess.CREATE_NO_WINDOW
+            proc = self.run(tuflow_bin, add_cli_args=['-t'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, **kwargs)
+            out, err = proc.communicate()
+            if isinstance(out, bytes):
+                out = out.decode('utf-8')
+            if isinstance(err, bytes):
+                err = err.decode('utf-8')
+            return out, err
