@@ -6,6 +6,14 @@
     {
       "template_key": "model/${model_name}_${iter}.adcf",
       "output_subdir": "model"
+    },
+    {
+      "template_key": "bc_dbase/bc_dbase_${model_name}_AD.csv",
+      "output_subdir": "bc_dbase"
+    },
+    {
+      "template_key": "bc_dbase/${model_name}_AD_Constituents.csv",
+      "output_subdir": "bc_dbase"
     }
   ],
   "command_blocks": [

@@ -1,2 +1,4 @@
-! ${model_name}_${iter}.qcf
-! Quadtree Control File - TODO populate
+Model Origin and Extent == TGC
+Orientation Angle == TGC
+Base Cell Size	== TGC
+Read GIS Nesting == <path/to/2d_qnl>

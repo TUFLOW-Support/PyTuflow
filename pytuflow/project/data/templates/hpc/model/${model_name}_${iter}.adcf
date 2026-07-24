@@ -1,2 +1,4 @@
-! ${model_name}_${iter}.adcf
-! AD Control File - TODO populate
+AD Global Database == ..\bc_dbase\${model_name}_AD_Constituents.csv 	! Constituent information incl. settling rate (m.day-1)
+AD BC Database == ..\bc_dbase\bc_dbase_${model_name}_AD.csv			! Boundary database information 
+! Write Mass == ON 												! Generate a mass conservation commentary output file (not yet supported with SGS) 
+! Write Mass Unit == Kg

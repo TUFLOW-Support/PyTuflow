@@ -4,8 +4,8 @@
   "sort_order": 70,
   "template_files": [
     {
-      "template_key": "model/${model_name}_${iter}.trfc",
-      "output_subdir": "model"
+      "template_key": "bc_dbase/${model_name}_${iter}.trfc",
+      "output_subdir": "bc_dbase"
     }
   ],
   "command_blocks": [

@@ -1,2 +1,4 @@
-! ${model_name}.toc
-! Operational Controls File - TODO populate
+! OPERATIONS CONTROL FILE (.TOC) contains sets of rules to control operational structures
+
+! OPERATING CONTROL COMMANDS
+

@@ -4,8 +4,8 @@
   "sort_order": 10,
   "template_files": [
     {
-      "template_key": "model/${model_name}_events.tef",
-      "output_subdir": "model"
+      "template_key": "runs/${model_name}_events.tef",
+      "output_subdir": "runs"
     }
   ],
   "command_blocks": [

@@ -1,0 +1,5 @@
+! TUFLOW EVENT FILE (.TEF) defines the parameters for the model events
+
+Define Event == <EVENT_NAME>				        ! Start definition of block of commands
+	BC Event Source == ~event~ | <REPLACE_TEXT>		! Specifies the text in which '~event~' is to be substituted within the bc_dbase
+End Define
