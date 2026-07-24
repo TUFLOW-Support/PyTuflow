@@ -291,7 +291,7 @@ It's possible to check the available TUFLOW FV versions from installed versions 
 
     >>> for version, path in tuflowfv_binaries.items():
     ...     print(version)
-    ... 2026.0.1 /opt/tuflow/tuflowfv-2026.0/bin/tuflowfv-2026.0
+    2026.0.1 /opt/tuflow/tuflowfv-2026.0/bin/tuflowfv-2026.0
 
 Running a TUFLOW FV model is done by using a run context (to resolve scenarios and events) and using the :meth:`~pytuflow.FVCRunState.run` method.
 
@@ -301,3 +301,21 @@ Running a TUFLOW FV model is done by using a run context (to resolve scenarios a
     >>> fvc = FVC('runs/FLD000_2D_001.fvc')
     >>> proc = fvc.context().run('2026.0.1')
 
+It's possible to pass ``subprocess.Popen`` keyword arguments into the :meth:`~pytuflow.FVCRunState.run` method.
+
+.. code-block:: pycon
+
+    >>> import subprocess
+    >>> proc = fvc.context().run('2026.0.1', stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    >>> out, err = proc.communicate()
+
+The :class:`~pytuflow.FVC` class also has a convenience method for running the model with the test flag using the :meth:`~pytuflow.FVCRunState.test` method.
+
+.. code-block:: pycon
+
+    >>> out, err = fvc.context().test('2026.0.1')
+    >>> for e in err.splitlines():
+    ...     print(e)
+    WARNING: CONN_2D column not found in csv file. Assigning a value of             NaN
+    WARNING: CONN_2D column not found in csv file. Assigning a value of             NaN
+    WARNING: CONN_2D column not found in csv file. Assigning a value of             NaN
