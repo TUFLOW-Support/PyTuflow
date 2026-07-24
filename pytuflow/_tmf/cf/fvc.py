@@ -1,9 +1,19 @@
+from pathlib import Path
+import logging
+import os
+
 from .cf_load_factory import ControlFileLoadMixin
 from .fvc_build_state import FVCControlFileBuildState, FVCBase
 from .cf_run_state import ControlFileRunState
 from ..context import Context
 from ..parsers.fvcommand import Command, FVCommand
+from ..tmf_types import PathLike
+from ..tuflowfv_binaries import tuflowfv_binaries
+from .model_run_mixin import ModelRunMixin
 from .. import const
+
+
+logger = logging.getLogger('pytuflow')
 
 
 class FVC(ControlFileLoadMixin, FVCControlFileBuildState):
@@ -56,5 +66,40 @@ class FVC(ControlFileLoadMixin, FVCControlFileBuildState):
         return FVCommand
     
 
-class FVCRunState(ControlFileRunState, FVCBase):
-    pass
+class FVCRunState(ControlFileRunState, ModelRunMixin, FVCBase):
+
+    def run(self, tuflowfv_bin: PathLike, add_cli_args: list[str] = (), *args, **kwargs):
+        """Run the control file in context using the specified TUFLOW binary.
+
+        * TUFLOW binary can be a file path to the executable or a version name that has been registered using
+            the :func:`register_tuflow_binary function()<pytuflow.register_tuflow_binary>`
+            or the :func:`register_tuflow_binary_folder()<pytuflow.register_tuflow_binary_folder>`.
+
+        Additional arguments can be passed in and will be passed to the subprocess.Popen() call. By default,
+        a new console will be created for the subprocess.
+
+        Parameters
+        ----------
+        tuflowfv_bin : PathLike
+            Path to the TUFLOW binary or a registered version name.
+        add_cli_args : list[str]
+            A list of additional command line arguments specific to TUFLOW that will be passed directly to the
+            subprocess.Popen() call. e.g. ``add_cli_args=['-t']`` to pass in the ``-t`` flag to run TUFLOW in test mode,
+            or ``add_cli_args=['-cs1']`` to pass in the ``-cs1`` flag to run TUFLOW with case-insensitive file paths.
+        *args, **kwargs:
+            Will be passed to subprocess.Popen() call.
+
+        Returns
+        -------
+        subprocess.Popen
+            The subprocess.Popen object that is created when the control file is run.
+
+        Examples
+        --------
+        >>> tcf = ... # assuming is an instance of TCF
+        >>> tcf.context().run('2025.1.2')
+        <Popen: returncode: None args: ['C:\\TUFLOW\\releases\\2025.1.2\\TUFLOW_iSP_...>
+        """
+        fv_bin = self._find_tuflow_bin(tuflowfv_binaries, tuflowfv_bin, prec='SP')
+        os.chdir(str(self.fpath.parent))
+        return self._run(self.fpath, fv_bin, self.ctx.context_args, add_cli_args, *args, **kwargs)

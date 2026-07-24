@@ -10,13 +10,14 @@ from ..tmf_types import PathLike
 from ..tuflow_binaries import tuflow_binaries
 from ..context import Context
 from ..abc.tf_cf_base_mixin import TuflowControlFileMixin
+from .model_run_mixin import ModelRunMixin
 
 
 
 logger = logging.getLogger('pytuflow')
 
 if typing.TYPE_CHECKING:
-    from ....._outputs.tpc import TPC
+    from pytuflow import TPC
     from .tcf import TCF
     from .tef_run_state import TEFRunState
     from ..db.bc_dbase_run_state import BCDatabaseRunState
@@ -25,7 +26,7 @@ if typing.TYPE_CHECKING:
     from ..db.db_run_state import DatabaseRunState
 
 
-class TCFRunState(ControlFileRunState, TuflowControlFileMixin, TCFBase):
+class TCFRunState(ControlFileRunState, TuflowControlFileMixin, ModelRunMixin, TCFBase):
     """Class for storing the run state of a TCF file.
 
     This class should not be instantiated directly, but rather it should be created from an instance
@@ -346,8 +347,11 @@ class TCFRunState(ControlFileRunState, TuflowControlFileMixin, TCFBase):
         >>> tcf.context().run('2025.1.2')
         <Popen: returncode: None args: ['C:\\TUFLOW\\releases\\2025.1.2\\TUFLOW_iSP_...>
         """
-        tuflow_bin_ = self._find_tuflow_bin(tuflow_bin, prec)
-        return self._run(tuflow_bin_, add_cli_args, *args, **kwargs)
+        tuflow_bin_ = self._find_tuflow_bin(tuflow_binaries, tuflow_bin, prec)
+        if '-b' not in add_cli_args:
+            add_cli_args = list(add_cli_args)
+            add_cli_args.insert(0, '-b')
+        return self._run(self.fpath, tuflow_bin_, self.ctx.context_args, add_cli_args, *args, **kwargs)
 
     def test(self, tuflow_bin: PathLike, prec: str = 'sp') -> tuple[str, str]:
         """Run the control file in context using the specified TUFLOW binary in test mode.
@@ -383,42 +387,3 @@ class TCFRunState(ControlFileRunState, TuflowControlFileMixin, TCFBase):
         if isinstance(err, bytes):
             err = err.decode('utf-8')
         return out, err
-
-    def _run(self, bin_path: str, add_tf_flags: list[str], *args, **kwargs):
-        """Method for running the control file using the tuflow binary specified."""
-        if 'creationflags' not in kwargs and os.name == 'nt':
-            kwargs['creationflags'] = subprocess.CREATE_NEW_CONSOLE
-        args_ = [bin_path, '-b']
-        for flag in add_tf_flags:
-            if flag != '-b':
-                args_.append(flag)
-        args_.extend(self.ctx.context_args)
-        args_.append(str(self.fpath))
-        self.proc = subprocess.Popen(args_, *args, **kwargs)
-        return self.proc
-
-    @staticmethod
-    def _find_tuflow_bin(tuflow_bin: PathLike, prec: str) -> str:
-        """Returns the path to the TUFLOW binary to use for the run."""
-        if Path(tuflow_bin).is_file() and not Path(tuflow_bin).exists():
-            logger.error('tuflow binary not found: {0}'.format(tuflow_bin))
-            raise FileNotFoundError('tuflow binary not found: {0}'.format(tuflow_bin))
-        elif not Path(tuflow_bin).is_file():
-            if tuflow_bin not in tuflow_binaries:
-                # search for available tuflow versions in registered folders
-                # do this only now (after checking explicitly registered binaries first)
-                # just in case this is a slow step (network drives etc.)
-                tuflow_binaries.check_tuflow_folders()
-                if tuflow_bin not in tuflow_binaries:
-                    logger.error('TUFLOW binary version not found: {0}'.format(tuflow_bin))
-                    raise KeyError('TUFLOW binary version not found: {0}'.format(tuflow_bin))
-        tuflow_bin_ = str(tuflow_bin) if Path(tuflow_bin).is_file() else tuflow_binaries[tuflow_bin]
-        if prec.upper() in ['DP', 'IDP', 'DOUBLE']:
-            p = Path(tuflow_bin_)
-            if 'dp' not in p.stem.lower():
-                tuflow_bin_ = p.parent / str(p.name).replace('SP', 'DP')
-        elif prec.upper() not in ['SP', 'ISP', 'SINGLE']:
-            logger.error('Unrecognised "prec" argument: {0}'.format(prec))
-            raise AttributeError('Unrecognised "prec" argument: {0}'.format(prec))
-
-        return tuflow_bin_
