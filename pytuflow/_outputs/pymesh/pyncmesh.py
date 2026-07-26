@@ -59,8 +59,8 @@ class PyNCMesh(PyMesh, Mesh3DMixin, GLTFMixin):
                 data_type_ = data_type_1
             if extractor.NAME == 'QgisDataExtractor':
                 return data_type_
-            if len(data_type_) == 1 and data_type_[0].lower() == 'v':
-                return 'V_x', 'V_y'
+            if len(data_type) == 1 and extractor.is_vector(data_type[0]) and f'{data_type[0]}_x' in extractor.long_name_to_variable.values():
+                return f'{data_type[0]}_x', f'{data_type[0]}_y'
             return data_type_
         raise ValueError(f'Could not translate data_type: {data_type}')
     

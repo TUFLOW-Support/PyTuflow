@@ -215,6 +215,23 @@ Bug Fixes
 
 - Fixed a bug in the ``MapOutput`` classes where reading in an empty GIS file would cause an unexpected Python error. When an empty GIS file is provided, an exception is still thrown, but gives a more informative message about the issue.
 
+1.1.9
+"""""
+
+Release date: 27 July 2026
+
+- Fixed a bug where vector types that were not the "velocity" data type in the :class:`~pytuflow.NCMesh` format could cause an error when loading the results.
+
+1.1.8
+"""""
+
+Release date: 18 June 2026
+
+- Fixed an uncaught exception if a TIF Projection command was present in a :class:`~pytuflow.TCF` and the file did not exist. The error is now logged, but loading will continue which matches other similar behaviour when attempting to loadi missing files.
+- Improved logging messages when GDAL Python bindings are not installed and projection extraction fails as a consequence.
+- Fixed a bug where files referenced in GIS attributes were incorrectly being added to the :attr:`~pytuflow.GisInput.files` property for projection commands.
+- Fixed a bug when extracting time-series data from a bc_dbase where the source file was a CSV and contained a comment row above the header row.
+
 1.1.7
 """""
 
