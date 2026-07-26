@@ -49,6 +49,10 @@ class HPCProject(BaseEngineProject):
 
     Projects can also be created via the CLI with ``python -m pytuflow.project create --engine hpc``.
     See below for examples.
+
+    It is also possible to insert modules into an existing project using 
+    :meth:`HPCProject.insert_module_into()<pytuflow.HPCProject.insert_module_into>` or via the CLI
+    with ``python -m pytuflow.project insert --engine hpc``.
     
     Parameters
     ----------
@@ -166,6 +170,18 @@ class HPCProject(BaseEngineProject):
             --gis-format GPKG \
             --output-format '{"XMDF": {"data_types": "h v d q ZAEM1", "interval": 3600}, \
                 "TIF": {"data_types": "h v d ZAEM1", "interval": 0}}'
+
+    Insert Quadtree into an existing model:
+
+    >>> HPCProject.insert_module_into('quadtree', 'models/TUFLOW/runs/Tutorial_Model_001.tcf')
+
+    Insert PO int an existing model using the CLI:
+
+    .. code-block:: console
+
+        python -m pytuflow.project insert --engine hpc \
+            --module po \
+            --cf models/TUFLOW/runs/Tutorial_Model_001.tcf
     """
 
     ENGINE_TYPE = 'hpc'
