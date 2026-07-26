@@ -91,11 +91,23 @@ class HPCProject(BaseEngineProject):
     toc
     tutorial
 
+    Or list the modules via the CLI:
+
+    .. code-block:: console
+
+        python -m pytuflow.project list-modules --engine hpc
+
     (Re-)Initialise the template files:
 
     >>> from pytuflow.project import TemplateManager
     >>> manager = TemplateManager(engine_type='hpc')
     >>> manager.init_cache(force=True)
+
+    Initialise the templates via the CLI:
+
+    .. code-block:: console
+
+        python -m pytuflow.project init-templates --engine hpc --force
 
     Initialise an HPC project with SGS and event modules. This example uses the TUFLOW tutorial model CRS.
 

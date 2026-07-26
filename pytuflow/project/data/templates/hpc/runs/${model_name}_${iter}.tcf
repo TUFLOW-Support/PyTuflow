@@ -52,6 +52,9 @@ Read Materials File == ..\model\${model_name}_mat.csv
 ##IF module:rf##
 ##COMMANDS rf_tcf##
 ##ENDIF##
+##IF module:swmm##
+##COMMANDS swmm_tcf##
+##ENDIF##
 
 !_______________________________________________________
 ! INITIAL WATER LEVEL
