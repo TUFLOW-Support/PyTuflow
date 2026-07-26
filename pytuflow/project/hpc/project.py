@@ -39,11 +39,11 @@ class HPCProject(BaseEngineProject):
     r"""HPC project generator.
 
     The HPC project generator is a highly customisable class for generating
-    an Classic/HPC project from scratch. The class uses template files, modules, variables,
+    a Classic/HPC project from scratch. The class uses template files, modules, variables,
     and directives, which are fully customisable and extendable by the user.
 
     When an HPC project is created for the first time, the template files are copied
-    locally the users home directory, ``%userprofile%\.tuflow_model_files\project_templates``
+    locally to the users home directory, ``%userprofile%\.tuflow_model_files\project_templates``
     on Windows or ``~/.tuflow_model_files/project_templates`` on Linux. Subsequent calls
     will use these cached templates, and the user is free to modify and/or extend them.
     
@@ -57,15 +57,17 @@ class HPCProject(BaseEngineProject):
         The modules to include within the generated project. The available modules are
         dynamic and can be modified or extended by the user. See the example section below
         to check the available modules. Modules can also be added post project generation using
-        :meth:`pytuflow.HPCProject.insert_module_into<HPCProject.insert_module_into>`.
+        :meth:`HPCProject.insert_module_into()<pytuflow.HPCProject.insert_module_into>`.
     crs : str
         The CRS to use for the project in the form of "AUTHORITY:CODE". E.g. the TUFLOW tutorial model
         would be ``"EPSG:32760"``
     create_empties : bool, optional
         Sets whether to generate empty files.
     **kwargs
-        Sets any number of variables used in the template files. The 
-
+        Sets any number of variables used in the template files. The available variables are pulled
+        from the ``defaults.json`` and ``hpc_defaults.json`` files that are cached in the users home
+        directory under ``.tuflow_model_files/project_templates``. Any keyword arguments will override
+        the default values listed in the json files. The user is free to modify the defaults or extend them.
 
     Examples
     --------
@@ -84,6 +86,46 @@ class HPCProject(BaseEngineProject):
     soils
     toc
     tutorial
+
+    (Re-)Initialise the template files:
+
+    >>> from pytuflow.project import TemplateManager
+    >>> manager = TemplateManager(engine_type='hpc')
+    >>> manager.init_cache(force=True)
+
+    Initialise an HPC project with SGS and event modules. This example uses the TUFLOW tutorial model CRS.
+
+    >>> project = HPCProject(
+    ...     name='Tutorial_Model',
+    ...     output_dir='models/TUFLOW',
+    ...     modules=['sgs', 'events'],
+    ...     crs='EPSG:32760',
+    ...     create_empties=True
+    ... )
+    >>> project.create()
+    PosixPath('models/TUFLOW')
+
+    Initialise an HPC project using GPKG and customise the map outputs.
+
+    >>> project = HPCProject(
+    ...     name='Tutorial_Model',
+    ...     output_dir='models/TUFLOW',
+    ...     crs='EPSG:32760',
+    ...     create_empties=True,
+    ...     gis_format='GPKG',
+    ...     output_formats={
+    ...         "XMDF": {
+    ...             "data_types": ["h", "v", "d", "q", "ZAEM1"],
+    ...             "interval": 3600
+    ...         },
+    ...         "TIF": {
+    ...             "data_types": ["h", "v", "d", "ZAEM1"],
+    ...             "interval": 0
+    ...         }
+    ...     }
+    ... )
+    >>> project.create()
+    PosixPath('models/TUFLOW')
     """
 
     ENGINE_TYPE = 'hpc'

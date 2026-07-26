@@ -116,6 +116,14 @@ This page gives an overview of the public modules, classes, and functions within
    CrossSections
    DATCrossSections
 
+.. rubric:: Project
+
+.. autosummary::
+   :toctree: ./api
+   :nosignatures:
+
+   HPCProject
+
 .. rubric:: Utilities
 
 .. autosummary::

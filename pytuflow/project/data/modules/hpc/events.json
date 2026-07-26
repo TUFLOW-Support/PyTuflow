@@ -17,7 +17,7 @@
         "! SCENARIOS / EVENTS",
         "! Model event == <event_name>",
         "! Model scenario == <scenario_name>",
-        "Event File == ..\\model\\${model_name}_events.tef"
+        "Event File == ${model_name}_events.tef"
       ]
     }
   ]
