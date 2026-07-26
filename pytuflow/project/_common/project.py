@@ -79,6 +79,13 @@ class BaseEngineProject(BaseProject):
     # ------------------------------------------------------------------
 
     def validate(self) -> list[str]:
+        """Validates the class inputs. Should be run prior to running :meth:`~pytuflow.HPCProject.create`.
+        
+        Returns
+        -------
+        list[str]
+            List of error messages.
+        """
         errors = []
         if not self.name:
             errors.append("'name' must be provided")
@@ -93,6 +100,14 @@ class BaseEngineProject(BaseProject):
         return errors
 
     def create(self) -> Path:
+        """The execuation step when creating a project. This method copies template files, fills in variables, and
+        parses the control files and follows directives.
+        
+        Returns
+        -------
+        Path
+            Path to the output directory where the model was created.
+        """
         errors = self.validate()
         if errors:
             raise ValueError('\n'.join(errors))
@@ -171,7 +186,17 @@ class BaseEngineProject(BaseProject):
         return self.output_dir
 
     @classmethod
-    def insert_module_into(cls, module_name: str, cf_path: str | Path, **kwargs) -> None:
+    def insert_module_into(cls, module_name: str, cf_path: str | Path, **kwargs):
+        """Inserts a module into an existing project.
+        
+        Parameters
+        ----------
+        module_name : str
+            Name of the module to insert
+        cf_path : str | Path
+            Path to the control file to insert the module into. This should either a TCF or FVC,
+            and not an ancillary control file such as the TGC or FVWQ.
+        """
         import pytuflow
         cf_path = Path(cf_path)
         project_dir = cf_path.parent.parent  # runs/ → project root
@@ -228,8 +253,11 @@ class BaseEngineProject(BaseProject):
     def get_available_modules(cls) -> dict[str, type]:
         """Discover all available modules for this engine from JSON files.
 
-        Subclasses must override :meth:`_get_module_base_class` to return
-        their engine-specific base module class.
+        Returns
+        -------
+        dict[str, type]
+            A dictionary of the available modules with using the module
+            name as the key and the module class as the value.
         """
         base_cls = cls._get_module_base_class()
         manager = TemplateManager(cls.ENGINE_TYPE)

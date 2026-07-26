@@ -121,6 +121,7 @@ This page gives an overview of the public modules, classes, and functions within
 .. autosummary::
    :toctree: ./api
    :nosignatures:
+   :template: custom-class-template.rst
 
    HPCProject
 
