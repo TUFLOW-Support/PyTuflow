@@ -15,7 +15,7 @@ class TestSettingsDefaults:
 
     def test_hpc_defaults_present(self):
         s = Settings()
-        assert s.map_output_formats == ['XMDF']
+        assert s.map_output_formats == ['XMDF', 'TIF']
     def test_override_iter(self):
         s = Settings(iter='002')
         assert s.iter == '002'
@@ -116,7 +116,7 @@ class TestSettingsUserDefaults:
     def test_user_hpc_defaults_json_loaded(self, tmp_path, monkeypatch):
         """User hpc_defaults.json should override factory HPC defaults."""
         cache = tmp_path / 'project_templates'
-        hpc_dir = cache / 'hpc'
+        hpc_dir = cache
         hpc_dir.mkdir(parents=True)
         (hpc_dir / 'hpc_defaults.json').write_text(
             json.dumps({'cell_size': '5'})

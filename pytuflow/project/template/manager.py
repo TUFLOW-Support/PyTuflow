@@ -11,13 +11,25 @@ class TemplateManager:
         self.engine_type = engine_type
         self._bundled_templates_dir = _BUNDLED_DATA_DIR / 'templates' / engine_type
         self._bundled_modules_dir = _BUNDLED_DATA_DIR / 'modules' / engine_type
+        self._bundled_defaults = _BUNDLED_DATA_DIR / 'defaults.json'
+        self._bundled_hpc_defaults = _BUNDLED_DATA_DIR / 'hpc_defaults.json'
+        self._bundled_fv_defaults = _BUNDLED_DATA_DIR / 'fv_defaults.json'
+        self._bundled_rules = _BUNDLED_DATA_DIR / 'rules.json'
         self._cache_dir = CACHE_ROOT / engine_type
         self._cache_modules_dir = CACHE_ROOT / 'modules' / engine_type
+        self._cache_defaults = CACHE_ROOT / 'defaults.json'
+        self._cache_hpc_defaults = CACHE_ROOT / 'hpc_defaults.json'
+        self._cache_fv_defaults = CACHE_ROOT / 'fv_defaults.json'
+        self._cache_rules = CACHE_ROOT / 'rules.json'
 
     def init_cache(self, force: bool = False) -> None:
         """Copy bundled templates and module configs to the user cache on first use."""
         needs_templates = not self._cache_dir.exists() or force
         needs_modules = not self._cache_modules_dir.exists() or force
+        needs_defaults = not self._cache_defaults.exists() or force
+        needs_hpc_defaults = not self._cache_hpc_defaults.exists() or force
+        needs_fv_defaults = not self._cache_fv_defaults.exists() or force
+        needs_rules = not self._cache_rules.exists() or force
 
         if needs_templates:
             if self._cache_dir.exists():
@@ -28,6 +40,26 @@ class TemplateManager:
             if self._cache_modules_dir.exists():
                 shutil.rmtree(self._cache_modules_dir)
             shutil.copytree(self._bundled_modules_dir, self._cache_modules_dir)
+
+        if needs_defaults:
+            if self._cache_defaults.exists():
+                self._cache_defaults.unlink()
+            shutil.copy2(str(self._bundled_defaults), str(self._cache_defaults))
+
+        if needs_hpc_defaults:
+            if self._cache_hpc_defaults.exists():
+                self._cache_hpc_defaults.unlink()
+            shutil.copy2(str(self._bundled_hpc_defaults), str(self._cache_hpc_defaults))
+
+        if needs_fv_defaults:
+            if self._cache_fv_defaults.exists():
+                self._cache_fv_defaults.unlink()
+            shutil.copy2(str(self._bundled_fv_defaults), str(self._cache_fv_defaults))
+
+        if needs_rules:
+            if self._cache_rules.exists():
+                self._cache_rules.unlink()
+            shutil.copy2(str(self._bundled_rules), str(self._cache_rules))
 
     def get_template(self, relative_key: str) -> str:
         """Read template text from cache (initialising cache first if needed).
@@ -60,17 +92,19 @@ class TemplateManager:
                 return json.load(f)
         return {}
 
-    @staticmethod
-    def get_rules() -> dict:
+    def get_rules(self) -> dict:
         """Load the shared placement rules from the bundled rules.json.
 
         Returns a dict keyed by rule name, each value having a ``commands``
         list of LHS strings that define a logical section in a control file.
         Falls back to an empty dict if the file is missing.
         """
-        rules_path = _BUNDLED_DATA_DIR / 'rules.json'
-        if rules_path.exists():
-            with open(rules_path, encoding='utf-8') as f:
+        self.init_cache()
+        if self._cache_rules.exists():
+            with open(self._cache_rules, encoding='utf-8') as f:
+                return json.load(f)
+        if self._bundled_rules.exists():
+            with open(self._bundled_rules, encoding='utf-8') as f:
                 return json.load(f)
         return {}
 

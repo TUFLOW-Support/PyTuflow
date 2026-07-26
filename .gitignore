@@ -21,3 +21,4 @@ uv.lock
 *pytest_cache*
 tests/fm_lib/integration_tests/outputs_tmp*
 *.mdtest/
+tuflowfv.log

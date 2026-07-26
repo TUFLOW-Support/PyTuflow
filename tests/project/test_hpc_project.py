@@ -167,7 +167,7 @@ class TestHPCProjectWithEventsModule:
     def test_tef_created(self, project_dir):
         p = HPCProject('mymodel', project_dir, crs='EPSG:32760', modules=['events'])
         p.create()
-        assert (project_dir / 'model' / 'mymodel_events.tef').exists()
+        assert (project_dir / 'runs' / 'mymodel_events.tef').exists()
 
     def test_tcf_events_uncommented_when_active(self, project_dir):
         p = HPCProject('mymodel', project_dir, crs='EPSG:32760', modules=['events'])
@@ -598,7 +598,8 @@ class TestPlacementRules:
 
     def test_rules_json_loadable(self):
         from pytuflow.project.template.manager import TemplateManager
-        rules = TemplateManager.get_rules()
+        manager = TemplateManager('hpc')
+        rules = manager.get_rules()
         assert 'hpc_control_files' in rules
         assert 'commands' in rules['hpc_control_files']
         assert len(rules['hpc_control_files']['commands']) > 0
@@ -606,7 +607,9 @@ class TestPlacementRules:
 
     def test_control_files_rule_contains_expected_lhs(self):
         from pytuflow.project.template.manager import TemplateManager
-        commands = TemplateManager.get_rules()['hpc_control_files']['commands']
+        manager = TemplateManager('hpc')
+        rules = manager.get_rules()
+        commands = rules['hpc_control_files']['commands']
         for expected in ['Geometry Control File', 'BC Control File', 'Read Materials File']:
             assert expected in commands, f"'{expected}' missing from hpc_control_files rule"
 
@@ -635,13 +638,13 @@ class TestPlacementRules:
             }
         }
         original_get_rules = mgr_mod.TemplateManager.get_rules
-        mgr_mod.TemplateManager.get_rules = staticmethod(lambda: fake_rules)
+        mgr_mod.TemplateManager.get_rules = lambda self: fake_rules
         try:
             tcf = TCF(tcf_path)
             EstryModule().apply_to_control_files({'tcf': tcf}, {'model_name': 'mymodel', 'iter': '001'})
             tcf.write('inplace')
         finally:
-            mgr_mod.TemplateManager.get_rules = staticmethod(original_get_rules)
+            mgr_mod.TemplateManager.get_rules = original_get_rules
 
         content = tcf_path.read_text(encoding='utf-8')
         ecf_pos = content.lower().find('estry control file')
@@ -708,14 +711,14 @@ class TestPlacementRules:
         fake_rules = {'hpc_control_files': {'rule': 'before', 'commands': ['Read Materials File']}}
         original_get_rules = mgr_mod.TemplateManager.get_rules
 
-        mgr_mod.TemplateManager.get_rules = staticmethod(lambda: fake_rules)
+        mgr_mod.TemplateManager.get_rules = lambda self: fake_rules
         try:
             tcf = TCF(tcf_path)
             module = EstryModule()
             with pytest.raises(NotImplementedError, match="'before'.*not implemented"):
                 module.apply_to_control_files({'tcf': tcf}, {'model_name': 'mymodel', 'iter': '001'})
         finally:
-            mgr_mod.TemplateManager.get_rules = staticmethod(original_get_rules)
+            mgr_mod.TemplateManager.get_rules = original_get_rules
 
 
 class TestExistenceCheck:

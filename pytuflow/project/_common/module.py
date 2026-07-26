@@ -25,6 +25,11 @@ class BaseEngineModule(BaseModule):
         manager = TemplateManager(self.ENGINE_TYPE)
         return manager.get_module_config(self.NAME)
 
+    def _get_rules(self) -> dict:
+        """Load the module's rules config."""
+        manager = TemplateManager(self.ENGINE_TYPE)
+        return manager.get_rules()
+
     # ------------------------------------------------------------------
     # BaseModule interface
     # ------------------------------------------------------------------
@@ -159,7 +164,7 @@ class BaseEngineModule(BaseModule):
         """
         placement_rule = block.get('placement_rule')
         if placement_rule:
-            rules = TemplateManager.get_rules()
+            rules = self._get_rules()
             rule = rules.get(placement_rule, {})
             rule_type = rule.get('rule', 'after')
             if rule_type != 'after':

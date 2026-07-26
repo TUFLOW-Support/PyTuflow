@@ -22,10 +22,10 @@ class Settings:
         # Engine-specific factory defaults
         if engine_type == 'hpc':
             settings.update(FACTORY_HPC_DEFAULTS)
-            user_engine_defaults = CACHE_ROOT / 'hpc' / 'hpc_defaults.json'
+            user_engine_defaults = CACHE_ROOT / 'hpc_defaults.json'
         elif engine_type == 'fv':
             settings.update(FACTORY_FV_DEFAULTS)
-            user_engine_defaults = CACHE_ROOT / 'fv' / 'fv_defaults.json'
+            user_engine_defaults = CACHE_ROOT / 'fv_defaults.json'
         else:
             user_engine_defaults = None
 

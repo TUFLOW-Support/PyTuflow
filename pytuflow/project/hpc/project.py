@@ -36,6 +36,55 @@ _BASE_TEMPLATES = [
 
 
 class HPCProject(BaseEngineProject):
+    r"""HPC project generator.
+
+    The HPC project generator is a highly customisable class for generating
+    an Classic/HPC project from scratch. The class uses template files, modules, variables,
+    and directives, which are fully customisable and extendable by the user.
+
+    When an HPC project is created for the first time, the template files are copied
+    locally the users home directory, ``%userprofile%\.tuflow_model_files\project_templates``
+    on Windows or ``~/.tuflow_model_files/project_templates`` on Linux. Subsequent calls
+    will use these cached templates, and the user is free to modify and/or extend them.
+    
+    Parameters
+    ----------
+    name : str
+        The name to be used for the project/model.
+    output_dir : str | Path
+        The directory to generate the project within.
+    modules : list[str] | None, optional
+        The modules to include within the generated project. The available modules are
+        dynamic and can be modified or extended by the user. See the example section below
+        to check the available modules. Modules can also be added post project generation using
+        :meth:`pytuflow.HPCProject.insert_module_into<HPCProject.insert_module_into>`.
+    crs : str
+        The CRS to use for the project in the form of "AUTHORITY:CODE". E.g. the TUFLOW tutorial model
+        would be ``"EPSG:32760"``
+    create_empties : bool, optional
+        Sets whether to generate empty files.
+    **kwargs
+        Sets any number of variables used in the template files. The 
+
+
+    Examples
+    --------
+    List the available modules:
+
+    >>> from pytuflow import HPCProject
+    >>> for mod in HPCProject.get_available_modules():
+    ...     print(mod)
+    ad
+    estry
+    events
+    po
+    quadtree
+    rf
+    sgs
+    soils
+    toc
+    tutorial
+    """
 
     ENGINE_TYPE = 'hpc'
     MAIN_CF_EXT = 'tcf'
