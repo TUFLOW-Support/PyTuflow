@@ -46,6 +46,9 @@ class HPCProject(BaseEngineProject):
     locally to the users home directory, ``%userprofile%\.tuflow_model_files\project_templates``
     on Windows or ``~/.tuflow_model_files/project_templates`` on Linux. Subsequent calls
     will use these cached templates, and the user is free to modify and/or extend them.
+
+    Projects can also be created via the CLI with ``python -m pytuflow.project create --engine hpc``.
+    See below for examples.
     
     Parameters
     ----------
@@ -84,6 +87,7 @@ class HPCProject(BaseEngineProject):
     rf
     sgs
     soils
+    swmm
     toc
     tutorial
 
@@ -104,6 +108,17 @@ class HPCProject(BaseEngineProject):
     ... )
     >>> project.create()
     PosixPath('models/TUFLOW')
+
+    Taking the same example as above, and initialising it via the CLI:
+
+    .. code-block:: console
+
+        python -m pytuflow.project create \
+            --engine hpc \
+            --name Tutorial_Model \
+            --output-dir models/TUFLOW \
+            --crs "EPSG:32760" \
+            --modules sgs events
 
     Initialise an HPC project using GPKG and customise the map outputs.
 
@@ -126,6 +141,19 @@ class HPCProject(BaseEngineProject):
     ... )
     >>> project.create()
     PosixPath('models/TUFLOW')
+
+    Initialising the same example via the CLI.
+
+    .. code-block:: console
+
+        python -m pytuflow.project create \
+            --engine hpc \
+            --name Tutorial_Model \
+            --output-dir models/TUFLOW \
+            --crs "EPSG:32760" \
+            --gis-format GPKG \
+            --output-format '{"XMDF": {"data_types": "h v d q ZAEM1", "interval": 3600}, \
+                "TIF": {"data_types": "h v d ZAEM1", "interval": 0}}'
     """
 
     ENGINE_TYPE = 'hpc'

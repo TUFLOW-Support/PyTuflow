@@ -8,7 +8,12 @@ FACTORY_HPC_DEFAULTS = {
     "cell_size": "<cell size>  ! TODO populate with appropriate value",
     "output_formats": {
         "XMDF": {
-            "data_types": ["h", "v", "d", "q", "V", "Z"]
+            "data_types": ["h", "v", "d", "q"],
+            "interval": 3600
+        },
+        "TIF": {
+            "data_types": ["h", "v", "d"],
+            "interval": 0
         }
     },
     "engine": "HPC",
