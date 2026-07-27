@@ -28,5 +28,12 @@
     "commands": [
       "map output"
     ]
+  },
+  "fvc_output": {
+    "description": "Insert after all the fv output blocks.",
+    "rule": "after",
+    "commands": [
+      "/^output$/i"
+    ]
   }
 }

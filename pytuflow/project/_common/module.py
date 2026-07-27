@@ -49,10 +49,18 @@ class BaseEngineModule(BaseModule):
         """Apply this module's command blocks to the supplied control file objects."""
         config = self._get_config()
         for block in config.get('command_blocks', []):
-            target = block.get('target_cf', 'tcf')
+            target = block.get('target_cf', 'tcf' if self.ENGINE_TYPE == 'hpc' else 'fvc')
             cf = control_files.get(target)
             if cf is None:
                 continue
+            subtarget = block.get("subtarget_cf")
+            if subtarget:
+                pattern, is_regex, flags = _parse_filter(subtarget)
+                input_subtarget = cf.find_input(pattern, regex=is_regex, regex_flags=flags)
+                for inp in input_subtarget:
+                    if inp.cf:
+                        cf = inp.cf[0]
+                        break
             self._apply_block(cf, block, variables)
 
     def apply_to_tcf(self, tcf, variables: dict) -> None:

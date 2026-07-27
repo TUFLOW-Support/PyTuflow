@@ -1,0 +1,27 @@
+{
+  "name": "output_nc",
+  "display_name": "Output NetCDF",
+  "sort_order": 5,
+  "template_files": [],
+  "command_blocks": [
+    {
+      "id": "fvc_output_nc",
+      "target_cf": "fvc",
+      "placement_rule": "fvc_output",
+      "existence_check": "output == netcdf",
+      "commands": [
+        "\nOutput == netcdf"
+      ]
+    },
+    {
+      "id": "output_nc_param",
+      "target_cf": "fvc",
+      "subtarget_cf": "/^output == netcdf$/i",
+      "commands": [
+        "Output Parameters == h, v, d",
+        "Output Interval == 3600.",
+        "! Suffix == HD  ! uncomment if writing multiple netcdf outputs"
+      ]
+    }
+  ]
+}

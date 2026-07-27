@@ -13,21 +13,21 @@ SHP Projection == ..\model\gis\projection.shp						! Projection string used for 
 ##IF ${gis_format}:MIF##
 MI Projection == ..\model\gis\projection.mif						! Projection string used for GIS integration
 ##ENDIF##
-Units == Metric															! {Metric} | US Customary | Imperial | English        
+Units == ${units}															! {Metric} | US Customary | Imperial | English        
 Spherical == ${spherical}											! {0} Cartesian | 1 Spherical
 Latitude == ${latitude}												! {0.0} Representative latitude for study area
 
 !__________________________________________________________________________________________________________________________________________________________________________________________
 ! HARDWARE (optional)
-! Set to default CPU
+Hardware == ${hardware}
 
 !__________________________________________________________________________________________________________________________________________________________________________________________
 ! SPATIAL ORDER (optional)
-! Set to default first order 
+Spatial Order == ${spatial_order}
 
 !__________________________________________________________________________________________________________________________________________________________________________________________
 ! SIMULATION TIME SETTINGS
-Time Format == HOURS													! {HOURS} | ISODATE
+Time Format == ${time_format}								! {HOURS} | ISODATE
 Start Time == 0.0														! Simulation start time (dd/mm/yyyy hh:mm:ss)
 End Time == 6.0															! Simulation end time (dd/mm/yyyy hh:mm:ss)
 
@@ -59,7 +59,7 @@ Global Horizontal Eddy Viscosity Limits == 0.05, 99999.					! {0.0} Minimum eddy
 !__________________________________________________________________________________________________________________________________________________________________________________________
 ! COMPUTATIONAL MESH
 ! Unstructured
-Geometry 2D == ..\model\geo\Trap_Channel_000.2dm						! Flexible mesh geometry
+Geometry 2D == <path/to/geometry.2dm>
 
 !__________________________________________________________________________________________________________________________________________________________________________________________
 ! BATHYMETRY 
@@ -67,30 +67,23 @@ Geometry 2D == ..\model\geo\Trap_Channel_000.2dm						! Flexible mesh geometry
 
 !__________________________________________________________________________________________________________________________________________________________________________________________
 ! MATERIALS
-Material == 1															! {0} Material ID
-  Bottom Roughness == 0.018												! Manning's 'n' roughness coefficient
-End Material                                                            
+! Example Material - uncomment and update if required
+! Material == 1															! {0} Material ID
+!   Bottom Roughness == 0.018								! Manning's 'n' roughness coefficient
+! End Material
 
 !__________________________________________________________________________________________________________________________________________________________________________________________
 ! INITIAL CONDITIONS (optional) 
 ! Set global initial water level
-Initial Water Level == -3.5												! {0.0} Water surface elevation (m)
 
 !__________________________________________________________________________________________________________________________________________________________________________________________
 ! BOUNDARY CONDITIONS
-Read GIS Nodestring == ..\model\gis\2d_ns_Trap_Channel_000_L.shp		! Polyline (Nodestring) boundary location definition
+Read GIS Nodestring == <path/to/2d_ns.shp>
 
-! Data Selection BC Header
-! Inflow/Outflow
-BC == Q, 1, ..\bc_dbase\steadyQ_01.csv									! Boundary_type, location_ID, data_filepath
-  BC Header == time, flow												! {TIME}, {Q} (m³/s or ft³/s) 
-  Sub-Type == 3															! {1} | 2 | 3 | 4 - Distribute nodestring flow as a function of cell water depth (h1.5)
-End BC
-
-! Water Level
-BC == WL, 2, ..\bc_dbase\steadyWL_01.csv								! Boundary_type, location_ID, data_filepath
-  BC Header == time, WL													! {TIME}, {WL} (mRL or ftRL) (Required data headers for the WL boundary type)
-End BC
+! Example BC Block - Uncomment and update if required
+! BC == WL, 2, ..\bc_dbase\<wl_boundary.csv>
+!   BC Header == time, WL
+! End BC
 
 !__________________________________________________________________________________________________________________________________________________________________________________________
 ! HYDRAULIC STRUCTURES (optional) 
@@ -101,9 +94,8 @@ End BC
 Output Dir == ..\results												! Result output directory
 Log Dir == log															! Log and diagnostics directory
 Write Check Files == ..\check											! Directory for GIS check files
-
-! Mesh
-Output == netcdf														! NetCDF mesh output format
-  Output Parameters == h, v, d											! Water level (mRL), velocity (m/s), depth (m)
-  Output Interval == 600.												! Output interval (s) 15 minutes
+##IF module:output_nc##
+##COMMANDS fvc_output_nc##
+##COMMANDS output_nc_param##
 End Output
+##ENDIF##
