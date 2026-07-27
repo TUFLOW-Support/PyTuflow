@@ -124,6 +124,7 @@ This page gives an overview of the public modules, classes, and functions within
    :template: custom-class-template.rst
 
    HPCProject
+   FVProject
 
 .. rubric:: Utilities
 
