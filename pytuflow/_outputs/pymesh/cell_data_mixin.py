@@ -517,7 +517,7 @@ class CellDataMixin:
 
         return np.column_stack(
             (np.array(zlevels).flatten(), np.repeat(values, 2, axis=0))
-        ).reshape((-1, 2) if len(values[1]) == 1 else (-1, 1, 3))
+        ).reshape((-1, 2) if len(values) > 1 and len(values[1]) == 1 else (-1, 1, 3))
 
     def curtain_from_cell_data(
             self: 'PyMesh',
