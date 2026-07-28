@@ -5,6 +5,7 @@ import pytest
 import sys
 
 from ...pytuflow._tmf.cf.tcf import TCF
+from ...pytuflow._tmf.cf.fvc import FVC
 from ...pytuflow._tmf.cf.ecf import ECF
 from ...pytuflow._tmf.cf.tef import TEF
 from ...pytuflow._tmf.cf.adcf import ADCF
@@ -1648,3 +1649,10 @@ def test_mi_projection_string():
     p = './tests/tmf/test_datasets/mi_proj_string.tcf'
     tcf = TCF(p).context()
     assert tcf.find_input('mi projection')[0].value == 'CoordSys Earth Projection 8, 79, "m", -2, 49, 0.9996012717, 400000, -100000 Bounds (-7845061.1011, -15524202.1641) (8645061.1011, 4470074.53373)'
+
+
+def test_find_input_fvc_recurse_similar():
+    p = './tests/tmf/test_datasets/fv/FLD000_2D_001.fvc'
+    fvc = FVC(p)
+    inp = fvc.find_input('output == netcdf', recursive='similar')
+    assert len(inp) == 1
