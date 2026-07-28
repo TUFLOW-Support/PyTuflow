@@ -1,6 +1,7 @@
 """Tests for FVProject create and module framework."""
 import pytest
 from pathlib import Path
+import re
 
 from pytuflow.project.fv.project import FVProject, get_available_modules
 
@@ -168,3 +169,68 @@ class TestFVProjectIter:
         )
         p.create()
         assert (project_dir / 'runs' / 'mymodel_002.fvc').exists()
+
+
+class TestFVBaseModuleApplyToControlFiles:
+
+    def test_apply_inserts_via_placement_rule(self, project_dir):
+        """apply_to_control_files uses placement_rule to find the last control-file command."""
+        from pytuflow.project.fv.project import get_available_modules
+        OutputNetcdf = get_available_modules()['output_nc']
+        from pytuflow import FVC
+
+        # Create bare-bones project (no estry)
+        p = FVProject('mymodel', project_dir, crs='EPSG:32760', modules=[])
+        p.create()
+
+        fvc_path = project_dir / 'runs' / 'mymodel_001.fvc'
+        fvc = FVC(fvc_path)
+
+        # Apply output_nc module — should insert via placement_rule
+        (project_dir / 'model').mkdir(parents=True, exist_ok=True)
+        module = OutputNetcdf()
+        variables = {'model_name': 'mymodel', 'iter': '001'}
+        module.apply_to_control_files({'fvc': fvc}, variables)
+        fvc.write('inplace')
+
+        tcf2 = FVC(fvc_path)
+        active = tcf2.find_input(filter_by='^output == netcdf$', recursive=False, regex=True, regex_flags=re.IGNORECASE)
+        assert active, "Output == netcdf should have been inserted via placement rule"
+
+    def test_apply_inserts_via_placement_rule_with_include_file(self, project_dir):
+        """apply_to_control_files uses placement_rule to find the last control-file command."""
+        from pytuflow.project.fv.project import get_available_modules
+        OutputNetcdf = get_available_modules()['output_nc']
+        from pytuflow import FVC
+
+        # Create bare-bones project (no estry)
+        p = FVProject('mymodel', project_dir, crs='EPSG:32760', modules=[])
+        p.create()
+
+        fvc_path = project_dir / 'runs' / 'mymodel_001.fvc'
+        fvc = FVC(fvc_path)
+
+        include = FVC()
+        include.fpath = project_dir / 'runs' / 'outputs.fvc'
+        include.parent = fvc
+        inp = include.append_input('Output == Points')
+        block = inp.block_control()
+        block.append_input('Read GIS PO == <path/to/3d_po.shp>')
+        block.append_input('Output Parameters == h, v, d')
+        block.append_input('Output Interval == 300.')
+        inp = fvc.append_input('Include == outputs.fvc')
+        inp.cf.append(include)
+
+        # Apply output_nc module — should insert via placement_rule which should end up in the include file not main fvc
+        (project_dir / 'model').mkdir(parents=True, exist_ok=True)
+        module = OutputNetcdf()
+        variables = {'model_name': 'mymodel', 'iter': '001'}
+        module.apply_to_control_files({'fvc': fvc}, variables)
+        fvc.write('inplace')
+
+        tcf2 = FVC(fvc_path)
+        active = tcf2.find_input(filter_by='^output == netcdf$', recursive=False, regex=True, regex_flags=re.IGNORECASE)
+        assert not active, "Output == netcdf should not have been inserted into the main fvc"
+        active = tcf2.find_input(filter_by='^output == netcdf$', recursive='similar', regex=True, regex_flags=re.IGNORECASE)
+        assert active, "Output == netcdf should have been added"
+        assert active[0].parent.fpath.name == 'outputs.fvc', "Output == netcdf should have been added to outputs.fvc"

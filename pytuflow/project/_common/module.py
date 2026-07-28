@@ -107,16 +107,18 @@ class BaseEngineModule(BaseModule):
             is_comment = existence_check.strip().startswith('!')
             pattern, is_regex, flags = _parse_filter(existence_check)
             if is_comment:
-                found = cf.find_input(filter_by=pattern, comments=True, regex=is_regex, regex_flags=flags)
+                found = cf.find_input(filter_by=pattern, recursive='similar', comments=True, regex=is_regex, regex_flags=flags)
             else:
                 if '==' in pattern:
-                    found = cf.find_input(filter_by=pattern, recursive=False, regex=is_regex, regex_flags=flags)
+                    found = cf.find_input(filter_by=pattern, recursive='similar', regex=is_regex, regex_flags=flags)
                 else:
-                    found = cf.find_input(lhs=pattern, recursive=False, regex=is_regex, regex_flags=flags)
+                    found = cf.find_input(lhs=pattern, recursive='similar', regex=is_regex, regex_flags=flags)
             if found:
                 return  # sentinel present — block already inserted
 
             current_ref = self._find_block_anchor(cf, block)
+            if current_ref:
+                cf = current_ref.parent
             for cmd in commands:
                 if cmd.strip():
                     current_ref = self._insert_or_append(cf, current_ref, cmd)
@@ -151,7 +153,7 @@ class BaseEngineModule(BaseModule):
             commented = cf.find_input(
                 filter_by=auto_pattern,
                 comments=True,
-                recursive=False,
+                recursive='similar',
                 regex=True,
                 regex_flags=re.IGNORECASE,
             )
@@ -160,6 +162,9 @@ class BaseEngineModule(BaseModule):
                 pending_decorators.clear()
                 current_ref = commented[0]
                 continue
+
+            if current_ref:
+                cf = current_ref.parent
 
             for dec in pending_decorators:
                 if dec.strip():
@@ -191,11 +196,11 @@ class BaseEngineModule(BaseModule):
                 pattern, is_regex, flags = _parse_filter(cmd_entry)
                 if '==' in pattern:
                     matches = cf.find_input(
-                        filter_by=pattern, recursive=False, regex=is_regex, regex_flags=flags
+                        filter_by=pattern, recursive='similar', regex=is_regex, regex_flags=flags
                     )
                 else:
                     matches = cf.find_input(
-                        lhs=pattern, recursive=False, regex=is_regex, regex_flags=flags
+                        lhs=pattern, recursive='similar', regex=is_regex, regex_flags=flags
                     )
                 if matches:
                     last_ref = matches[-1]
@@ -204,7 +209,7 @@ class BaseEngineModule(BaseModule):
 
         insert_after_lhs = block.get('insert_after_lhs')
         if insert_after_lhs:
-            refs = cf.find_input(lhs=insert_after_lhs, recursive=False)
+            refs = cf.find_input(lhs=insert_after_lhs, recursive='similar')
             if refs:
                 return refs[-1]
 
