@@ -32,6 +32,13 @@ Check out the :doc:`usage` section for further information, including how to :re
 Changelog
 ---------
 
+1.1.10
+"""""
+
+Release date: 29 July 2026
+
+- Fixed a bug with :meth:`NCMesh.profile()<pytuflow.NCMesh.profile>` when extracting data from a 2D vector type (e.g. velocity).
+
 1.1.9
 """""
 
