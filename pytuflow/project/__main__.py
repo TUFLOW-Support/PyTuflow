@@ -130,7 +130,7 @@ def main():
 
     # create — fixed args + dynamic args from defaults
     p_create = sub.add_parser('create', help='Create a new project skeleton')
-    p_create.add_argument('--engine', default='hpc', choices=['hpc', 'fv'],
+    p_create.add_argument('--engine', required=True, choices=['hpc', 'fv'],
                           help='TUFLOW engine type (default: hpc)')
     p_create.add_argument('--name', required=True, help='Model name')
     p_create.add_argument('--output-dir', required=True, dest='output_dir', help='Output directory')

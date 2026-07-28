@@ -1,5 +1,5 @@
 ! TUFLOW FV
-##IF module:tutorial##
+##IF feature:tutorial##
 Tutorial Model == ON													! {OFF} | ON Enable license free tutorial mode
 ##ENDIF##
 
@@ -94,12 +94,21 @@ Read GIS Nodestring == <path/to/2d_ns.shp>
 Output Dir == ..\results												! Result output directory
 Log Dir == log															! Log and diagnostics directory
 Write Check Files == ..\check											! Directory for GIS check files
-##IF module:output_nc##
+
+##IF feature:outputflux##
+##COMMANDS fvc_flux_nodestring##
+##ENDIF##
+##IF feature:outputflux##
+##COMMANDS fvc_output_flux##
+##COMMANDS output_flux_param##
+End Output
+##ENDIF##
+##IF feature:outputnc##
 ##COMMANDS fvc_output_nc##
 ##COMMANDS output_nc_param##
 End Output
 ##ENDIF##
-##IF module:output_points##
+##IF feature:outputpoints##
 ##COMMANDS fvc_output_points##
 ##COMMANDS output_points_param##
 End Output
