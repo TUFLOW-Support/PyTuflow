@@ -1,6 +1,7 @@
 import typing
 from typing import TYPE_CHECKING
 from uuid import UUID
+from pathlib import Path
 
 from ..scope import Scope
 from ..tmf_types import SearchTagLike
@@ -92,7 +93,7 @@ class ControlFile(ControlBase):
                    filter_by: str = None,
                    lhs: str = None,
                    rhs: str = None,
-                   recursive: bool = True,
+                   recursive: bool | str = True,
                    regex: bool = False,
                    regex_flags: int = 0,
                    attrs: SearchTagLike = (),
@@ -123,8 +124,11 @@ class ControlFile(ControlBase):
         rhs : str, optional
             A string or regular expression to filter the input by.
             This will search through the right-hand side of the input.
-        recursive : bool, optional
-            If set to True, will also search through any child control files.
+        recursive : bool | str, optional
+            If set to ``True``, will also search through any child control files. If set to ``False``,
+            no recursion will occur. For FV models, this can also be set to ``"similar"`` or ``blocks"``. ``"similar"`` will
+            allow recursion into include files with the same extension only. ``"blocks"`` will allow recursion into FV blocks.
+            It can also be set to ``"similar blocks"`` to have both options on (treated as an "or" rule, either similar or blocks).
         regex : bool, optional
             If set to True, the filter, lhs, and rhs parameters will be treated as regular expressions.
         regex_flags : int, optional
@@ -178,15 +182,24 @@ class ControlFile(ControlBase):
         >>> from pytuflow import const
         >>> control_file.find_input(callback=lambda x: x.TUFLOW_TYPE == const.INPUT.GIS and ogr.wkbPolygon in x.geoms)
         """
+        from ..cf.block import BlockControl
         inputs = self.inputs.inputs(include_hidden=comments)
         ret_inputs = []
         for inp in inputs:
             if inp.is_match(filter_by, lhs, rhs, regex, regex_flags, attrs, callback, comments):
-                ret_inputs.append(inp)
+                ret_inputs.append(inp)                
             if recursive and inp.TUFLOW_TYPE in [const.INPUT.CF, const.INPUT.BLOCK, const.INPUT.BC_BLOCK, const.INPUT.GRID_DEFINITION_FILE_INPUT] and inp.cf:
                 for cf in inp.cf:
-                    ret_inputs.extend(cf.find_input(filter_by, lhs, rhs, recursive, regex, regex_flags, attrs,
-                                                    callback, comments))
+                    should_recurse = False
+                    if isinstance(recursive, bool):
+                        should_recurse = recursive
+                    elif isinstance(recursive, str) and 'similar' in recursive.lower() and isinstance(cf, type(self)):
+                        should_recurse = True
+                    elif isinstance(recursive, str) and 'block' in recursive.lower() and isinstance(cf, BlockControl):
+                        should_recurse = True
+                    if should_recurse:
+                        ret_inputs.extend(cf.find_input(filter_by, lhs, rhs, recursive, regex, regex_flags, attrs,
+                                                        callback, comments))
         return ret_inputs
 
     def _find_control_file(self,
