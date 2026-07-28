@@ -176,7 +176,7 @@ class TestFVBaseModuleApplyToControlFiles:
     def test_apply_inserts_via_placement_rule(self, project_dir):
         """apply_to_control_files uses placement_rule to find the last control-file command."""
         from pytuflow.project.fv.project import get_available_modules
-        OutputNetcdf = get_available_modules()['output_nc']
+        OutputNetcdf = get_available_modules()['outputnc']
         from pytuflow import FVC
 
         # Create bare-bones project (no estry)
@@ -200,7 +200,7 @@ class TestFVBaseModuleApplyToControlFiles:
     def test_apply_inserts_via_placement_rule_with_include_file(self, project_dir):
         """apply_to_control_files uses placement_rule to find the last control-file command."""
         from pytuflow.project.fv.project import get_available_modules
-        OutputNetcdf = get_available_modules()['output_nc']
+        OutputNetcdf = get_available_modules()['outputnc']
         from pytuflow import FVC
 
         # Create bare-bones project (no estry)

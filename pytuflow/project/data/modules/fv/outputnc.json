@@ -1,5 +1,5 @@
 {
-  "name": "output_nc",
+  "name": "outputnc",
   "display_name": "Output NetCDF",
   "sort_order": 5,
   "template_files": [],
