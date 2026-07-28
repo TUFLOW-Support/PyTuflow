@@ -56,7 +56,10 @@ class BaseEngineModule(BaseModule):
             subtarget = block.get("subtarget_cf")
             if subtarget:
                 pattern, is_regex, flags = _parse_filter(subtarget)
-                input_subtarget = cf.find_input(pattern, regex=is_regex, regex_flags=flags)
+                if '==' in pattern:
+                    input_subtarget = cf.find_input(filter_by=pattern, regex=is_regex, regex_flags=flags)
+                else:
+                    input_subtarget = cf.find_input(lhs=pattern, regex=is_regex, regex_flags=flags)
                 for inp in input_subtarget:
                     if inp.cf:
                         cf = inp.cf[0]
@@ -106,7 +109,10 @@ class BaseEngineModule(BaseModule):
             if is_comment:
                 found = cf.find_input(filter_by=pattern, comments=True, regex=is_regex, regex_flags=flags)
             else:
-                found = cf.find_input(lhs=pattern, recursive=False, regex=is_regex, regex_flags=flags)
+                if '==' in pattern:
+                    found = cf.find_input(filter_by=pattern, recursive=False, regex=is_regex, regex_flags=flags)
+                else:
+                    found = cf.find_input(lhs=pattern, recursive=False, regex=is_regex, regex_flags=flags)
             if found:
                 return  # sentinel present — block already inserted
 
@@ -183,9 +189,14 @@ class BaseEngineModule(BaseModule):
             last_ref = None
             for cmd_entry in rule.get('commands', []):
                 pattern, is_regex, flags = _parse_filter(cmd_entry)
-                matches = cf.find_input(
-                    lhs=pattern, recursive=False, regex=is_regex, regex_flags=flags
-                )
+                if '==' in pattern:
+                    matches = cf.find_input(
+                        filter_by=pattern, recursive=False, regex=is_regex, regex_flags=flags
+                    )
+                else:
+                    matches = cf.find_input(
+                        lhs=pattern, recursive=False, regex=is_regex, regex_flags=flags
+                    )
                 if matches:
                     last_ref = matches[-1]
             if last_ref is not None:

@@ -171,6 +171,9 @@ class Scope:
             cls = ControlScope
         elif type_ == 'VARIABLE':
             cls = VariableScope
+        elif type_ == 'BLOCK':
+            from .cf.block import _BlockScope
+            cls = _BlockScope
         else:
             logger.error('Scope type not recognised - {0}'.format(type_))
             raise TypeError('Scope type not recognised - {0}'.format(type_))

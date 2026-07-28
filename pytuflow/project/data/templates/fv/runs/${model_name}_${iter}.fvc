@@ -99,3 +99,8 @@ Write Check Files == ..\check											! Directory for GIS check files
 ##COMMANDS output_nc_param##
 End Output
 ##ENDIF##
+##IF module:output_points##
+##COMMANDS fvc_output_points##
+##COMMANDS output_points_param##
+End Output
+##ENDIF##

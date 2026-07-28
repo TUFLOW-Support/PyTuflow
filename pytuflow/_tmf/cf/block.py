@@ -95,7 +95,7 @@ class BlockControl(ControlFileBuildState):
         inputs, _ = self._get_trd_inputs(self)
         if inputs:
             inputs = inputs.copy()
-            for inp in inputs:
+            for inp in inputs.inputs(include_hidden=True):
                 inp.scope.append(block_scope)
         else:  # add an empty command, otherwise the scope writer won't close the block
             cmd = FVCommand('', self.config, self.fpath)
