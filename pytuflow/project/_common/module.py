@@ -1,11 +1,15 @@
 from __future__ import annotations
 
 import re
+import typing
 from string import Template
 
 from ..abc.module import BaseModule
 from ..template.manager import TemplateManager
 from .utils import _normalize_slashes, _parse_filter
+
+if typing.TYPE_CHECKING:
+    from ..._tmf.abc.input import Input
 
 
 class BaseEngineModule(BaseModule):
@@ -116,16 +120,17 @@ class BaseEngineModule(BaseModule):
             if found:
                 return  # sentinel present — block already inserted
 
-            current_ref = self._find_block_anchor(cf, block)
+            current_ref, anchor_rule = self._find_block_anchor(cf, block)
             if current_ref:
                 cf = current_ref.parent
             for cmd in commands:
                 if cmd.strip():
-                    current_ref = self._insert_or_append(cf, current_ref, cmd)
+                    current_ref = self._insert_or_append(cf, current_ref, cmd, anchor_rule)
+                anchor_rule = 'after'  # switch back to after so that subsequent commands appear in expected order
             return
 
         # ── Per-command mode (no existence_check) ────────────────────────────
-        current_ref = self._find_block_anchor(cf, block)
+        current_ref, anchor_rule = self._find_block_anchor(cf, block)
         pending_decorators: list[str] = []
         past_first_real_command = False
 
@@ -168,12 +173,13 @@ class BaseEngineModule(BaseModule):
 
             for dec in pending_decorators:
                 if dec.strip():
-                    current_ref = self._insert_or_append(cf, current_ref, dec)
+                    current_ref = self._insert_or_append(cf, current_ref, dec, anchor_rule)
+                anchor_rule = 'after'  # switch back to after so that subsequent commands appear in expected order
             pending_decorators.clear()
 
-            current_ref = self._insert_or_append(cf, current_ref, cmd)
+            current_ref = self._insert_or_append(cf, current_ref, cmd, anchor_rule)
 
-    def _find_block_anchor(self, cf, block: dict):
+    def _find_block_anchor(self, cf, block: dict) -> tuple['Input | None', str]:
         """Return the input after which to start inserting, or ``None`` (append).
 
         Priority:
@@ -181,15 +187,16 @@ class BaseEngineModule(BaseModule):
         2. ``insert_after_lhs`` fallback.
         3. ``None`` — commands are appended to the end of the file.
         """
+        rule_type = ''
         placement_rule = block.get('placement_rule')
         if placement_rule:
             rules = self._get_rules()
             rule = rules.get(placement_rule, {})
             rule_type = rule.get('rule', 'after')
-            if rule_type != 'after':
+            if rule_type not in ['before', 'after']:
                 raise NotImplementedError(
                     f"Placement rule strategy '{rule_type}' (from rule '{placement_rule}') "
-                    f"is not implemented. Only 'after' is currently supported."
+                    f"is not implemented."
                 )
             last_ref = None
             for cmd_entry in rule.get('commands', []):
@@ -205,20 +212,20 @@ class BaseEngineModule(BaseModule):
                 if matches:
                     last_ref = matches[-1]
             if last_ref is not None:
-                return last_ref
+                return last_ref, rule_type
 
         insert_after_lhs = block.get('insert_after_lhs')
         if insert_after_lhs:
             refs = cf.find_input(lhs=insert_after_lhs, recursive='similar')
             if refs:
-                return refs[-1]
+                return refs[-1], rule_type
 
-        return None  # append mode
+        return None, rule_type  # append mode
 
     @staticmethod
-    def _insert_or_append(cf, ref_inp, cmd: str):
+    def _insert_or_append(cf, ref_inp, cmd: str, anchor_rule: str):
         """Insert *cmd* after *ref_inp*, or append when *ref_inp* is ``None``."""
         if ref_inp is None:
             cf.append_input(cmd)
             return None
-        return cf.insert_input(ref_inp, cmd, after=True)
+        return cf.insert_input(ref_inp, cmd, after=True if anchor_rule == 'after' else False, gap=0 if anchor_rule == 'after' else 1)

@@ -35,5 +35,12 @@
     "commands": [
       "/^output$/i"
     ]
+  },
+  "before_fvc_output": {
+    "description": "Insert before all the fv output blocks.",
+    "rule": "before",
+    "commands": [
+      "/^output$/i"
+    ]
   }
 }

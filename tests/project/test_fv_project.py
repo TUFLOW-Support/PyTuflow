@@ -193,8 +193,8 @@ class TestFVBaseModuleApplyToControlFiles:
         module.apply_to_control_files({'fvc': fvc}, variables)
         fvc.write('inplace')
 
-        tcf2 = FVC(fvc_path)
-        active = tcf2.find_input(filter_by='^output == netcdf$', recursive=False, regex=True, regex_flags=re.IGNORECASE)
+        fvc2 = FVC(fvc_path)
+        active = fvc2.find_input(filter_by='^output == netcdf$', recursive=False, regex=True, regex_flags=re.IGNORECASE)
         assert active, "Output == netcdf should have been inserted via placement rule"
 
     def test_apply_inserts_via_placement_rule_with_include_file(self, project_dir):
@@ -228,9 +228,38 @@ class TestFVBaseModuleApplyToControlFiles:
         module.apply_to_control_files({'fvc': fvc}, variables)
         fvc.write('inplace')
 
-        tcf2 = FVC(fvc_path)
-        active = tcf2.find_input(filter_by='^output == netcdf$', recursive=False, regex=True, regex_flags=re.IGNORECASE)
+        fvc2 = FVC(fvc_path)
+        active = fvc2.find_input(filter_by='^output == netcdf$', recursive=False, regex=True, regex_flags=re.IGNORECASE)
         assert not active, "Output == netcdf should not have been inserted into the main fvc"
-        active = tcf2.find_input(filter_by='^output == netcdf$', recursive='similar', regex=True, regex_flags=re.IGNORECASE)
+        active = fvc2.find_input(filter_by='^output == netcdf$', recursive='similar', regex=True, regex_flags=re.IGNORECASE)
         assert active, "Output == netcdf should have been added"
         assert active[0].parent.fpath.name == 'outputs.fvc', "Output == netcdf should have been added to outputs.fvc"
+
+    def test_apply_inserts_via_placement_rule_with_before_anchor(self, project_dir):
+        """apply_to_control_files uses placement_rule to find the last control-file command."""
+        from pytuflow.project.fv.project import get_available_modules
+        OutputFlux = get_available_modules()['outputflux']
+        from pytuflow import FVC
+
+        # Create bare-bones project (no estry)
+        p = FVProject('mymodel', project_dir, crs='EPSG:32760', modules=[])
+        p.create()
+
+        fvc_path = project_dir / 'runs' / 'mymodel_001.fvc'
+        fvc = FVC(fvc_path)
+
+        # Apply outputflux module — should insert via placement_rule which has a 'before' rule
+        (project_dir / 'model').mkdir(parents=True, exist_ok=True)
+        module = OutputFlux()
+        variables = {'model_name': 'mymodel', 'iter': '001'}
+        module.apply_to_control_files({'fvc': fvc}, variables)
+        fvc.write('inplace')
+
+        fvc2 = FVC(fvc_path)
+        flux = fvc2.find_input(filter_by='^output == flux$', recursive=False, regex=True, regex_flags=re.IGNORECASE)
+        assert flux, "Output == flux should have been inserted via placement rule"
+        nodestring = fvc2.find_input(filter_by='Read GIS Nodestring', recursive=False)
+        assert nodestring, "Read GIS Nodestring should have been inserted via placement rule"
+        iflux = fvc2.inputs.index(flux[0])
+        inodestring = fvc2.inputs.index(nodestring[0])
+        assert inodestring < iflux, "Read GIS Nodestring should have been placed before output == flux command"

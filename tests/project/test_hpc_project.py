@@ -708,14 +708,14 @@ class TestPlacementRules:
             encoding='utf-8',
         )
 
-        fake_rules = {'hpc_control_files': {'rule': 'before', 'commands': ['Read Materials File']}}
+        fake_rules = {'hpc_control_files': {'rule': 'inbetween', 'commands': ['Read Materials File']}}
         original_get_rules = mgr_mod.TemplateManager.get_rules
 
         mgr_mod.TemplateManager.get_rules = lambda self: fake_rules
         try:
             tcf = TCF(tcf_path)
             module = EstryModule()
-            with pytest.raises(NotImplementedError, match="'before'.*not implemented"):
+            with pytest.raises(NotImplementedError, match="'inbetween'.*not implemented"):
                 module.apply_to_control_files({'tcf': tcf}, {'model_name': 'mymodel', 'iter': '001'})
         finally:
             mgr_mod.TemplateManager.get_rules = original_get_rules
