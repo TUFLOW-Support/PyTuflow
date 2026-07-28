@@ -39,13 +39,16 @@ class HPCProject(BaseEngineProject):
     r"""HPC project generator.
 
     The HPC project generator is a highly customisable class for generating
-    a Classic/HPC project from scratch. The class uses template files, features, variables,
+    a Classic/HPC project from scratch. The class uses template files, modular features, variables,
     and directives, which are fully customisable and extendable by the user.
 
     When an HPC project is created for the first time, the template files are copied
-    locally to the users home directory, ``%userprofile%\.tuflow_model_files\project_templates``
-    on Windows or ``~/.tuflow_model_files/project_templates`` on Linux. Subsequent calls
-    will use these cached templates, and the user is free to modify and/or extend them.
+    locally to the users home directory:
+    
+    - Windows: ``%userprofile%\.tuflow_model_files\project_templates``
+    - Linux: ``~/.tuflow_model_files/project_templates``
+    
+    Subsequent calls will use these cached templates, and the user is free to modify and/or extend them.
 
     Projects can also be created via the CLI with ``python -m pytuflow.project create --engine hpc``.
     See below for examples.
@@ -179,7 +182,8 @@ class HPCProject(BaseEngineProject):
 
     .. code-block:: console
 
-        python -m pytuflow.project insert --engine hpc \
+        python -m pytuflow.project insert \
+            --engine hpc \
             --feature po \
             --cf models/TUFLOW/runs/Tutorial_Model_001.tcf
     """
