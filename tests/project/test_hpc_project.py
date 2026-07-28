@@ -1,9 +1,9 @@
-"""Tests for HPCProject create and insert_module."""
+"""Tests for HPCProject create and insert_feature."""
 import pytest
 from pathlib import Path
 from unittest.mock import patch, MagicMock
 
-from pytuflow.project.hpc.project import HPCProject, get_available_modules, _variables_from_tcf_path
+from pytuflow.project.hpc.project import HPCProject, get_available_features, _variables_from_tcf_path
 from pytuflow.project.template.manager import TemplateManager
 
 
@@ -123,67 +123,67 @@ class TestHPCProjectCreate:
             p.create()
 
 
-class TestHPCProjectWithEstryModule:
+class TestHPCProjectWithEstryfeature:
     def test_ecf_created(self, project_dir):
-        p = HPCProject('mymodel', project_dir, crs='EPSG:32760', modules=['estry'])
+        p = HPCProject('mymodel', project_dir, crs='EPSG:32760', features=['estry'])
         p.create()
         assert (project_dir / 'model' / 'mymodel_001.ecf').exists()
 
     def test_tcf_contains_estry_command(self, project_dir):
-        p = HPCProject('mymodel', project_dir, crs='EPSG:32760', modules=['estry'])
+        p = HPCProject('mymodel', project_dir, crs='EPSG:32760', features=['estry'])
         p.create()
         tcf_text = (project_dir / 'runs' / 'mymodel_001.tcf').read_text()
         assert 'Estry Control File' in tcf_text
-        # Should be uncommented (active module)
+        # Should be uncommented (active feature)
         lines = [l for l in tcf_text.splitlines() if 'Estry Control File' in l]
         assert any(not l.strip().startswith('!') for l in lines)
 
     def test_tcf_no_estry_when_inactive(self, project_dir):
-        """Without estry module, estry line should be absent from TCF (template omits it)."""
-        p = HPCProject('mymodel', project_dir, crs='EPSG:32760', modules=[])
+        """Without estry feature, estry line should be absent from TCF (template omits it)."""
+        p = HPCProject('mymodel', project_dir, crs='EPSG:32760', features=[])
         p.create()
         tcf_text = (project_dir / 'runs' / 'mymodel_001.tcf').read_text()
-        # Template uses ##IF module:estry## — line should be absent entirely
+        # Template uses ##IF feature:estry## — line should be absent entirely
         active_lines = [l for l in tcf_text.splitlines()
                         if 'Estry Control File' in l and not l.strip().startswith('!')]
-        assert not active_lines, "Estry Control File should not be active when module is off"
+        assert not active_lines, "Estry Control File should not be active when feature is off"
 
 
-class TestHPCProjectWithSoilsModule:
+class TestHPCProjectWithSoilsfeature:
     def test_soils_file_created(self, project_dir):
-        p = HPCProject('mymodel', project_dir, crs='EPSG:32760', modules=['soils'])
+        p = HPCProject('mymodel', project_dir, crs='EPSG:32760', features=['soils'])
         p.create()
         assert (project_dir / 'model' / 'mymodel_soils.tsoilf').exists()
 
     def test_tcf_contains_soils_command(self, project_dir):
-        p = HPCProject('mymodel', project_dir, crs='EPSG:32760', modules=['soils'])
+        p = HPCProject('mymodel', project_dir, crs='EPSG:32760', features=['soils'])
         p.create()
         tcf_text = (project_dir / 'runs' / 'mymodel_001.tcf').read_text()
         lines = [l for l in tcf_text.splitlines() if 'Read Soils File' in l]
         assert any(not l.strip().startswith('!') for l in lines)
 
 
-class TestHPCProjectWithEventsModule:
+class TestHPCProjectWithEventsfeature:
     def test_tef_created(self, project_dir):
-        p = HPCProject('mymodel', project_dir, crs='EPSG:32760', modules=['events'])
+        p = HPCProject('mymodel', project_dir, crs='EPSG:32760', features=['events'])
         p.create()
         assert (project_dir / 'runs' / 'mymodel_events.tef').exists()
 
     def test_tcf_events_uncommented_when_active(self, project_dir):
-        p = HPCProject('mymodel', project_dir, crs='EPSG:32760', modules=['events'])
+        p = HPCProject('mymodel', project_dir, crs='EPSG:32760', features=['events'])
         p.create()
         tcf_text = (project_dir / 'runs' / 'mymodel_001.tcf').read_text()
         lines = [l for l in tcf_text.splitlines() if 'Event File' in l]
         assert any(not l.strip().startswith('!') for l in lines)
 
     def test_tcf_events_absent_when_inactive(self, project_dir):
-        """Without events module, Event File line should be absent from TCF."""
-        p = HPCProject('mymodel', project_dir, crs='EPSG:32760', modules=[])
+        """Without events feature, Event File line should be absent from TCF."""
+        p = HPCProject('mymodel', project_dir, crs='EPSG:32760', features=[])
         p.create()
         tcf_text = (project_dir / 'runs' / 'mymodel_001.tcf').read_text()
         active_lines = [l for l in tcf_text.splitlines()
                         if 'Event File' in l and not l.strip().startswith('!')]
-        assert not active_lines, "Event File should not be active when module is off"
+        assert not active_lines, "Event File should not be active when feature is off"
 
 
 class TestHPCProjectInsertPoint:
@@ -195,27 +195,27 @@ class TestHPCProjectInsertPoint:
         assert '##INSERT_POINT' not in tcf_text
 
 
-class TestHPCProjectUnknownModule:
-    def test_unknown_module_raises(self, project_dir):
-        p = HPCProject('mymodel', project_dir, crs='EPSG:32760', modules=['nonexistent'])
-        with pytest.raises(ValueError, match="Unknown module"):
+class TestHPCProjectUnknownfeature:
+    def test_unknown_feature_raises(self, project_dir):
+        p = HPCProject('mymodel', project_dir, crs='EPSG:32760', features=['nonexistent'])
+        with pytest.raises(ValueError, match="Unknown feature"):
             p.create()
 
 
-class TestGetAvailableModules:
-    def test_returns_all_modules(self):
-        modules = get_available_modules()
+class TestGetAvailablefeatures:
+    def test_returns_all_features(self):
+        features = get_available_features()
         expected = {'estry', 'quadtree', 'soils', 'ad', 'toc', 'rf', 'events', 'sgs', 'po', 'tutorial', 'swmm'}
-        assert set(modules.keys()) == expected
+        assert set(features.keys()) == expected
 
-    def test_modules_have_name(self):
-        modules = get_available_modules()
-        for name, cls in modules.items():
+    def test_features_have_name(self):
+        features = get_available_features()
+        for name, cls in features.items():
             assert cls.NAME == name
 
-    def test_modules_have_display_name(self):
-        modules = get_available_modules()
-        for name, cls in modules.items():
+    def test_features_have_display_name(self):
+        features = get_available_features()
+        for name, cls in features.items():
             assert cls.DISPLAY_NAME
 
 
@@ -238,17 +238,17 @@ class TestVariablesFromTcfPath:
         assert v['model_name'] == 'override'
 
 
-class TestHPCBaseModuleApplyToControlFiles:
-    """Tests for HPCBaseModule.apply_to_control_files logic."""
+class TestHPCBasefeatureApplyToControlFiles:
+    """Tests for HPCBasefeature.apply_to_control_files logic."""
 
     def test_apply_skips_if_already_present(self, project_dir):
         """If command already exists in TCF, apply_to_control_files should skip."""
-        from pytuflow.project.hpc.project import get_available_modules
-        EstryModule = get_available_modules()['estry']
+        from pytuflow.project.hpc.project import get_available_features
+        Estryfeature = get_available_features()['estry']
         from pytuflow import TCF
 
         # Create project with estry already active
-        p = HPCProject('mymodel', project_dir, crs='EPSG:32760', modules=['estry'])
+        p = HPCProject('mymodel', project_dir, crs='EPSG:32760', features=['estry'])
         p.create()
 
         tcf_path = project_dir / 'runs' / 'mymodel_001.tcf'
@@ -256,21 +256,21 @@ class TestHPCBaseModuleApplyToControlFiles:
         before_lines = list(tcf.find_input(lhs='estry control file', recursive=False))
 
         # Apply again — should be a no-op
-        module = EstryModule()
+        feature = Estryfeature()
         variables = {'model_name': 'mymodel', 'iter': '001'}
-        module.apply_to_control_files({'tcf': tcf}, variables)
+        feature.apply_to_control_files({'tcf': tcf}, variables)
 
         after_lines = list(tcf.find_input(lhs='estry control file', recursive=False))
         assert len(before_lines) == len(after_lines)
 
     def test_apply_inserts_via_placement_rule(self, project_dir):
         """apply_to_control_files uses placement_rule to find the last control-file command."""
-        from pytuflow.project.hpc.project import get_available_modules
-        EstryModule = get_available_modules()['estry']
+        from pytuflow.project.hpc.project import get_available_features
+        Estryfeature = get_available_features()['estry']
         from pytuflow import TCF
 
         # Create bare-bones project (no estry)
-        p = HPCProject('mymodel', project_dir, crs='EPSG:32760', modules=[])
+        p = HPCProject('mymodel', project_dir, crs='EPSG:32760', features=[])
         p.create()
 
         tcf_path = project_dir / 'runs' / 'mymodel_001.tcf'
@@ -281,11 +281,11 @@ class TestHPCBaseModuleApplyToControlFiles:
             filter_by='##INSERT_POINT control_files##', comments=True, recursive=False
         ), "INSERT_POINT comment must not appear in rendered TCF"
 
-        # Apply estry module — should insert via placement_rule
+        # Apply estry feature — should insert via placement_rule
         (project_dir / 'model').mkdir(parents=True, exist_ok=True)
-        module = EstryModule()
+        feature = Estryfeature()
         variables = {'model_name': 'mymodel', 'iter': '001'}
-        module.apply_to_control_files({'tcf': tcf}, variables)
+        feature.apply_to_control_files({'tcf': tcf}, variables)
         tcf.write('inplace')
 
         tcf2 = TCF(tcf_path)
@@ -294,8 +294,8 @@ class TestHPCBaseModuleApplyToControlFiles:
 
     def test_apply_uncomments_manually_added_comment(self, tmp_path):
         """apply_to_control_files can uncomment an existing commented line."""
-        from pytuflow.project.hpc.project import get_available_modules
-        EstryModule = get_available_modules()['estry']
+        from pytuflow.project.hpc.project import get_available_features
+        Estryfeature = get_available_features()['estry']
         from pytuflow import TCF
 
         # Write a minimal TCF with a commented Estry line (simulating a hand-edited file)
@@ -311,9 +311,9 @@ class TestHPCBaseModuleApplyToControlFiles:
         )
 
         tcf = TCF(tcf_path)
-        module = EstryModule()
+        feature = Estryfeature()
         variables = {'model_name': 'mymodel', 'iter': '001'}
-        module.apply_to_control_files({'tcf': tcf}, variables)
+        feature.apply_to_control_files({'tcf': tcf}, variables)
         tcf.write('inplace')
 
         tcf2 = TCF(tcf_path)
@@ -322,11 +322,11 @@ class TestHPCBaseModuleApplyToControlFiles:
 
     def test_partial_block_some_commands_exist(self, tmp_path):
         """Commands that already exist are skipped individually; missing ones are inserted."""
-        from pytuflow.project.hpc.modules._base import HPCBaseModule
+        from pytuflow.project.hpc.features._base import HPCBaseFeature
         from pytuflow import TCF
 
-        # Create a minimal module-like block with two real commands
-        class TwoCommandModule(HPCBaseModule):
+        # Create a minimal feature-like block with two real commands
+        class TwoCommandfeature(HPCBaseFeature):
             NAME = '_test'
             DISPLAY_NAME = 'Test'
             def _get_config(self):
@@ -353,7 +353,7 @@ class TestHPCBaseModuleApplyToControlFiles:
         )
 
         tcf = TCF(tcf_path)
-        TwoCommandModule().apply_to_control_files({'tcf': tcf}, {})
+        TwoCommandfeature().apply_to_control_files({'tcf': tcf}, {})
         tcf.write('inplace')
 
         content = tcf_path.read_text(encoding='utf-8')
@@ -362,10 +362,10 @@ class TestHPCBaseModuleApplyToControlFiles:
 
     def test_partial_block_some_commands_commented(self, tmp_path):
         """Commented commands are uncommented individually; others are inserted."""
-        from pytuflow.project.hpc.modules._base import HPCBaseModule
+        from pytuflow.project.hpc.features._base import HPCBaseFeature
         from pytuflow import TCF
 
-        class TwoCommandModule(HPCBaseModule):
+        class TwoCommandfeature(HPCBaseFeature):
             NAME = '_test'
             DISPLAY_NAME = 'Test'
             def _get_config(self):
@@ -392,7 +392,7 @@ class TestHPCBaseModuleApplyToControlFiles:
         )
 
         tcf = TCF(tcf_path)
-        TwoCommandModule().apply_to_control_files({'tcf': tcf}, {})
+        TwoCommandfeature().apply_to_control_files({'tcf': tcf}, {})
         tcf.write('inplace')
 
         tcf2 = TCF(tcf_path)
@@ -401,10 +401,10 @@ class TestHPCBaseModuleApplyToControlFiles:
 
     def test_decorator_comments_not_inserted_when_all_commands_exist(self, tmp_path):
         """Section-header decorator comments are NOT inserted when all real commands exist."""
-        from pytuflow.project.hpc.modules._base import HPCBaseModule
+        from pytuflow.project.hpc.features._base import HPCBaseFeature
         from pytuflow import TCF
 
-        class DecoratedModule(HPCBaseModule):
+        class Decoratedfeature(HPCBaseFeature):
             NAME = '_test'
             DISPLAY_NAME = 'Test'
             def _get_config(self):
@@ -432,7 +432,7 @@ class TestHPCBaseModuleApplyToControlFiles:
         )
 
         tcf = TCF(tcf_path)
-        DecoratedModule().apply_to_control_files({'tcf': tcf}, {})
+        Decoratedfeature().apply_to_control_files({'tcf': tcf}, {})
         tcf.write('inplace')
 
         content = tcf_path.read_text(encoding='utf-8')
@@ -441,10 +441,10 @@ class TestHPCBaseModuleApplyToControlFiles:
 
     def test_trailing_comment_after_real_command_is_inserted(self, tmp_path):
         """Comment lines that follow a real command (e.g. placeholders) are always inserted."""
-        from pytuflow.project.hpc.modules._base import HPCBaseModule
+        from pytuflow.project.hpc.features._base import HPCBaseFeature
         from pytuflow import TCF
 
-        class TrailingCommentModule(HPCBaseModule):
+        class TrailingCommentfeature(HPCBaseFeature):
             NAME = '_test'
             DISPLAY_NAME = 'Test'
             def _get_config(self):
@@ -466,7 +466,7 @@ class TestHPCBaseModuleApplyToControlFiles:
         tcf_path.write_text('Solution Scheme == HPC\n', encoding='utf-8')
 
         tcf = TCF(tcf_path)
-        TrailingCommentModule().apply_to_control_files({'tcf': tcf}, {})
+        TrailingCommentfeature().apply_to_control_files({'tcf': tcf}, {})
         tcf.write('inplace')
 
         content = tcf_path.read_text(encoding='utf-8')
@@ -474,10 +474,10 @@ class TestHPCBaseModuleApplyToControlFiles:
         assert '! Read GIS Layer == <path/to/layer>' in content, \
             "Trailing placeholder comment should be inserted after the real command"
 
-    def test_po_module_inserts_placeholder_comment(self, tmp_path):
-        """Regression: po module's '! Read GIS PO' placeholder must appear in the TCF."""
-        from pytuflow.project.hpc.project import get_available_modules
-        POModule = get_available_modules()['po']
+    def test_po_feature_inserts_placeholder_comment(self, tmp_path):
+        """Regression: po feature's '! Read GIS PO' placeholder must appear in the TCF."""
+        from pytuflow.project.hpc.project import get_available_features
+        POfeature = get_available_features()['po']
         from pytuflow import TCF
 
         tcf_dir = tmp_path / 'runs'
@@ -489,7 +489,7 @@ class TestHPCBaseModuleApplyToControlFiles:
         )
 
         tcf = TCF(tcf_path)
-        POModule().apply_to_control_files({'tcf': tcf}, {'model_name': 'test', 'iter': '001'})
+        POfeature().apply_to_control_files({'tcf': tcf}, {'model_name': 'test', 'iter': '001'})
         tcf.write('inplace')
 
         content = tcf_path.read_text(encoding='utf-8')
@@ -502,7 +502,7 @@ class TestParseFilter:
     """Unit tests for the _parse_filter helper."""
 
     def test_plain_string_unchanged(self):
-        from pytuflow.project.hpc.modules._base import _parse_filter
+        from pytuflow.project.hpc.features._base import _parse_filter
         pattern, is_regex, flags = _parse_filter("estry control file")
         assert pattern == "estry control file"
         assert is_regex is False
@@ -510,7 +510,7 @@ class TestParseFilter:
 
     def test_regex_basic(self):
         import re
-        from pytuflow.project.hpc.modules._base import _parse_filter
+        from pytuflow.project.hpc.features._base import _parse_filter
         pattern, is_regex, flags = _parse_filter("/^SGS$/i")
         assert pattern == "^SGS$"
         assert is_regex is True
@@ -518,14 +518,14 @@ class TestParseFilter:
 
     def test_regex_multiple_flags(self):
         import re
-        from pytuflow.project.hpc.modules._base import _parse_filter
+        from pytuflow.project.hpc.features._base import _parse_filter
         pattern, is_regex, flags = _parse_filter("/^set soil\\s*==/im")
         assert pattern == "^set soil\\s*=="
         assert is_regex is True
         assert flags == re.IGNORECASE | re.MULTILINE
 
     def test_regex_no_flags(self):
-        from pytuflow.project.hpc.modules._base import _parse_filter
+        from pytuflow.project.hpc.features._base import _parse_filter
         pattern, is_regex, flags = _parse_filter("/^exact$/")
         assert pattern == "^exact$"
         assert is_regex is True
@@ -537,8 +537,8 @@ class TestAutoCommentDetection:
 
     def test_auto_uncomments_exact_command(self, tmp_path):
         """Auto-detection finds and uncomments '! Estry Control File ==' precisely."""
-        from pytuflow.project.hpc.project import get_available_modules
-        EstryModule = get_available_modules()['estry']
+        from pytuflow.project.hpc.project import get_available_features
+        Estryfeature = get_available_features()['estry']
         from pytuflow import TCF
 
         tcf_dir = tmp_path / 'runs'
@@ -552,7 +552,7 @@ class TestAutoCommentDetection:
         )
 
         tcf = TCF(tcf_path)
-        EstryModule().apply_to_control_files({'tcf': tcf}, {'model_name': 'mymodel', 'iter': '001'})
+        Estryfeature().apply_to_control_files({'tcf': tcf}, {'model_name': 'mymodel', 'iter': '001'})
         tcf.write('inplace')
 
         tcf2 = TCF(tcf_path)
@@ -561,8 +561,8 @@ class TestAutoCommentDetection:
 
     def test_auto_detect_avoids_false_prefix_match(self, tmp_path):
         """Auto-detection must NOT match 'Set Soil Layer 2' when looking for 'Set Soil'."""
-        from pytuflow.project.hpc.project import get_available_modules
-        SoilsModule = get_available_modules()['soils']
+        from pytuflow.project.hpc.project import get_available_features
+        Soilsfeature = get_available_features()['soils']
         from pytuflow import TGC
 
         tgc_dir = tmp_path / 'model'
@@ -575,22 +575,22 @@ class TestAutoCommentDetection:
         )
 
         tgc = TGC(tgc_path)
-        SoilsModule().apply_to_control_files({'tgc': tgc}, {'model_name': 'mymodel', 'iter': '001'})
+        Soilsfeature().apply_to_control_files({'tgc': tgc}, {'model_name': 'mymodel', 'iter': '001'})
         tgc.write('inplace')
 
         content = tgc_path.read_text(encoding='utf-8')
         assert '! Set Soil Layer 2' in content, "Set Soil Layer 2 should remain commented"
 
-    def test_no_commented_lhs_in_module_jsons(self):
-        """No module JSON should contain a 'commented_lhs' key — it is now auto-derived."""
+    def test_no_commented_lhs_in_feature_jsons(self):
+        """No feature JSON should contain a 'commented_lhs' key — it is now auto-derived."""
         from pytuflow.project.template.manager import TemplateManager
-        from pytuflow.project.hpc.project import get_available_modules
+        from pytuflow.project.hpc.project import get_available_features
         manager = TemplateManager('hpc')
-        for name in get_available_modules():
-            cfg = manager.get_module_config(name)
+        for name in get_available_features():
+            cfg = manager.get_feature_config(name)
             for block in cfg.get('command_blocks', []):
                 assert 'commented_lhs' not in block, \
-                    f"Module '{name}' block '{block.get('id')}' still has deprecated 'commented_lhs'"
+                    f"feature '{name}' block '{block.get('id')}' still has deprecated 'commented_lhs'"
 
 
 class TestPlacementRules:
@@ -615,8 +615,8 @@ class TestPlacementRules:
 
     def test_regex_command_in_rules_is_recognised(self, tmp_path):
         """A /pattern/flags entry in a rule's commands list is used as a regex match."""
-        from pytuflow.project.hpc.project import get_available_modules
-        EstryModule = get_available_modules()['estry']
+        from pytuflow.project.hpc.project import get_available_features
+        Estryfeature = get_available_features()['estry']
         from pytuflow import TCF
         import pytuflow.project.template.manager as mgr_mod
 
@@ -641,7 +641,7 @@ class TestPlacementRules:
         mgr_mod.TemplateManager.get_rules = lambda self: fake_rules
         try:
             tcf = TCF(tcf_path)
-            EstryModule().apply_to_control_files({'tcf': tcf}, {'model_name': 'mymodel', 'iter': '001'})
+            Estryfeature().apply_to_control_files({'tcf': tcf}, {'model_name': 'mymodel', 'iter': '001'})
             tcf.write('inplace')
         finally:
             mgr_mod.TemplateManager.get_rules = original_get_rules
@@ -651,21 +651,21 @@ class TestPlacementRules:
         mat_pos = content.lower().find('read materials file')
         assert ecf_pos > mat_pos, "Estry should be inserted after Read Materials File via regex rule"
 
-    def test_module_jsons_use_placement_rule(self):
-        """All modules that previously used insert_point now use placement_rule."""
+    def test_feature_jsons_use_placement_rule(self):
+        """All features that previously used insert_point now use placement_rule."""
         from pytuflow.project.template.manager import TemplateManager
         manager = TemplateManager('hpc')
         for name in ['estry', 'soils', 'ad', 'rf', 'quadtree', 'toc']:
-            cfg = manager.get_module_config(name)
+            cfg = manager.get_feature_config(name)
             for block in cfg.get('command_blocks', []):
                 assert 'insert_point' not in block, (
-                    f"Module '{name}' block '{block.get('id')}' still uses deprecated 'insert_point'"
+                    f"feature '{name}' block '{block.get('id')}' still uses deprecated 'insert_point'"
                 )
 
     def test_placement_rule_inserts_after_last_cf_command(self, tmp_path):
         """Placement rule inserts after the last matching command in the CF section."""
-        from pytuflow.project.hpc.project import get_available_modules
-        EstryModule = get_available_modules()['estry']
+        from pytuflow.project.hpc.project import get_available_features
+        Estryfeature = get_available_features()['estry']
         from pytuflow import TCF
 
         tcf_dir = tmp_path / 'runs'
@@ -682,8 +682,8 @@ class TestPlacementRules:
         )
 
         tcf = TCF(tcf_path)
-        module = EstryModule()
-        module.apply_to_control_files({'tcf': tcf}, {'model_name': 'mymodel', 'iter': '001'})
+        feature = Estryfeature()
+        feature.apply_to_control_files({'tcf': tcf}, {'model_name': 'mymodel', 'iter': '001'})
         tcf.write('inplace')
 
         content = tcf_path.read_text(encoding='utf-8')
@@ -693,8 +693,8 @@ class TestPlacementRules:
 
     def test_unsupported_rule_type_raises(self, tmp_path):
         """An unimplemented rule type in rules.json raises NotImplementedError."""
-        from pytuflow.project.hpc.project import get_available_modules
-        EstryModule = get_available_modules()['estry']
+        from pytuflow.project.hpc.project import get_available_features
+        Estryfeature = get_available_features()['estry']
         from pytuflow import TCF
         import pytuflow.project.template.manager as mgr_mod
 
@@ -714,9 +714,9 @@ class TestPlacementRules:
         mgr_mod.TemplateManager.get_rules = lambda self: fake_rules
         try:
             tcf = TCF(tcf_path)
-            module = EstryModule()
+            feature = Estryfeature()
             with pytest.raises(NotImplementedError, match="'inbetween'.*not implemented"):
-                module.apply_to_control_files({'tcf': tcf}, {'model_name': 'mymodel', 'iter': '001'})
+                feature.apply_to_control_files({'tcf': tcf}, {'model_name': 'mymodel', 'iter': '001'})
         finally:
             mgr_mod.TemplateManager.get_rules = original_get_rules
 
@@ -737,9 +737,9 @@ class TestExistenceCheck:
             'commands': commands,
         }
 
-    def _module(self):
-        from pytuflow.project.hpc.modules._base import HPCBaseModule
-        m = HPCBaseModule.__new__(HPCBaseModule)
+    def _feature(self):
+        from pytuflow.project.hpc.features._base import HPCBaseFeature
+        m = HPCBaseFeature.__new__(HPCBaseFeature)
         return m
 
     def test_comment_guard_inserts_when_absent(self, tmp_path):
@@ -752,7 +752,7 @@ class TestExistenceCheck:
             '! 1D/2D LINKING',
             ['! 1D/2D LINKING', 'Read GIS BC == ..\\model\\2d_bc_L.shp'],
         )
-        self._module()._apply_block(tbc, block, {})
+        self._feature()._apply_block(tbc, block, {})
         tbc.write('inplace')
         content = tbc_path.read_text(encoding='utf-8')
         assert '1D/2D LINKING' in content
@@ -769,7 +769,7 @@ class TestExistenceCheck:
             '! 1D/2D LINKING',
             ['! 1D/2D LINKING', 'Read GIS BC == ..\\model\\2d_bc_L.shp'],
         )
-        self._module()._apply_block(tbc, block, {})
+        self._feature()._apply_block(tbc, block, {})
         tbc.write('inplace')
         content = tbc_path.read_text(encoding='utf-8')
         assert content.count('Read GIS BC') == 2  # still only 2 — no duplicate inserted
@@ -781,7 +781,7 @@ class TestExistenceCheck:
             'Read GIS BC Linking',
             ['Read GIS BC Linking == ..\\model\\linking_L.shp'],
         )
-        self._module()._apply_block(tbc, block, {})
+        self._feature()._apply_block(tbc, block, {})
         tbc.write('inplace')
         content = tbc_path.read_text(encoding='utf-8')
         assert 'Read GIS BC Linking' in content
@@ -796,7 +796,7 @@ class TestExistenceCheck:
             'Read GIS BC Linking',
             ['Read GIS BC Linking == ..\\model\\linking_L.shp'],
         )
-        self._module()._apply_block(tbc, block, {})
+        self._feature()._apply_block(tbc, block, {})
         tbc.write('inplace')
         content = tbc_path.read_text(encoding='utf-8')
         assert content.count('Read GIS BC Linking') == 1  # not duplicated
@@ -838,10 +838,10 @@ class TestTemplateManagerIntegration:
 class TestCLICommands:
     """Integration tests for the CLI entry points."""
 
-    def test_list_modules(self, capsys):
+    def test_list_features(self, capsys):
         import sys
-        from pytuflow.project.__main__ import cmd_list_modules
-        cmd_list_modules(None)
+        from pytuflow.project.__main__ import cmd_list_features
+        cmd_list_features(None)
         captured = capsys.readouterr()
         assert 'estry' in captured.out
 
@@ -862,14 +862,14 @@ class TestCLICommands:
         assert (tmp_path / 'out' / 'runs' / 'testmodel_001.tcf').exists()
 
 
-class TestModuleJsonConfig:
-    """Tests for module JSON config loading via TemplateManager."""
+class TestfeatureJsonConfig:
+    """Tests for feature JSON config loading via TemplateManager."""
 
-    def test_module_config_loaded(self, tmp_path, monkeypatch):
+    def test_feature_config_loaded(self, tmp_path, monkeypatch):
         import pytuflow.project.template.manager as mgr_mod
         monkeypatch.setattr(mgr_mod, 'CACHE_ROOT', tmp_path / 'cache')
         manager = TemplateManager('hpc')
-        config = manager.get_module_config('estry')
+        config = manager.get_feature_config('estry')
         assert config['name'] == 'estry'
         assert 'command_blocks' in config
         assert 'template_files' in config
@@ -878,27 +878,27 @@ class TestModuleJsonConfig:
         import pytuflow.project.template.manager as mgr_mod
         monkeypatch.setattr(mgr_mod, 'CACHE_ROOT', tmp_path / 'cache')
         manager = TemplateManager('hpc')
-        config = manager.get_module_config('soils')
+        config = manager.get_feature_config('soils')
         targets = [b['target_cf'] for b in config['command_blocks']]
         assert 'tcf' in targets
         assert 'tgc' in targets
 
-    def test_module_config_cached(self, tmp_path, monkeypatch):
+    def test_feature_config_cached(self, tmp_path, monkeypatch):
         import pytuflow.project.template.manager as mgr_mod
         monkeypatch.setattr(mgr_mod, 'CACHE_ROOT', tmp_path / 'cache')
         manager = TemplateManager('hpc')
         manager.init_cache()
-        cached_path = manager._cache_modules_dir / 'estry.json'
+        cached_path = manager._cache_features_dir / 'estry.json'
         assert cached_path.exists()
 
-    def test_module_config_cache_reset(self, tmp_path, monkeypatch):
+    def test_feature_config_cache_reset(self, tmp_path, monkeypatch):
         import json
         import pytuflow.project.template.manager as mgr_mod
         monkeypatch.setattr(mgr_mod, 'CACHE_ROOT', tmp_path / 'cache')
         manager = TemplateManager('hpc')
         manager.init_cache()
         # Modify cached config
-        cached_path = manager._cache_modules_dir / 'estry.json'
+        cached_path = manager._cache_features_dir / 'estry.json'
         cached_path.write_text('{"name": "modified"}')
         # Reset should restore original
         manager.reset_cache()
@@ -906,28 +906,28 @@ class TestModuleJsonConfig:
             data = json.load(f)
         assert data['name'] == 'estry'
 
-    def test_unknown_module_returns_empty(self, tmp_path, monkeypatch):
+    def test_unknown_feature_returns_empty(self, tmp_path, monkeypatch):
         import pytuflow.project.template.manager as mgr_mod
         monkeypatch.setattr(mgr_mod, 'CACHE_ROOT', tmp_path / 'cache')
         manager = TemplateManager('hpc')
-        config = manager.get_module_config('nonexistent')
+        config = manager.get_feature_config('nonexistent')
         assert config == {}
 
-    def test_list_module_configs(self, tmp_path, monkeypatch):
+    def test_list_feature_configs(self, tmp_path, monkeypatch):
         import pytuflow.project.template.manager as mgr_mod
         monkeypatch.setattr(mgr_mod, 'CACHE_ROOT', tmp_path / 'cache')
         manager = TemplateManager('hpc')
-        names = manager.list_module_configs()
+        names = manager.list_feature_configs()
         assert 'estry' in names
         assert 'soils' in names
 
 
-class TestSoilsMultiCFModule:
-    """Tests that the soils module applies commands to both TCF and TGC."""
+class TestSoilsMultiCFfeature:
+    """Tests that the soils feature applies commands to both TCF and TGC."""
 
     def test_soils_adds_set_soil_to_tgc(self, project_dir):
         """Creating a project with soils should result in Set Soil in TGC."""
-        p = HPCProject('mymodel', project_dir, crs='EPSG:32760', modules=['soils'])
+        p = HPCProject('mymodel', project_dir, crs='EPSG:32760', features=['soils'])
         p.create()
         tgc_text = (project_dir / 'model' / 'mymodel_001.tgc').read_text()
         active_lines = [l for l in tgc_text.splitlines()
@@ -935,8 +935,8 @@ class TestSoilsMultiCFModule:
         assert active_lines, "TGC should contain active Set Soil command"
 
     def test_soils_tgc_content_without_soils(self, project_dir):
-        """Without soils module, TGC should have no soil section."""
-        p = HPCProject('mymodel', project_dir, crs='EPSG:32760', modules=[])
+        """Without soils feature, TGC should have no soil section."""
+        p = HPCProject('mymodel', project_dir, crs='EPSG:32760', features=[])
         p.create()
         tgc_text = (project_dir / 'model' / 'mymodel_001.tgc').read_text()
         assert 'Set Soil' not in tgc_text
@@ -956,8 +956,8 @@ class TestSoilsMultiCFModule:
         tcf_before = TCF(tcf_path)
         assert not tcf_before.find_input(lhs='read soils file', recursive=False)
 
-        # Insert soils module
-        HPCProject.insert_module_into('soils', tcf_path)
+        # Insert soils feature
+        HPCProject.insert_feature_into('soils', tcf_path)
 
         # TCF should now have Read Soils File
         tcf_after = TCF(tcf_path)
@@ -980,8 +980,8 @@ class TestSoilsMultiCFModule:
         p.create()
         tcf_path = project_dir / 'runs' / 'mymodel_001.tcf'
 
-        HPCProject.insert_module_into('soils', tcf_path)
-        HPCProject.insert_module_into('soils', tcf_path)
+        HPCProject.insert_feature_into('soils', tcf_path)
+        HPCProject.insert_feature_into('soils', tcf_path)
 
         tcf = TCF(tcf_path)
         soils_inps = tcf.find_input(lhs='read soils file', recursive=False)

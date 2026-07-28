@@ -53,7 +53,7 @@ class BaseEngineProject(BaseProject):
         self,
         name: str,
         output_dir: str | Path,
-        modules: list[str] | None = None,
+        features: list[str] | None = None,
         *,
         crs: str,
         create_empties: bool = True,
@@ -61,7 +61,7 @@ class BaseEngineProject(BaseProject):
     ):
         self.name = name
         self.output_dir = Path(output_dir)
-        self.module_names: list[str] = list(modules or [])
+        self.feature_names: list[str] = list(features or [])
         self.create_empties = create_empties
         self.crs = crs
 
@@ -114,10 +114,10 @@ class BaseEngineProject(BaseProject):
 
         variables = dict(self.settings._settings)
         variables['model_name'] = self.name
-        active_modules = list(self.module_names)
+        active_features = list(self.feature_names)
 
-        modules = self._get_module_instances()
-        module_configs = {m.NAME: m._get_config() for m in modules}
+        features = self._get_feature_instances()
+        feature_configs = {m.NAME: m._get_config() for m in features}
 
         # Create output directories
         for d in self.OUTPUT_DIRS:
@@ -147,7 +147,7 @@ class BaseEngineProject(BaseProject):
         for template_key, output_rel in self.BASE_TEMPLATES:
             rendered_out = Template(output_rel).safe_substitute(variables)
             text = self._manager.get_template(template_key)
-            rendered_text = self._engine.render(text, variables, active_modules, module_configs)
+            rendered_text = self._engine.render(text, variables, active_features, feature_configs)
             rendered_text = _normalize_rendered(rendered_text)
             out_path = self.output_dir / rendered_out
             out_path.write_text(rendered_text, encoding='utf-8')
@@ -157,26 +157,26 @@ class BaseEngineProject(BaseProject):
             ):
                 main_cf_path = out_path
 
-        # Render and write module template files
-        for module in modules:
-            for template_key, output_rel in module.get_template_files(variables):
+        # Render and write feature template files
+        for feature in features:
+            for template_key, output_rel in feature.get_template_files(variables):
                 rendered_out = Template(output_rel).safe_substitute(variables)
                 text = self._manager.get_template(template_key)
-                rendered_text = self._engine.render(text, variables, active_modules, module_configs)
+                rendered_text = self._engine.render(text, variables, active_features, feature_configs)
                 rendered_text = _normalize_rendered(rendered_text)
                 out_path = self.output_dir / rendered_out
                 out_path.parent.mkdir(parents=True, exist_ok=True)
                 out_path.write_text(rendered_text, encoding='utf-8')
 
-        # Apply modules to control files
+        # Apply features to control files
         if main_cf_path is not None:
             import pytuflow
             main_cf = getattr(pytuflow, self.MAIN_CF_CLASS)(main_cf_path)
-            secondary_cfs = self._load_secondary_cfs(main_cf, main_cf_path, modules)
+            secondary_cfs = self._load_secondary_cfs(main_cf, main_cf_path, features)
             control_files = {self.MAIN_CF_EXT: main_cf, **secondary_cfs}
 
-            for module in modules:
-                module.apply_to_control_files(control_files, variables)
+            for feature in features:
+                feature.apply_to_control_files(control_files, variables)
 
             main_cf.write('inplace')
             for cf in secondary_cfs.values():
@@ -186,30 +186,30 @@ class BaseEngineProject(BaseProject):
         return self.output_dir
 
     @classmethod
-    def insert_module_into(cls, module_name: str, cf_path: str | Path, **kwargs):
-        """Inserts a module into an existing project.
+    def insert_feature_into(cls, feature_name: str, cf_path: str | Path, **kwargs):
+        """Inserts a feature into an existing project.
         
         Parameters
         ----------
-        module_name : str
-            Name of the module to insert
+        feature_name : str
+            Name of the feature to insert
         cf_path : str | Path
-            Path to the control file to insert the module into. This should either a TCF or FVC,
+            Path to the control file to insert the feature into. This should either a TCF or FVC,
             and not an ancillary control file such as the TGC or FVWQ.
         """
         import pytuflow
         cf_path = Path(cf_path)
         project_dir = cf_path.parent.parent  # runs/ → project root
 
-        registry = cls.get_available_modules()
-        if module_name not in registry:
+        registry = cls.get_available_features()
+        if feature_name not in registry:
             raise ValueError(
-                f"Unknown module '{module_name}'. Available: {list(registry.keys())}"
+                f"Unknown feature '{feature_name}'. Available: {list(registry.keys())}"
             )
 
-        module_cls = registry[module_name]
-        module = module_cls()
-        module_config = module._get_config()
+        feature_cls = registry[feature_name]
+        feature = feature_cls()
+        feature_config = feature._get_config()
 
         variables = _variables_from_cf_path(cf_path, **kwargs)
         settings = Settings(
@@ -223,22 +223,22 @@ class BaseEngineProject(BaseProject):
 
         engine = TemplateEngine()
         manager = TemplateManager(cls.ENGINE_TYPE)
-        module_configs = {module_name: module_config}
+        feature_configs = {feature_name: feature_config}
 
-        for template_key, output_rel in module.get_template_files(variables):
+        for template_key, output_rel in feature.get_template_files(variables):
             rendered_out = Template(output_rel).safe_substitute(variables)
             out_path = project_dir / rendered_out
             if not out_path.exists():
                 text = manager.get_template(template_key)
-                rendered_text = engine.render(text, variables, [module_name], module_configs)
+                rendered_text = engine.render(text, variables, [feature_name], feature_configs)
                 out_path.parent.mkdir(parents=True, exist_ok=True)
                 out_path.write_text(rendered_text, encoding='utf-8')
 
         main_cf = getattr(pytuflow, cls.MAIN_CF_CLASS)(cf_path)
-        secondary_cfs = cls._load_secondary_cfs_cls(main_cf, cf_path, [module])
+        secondary_cfs = cls._load_secondary_cfs_cls(main_cf, cf_path, [feature])
         control_files = {cls.MAIN_CF_EXT: main_cf, **secondary_cfs}
 
-        module.apply_to_control_files(control_files, variables)
+        feature.apply_to_control_files(control_files, variables)
 
         main_cf.write('inplace')
         for cf in secondary_cfs.values():
@@ -246,25 +246,25 @@ class BaseEngineProject(BaseProject):
                 cf.write('inplace')
 
     # ------------------------------------------------------------------
-    # Module registry
+    # feature registry
     # ------------------------------------------------------------------
 
     @classmethod
-    def get_available_modules(cls) -> dict[str, type]:
-        """Discover all available modules for this engine from JSON files.
+    def get_available_features(cls) -> dict[str, type]:
+        """Discover all available features for this engine from JSON files.
 
         Returns
         -------
         dict[str, type]
-            A dictionary of the available modules with using the module
-            name as the key and the module class as the value.
+            A dictionary of the available features with using the feature
+            name as the key and the feature class as the value.
         """
-        base_cls = cls._get_module_base_class()
+        base_cls = cls._get_feature_base_class()
         manager = TemplateManager(cls.ENGINE_TYPE)
         result = {}
-        for name in manager.list_module_configs():
+        for name in manager.list_feature_configs():
             dyn_cls = type(
-                f'{name.title()}Module',
+                f'{name.title()}feature',
                 (base_cls,),
                 {'NAME': name, 'DISPLAY_NAME': name.replace('_', ' ').title()},
             )
@@ -272,29 +272,29 @@ class BaseEngineProject(BaseProject):
         return result
 
     @classmethod
-    def _get_module_base_class(cls):
+    def _get_feature_base_class(cls):
         raise NotImplementedError(
-            f"{cls.__name__} must implement _get_module_base_class()"
+            f"{cls.__name__} must implement _get_feature_base_class()"
         )
 
     # ------------------------------------------------------------------
     # Internal helpers (overridable by subclasses)
     # ------------------------------------------------------------------
 
-    def _get_module_instances(self):
-        """Return sorted module instances (by sort_order ascending)."""
-        registry = self.get_available_modules()
+    def _get_feature_instances(self):
+        """Return sorted feature instances (by sort_order ascending)."""
+        registry = self.get_available_features()
         instances = []
-        for name in self.module_names:
+        for name in self.feature_names:
             if name not in registry:
                 raise ValueError(
-                    f"Unknown module '{name}'. Available: {list(registry.keys())}"
+                    f"Unknown feature '{name}'. Available: {list(registry.keys())}"
                 )
             instances.append(registry[name]())
         instances.sort(key=lambda m: m._get_config().get('sort_order', 50))
         return instances
 
-    def _load_secondary_cfs(self, main_cf, main_cf_path: Path, modules) -> dict:
+    def _load_secondary_cfs(self, main_cf, main_cf_path: Path, features) -> dict:
         """Load secondary control files referenced by *main_cf*.
 
         Override in subclasses that have secondary CFs (e.g. HPC has TGC/TBC).
@@ -303,7 +303,7 @@ class BaseEngineProject(BaseProject):
         return {}
 
     @classmethod
-    def _load_secondary_cfs_cls(cls, main_cf, main_cf_path: Path, modules) -> dict:
+    def _load_secondary_cfs_cls(cls, main_cf, main_cf_path: Path, features) -> dict:
         """Class-level variant of :meth:`_load_secondary_cfs` for use in
-        :meth:`insert_module_into`.  Override in subclasses as needed."""
+        :meth:`insert_feature_into`.  Override in subclasses as needed."""
         return {}

@@ -4,7 +4,7 @@ import re
 import typing
 from string import Template
 
-from ..abc.module import BaseModule
+from ..abc.feature import BaseFeature
 from ..template.manager import TemplateManager
 from .utils import _normalize_slashes, _parse_filter
 
@@ -12,11 +12,11 @@ if typing.TYPE_CHECKING:
     from ..._tmf.abc.input import Input
 
 
-class BaseEngineModule(BaseModule):
-    """Shared base for all engine modules (HPC, FV, …).
+class BaseEngineFeature(BaseFeature):
+    """Shared base for all engine features (HPC, FV, …).
 
     Command configuration is driven by a JSON file cached at
-    ``~/.tuflow_model_files/project_templates/modules/<engine>/<name>.json``.
+    ``~/.tuflow_model_files/project_templates/features/<engine>/<name>.json``.
     Subclasses must set ``ENGINE_TYPE`` (e.g. ``'hpc'`` or ``'fv'``).
     """
 
@@ -25,17 +25,17 @@ class BaseEngineModule(BaseModule):
     DISPLAY_NAME: str = ''
 
     def _get_config(self) -> dict:
-        """Load this module's JSON config via the TemplateManager (reads from cache)."""
+        """Load this feature's JSON config via the TemplateManager (reads from cache)."""
         manager = TemplateManager(self.ENGINE_TYPE)
-        return manager.get_module_config(self.NAME)
+        return manager.get_feature_config(self.NAME)
 
     def _get_rules(self) -> dict:
-        """Load the module's rules config."""
+        """Load the feature's rules config."""
         manager = TemplateManager(self.ENGINE_TYPE)
         return manager.get_rules()
 
     # ------------------------------------------------------------------
-    # BaseModule interface
+    # BaseFeature interface
     # ------------------------------------------------------------------
 
     def get_template_files(self, variables: dict) -> list[tuple[str, str]]:
@@ -50,7 +50,7 @@ class BaseEngineModule(BaseModule):
         return result
 
     def apply_to_control_files(self, control_files: dict, variables: dict) -> None:
-        """Apply this module's command blocks to the supplied control file objects."""
+        """Apply this feature's command blocks to the supplied control file objects."""
         config = self._get_config()
         for block in config.get('command_blocks', []):
             target = block.get('target_cf', 'tcf' if self.ENGINE_TYPE == 'hpc' else 'fvc')

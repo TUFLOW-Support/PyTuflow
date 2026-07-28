@@ -16,14 +16,14 @@ _CF_TYPE_MAP: dict[str, dict] = {
 }
 
 
-def get_available_modules() -> dict[str, type]:
-    """Discover all available HPC modules from JSON files in the module cache.
+def get_available_features() -> dict[str, type]:
+    """Discover all available HPC features from JSON files in the feature cache.
 
-    Returns a dict mapping module name → dynamically-created subclass of
-    :class:`HPCBaseModule`.  Adding a new module requires only a JSON file
-    in ``data/modules/hpc/`` — no Python code changes needed.
+    Returns a dict mapping feature name → dynamically-created subclass of
+    :class:`HPCBasefeature`.  Adding a new feature requires only a JSON file
+    in ``data/features/hpc/`` — no Python code changes needed.
     """
-    return HPCProject.get_available_modules()
+    return HPCProject.get_available_features()
 
 
 _BASE_TEMPLATES = [
@@ -39,7 +39,7 @@ class HPCProject(BaseEngineProject):
     r"""HPC project generator.
 
     The HPC project generator is a highly customisable class for generating
-    a Classic/HPC project from scratch. The class uses template files, modules, variables,
+    a Classic/HPC project from scratch. The class uses template files, features, variables,
     and directives, which are fully customisable and extendable by the user.
 
     When an HPC project is created for the first time, the template files are copied
@@ -50,8 +50,8 @@ class HPCProject(BaseEngineProject):
     Projects can also be created via the CLI with ``python -m pytuflow.project create --engine hpc``.
     See below for examples.
 
-    It is also possible to insert modules into an existing project using 
-    :meth:`HPCProject.insert_module_into()<pytuflow.HPCProject.insert_module_into>` or via the CLI
+    It is also possible to insert features into an existing project using 
+    :meth:`HPCProject.insert_feature_into()<pytuflow.HPCProject.insert_feature_into>` or via the CLI
     with ``python -m pytuflow.project insert --engine hpc``.
     
     Parameters
@@ -60,11 +60,11 @@ class HPCProject(BaseEngineProject):
         The name to be used for the project/model.
     output_dir : str | Path
         The directory to generate the project within.
-    modules : list[str] | None, optional
-        The modules to include within the generated project. The available modules are
+    features : list[str] | None, optional
+        The features to include within the generated project. The available features are
         dynamic and can be modified or extended by the user. See the example section below
-        to check the available modules. Modules can also be added post project generation using
-        :meth:`HPCProject.insert_module_into()<pytuflow.HPCProject.insert_module_into>`.
+        to check the available features. features can also be added post project generation using
+        :meth:`HPCProject.insert_feature_into()<pytuflow.HPCProject.insert_feature_into>`.
     crs : str
         The CRS to use for the project in the form of "AUTHORITY:CODE". E.g. the TUFLOW tutorial model
         would be ``"EPSG:32760"``
@@ -78,10 +78,10 @@ class HPCProject(BaseEngineProject):
 
     Examples
     --------
-    List the available modules:
+    List the available features:
 
     >>> from pytuflow import HPCProject
-    >>> for mod in HPCProject.get_available_modules():
+    >>> for mod in HPCProject.get_available_features():
     ...     print(mod)
     ad
     estry
@@ -95,11 +95,11 @@ class HPCProject(BaseEngineProject):
     toc
     tutorial
 
-    Or list the modules via the CLI:
+    Or list the features via the CLI:
 
     .. code-block:: console
 
-        python -m pytuflow.project list-modules --engine hpc
+        python -m pytuflow.project list-features --engine hpc
 
     (Re-)Initialise the template files:
 
@@ -113,12 +113,12 @@ class HPCProject(BaseEngineProject):
 
         python -m pytuflow.project init-templates --engine hpc --force
 
-    Initialise an HPC project with SGS and event modules. This example uses the TUFLOW tutorial model CRS.
+    Initialise an HPC project with SGS and event features. This example uses the TUFLOW tutorial model CRS.
 
     >>> project = HPCProject(
     ...     name='Tutorial_Model',
     ...     output_dir='models/TUFLOW',
-    ...     modules=['sgs', 'events'],
+    ...     features=['sgs', 'events'],
     ...     crs='EPSG:32760',
     ...     create_empties=True
     ... )
@@ -134,7 +134,7 @@ class HPCProject(BaseEngineProject):
             --name Tutorial_Model \
             --output-dir models/TUFLOW \
             --crs "EPSG:32760" \
-            --modules sgs events
+            --features sgs events
 
     Initialise an HPC project using GPKG and customise the map outputs.
 
@@ -173,14 +173,14 @@ class HPCProject(BaseEngineProject):
 
     Insert Quadtree into an existing model:
 
-    >>> HPCProject.insert_module_into('quadtree', 'models/TUFLOW/runs/Tutorial_Model_001.tcf')
+    >>> HPCProject.insert_feature_into('quadtree', 'models/TUFLOW/runs/Tutorial_Model_001.tcf')
 
     Insert PO int an existing model using the CLI:
 
     .. code-block:: console
 
         python -m pytuflow.project insert --engine hpc \
-            --module po \
+            --feature po \
             --cf models/TUFLOW/runs/Tutorial_Model_001.tcf
     """
 
@@ -193,29 +193,29 @@ class HPCProject(BaseEngineProject):
     SUPPORTED_GIS_FORMATS = frozenset({'SHP', 'MIF', 'GPKG'})
 
     @classmethod
-    def _get_module_base_class(cls):
-        from .modules._base import HPCBaseModule
-        return HPCBaseModule
+    def _get_feature_base_class(cls):
+        from .features._base import HPCBaseFeature
+        return HPCBaseFeature
 
     # ------------------------------------------------------------------
     # Secondary CF loading (HPC-specific — TGC, TBC, ECF, QCF, ADCF)
     # ------------------------------------------------------------------
 
-    def _load_secondary_cfs(self, main_cf, main_cf_path: Path, modules) -> dict:
-        needed = _needed_cf_types(modules)
+    def _load_secondary_cfs(self, main_cf, main_cf_path: Path, features) -> dict:
+        needed = _needed_cf_types(features)
         return _load_secondary_cfs(main_cf, main_cf_path, needed)
 
     @classmethod
-    def _load_secondary_cfs_cls(cls, main_cf, main_cf_path: Path, modules) -> dict:
-        needed = _needed_cf_types(modules)
+    def _load_secondary_cfs_cls(cls, main_cf, main_cf_path: Path, features) -> dict:
+        needed = _needed_cf_types(features)
         return _load_secondary_cfs(main_cf, main_cf_path, needed)
 
 
-def _needed_cf_types(modules) -> set[str]:
-    """Collect all non-primary target_cf values across all modules' command blocks."""
+def _needed_cf_types(features) -> set[str]:
+    """Collect all non-primary target_cf values across all features' command blocks."""
     needed = set()
-    for module in modules:
-        config = module._get_config()
+    for feature in features:
+        config = feature._get_config()
         for block in config.get('command_blocks', []):
             target = block.get('target_cf', 'tcf')
             if target != 'tcf':

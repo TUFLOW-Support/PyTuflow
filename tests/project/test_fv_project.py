@@ -1,9 +1,9 @@
-"""Tests for FVProject create and module framework."""
+"""Tests for FVProject create and feature framework."""
 import pytest
 from pathlib import Path
 import re
 
-from pytuflow.project.fv.project import FVProject, get_available_modules
+from pytuflow.project.fv.project import FVProject, get_available_features
 
 
 @pytest.fixture
@@ -118,7 +118,7 @@ class TestFVProjectCreate:
             assert '/' not in fvc_text.replace('\r\n', '\n')
 
     def test_no_map_output_formats_in_fvc(self, basic_project, project_dir):
-        """FV outputs are modules — Map Output Formats command must not appear."""
+        """FV outputs are features — Map Output Formats command must not appear."""
         basic_project.create()
         fvc_text = (project_dir / 'runs' / 'mymodel_001.fvc').read_text()
         assert 'Map Output Formats' not in fvc_text
@@ -148,15 +148,14 @@ class TestFVProjectSettings:
         assert p.settings._settings['gis_format'] == 'SHP'
 
 
-class TestFVAvailableModules:
-    def test_get_available_modules_returns_dict(self):
-        modules = get_available_modules()
-        assert isinstance(modules, dict)
+class TestFVAvailablefeatures:
+    def test_get_available_features_returns_dict(self):
+        features = get_available_features()
+        assert isinstance(features, dict)
 
-    def test_modules_are_fv_engine_type(self):
-        from pytuflow.project.fv.modules._base import FVBaseModule
-        modules = get_available_modules()
-        for name, cls in modules.items():
+    def test_features_are_fv_engine_type(self):
+        features = get_available_features()
+        for name, cls in features.items():
             instance = cls()
             assert instance.ENGINE_TYPE == 'fv', f"{name} has wrong ENGINE_TYPE"
 
@@ -171,26 +170,26 @@ class TestFVProjectIter:
         assert (project_dir / 'runs' / 'mymodel_002.fvc').exists()
 
 
-class TestFVBaseModuleApplyToControlFiles:
+class TestFVBaseFeatureApplyToControlFiles:
 
     def test_apply_inserts_via_placement_rule(self, project_dir):
         """apply_to_control_files uses placement_rule to find the last control-file command."""
-        from pytuflow.project.fv.project import get_available_modules
-        OutputNetcdf = get_available_modules()['outputnc']
+        from pytuflow.project.fv.project import get_available_features
+        OutputNetcdf = get_available_features()['outputnc']
         from pytuflow import FVC
 
         # Create bare-bones project (no estry)
-        p = FVProject('mymodel', project_dir, crs='EPSG:32760', modules=[])
+        p = FVProject('mymodel', project_dir, crs='EPSG:32760', features=[])
         p.create()
 
         fvc_path = project_dir / 'runs' / 'mymodel_001.fvc'
         fvc = FVC(fvc_path)
 
-        # Apply output_nc module — should insert via placement_rule
+        # Apply output_nc feature — should insert via placement_rule
         (project_dir / 'model').mkdir(parents=True, exist_ok=True)
-        module = OutputNetcdf()
+        feature = OutputNetcdf()
         variables = {'model_name': 'mymodel', 'iter': '001'}
-        module.apply_to_control_files({'fvc': fvc}, variables)
+        feature.apply_to_control_files({'fvc': fvc}, variables)
         fvc.write('inplace')
 
         fvc2 = FVC(fvc_path)
@@ -199,12 +198,12 @@ class TestFVBaseModuleApplyToControlFiles:
 
     def test_apply_inserts_via_placement_rule_with_include_file(self, project_dir):
         """apply_to_control_files uses placement_rule to find the last control-file command."""
-        from pytuflow.project.fv.project import get_available_modules
-        OutputNetcdf = get_available_modules()['outputnc']
+        from pytuflow.project.fv.project import get_available_features
+        OutputNetcdf = get_available_features()['outputnc']
         from pytuflow import FVC
 
         # Create bare-bones project (no estry)
-        p = FVProject('mymodel', project_dir, crs='EPSG:32760', modules=[])
+        p = FVProject('mymodel', project_dir, crs='EPSG:32760', features=[])
         p.create()
 
         fvc_path = project_dir / 'runs' / 'mymodel_001.fvc'
@@ -221,11 +220,11 @@ class TestFVBaseModuleApplyToControlFiles:
         inp = fvc.append_input('Include == outputs.fvc')
         inp.cf.append(include)
 
-        # Apply output_nc module — should insert via placement_rule which should end up in the include file not main fvc
+        # Apply output_nc feature — should insert via placement_rule which should end up in the include file not main fvc
         (project_dir / 'model').mkdir(parents=True, exist_ok=True)
-        module = OutputNetcdf()
+        feature = OutputNetcdf()
         variables = {'model_name': 'mymodel', 'iter': '001'}
-        module.apply_to_control_files({'fvc': fvc}, variables)
+        feature.apply_to_control_files({'fvc': fvc}, variables)
         fvc.write('inplace')
 
         fvc2 = FVC(fvc_path)
@@ -237,22 +236,22 @@ class TestFVBaseModuleApplyToControlFiles:
 
     def test_apply_inserts_via_placement_rule_with_before_anchor(self, project_dir):
         """apply_to_control_files uses placement_rule to find the last control-file command."""
-        from pytuflow.project.fv.project import get_available_modules
-        OutputFlux = get_available_modules()['outputflux']
+        from pytuflow.project.fv.project import get_available_features
+        OutputFlux = get_available_features()['outputflux']
         from pytuflow import FVC
 
         # Create bare-bones project (no estry)
-        p = FVProject('mymodel', project_dir, crs='EPSG:32760', modules=[])
+        p = FVProject('mymodel', project_dir, crs='EPSG:32760', features=[])
         p.create()
 
         fvc_path = project_dir / 'runs' / 'mymodel_001.fvc'
         fvc = FVC(fvc_path)
 
-        # Apply outputflux module — should insert via placement_rule which has a 'before' rule
+        # Apply outputflux feature — should insert via placement_rule which has a 'before' rule
         (project_dir / 'model').mkdir(parents=True, exist_ok=True)
-        module = OutputFlux()
+        feature = OutputFlux()
         variables = {'model_name': 'mymodel', 'iter': '001'}
-        module.apply_to_control_files({'fvc': fvc}, variables)
+        feature.apply_to_control_files({'fvc': fvc}, variables)
         fvc.write('inplace')
 
         fvc2 = FVC(fvc_path)

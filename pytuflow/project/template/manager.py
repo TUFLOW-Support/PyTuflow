@@ -10,22 +10,22 @@ class TemplateManager:
     def __init__(self, engine_type: str = 'hpc'):
         self.engine_type = engine_type
         self._bundled_templates_dir = _BUNDLED_DATA_DIR / 'templates' / engine_type
-        self._bundled_modules_dir = _BUNDLED_DATA_DIR / 'modules' / engine_type
+        self._bundled_features_dir = _BUNDLED_DATA_DIR / 'features' / engine_type
         self._bundled_defaults = _BUNDLED_DATA_DIR / 'defaults.json'
         self._bundled_hpc_defaults = _BUNDLED_DATA_DIR / 'hpc_defaults.json'
         self._bundled_fv_defaults = _BUNDLED_DATA_DIR / 'fv_defaults.json'
         self._bundled_rules = _BUNDLED_DATA_DIR / 'rules.json'
         self._cache_dir = CACHE_ROOT / engine_type
-        self._cache_modules_dir = CACHE_ROOT / 'modules' / engine_type
+        self._cache_features_dir = CACHE_ROOT / 'features' / engine_type
         self._cache_defaults = CACHE_ROOT / 'defaults.json'
         self._cache_hpc_defaults = CACHE_ROOT / 'hpc_defaults.json'
         self._cache_fv_defaults = CACHE_ROOT / 'fv_defaults.json'
         self._cache_rules = CACHE_ROOT / 'rules.json'
 
     def init_cache(self, force: bool = False) -> None:
-        """Copy bundled templates and module configs to the user cache on first use."""
+        """Copy bundled templates and feature configs to the user cache on first use."""
         needs_templates = not self._cache_dir.exists() or force
-        needs_modules = not self._cache_modules_dir.exists() or force
+        needs_features = not self._cache_features_dir.exists() or force
         needs_defaults = not self._cache_defaults.exists() or force
         needs_hpc_defaults = not self._cache_hpc_defaults.exists() or force
         needs_fv_defaults = not self._cache_fv_defaults.exists() or force
@@ -36,10 +36,10 @@ class TemplateManager:
                 shutil.rmtree(self._cache_dir)
             shutil.copytree(self._bundled_templates_dir, self._cache_dir)
 
-        if needs_modules and self._bundled_modules_dir.exists():
-            if self._cache_modules_dir.exists():
-                shutil.rmtree(self._cache_modules_dir)
-            shutil.copytree(self._bundled_modules_dir, self._cache_modules_dir)
+        if needs_features and self._bundled_features_dir.exists():
+            if self._cache_features_dir.exists():
+                shutil.rmtree(self._cache_features_dir)
+            shutil.copytree(self._bundled_features_dir, self._cache_features_dir)
 
         if needs_defaults:
             if self._cache_defaults.exists():
@@ -79,14 +79,14 @@ class TemplateManager:
             shutil.copy2(bundled_path, cached_path)
         return cached_path.read_text(encoding='utf-8')
 
-    def get_module_config(self, module_name: str) -> dict:
-        """Load a module's JSON config from cache, falling back to bundled."""
+    def get_feature_config(self, feature_name: str) -> dict:
+        """Load a feature's JSON config from cache, falling back to bundled."""
         self.init_cache()
-        cached = self._cache_modules_dir / f'{module_name}.json'
+        cached = self._cache_features_dir / f'{feature_name}.json'
         if cached.exists():
             with open(cached, encoding='utf-8') as f:
                 return json.load(f)
-        bundled = self._bundled_modules_dir / f'{module_name}.json'
+        bundled = self._bundled_features_dir / f'{feature_name}.json'
         if bundled.exists():
             with open(bundled, encoding='utf-8') as f:
                 return json.load(f)
@@ -116,12 +116,12 @@ class TemplateManager:
                 result.append(str(p.relative_to(self._cache_dir)))
         return result
 
-    def list_module_configs(self) -> list[str]:
-        """Return list of cached module config names (without .json extension)."""
+    def list_feature_configs(self) -> list[str]:
+        """Return list of cached feature config names (without .json extension)."""
         self.init_cache()
-        if not self._cache_modules_dir.exists():
+        if not self._cache_features_dir.exists():
             return []
-        return [p.stem for p in sorted(self._cache_modules_dir.glob('*.json'))]
+        return [p.stem for p in sorted(self._cache_features_dir.glob('*.json'))]
 
     def reset_cache(self) -> None:
         self.init_cache(force=True)

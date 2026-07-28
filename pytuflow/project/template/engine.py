@@ -7,8 +7,8 @@ class TemplateEngine:
         self,
         template_text: str,
         variables: dict,
-        active_modules: list[str] = None,
-        module_configs: dict[str, dict] = None,
+        active_features: list[str] = None,
+        feature_configs: dict[str, dict] = None,
     ) -> str:
         """Render a template.
 
@@ -18,26 +18,26 @@ class TemplateEngine:
             Raw template content.
         variables : dict
             Variable substitutions (${var} style).
-        active_modules : list[str], optional
-            Module names that are active (used for ##IF module:X## conditions).
-        module_configs : dict[str, dict], optional
-            Mapping of module name → parsed JSON config dict.  Required for
+        active_features : list[str], optional
+            feature names that are active (used for ##IF feature:X## conditions).
+        feature_configs : dict[str, dict], optional
+            Mapping of feature name → parsed JSON config dict.  Required for
             ##COMMANDS block_id## directives to be resolved.  If omitted the
             directive is left as a comment in the output.
         """
-        if active_modules is None:
-            active_modules = []
-        if module_configs is None:
-            module_configs = {}
+        if active_features is None:
+            active_features = []
+        if feature_configs is None:
+            feature_configs = {}
 
         # Build a flat lookup: block_id -> commands list
-        block_lookup = _build_block_lookup(module_configs)
+        block_lookup = _build_block_lookup(feature_configs)
 
         lines = template_text.splitlines(keepends=True)
         if template_text and not template_text.endswith('\n'):
             lines[-1] = lines[-1] + '\n'
 
-        processed = self._process_directives(lines, variables, active_modules, block_lookup)
+        processed = self._process_directives(lines, variables, active_features, block_lookup)
         result = ''.join(processed)
 
         str_vars = {
@@ -46,7 +46,7 @@ class TemplateEngine:
         }
         return Template(result).safe_substitute(str_vars)
 
-    def _process_directives(self, lines, variables, active_modules, block_lookup):
+    def _process_directives(self, lines, variables, active_features, block_lookup):
         result = []
         i = 0
         while i < len(lines):
@@ -70,8 +70,8 @@ class TemplateEngine:
                             break
                     block_lines.append(lines[i])
                     i += 1
-                if self._eval_condition(condition, active_modules, variables):
-                    result.extend(self._process_directives(block_lines, variables, active_modules, block_lookup))
+                if self._eval_condition(condition, active_features, variables):
+                    result.extend(self._process_directives(block_lines, variables, active_features, block_lookup))
                 i += 1
                 continue
 
@@ -94,7 +94,7 @@ class TemplateEngine:
                     loop_vars = dict(variables)
                     loop_vars['format'] = item
                     loop_vars['item'] = item
-                    expanded = self._process_directives(block_lines, loop_vars, active_modules, block_lookup)
+                    expanded = self._process_directives(block_lines, loop_vars, active_features, block_lookup)
                     str_loop_vars = {
                         k: (', '.join(str(x) for x in v) if isinstance(v, list) else str(v))
                         for k, v in loop_vars.items()
@@ -134,15 +134,15 @@ class TemplateEngine:
             i += 1
         return result
 
-    def _eval_condition(self, condition: str, active_modules: list[str], variables: dict) -> bool:
+    def _eval_condition(self, condition: str, active_features: list[str], variables: dict) -> bool:
         negated = False
         if condition.startswith('not:'):
             negated = True
             condition = condition[4:]
 
-        if condition.startswith('module:'):
-            module_name = condition[7:]
-            result = module_name in active_modules
+        if condition.startswith('feature:'):
+            feature_name = condition[8:]
+            result = feature_name in active_features
         else:
             # ${var}:value — variable equality check (case-insensitive)
             m = re.match(r'^\$\{(\w+)\}:(.+)$', condition)
@@ -157,10 +157,10 @@ class TemplateEngine:
         return (not result) if negated else result
 
 
-def _build_block_lookup(module_configs: dict[str, dict]) -> dict[str, list[str]]:
-    """Build a flat {block_id: [commands]} dict from all module configs."""
+def _build_block_lookup(feature_configs: dict[str, dict]) -> dict[str, list[str]]:
+    """Build a flat {block_id: [commands]} dict from all feature configs."""
     lookup: dict[str, list[str]] = {}
-    for config in module_configs.values():
+    for config in feature_configs.values():
         for block in config.get('command_blocks', []):
             block_id = block.get('id')
             if block_id:

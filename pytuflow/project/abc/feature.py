@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 
 
-class BaseModule(ABC):
+class BaseFeature(ABC):
     NAME: str
     DISPLAY_NAME: str
 

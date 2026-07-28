@@ -3,9 +3,9 @@ from __future__ import annotations
 from .._common.project import BaseEngineProject
 
 
-def get_available_modules() -> dict[str, type]:
-    """Discover all available FV modules from JSON files in the module cache."""
-    return FVProject.get_available_modules()
+def get_available_features() -> dict[str, type]:
+    """Discover all available FV features from JSON files in the feature cache."""
+    return FVProject.get_available_features()
 
 
 _BASE_TEMPLATES = [
@@ -22,7 +22,7 @@ class FVProject(BaseEngineProject):
     * Primary control file is ``.fvc`` (loaded as :class:`pytuflow.FVC`).
     * No secondary control files (all content lives in the single FVC).
     * GPKG is not a supported GIS format.
-    * Output blocks are treated as modules — no ``Map Output Formats`` command.
+    * Output blocks are treated as features — no ``Map Output Formats`` command.
     * FV-specific defaults are loaded from ``fv_defaults.json``.
     """
 
@@ -35,6 +35,6 @@ class FVProject(BaseEngineProject):
     SUPPORTED_GIS_FORMATS = frozenset({'SHP', 'MIF'})
 
     @classmethod
-    def _get_module_base_class(cls):
-        from .modules._base import FVBaseModule
-        return FVBaseModule
+    def _get_feature_base_class(cls):
+        from .features._base import FVBaseFeature
+        return FVBaseFeature

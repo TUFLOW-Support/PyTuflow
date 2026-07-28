@@ -6,6 +6,6 @@
 ! INTERNAL BOUNDARIES
 ! Read GIS SA == <path/to/2d_sa>
 
-##IF module:estry##
+##IF feature:estry##
 ##COMMANDS estry_tbc##
 ##ENDIF##

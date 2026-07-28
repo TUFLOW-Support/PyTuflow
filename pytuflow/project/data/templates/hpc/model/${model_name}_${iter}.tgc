@@ -22,6 +22,6 @@ Set Mat == 1
 ! Read GIS Mat == <path/to/2d_mat>  ! e.g. of reading vector layer
 ! Read GRID Mat == <path/to/landuse.tif>  ! e.g. of reading raster layer
 
-##IF module:soils##
+##IF feature:soils##
 ##COMMANDS soils_tgc##
 ##ENDIF##

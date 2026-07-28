@@ -18,16 +18,16 @@ MI Projection == ..\model\gis\projection.mif
 
 !_______________________________________________________
 ! SOLVER
-##IF module:tutorial##
+##IF feature:tutorial##
 ##COMMANDS tutorial_model_activate##
 ##ENDIF##
 Solution scheme == ${engine}
 Hardware == ${hardware}
 
-##IF module:sgs##
+##IF feature:sgs##
 ##COMMANDS sgs_on##
 ##ENDIF##
-##IF module:events##
+##IF feature:events##
 ##COMMANDS events_tcf##
 ##ENDIF##
 
@@ -37,22 +37,22 @@ Geometry Control File == ..\model\${model_name}_${iter}.tgc
 BC Control File == ..\model\${model_name}_${iter}.tbc
 BC Database == ..\bc_dbase\bc_dbase.csv
 Read Materials File == ..\model\${model_name}_mat.csv
-##IF module:estry##
+##IF feature:estry##
 ##COMMANDS estry_tcf##
 ##ENDIF##
-##IF module:soils##
+##IF feature:soils##
 ##COMMANDS soils_tcf##
 ##ENDIF##
-##IF module:quadtree##
+##IF feature:quadtree##
 ##COMMANDS quadtree_tcf##
 ##ENDIF##
-##IF module:ad##
+##IF feature:ad##
 ##COMMANDS ad_tcf##
 ##ENDIF##
-##IF module:rf##
+##IF feature:rf##
 ##COMMANDS rf_tcf##
 ##ENDIF##
-##IF module:swmm##
+##IF feature:swmm##
 ##COMMANDS swmm_tcf##
 ##ENDIF##
 
@@ -80,9 +80,9 @@ Write Check Files == ..\check\
 Map Output Formats == ${map_output_formats_str}
 ${output_format_setting_lines}
 
-##IF module:sgs##
+##IF feature:sgs##
 ##COMMANDS sgs_output_settings##
 ##ENDIF##
-##IF module:po##
+##IF feature:po##
 ##COMMANDS po_commands##
 ##ENDIF##

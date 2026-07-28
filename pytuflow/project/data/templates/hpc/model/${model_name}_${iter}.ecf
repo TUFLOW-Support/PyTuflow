@@ -2,7 +2,7 @@
 ! GIS INPUTS
 ! Read GIS Network == <path/to/1d_nwk>
 
-##IF module:toc##
+##IF feature:toc##
 ##COMMANDS toc_ecf##
 
 ##ENDIF##

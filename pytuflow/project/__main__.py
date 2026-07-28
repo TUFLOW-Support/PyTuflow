@@ -2,10 +2,10 @@
 
 Usage:
     python -m pytuflow.project create --name NAME --output-dir DIR --crs EPSG:XXXX
-                                       [--engine hpc|fv] [--modules M1 M2 ...] [--<variable> VALUE ...]
-    python -m pytuflow.project insert --tcf TCF_PATH --module MODULE_NAME
+                                       [--engine hpc|fv] [--features M1 M2 ...] [--<variable> VALUE ...]
+    python -m pytuflow.project insert --tcf TCF_PATH --feature feature_NAME
     python -m pytuflow.project init-templates [--engine hpc|fv] [--force]
-    python -m pytuflow.project list-modules [--engine hpc|fv]
+    python -m pytuflow.project list-features [--engine hpc|fv]
 
 Dynamic variables (--<variable>) are discovered from defaults.json / hpc_defaults.json / fv_defaults.json
 and can be extended by the user without modifying this file.
@@ -16,7 +16,7 @@ import sys
 
 
 # Fixed args that are NOT driven by defaults.json
-_FIXED_ARGS = {'name', 'output_dir', 'output-dir', 'crs', 'modules', 'create_empties', 'engine'}
+_FIXED_ARGS = {'name', 'output_dir', 'output-dir', 'crs', 'features', 'create_empties', 'engine'}
 
 
 def _get_engine_defaults(engine: str) -> tuple[dict, dict]:
@@ -80,7 +80,7 @@ def cmd_create(args, dynamic_dests: list[str]):
     project = ProjectClass(
         name=args.name,
         output_dir=args.output_dir,
-        modules=args.modules or [],
+        features=args.features or [],
         crs=args.crs,
         **kwargs,
     )
@@ -98,8 +98,8 @@ def cmd_insert(args):
         from .fv.project import FVProject as ProjectClass
     else:
         from .hpc.project import HPCProject as ProjectClass
-    ProjectClass.insert_module_into(args.module, args.cf)
-    print(f"Module '{args.module}' inserted into {args.cf}")
+    ProjectClass.insert_feature_into(args.feature, args.cf)
+    print(f"feature '{args.feature}' inserted into {args.cf}")
 
 
 def cmd_init_templates(args):
@@ -110,15 +110,15 @@ def cmd_init_templates(args):
     print(f"Templates initialised at {manager._cache_dir}")
 
 
-def cmd_list_modules(args):
+def cmd_list_features(args):
     engine = getattr(args, 'engine', 'hpc') or 'hpc'
     if engine == 'fv':
-        from .fv.project import get_available_modules
+        from .fv.project import get_available_features
     else:
-        from .hpc.project import get_available_modules
-    registry = get_available_modules()
+        from .hpc.project import get_available_features
+    registry = get_available_features()
     if not registry:
-        print(f"  (no {engine.upper()} modules found)")
+        print(f"  (no {engine.upper()} features found)")
         return
     for name, cls in registry.items():
         print(f"  {name:12s}  {cls.DISPLAY_NAME}")
@@ -135,7 +135,7 @@ def main():
     p_create.add_argument('--name', required=True, help='Model name')
     p_create.add_argument('--output-dir', required=True, dest='output_dir', help='Output directory')
     p_create.add_argument('--crs', required=True, help='Coordinate reference system (e.g. EPSG:32760)')
-    p_create.add_argument('--modules', nargs='*', default=[], help='Optional modules to include')
+    p_create.add_argument('--features', nargs='*', default=[], help='Optional features to include')
     # We parse --engine first to determine which dynamic args to add.  For the
     # common case (hpc) we add HPC defaults; fv users pass --engine fv first.
     # To keep things simple, always add HPC defaults (they're ignored for FV).
@@ -158,19 +158,19 @@ def main():
             dynamic_dests.append(key)
 
     # insert
-    p_insert = sub.add_parser('insert', help='Insert a module into an existing project')
+    p_insert = sub.add_parser('insert', help='Insert a feature into an existing project')
     p_insert.add_argument('--engine', default='hpc', choices=['hpc', 'fv'],
                           help='TUFLOW engine type (default: hpc)')
     p_insert.add_argument('--cf', required=True, help='Path to main control file (TCF or FVC)')
-    p_insert.add_argument('--module', required=True, help='Module name to insert')
+    p_insert.add_argument('--feature', required=True, help='feature name to insert')
 
     # init-templates
     p_init = sub.add_parser('init-templates', help='Initialise user template cache')
     p_init.add_argument('--engine', default='hpc', choices=['hpc', 'fv'])
     p_init.add_argument('--force', action='store_true', help='Overwrite existing cache')
 
-    # list-modules
-    p_list = sub.add_parser('list-modules', help='List available modules')
+    # list-features
+    p_list = sub.add_parser('list-features', help='List available features')
     p_list.add_argument('--engine', default='hpc', choices=['hpc', 'fv'])
 
     args = parser.parse_args()
@@ -181,8 +181,8 @@ def main():
         cmd_insert(args)
     elif args.command == 'init-templates':
         cmd_init_templates(args)
-    elif args.command == 'list-modules':
-        cmd_list_modules(args)
+    elif args.command == 'list-features':
+        cmd_list_features(args)
     else:
         parser.print_help()
         sys.exit(1)
