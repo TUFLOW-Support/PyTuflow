@@ -33,7 +33,7 @@ Changelog
 ---------
 
 1.1.10
-"""""
+""""""
 
 Release date: 29 July 2026
 
