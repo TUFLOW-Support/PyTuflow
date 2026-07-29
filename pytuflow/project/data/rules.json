@@ -42,5 +42,19 @@
     "commands": [
       "/^output$/i"
     ]
+  },
+  "fvc_structures": {
+    "description": "Insert after all the fv structure blocks.",
+    "rule": "after",
+    "commands": [
+      "/^structure$/i"
+    ]
+  },
+  "before_fvc_structures": {
+    "description": "Insert before all the fv structure blocks.",
+    "rule": "before",
+    "commands": [
+      "/^structure$/i"
+    ]
   }
 }

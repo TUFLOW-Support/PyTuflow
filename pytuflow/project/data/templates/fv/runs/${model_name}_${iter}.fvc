@@ -85,9 +85,16 @@ Read GIS Nodestring == <path/to/2d_ns.shp>
 !   BC Header == time, WL
 ! End BC
 
+##IF feature:structweir##
 !__________________________________________________________________________________________________________________________________________________________________________________________
-! HYDRAULIC STRUCTURES (optional) 
-! Hydraulic structures are not simulated in this model
+! HYDRAULIC STRUCTURES
+#ENDIF##
+##IF feature:structweir##
+##COMMANDS fvc_struct_weir_nodestring##
+##COMMANDS fvc_struct_weir##
+##COMMANDS struct_weir_param##
+End Structure
+##END IF##
 
 !__________________________________________________________________________________________________________________________________________________________________________________________
 ! MODEL OUTPUTS

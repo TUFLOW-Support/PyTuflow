@@ -14,6 +14,14 @@ class TestIfDirective:
         result = engine.render(tmpl, {}, active_features=['estry'])
         assert 'estry line' in result
 
+    def test_if_feature_list_active(self, engine):
+        tmpl = "##IF feature:estry,po##\nestry line\n##ENDIF##\n"
+        result = engine.render(tmpl, {}, active_features=['estry'])
+        assert 'estry line' in result
+
+        result = engine.render(tmpl, {}, active_features=['po'])
+        assert 'estry line' in result
+
     def test_if_feature_inactive(self, engine):
         tmpl = "##IF feature:estry##\nestry line\n##ENDIF##\n"
         result = engine.render(tmpl, {}, active_features=[])

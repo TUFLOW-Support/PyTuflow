@@ -16,7 +16,7 @@
     {
       "id": "output_flux_param",
       "target_cf": "fvc",
-      "subtarget_cf": "/^output == points$/i",
+      "subtarget_cf": "##PREVIOUS_COMMAND_BLOCK##",
       "commands": [
         "Output Interval == 3600."
       ]

@@ -51,6 +51,7 @@ class BaseEngineFeature(BaseFeature):
 
     def apply_to_control_files(self, control_files: dict, variables: dict) -> None:
         """Apply this feature's command blocks to the supplied control file objects."""
+        last_input = None
         config = self._get_config()
         for block in config.get('command_blocks', []):
             target = block.get('target_cf', 'tcf' if self.ENGINE_TYPE == 'hpc' else 'fvc')
@@ -60,7 +61,9 @@ class BaseEngineFeature(BaseFeature):
             subtarget = block.get("subtarget_cf")
             if subtarget:
                 pattern, is_regex, flags = _parse_filter(subtarget)
-                if '==' in pattern:
+                if pattern == '##PREVIOUS_COMMAND_BLOCK##':
+                    input_subtarget = [last_input] if last_input else []
+                elif '==' in pattern:
                     input_subtarget = cf.find_input(filter_by=pattern, regex=is_regex, regex_flags=flags)
                 else:
                     input_subtarget = cf.find_input(lhs=pattern, regex=is_regex, regex_flags=flags)
@@ -68,7 +71,7 @@ class BaseEngineFeature(BaseFeature):
                     if inp.cf:
                         cf = inp.cf[0]
                         break
-            self._apply_block(cf, block, variables)
+            last_input = self._apply_block(cf, block, variables)
 
     def apply_to_tcf(self, tcf, variables: dict) -> None:
         """Legacy shim — delegates to apply_to_control_files."""
@@ -78,7 +81,7 @@ class BaseEngineFeature(BaseFeature):
     # Internal helpers
     # ------------------------------------------------------------------
 
-    def _apply_block(self, cf, block: dict, variables: dict) -> None:
+    def _apply_block(self, cf, block: dict, variables: dict) -> Input | None:
         """Apply a single command block to a control file.
 
         Supports two modes:
@@ -92,6 +95,8 @@ class BaseEngineFeature(BaseFeature):
         commented version found, otherwise insert.  Pre-command comments
         are buffered as *decorators* and only flushed when a real command
         needs inserting.
+
+        Returns the last inserted input.
         """
         raw_commands: list[str] = block.get('commands', [])
         if not raw_commands:
@@ -102,8 +107,8 @@ class BaseEngineFeature(BaseFeature):
             for cmd in raw_commands
         ]
 
-        if not any(c.strip() and not c.strip().startswith('!') for c in commands):
-            return
+        # if not any(c.strip() and not c.strip().startswith('!') for c in commands):
+        #     return
 
         # ── Atomic block mode (existence_check configured) ───────────────────
         existence_check = block.get('existence_check')
@@ -178,6 +183,8 @@ class BaseEngineFeature(BaseFeature):
             pending_decorators.clear()
 
             current_ref = self._insert_or_append(cf, current_ref, cmd, anchor_rule)
+
+        return current_ref
 
     def _find_block_anchor(self, cf, block: dict) -> tuple['Input | None', str]:
         """Return the input after which to start inserting, or ``None`` (append).

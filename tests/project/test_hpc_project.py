@@ -850,6 +850,7 @@ class TestCLICommands:
         result = subprocess.run(
             [
                 sys.executable, '-m', 'pytuflow.project', 'create',
+                '--engine', 'hpc',
                 '--name', 'testmodel',
                 '--output-dir', str(tmp_path / 'out'),
                 '--crs', 'EPSG:32760',

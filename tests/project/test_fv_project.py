@@ -262,3 +262,37 @@ class TestFVBaseFeatureApplyToControlFiles:
         iflux = fvc2.inputs.index(flux[0])
         inodestring = fvc2.inputs.index(nodestring[0])
         assert inodestring < iflux, "Read GIS Nodestring should have been placed before output == flux command"
+
+    def test_apply_struct_via_placement_rule(self, project_dir):
+        from pytuflow.project.fv.project import get_available_features
+        Weir = get_available_features()['structweir']
+        from pytuflow import FVC
+
+        # Create bare-bones project (no estry)
+        p = FVProject('mymodel', project_dir, crs='EPSG:32760', features=[])
+        p.create()
+
+        fvc_path = project_dir / 'runs' / 'mymodel_001.fvc'
+        fvc = FVC(fvc_path)
+
+        # Apply outputflux feature — should insert via placement_rule which has a 'before' rule
+        (project_dir / 'model').mkdir(parents=True, exist_ok=True)
+        feature = Weir()
+        variables = {'model_name': 'mymodel', 'iter': '001'}
+        feature.apply_to_control_files({'fvc': fvc}, variables)
+        fvc.write('inplace')
+
+        fvc2 = FVC(fvc_path)
+        flux = fvc2.find_input(lhs='^structure$', recursive=False, regex=True, regex_flags=re.IGNORECASE)
+        assert flux, "Structure block should have been inserted via placement rule"
+        weir = fvc2.find_input(filter_by='^Flux Function == Weir$', recursive='block', regex=True, regex_flags=re.IGNORECASE)
+        assert weir, "Flux function == Weir should be present"
+        nodestring = fvc2.find_input(filter_by='^Read GIS Notestring == <path/to/2d_ns_weir.shp>$', recursive=False, regex=True, regex_flags=re.IGNORECASE)
+        assert weir, "Flux function == Weir should be present"
+        header = fvc.find_input(filter_by='! HYDRAULIC STRUCTURES', recursive=False, comments=True)
+        assert header, "Structure header should have been inserted"
+        iflux = fvc.inputs.inputs(include_hidden=True).index(flux[0])
+        inodestring = fvc.inputs.inputs(include_hidden=True).index(nodestring[0])
+        iheader = fvc.inputs.inputs(include_hidden=True).index(header[0])
+        assert iheader < inodestring, '! HYDRAULIC STRUCTURES should be before Read GIS Nodestring '
+        assert inodestring < iflux, 'Read GIS Nodestring should be before Structure =='

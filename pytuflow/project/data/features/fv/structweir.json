@@ -1,0 +1,44 @@
+{
+  "name": "structweir",
+  "display_name": "Weir Structure",
+  "sort_order": 5,
+  "template_files": [],
+  "command_blocks": [
+    {
+      "id": "fvc_struct_header",
+      "target_cf": "fvc",
+      "placement_rule": "before_fvc_structures",
+      "existence_check": "! HYDRAULIC STRUCTURES",
+      "commands": [
+        "\n!__________________________________________________________________________________________________________________________________________________________________________________________",
+        "! HYDRAULIC STRUCTURES"
+      ]
+    },
+    {
+      "id": "fvc_struct_weir",
+      "target_cf": "fvc",
+      "placement_rule": "fvc_structures",
+      "commands": [
+        "\nStructure == <weir_connection_type>, <link1_id>, <link2_id>"
+      ]
+    },
+    {
+      "id": "struct_weir_param",
+      "target_cf": "fvc",
+      "subtarget_cf": "##PREVIOUS_COMMAND_BLOCK##",
+      "commands": [
+        "Flux Function == Weir",
+        "Properties == 3.0, 1.705, 1.5, 8.55, 0.556, 0.7"
+      ]
+    },
+    {
+        "id": "fvc_struct_weir_nodestring",
+        "target_cf": "fvc",
+        "placement_rule": "before_fvc_structures",
+        "commands": [
+            "Read GIS Notestring == <path/to/2d_ns_weir.shp>"
+        ]
+
+    }
+  ]
+}
