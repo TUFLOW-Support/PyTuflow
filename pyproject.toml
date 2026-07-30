@@ -66,3 +66,6 @@ Documentation = "https://docs.tuflow.com/pytuflow/"
 Repository = "https://github.com/TUFLOW-Support/PyTuflow"
 Issues = "https://github.com/TUFLOW-Support/PyTuflow/issues"
 Changelog = "https://docs.tuflow.com/pytuflow/#changelog"
+
+[project.scripts]
+pytuflow-project = "pytuflow.project.__main__:main"
