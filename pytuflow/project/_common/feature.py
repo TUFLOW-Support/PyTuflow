@@ -233,6 +233,5 @@ class BaseEngineFeature(BaseFeature):
     def _insert_or_append(cf, ref_inp, cmd: str, anchor_rule: str):
         """Insert *cmd* after *ref_inp*, or append when *ref_inp* is ``None``."""
         if ref_inp is None:
-            cf.append_input(cmd)
-            return None
-        return cf.insert_input(ref_inp, cmd, after=True if anchor_rule == 'after' else False, gap=0 if anchor_rule == 'after' else 1)
+            return cf.append_input(cmd)
+        return cf.insert_input(ref_inp, cmd, after=True if anchor_rule == 'after' else False, gap=1 if anchor_rule == 'before' else 0)

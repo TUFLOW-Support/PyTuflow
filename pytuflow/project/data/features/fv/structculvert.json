@@ -1,0 +1,44 @@
+{
+  "name": "structculvert",
+  "display_name": "Culvert Structure",
+  "sort_order": 5,
+  "template_files": [],
+  "command_blocks": [
+    {
+      "id": "fvc_struct_header",
+      "target_cf": "fvc",
+      "placement_rule": "before_fvc_structures",
+      "existence_check": "! HYDRAULIC STRUCTURES",
+      "commands": [
+        "\n!__________________________________________________________________________________________________________________________________________________________________________________________",
+        "! HYDRAULIC STRUCTURES"
+      ]
+    },
+    {
+      "id": "fvc_struct_culvert",
+      "target_cf": "fvc",
+      "placement_rule": "fvc_structures",
+      "commands": [
+        "\nStructure == <culvert_connection_type>, <link1_id>, <link2_id>"
+      ]
+    },
+    {
+      "id": "struct_culvert_param",
+      "target_cf": "fvc",
+      "subtarget_cf": "##PREVIOUS_COMMAND_BLOCK##",
+      "commands": [
+        "Flux Function == Culvert",
+        "Culvert File == <path/to/culvert_databsae.csv>"
+      ]
+    },
+    {
+        "id": "fvc_struct_culvert_nodestring",
+        "target_cf": "fvc",
+        "placement_rule": "before_fvc_structures",
+        "commands": [
+            "Read GIS Notestring == <path/to/2d_ns_culvert.shp>"
+        ]
+
+    }
+  ]
+}

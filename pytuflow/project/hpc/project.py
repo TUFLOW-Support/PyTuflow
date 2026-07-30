@@ -50,12 +50,12 @@ class HPCProject(BaseEngineProject):
     
     Subsequent calls will use these cached templates, and the user is free to modify and/or extend them.
 
-    Projects can also be created via the CLI with ``python -m pytuflow.project create --engine hpc``.
+    Projects can also be created via the CLI with ``pytuflow-project create --engine hpc``.
     See below for examples.
 
     It is also possible to insert features into an existing project using 
     :meth:`HPCProject.insert_feature_into()<pytuflow.HPCProject.insert_feature_into>` or via the CLI
-    with ``python -m pytuflow.project insert --engine hpc``.
+    with ``pytuflow-project insert --engine hpc``.
     
     Parameters
     ----------
@@ -102,7 +102,7 @@ class HPCProject(BaseEngineProject):
 
     .. code-block:: console
 
-        python -m pytuflow.project list-features --engine hpc
+        pytuflow-project list-features --engine hpc
 
     (Re-)Initialise the template files:
 
@@ -114,7 +114,7 @@ class HPCProject(BaseEngineProject):
 
     .. code-block:: console
 
-        python -m pytuflow.project init-templates --engine hpc --force
+        pytuflow-project init-templates --engine hpc --force
 
     Initialise an HPC project with SGS and event features. This example uses the TUFLOW tutorial model CRS.
 
@@ -132,7 +132,7 @@ class HPCProject(BaseEngineProject):
 
     .. code-block:: console
 
-        python -m pytuflow.project create \
+        pytuflow-project create \
             --engine hpc \
             --name Tutorial_Model \
             --output-dir models/TUFLOW \
@@ -165,7 +165,7 @@ class HPCProject(BaseEngineProject):
 
     .. code-block:: console
 
-        python -m pytuflow.project create \
+        pytuflow-project create \
             --engine hpc \
             --name Tutorial_Model \
             --output-dir models/TUFLOW \
@@ -182,7 +182,7 @@ class HPCProject(BaseEngineProject):
 
     .. code-block:: console
 
-        python -m pytuflow.project insert \
+        pytuflow-project insert \
             --engine hpc \
             --feature po \
             --cf models/TUFLOW/runs/Tutorial_Model_001.tcf
