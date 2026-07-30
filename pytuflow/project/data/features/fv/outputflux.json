@@ -8,6 +8,7 @@
       "id": "fvc_output_flux",
       "target_cf": "fvc",
       "placement_rule": "fvc_output",
+      "allow_multiple": true,
       "existence_check": "/^output == flux$/i",
       "commands": [
         "\nOutput == flux"

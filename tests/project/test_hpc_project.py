@@ -1079,3 +1079,107 @@ class TestProjectionFile:
         assert 'GPKG Projection ==' in tcf
         assert 'Spatial Database ==' in tcf
         assert 'SHP Projection ==' not in tcf
+
+
+class TestAllowMultiple:
+    """Tests for the allow_multiple flag in _apply_block."""
+
+    def _make_tbc(self, tmp_path, content: str):
+        from pytuflow import TBC
+        tbc_path = tmp_path / 'mymodel_001.tbc'
+        tbc_path.write_text(content, encoding='utf-8')
+        return TBC(tbc_path), tbc_path
+
+    def _feature(self):
+        from pytuflow.project.hpc.features._base import HPCBaseFeature
+        return HPCBaseFeature.__new__(HPCBaseFeature)
+
+    def test_allow_multiple_inserts_despite_existing_lhs(self, tmp_path):
+        """With allow_multiple, a second command with the same LHS is inserted."""
+        tbc, tbc_path = self._make_tbc(
+            tmp_path,
+            'Structure == weir, 1, 2\n',
+        )
+        block = {
+            'target_cf': 'tbc',
+            'allow_multiple': True,
+            'commands': ['Structure == culvert, 3, 4'],
+        }
+        self._feature()._apply_block(tbc, block, {})
+        tbc.write('inplace')
+        content = tbc_path.read_text(encoding='utf-8')
+        assert content.count('Structure ==') == 2
+
+    def test_allow_multiple_false_skips_duplicate_lhs(self, tmp_path):
+        """Without allow_multiple, a command whose LHS already exists is skipped."""
+        tbc, tbc_path = self._make_tbc(
+            tmp_path,
+            'Structure == weir, 1, 2\n',
+        )
+        block = {
+            'target_cf': 'tbc',
+            'allow_multiple': False,
+            'commands': ['Structure == culvert, 3, 4'],
+        }
+        self._feature()._apply_block(tbc, block, {})
+        tbc.write('inplace')
+        content = tbc_path.read_text(encoding='utf-8')
+        assert content.count('Structure ==') == 1
+
+    def test_allow_multiple_with_existence_check_idempotent(self, tmp_path):
+        """With existence_check + allow_multiple, re-inserting the same feature is a no-op."""
+        tbc, tbc_path = self._make_tbc(
+            tmp_path,
+            'Structure == weir, 1, 2\n',
+        )
+        block = {
+            'target_cf': 'tbc',
+            'allow_multiple': True,
+            'existence_check': '/^Structure == weir/i',
+            'commands': ['Structure == weir, 1, 2'],
+        }
+        self._feature()._apply_block(tbc, block, {})
+        tbc.write('inplace')
+        content = tbc_path.read_text(encoding='utf-8')
+        assert content.count('Structure ==') == 1  # idempotent
+
+    def test_allow_multiple_different_features_both_inserted(self, tmp_path):
+        """structweir and structculvert can both insert Structure == independently."""
+        tbc, tbc_path = self._make_tbc(tmp_path, '')
+        feature = self._feature()
+
+        weir_block = {
+            'target_cf': 'tbc',
+            'allow_multiple': True,
+            'commands': ['Structure == weir, 1, 2'],
+        }
+        culvert_block = {
+            'target_cf': 'tbc',
+            'allow_multiple': True,
+            'commands': ['Structure == culvert, 3, 4'],
+        }
+        feature._apply_block(tbc, weir_block, {})
+        feature._apply_block(tbc, culvert_block, {})
+        tbc.write('inplace')
+        content = tbc_path.read_text(encoding='utf-8')
+        assert content.count('Structure ==') == 2
+        assert 'weir' in content
+        assert 'culvert' in content
+
+    def test_allow_multiple_does_not_uncomment_existing(self, tmp_path):
+        """With allow_multiple, a commented version is not uncommented — a fresh line is added."""
+        tbc, tbc_path = self._make_tbc(
+            tmp_path,
+            '! Structure == weir, 1, 2\n',
+        )
+        block = {
+            'target_cf': 'tbc',
+            'allow_multiple': True,
+            'commands': ['Structure == culvert, 3, 4'],
+        }
+        self._feature()._apply_block(tbc, block, {})
+        tbc.write('inplace')
+        content = tbc_path.read_text(encoding='utf-8')
+        # The commented weir line stays commented; culvert is added fresh
+        assert '! Structure == weir' in content
+        assert 'Structure == culvert' in content

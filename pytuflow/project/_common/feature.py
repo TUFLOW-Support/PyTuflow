@@ -135,6 +135,7 @@ class BaseEngineFeature(BaseFeature):
             return
 
         # ── Per-command mode (no existence_check) ────────────────────────────
+        allow_multiple = block.get('allow_multiple', False)
         current_ref, anchor_rule = self._find_block_anchor(cf, block)
         pending_decorators: list[str] = []
         past_first_real_command = False
@@ -153,25 +154,26 @@ class BaseEngineFeature(BaseFeature):
                 existing = cf.find_input(stripped, comments=True)
             else:
                 existing = cf.find_input(lhs=lhs, recursive=False)
-            if existing:
+            if existing and not allow_multiple:
                 pending_decorators.clear()
                 current_ref = existing[0]
                 continue
 
-            escaped_lhs = re.escape(lhs)
-            auto_pattern = rf'^\s*!\s*{escaped_lhs}\s*=='
-            commented = cf.find_input(
-                filter_by=auto_pattern,
-                comments=True,
-                recursive='similar',
-                regex=True,
-                regex_flags=re.IGNORECASE,
-            )
-            if commented:
-                cf.uncomment(commented[0])
-                pending_decorators.clear()
-                current_ref = commented[0]
-                continue
+            if not allow_multiple:
+                escaped_lhs = re.escape(lhs)
+                auto_pattern = rf'^\s*!\s*{escaped_lhs}\s*=='
+                commented = cf.find_input(
+                    filter_by=auto_pattern,
+                    comments=True,
+                    recursive='similar',
+                    regex=True,
+                    regex_flags=re.IGNORECASE,
+                )
+                if commented:
+                    cf.uncomment(commented[0])
+                    pending_decorators.clear()
+                    current_ref = commented[0]
+                    continue
 
             if current_ref:
                 cf = current_ref.parent

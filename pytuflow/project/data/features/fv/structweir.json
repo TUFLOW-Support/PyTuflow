@@ -18,6 +18,7 @@
       "id": "fvc_struct_weir",
       "target_cf": "fvc",
       "placement_rule": "fvc_structures",
+      "allow_multiple": true,
       "commands": [
         "\nStructure == <weir_connection_type>, <link1_id>, <link2_id>"
       ]

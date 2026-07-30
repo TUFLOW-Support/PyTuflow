@@ -85,38 +85,8 @@ Read GIS Nodestring == <path/to/2d_ns.shp>
 !   BC Header == time, WL
 ! End BC
 
-##IF feature:structweir,structculvert##
-!__________________________________________________________________________________________________________________________________________________________________________________________
-! HYDRAULIC STRUCTURES
-##ENDIF##
-##IF feature:structweir##
-##COMMANDS fvc_struct_weir_nodestring##
-##COMMANDS fvc_struct_weir##
-##COMMANDS struct_weir_param##
-End Structure
-##END IF##
-
 !__________________________________________________________________________________________________________________________________________________________________________________________
 ! MODEL OUTPUTS
 Output Dir == ..\results												! Result output directory
 Log Dir == log															! Log and diagnostics directory
 Write Check Files == ..\check											! Directory for GIS check files
-
-##IF feature:outputflux##
-##COMMANDS fvc_flux_nodestring##
-##ENDIF##
-##IF feature:outputflux##
-##COMMANDS fvc_output_flux##
-##COMMANDS output_flux_param##
-End Output
-##ENDIF##
-##IF feature:outputnc##
-##COMMANDS fvc_output_nc##
-##COMMANDS output_nc_param##
-End Output
-##ENDIF##
-##IF feature:outputpoints##
-##COMMANDS fvc_output_points##
-##COMMANDS output_points_param##
-End Output
-##ENDIF##
