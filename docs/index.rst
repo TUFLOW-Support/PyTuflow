@@ -44,6 +44,17 @@ TUFLOW FV
 
 Support has been added for TUFLOW FV control files. The workflow and data structures are very similar to Classic/HPC with a few minor differences. See :doc:`Working with TUFLOW FV<examples/working_with_fv>` for examples.
 
+.. _projection_creation:
+
+Project Creation
+^^^^^^^^^^^^^^^^
+
+PyTUFLOW now supports project initialisation and creation via the classes :class:`~pytuflow.HPCProject` and :class:`~pytuflow.FVProject` or alternatively via the command line interface ``python -m pytuflow.project create``.
+
+It is also possible to insert features into an existing model with :meth:`HPCProject.insert_feature_into()<pytuflow.HPCProject.insert_feature_into>` and :meth:`FVProject.insert_feature_into()<pytuflow.FVProject.insert_feature_into>` or alternatively via the command line interface ``python -m pytuflow.project insert``.
+
+For examples, please see the :class:`~pytuflow.HPCProject` and :class:`~pytuflow.FVProject` documentation.
+
 .. _flux:
 
 Flux
