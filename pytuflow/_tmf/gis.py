@@ -199,42 +199,18 @@ def mi_projection(mi_proj):
 
 def ogr_projection(filepath):
     """Return the projection as WKT from a given layer."""
-    if str(filepath).startswith('CoordSys'):
-        return mi_projection(str(filepath))
-
-    db, layername = get_database_name(filepath)
+    db, _ = get_database_name(filepath)
 
     if not Path(db).exists():
-        raise FileNotFoundError(f'File {db} does not exist.')
+        raise FileNotFoundError(f'{db} does not exist')
 
     if Path(db).suffix.upper() == '.PRJ':
         with open(db, 'r') as f:
             return f.readline()
-
-    fmt = ogr_format(db)
-    driver_name = get_driver_name_from_gis_format(fmt)
-    try:
-        datasource = ogr.GetDriverByName(driver_name).Open(db)
-    except RuntimeError:
-        datasource = None
-
-    if datasource is None:
-        raise RuntimeError(f'Could not open {db} with driver {driver_name}')
-
-    lyr = datasource.GetLayer(layername)
-    if lyr is None:
-        raise RuntimeError(f'Layer {layername} not found in {db} or could not be loaded.')
-
-    sr = lyr.GetSpatialRef()
-    if sr is None:
-        raise RuntimeError(f'Layer {layername} in {db} has no spatial reference.')
-
-    wkt = sr.ExportToWkt()
-
-    # noinspection PyUnusedLocal
-    datasource, lyr = None, None
-
-    return wkt
+        
+    p = TuflowPath(filepath)
+    with p.open_gis() as gis:
+        return gis.crs_wkt()
 
 
 def get_all_layers_in_gpkg(db):
