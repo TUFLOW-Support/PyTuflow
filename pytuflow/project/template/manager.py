@@ -1,9 +1,13 @@
 import json
 import shutil
 from pathlib import Path
+import logging
 
 CACHE_ROOT = Path.home() / '.tuflow_model_files' / 'project_templates'
 _BUNDLED_DATA_DIR = Path(__file__).parent.parent / 'data'
+
+
+logger = logging.getLogger('pytuflow')
 
 
 class TemplateManager:
@@ -116,12 +120,21 @@ class TemplateManager:
                 result.append(str(p.relative_to(self._cache_dir)))
         return result
 
-    def list_feature_configs(self) -> list[str]:
+    def list_feature_configs(self) -> list[tuple[str, str]]:
         """Return list of cached feature config names (without .json extension)."""
         self.init_cache()
         if not self._cache_features_dir.exists():
             return []
-        return [p.stem for p in sorted(self._cache_features_dir.glob('*.json'))]
+        configs = []
+        for file in sorted(self._cache_features_dir.glob('*.json')):
+            try:
+                with open(file, 'r') as f:
+                    d = json.load(f)
+                configs.append((file.stem, d['display_name']))
+            except Exception:
+                logger.warning(f'Found feature {file.name} but could not load it or find diplay_name')
+                continue
+        return configs
 
     def reset_cache(self) -> None:
         self.init_cache(force=True)

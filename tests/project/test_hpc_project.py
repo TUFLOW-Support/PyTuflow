@@ -918,7 +918,7 @@ class TestfeatureJsonConfig:
         import pytuflow.project.template.manager as mgr_mod
         monkeypatch.setattr(mgr_mod, 'CACHE_ROOT', tmp_path / 'cache')
         manager = TemplateManager('hpc')
-        names = manager.list_feature_configs()
+        names = [x[0] for x in manager.list_feature_configs()]
         assert 'estry' in names
         assert 'soils' in names
 

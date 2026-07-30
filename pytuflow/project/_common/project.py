@@ -262,11 +262,11 @@ class BaseEngineProject(BaseProject):
         base_cls = cls._get_feature_base_class()
         manager = TemplateManager(cls.ENGINE_TYPE)
         result = {}
-        for name in manager.list_feature_configs():
+        for name, display_name in manager.list_feature_configs():
             dyn_cls = type(
                 f'{name.title()}feature',
                 (base_cls,),
-                {'NAME': name, 'DISPLAY_NAME': name.replace('_', ' ').title()},
+                {'NAME': name, 'DISPLAY_NAME': display_name},
             )
             result[name] = dyn_cls
         return result
