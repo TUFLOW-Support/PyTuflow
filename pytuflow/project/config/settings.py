@@ -100,7 +100,7 @@ class Settings:
                 lines.append(f'{fmt} Map Output Data Types == {data_types}')
 
         self._settings['output_format_setting_lines'] = '\n'.join(lines)
-        # Space-joined string for the single "Map Output Formats ==" command.
+        # Space-joined string for the single "Map Output Format ==" command.
         self._settings['map_output_formats_str'] = ' '.join(
             self._settings['map_output_formats']
         )

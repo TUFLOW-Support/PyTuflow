@@ -77,7 +77,7 @@ Write Check Files == ..\check\
 
 !_______________________________________________________
 ! MAP OUTPUT FORMATS
-Map Output Formats == ${map_output_formats_str}
+Map Output Format == ${map_output_formats_str}
 ${output_format_setting_lines}
 
 ##IF feature:sgs##

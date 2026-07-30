@@ -78,26 +78,26 @@ class TestHPCProjectCreate:
     def test_tcf_map_output_format(self, basic_project, project_dir):
         basic_project.create()
         tcf_text = (project_dir / 'runs' / 'mymodel_001.tcf').read_text()
-        assert 'Map Output Formats == XMDF' in tcf_text
+        assert 'Map Output Format == XMDF' in tcf_text
 
     def test_tcf_multiple_map_output_formats(self, project_dir):
         p = HPCProject('mymodel', project_dir, crs='EPSG:32760', map_output_formats=['XMDF', 'SHP'])
         p.create()
         tcf_text = (project_dir / 'runs' / 'mymodel_001.tcf').read_text()
-        assert 'Map Output Formats == XMDF SHP' in tcf_text
-        assert tcf_text.count('Map Output Formats ==') == 1, \
-            "Map Output Formats should appear only once"
+        assert 'Map Output Format == XMDF SHP' in tcf_text
+        assert tcf_text.count('Map Output Format ==') == 1, \
+            "Map Output Format should appear only once"
 
     def test_tcf_output_formats_per_format_settings(self, project_dir):
-        """output_formats dict generates a single Map Output Formats line plus per-format settings."""
+        """output_formats dict generates a single Map Output Format line plus per-format settings."""
         p = HPCProject('mymodel', project_dir, crs='EPSG:32760', output_formats={
             'XMDF': {'interval': 60, 'data_types': ['h', 'v', 'd']},
             'TIF':  {'interval': 0},
         })
         p.create()
         tcf_text = (project_dir / 'runs' / 'mymodel_001.tcf').read_text()
-        assert 'Map Output Formats == XMDF TIF' in tcf_text
-        assert tcf_text.count('Map Output Formats ==') == 1
+        assert 'Map Output Format == XMDF TIF' in tcf_text
+        assert tcf_text.count('Map Output Format ==') == 1
         assert 'XMDF Map Output Interval == 60' in tcf_text
         assert 'XMDF Map Output Data Types == h v d' in tcf_text
         assert 'TIF Map Output Interval == 0' in tcf_text

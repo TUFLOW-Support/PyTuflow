@@ -22,7 +22,7 @@ class FVProject(BaseEngineProject):
     * Primary control file is ``.fvc`` (loaded as :class:`pytuflow.FVC`).
     * No secondary control files (all content lives in the single FVC).
     * GPKG is not a supported GIS format.
-    * Output blocks are treated as features — no ``Map Output Formats`` command.
+    * Output blocks are treated as features — no ``Map Output Format`` command.
     * FV-specific defaults are loaded from ``fv_defaults.json``.
     """
 

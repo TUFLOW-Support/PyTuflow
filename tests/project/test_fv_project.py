@@ -118,10 +118,10 @@ class TestFVProjectCreate:
             assert '/' not in fvc_text.replace('\r\n', '\n')
 
     def test_no_map_output_formats_in_fvc(self, basic_project, project_dir):
-        """FV outputs are features — Map Output Formats command must not appear."""
+        """FV outputs are features — Map Output Format command must not appear."""
         basic_project.create()
         fvc_text = (project_dir / 'runs' / 'mymodel_001.fvc').read_text()
-        assert 'Map Output Formats' not in fvc_text
+        assert 'Map Output Format' not in fvc_text
 
 
 class TestFVProjectSettings:
