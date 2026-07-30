@@ -17,7 +17,7 @@
     {
       "id": "output_flux_param",
       "target_cf": "fvc",
-      "subtarget_cf": "##PREVIOUS_COMMAND_BLOCK##",
+      "target_previous_block": true,
       "commands": [
         "Output Interval == 3600."
       ]

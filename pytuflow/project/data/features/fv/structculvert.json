@@ -26,7 +26,7 @@
     {
       "id": "struct_culvert_param",
       "target_cf": "fvc",
-      "subtarget_cf": "##PREVIOUS_COMMAND_BLOCK##",
+      "target_previous_block": true,
       "commands": [
         "Flux Function == Culvert",
         "Culvert File == <path/to/culvert_databsae.csv>"

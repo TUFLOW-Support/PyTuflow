@@ -17,7 +17,7 @@
     {
       "id": "output_points_param",
       "target_cf": "fvc",
-      "subtarget_cf": "/^output == points$/i",
+      "target_previous_block": true,
       "commands": [
         "Read GIS PO == <path/to/3d_po.shp>",
         "Output Parameters == h, v, d",

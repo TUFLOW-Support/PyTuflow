@@ -58,15 +58,16 @@ class BaseEngineFeature(BaseFeature):
             cf = control_files.get(target)
             if cf is None:
                 continue
-            subtarget = block.get("subtarget_cf")
+            subtarget = block.get("subtarget_cf") or block.get("target_previous_block")
             if subtarget:
-                pattern, is_regex, flags = _parse_filter(subtarget)
-                if pattern == '##PREVIOUS_COMMAND_BLOCK##':
-                    input_subtarget = [last_input] if last_input else []
-                elif '==' in pattern:
-                    input_subtarget = cf.find_input(filter_by=pattern, regex=is_regex, regex_flags=flags)
+                if block.get("subtarget_cf"):
+                    pattern, is_regex, flags = _parse_filter(subtarget)
+                    if '==' in pattern:
+                        input_subtarget = cf.find_input(filter_by=pattern, regex=is_regex, regex_flags=flags)
+                    else:
+                        input_subtarget = cf.find_input(lhs=pattern, regex=is_regex, regex_flags=flags)
                 else:
-                    input_subtarget = cf.find_input(lhs=pattern, regex=is_regex, regex_flags=flags)
+                    input_subtarget = [last_input] if last_input else []
                 for inp in input_subtarget:
                     if inp.cf:
                         cf = inp.cf[0]

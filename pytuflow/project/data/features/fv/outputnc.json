@@ -17,7 +17,7 @@
     {
       "id": "output_nc_param",
       "target_cf": "fvc",
-      "subtarget_cf": "/^output == netcdf$/i",
+      "target_previous_block": true,
       "commands": [
         "Output Parameters == h, v, d",
         "Output Interval == 3600.",
