@@ -80,7 +80,8 @@
       "/^Spatial Order$/i",
       "/^Include Heat$/i",
       "/^Spherical$/i",
-      "/^Latitude$/i"
+      "/^Latitude$/i",
+      "/^Ntracer$/i"
     ]
   },
   "fvc_initial_conditions": {
@@ -99,6 +100,13 @@
       "/^Initial Condition OGCM$/i",
       "/^Initial Condition Quiescent$/i",
       "/^Initial Scalar Profile$/i"
+    ]
+  },
+  "fvc_tracer_block_heading": {
+    "description": "Insert after tracer block heading.",
+    "rule": "after",
+    "commands": [
+      "! TRACER DEFINITION"
     ]
   }
 }

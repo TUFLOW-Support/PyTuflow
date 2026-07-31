@@ -25,6 +25,9 @@ Latitude == ${latitude}												! {0.0} Representative latitude for study are
 ##IF feature:temp##
 ##COMMANDS fvc_heat##
 ##ENDIF##
+##IF feature:ad##
+##COMMANDS fvc_ntracer##
+##ENDIF##
 
 !__________________________________________________________________________________________________________________________________________________________________________________________
 ! HARDWARE (optional)
@@ -60,6 +63,14 @@ Global Bottom Roughness == 0.018										! {1.0E-6} Manning's 'n'
 Momentum Mixing Model == Smagorinsky									! None | Constant | Smagorinsky | Wu
 Global Horizontal Eddy Viscosity == 0.5									! {0.0} Smagorinksy coefficient
 Global Horizontal Eddy Viscosity Limits == 0.05, 99999.					! {0.0} Minimum eddy viscosity (m^2/s), {99999.} Maximum eddy viscosity (m^2/s)
+
+##IF feature:ad##
+!__________________________________________________________________________________________________________________________________________________________________________________________
+! TRACER DEFINITION
+##COMMANDS fvc_tracer_block##
+##COMMANDS fvc_tracer_block_params##
+End Tracer
+##ENDIF##
 
 !__________________________________________________________________________________________________________________________________________________________________________________________
 ! WIND STRESS (optional)

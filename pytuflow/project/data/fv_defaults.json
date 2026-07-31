@@ -16,5 +16,6 @@
   "temp_density": 1,
   "heat_active": 1,
   "initial_sal": "<sal mg/L>",
-  "initial_temp": "<temp deg>"
+  "initial_temp": "<temp deg>",
+  "ntracer": 1
 }

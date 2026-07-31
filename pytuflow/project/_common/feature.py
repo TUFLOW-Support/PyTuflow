@@ -124,7 +124,7 @@ class BaseEngineFeature(BaseFeature):
                 else:
                     found = cf.find_input(lhs=pattern, recursive='similar', regex=is_regex, regex_flags=flags)
             if found:
-                return  # sentinel present — block already inserted
+                return found[0]  # sentinel present — block already inserted
 
             current_ref, anchor_rule = self._find_block_anchor(cf, block)
             if current_ref:
@@ -133,7 +133,7 @@ class BaseEngineFeature(BaseFeature):
                 if cmd.strip():
                     current_ref = self._insert_or_append(cf, current_ref, cmd, anchor_rule)
                 anchor_rule = 'after'  # switch back to after so that subsequent commands appear in expected order
-            return
+            return current_ref
 
         # ── Per-command mode (no existence_check) ────────────────────────────
         allow_multiple = block.get('allow_multiple', False)

@@ -1,0 +1,47 @@
+{
+    "name": "ad",
+    "display_name": "AD",
+    "sort_order": 5,
+    "template_files": [],
+    "command_blocks": [
+        {
+            "id": "fvc_ntracer",
+            "target_cf": "fvc",
+            "placement_rule": "fvc_simulation_configuration",
+            "commands": [
+                "Ntracer == ${ntracer}"
+            ]
+        },
+        {
+            "id": "fvc_tracer_block_header",
+            "target_cf": "fvc",
+            "placement_rule": "fvc_simulation_configuration",
+            "existence_check": "! TRACER DEFINITION",
+            "commands": [
+                "\n!______________________________________________________________________________________________________________________",
+                "! TRACER DEFINITION"
+            ]
+        },
+        {
+            "id": "fvc_tracer_block",
+            "target_cf": "fvc",
+            "placement_rule": "fvc_tracer_block_heading",
+            "existence_check": "/^tracer$/i",
+            "commands": [
+                "! Example tracer block - Required for the decay, settling or water age implementations or when disabling evapo-concentration",
+                "Tracer == 1"
+            ]
+        },
+        {
+            "id": "fvc_tracer_block_params",
+            "target_cf": "fvc",
+            "target_previous_block": true,
+            "commands": [
+                "Decay Rate == <trace_Kd>",
+                "Settling Velocity == <settling_velocity>",
+                "Evapo-Concentrate == 1",
+                "Water Age == 0"
+            ]
+        }
+    ]
+}
