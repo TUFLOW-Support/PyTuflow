@@ -1,6 +1,6 @@
 {
-  "name": "structmat",
-  "display_name": "Structure - Matrix",
+  "name": "structpor",
+  "display_name": "Structure - Porous",
   "sort_order": 5,
   "template_files": [],
   "command_blocks": [
@@ -15,29 +15,29 @@
       ]
     },
     {
-      "id": "fvc_struct_matrix",
+      "id": "fvc_struct_porous",
       "target_cf": "fvc",
       "placement_rule": "fvc_structures",
       "allow_multiple": true,
       "commands": [
-        "\nStructure == <matrix_connection_type>, <link1_id>, <link2_id>"
+        "\nStructure == <porous_connection_type>, <link1_id>, <link2_id>"
       ]
     },
     {
-      "id": "struct_matrix_param",
+      "id": "struct_porous_param",
       "target_cf": "fvc",
       "target_previous_block": true,
       "commands": [
-        "Flux Function == Matrix",
-        "Flux File == <path/to/matrix.csv>"
+        "Flux Function == Porous",
+        "Properties == <K m/s>, <Flow Path Lengh m>"
       ]
     },
     {
-        "id": "fvc_struct_matrix_nodestring",
+        "id": "fvc_struct_porous_nodestring",
         "target_cf": "fvc",
         "placement_rule": "before_fvc_structures",
         "commands": [
-            "Read GIS Notestring == <path/to/2d_ns_matrix.shp>"
+            "Read GIS Notestring == <path/to/2d_ns_porous.shp>"
         ]
 
     }
