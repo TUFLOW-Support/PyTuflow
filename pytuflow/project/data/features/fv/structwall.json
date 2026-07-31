@@ -1,0 +1,44 @@
+{
+  "name": "structwall",
+  "display_name": "Structure - Wall",
+  "sort_order": 5,
+  "template_files": [],
+  "command_blocks": [
+    {
+      "id": "fvc_struct_header",
+      "target_cf": "fvc",
+      "placement_rule": "before_fvc_structures",
+      "existence_check": "! HYDRAULIC STRUCTURES",
+      "commands": [
+        "\n!__________________________________________________________________________________________________________________________________________________________________________________________",
+        "! HYDRAULIC STRUCTURES"
+      ]
+    },
+    {
+      "id": "fvc_struct_wall",
+      "target_cf": "fvc",
+      "placement_rule": "fvc_structures",
+      "allow_multiple": true,
+      "commands": [
+        "\nStructure == Nodestring, <link1_id>"
+      ]
+    },
+    {
+      "id": "struct_wall_param",
+      "target_cf": "fvc",
+      "target_previous_block": true,
+      "commands": [
+        "Flux Function == Wall"
+      ]
+    },
+    {
+        "id": "fvc_struct_wall_nodestring",
+        "target_cf": "fvc",
+        "placement_rule": "before_fvc_structures",
+        "commands": [
+            "Read GIS Notestring == <path/to/2d_ns_wall.shp>"
+        ]
+
+    }
+  ]
+}
