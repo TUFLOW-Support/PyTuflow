@@ -4,7 +4,6 @@ import pytest
 from pathlib import Path
 
 from pytuflow.project.config.settings import Settings
-from pytuflow.project.config.defaults import FACTORY_DEFAULTS, FACTORY_HPC_DEFAULTS
 
 
 class TestSettingsDefaults:

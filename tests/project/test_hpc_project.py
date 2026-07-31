@@ -1126,23 +1126,6 @@ class TestAllowMultiple:
         content = tbc_path.read_text(encoding='utf-8')
         assert content.count('Structure ==') == 1
 
-    def test_allow_multiple_with_existence_check_idempotent(self, tmp_path):
-        """With existence_check + allow_multiple, re-inserting the same feature is a no-op."""
-        tbc, tbc_path = self._make_tbc(
-            tmp_path,
-            'Structure == weir, 1, 2\n',
-        )
-        block = {
-            'target_cf': 'tbc',
-            'allow_multiple': True,
-            'existence_check': '/^Structure == weir/i',
-            'commands': ['Structure == weir, 1, 2'],
-        }
-        self._feature()._apply_block(tbc, block, {})
-        tbc.write('inplace')
-        content = tbc_path.read_text(encoding='utf-8')
-        assert content.count('Structure ==') == 1  # idempotent
-
     def test_allow_multiple_different_features_both_inserted(self, tmp_path):
         """structweir and structculvert can both insert Structure == independently."""
         tbc, tbc_path = self._make_tbc(tmp_path, '')

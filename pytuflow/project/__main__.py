@@ -21,10 +21,9 @@ _FIXED_ARGS = {'name', 'output_dir', 'output-dir', 'crs', 'features', 'create_em
 
 def _get_engine_defaults(engine: str) -> tuple[dict, dict]:
     """Return (shared_defaults, engine_defaults) for the given engine."""
-    from .config.defaults import FACTORY_DEFAULTS, FACTORY_HPC_DEFAULTS, FACTORY_FV_DEFAULTS
-    if engine == 'fv':
-        return FACTORY_DEFAULTS, FACTORY_FV_DEFAULTS
-    return FACTORY_DEFAULTS, FACTORY_HPC_DEFAULTS
+    from .template.manager import TemplateManager
+    manager = TemplateManager(engine)
+    return manager.get_defaults()
 
 
 def _add_dynamic_args(parser, engine: str = 'hpc') -> list[str]:
@@ -35,22 +34,23 @@ def _add_dynamic_args(parser, engine: str = 'hpc') -> list[str]:
     shared_defaults, engine_defaults = _get_engine_defaults(engine)
 
     dests = []
-    for defaults in (shared_defaults, engine_defaults):
-        for key, value in defaults.items():
-            if key.startswith('_') or key in _FIXED_ARGS:
-                continue
-            flag = f'--{key.replace("_", "-")}'
-            dest = key
-            if isinstance(value, dict):
-                parser.add_argument(
-                    flag, dest=dest, default=None, metavar='JSON',
-                    help=f'{key} as a JSON object',
-                )
-            elif isinstance(value, list):
-                parser.add_argument(flag, dest=dest, nargs='*', default=None)
-            else:
-                parser.add_argument(flag, dest=dest, default=None)
-            dests.append(dest)
+    defaults = shared_defaults.copy()
+    defaults.update(engine_defaults)
+    for key, value in defaults.items():
+        if key.startswith('_') or key in _FIXED_ARGS:
+            continue
+        flag = f'--{key.replace("_", "-")}'
+        dest = key
+        if isinstance(value, dict):
+            parser.add_argument(
+                flag, dest=dest, default=None, metavar='JSON',
+                help=f'{key} as a JSON object',
+            )
+        elif isinstance(value, list):
+            parser.add_argument(flag, dest=dest, nargs='*', default=None)
+        else:
+            parser.add_argument(flag, dest=dest, default=None)
+        dests.append(dest)
     return dests
 
 
@@ -92,13 +92,29 @@ def cmd_create(args, dynamic_dests: list[str]):
     print(f"Project created: {out}")
 
 
-def cmd_insert(args):
+def cmd_insert(args, dynamic_dests: list[str]):
     engine = getattr(args, 'engine', 'hpc') or 'hpc'
     if engine == 'fv':
         from .fv.project import FVProject as ProjectClass
     else:
         from .hpc.project import HPCProject as ProjectClass
-    ProjectClass.insert_feature_into(args.feature, args.cf)
+
+    shared_defaults, engine_defaults = _get_engine_defaults(engine)
+    all_defaults = {**shared_defaults, **engine_defaults}
+    kwargs = {}
+    for dest in dynamic_dests:
+        val = getattr(args, dest, None)
+        if val is None:
+            continue
+        if isinstance(all_defaults.get(dest), dict):
+            try:
+                val = json.loads(val)
+            except json.JSONDecodeError as e:
+                print(f"Invalid --{dest.replace('_', '-')} JSON: {e}", file=sys.stderr)
+                sys.exit(1)
+        kwargs[dest] = val
+
+    ProjectClass.insert_feature_into(args.feature, args.cf, **kwargs)
     print(f"feature '{args.feature}' inserted into {args.cf}")
 
 
@@ -136,26 +152,15 @@ def main():
     p_create.add_argument('--output-dir', required=True, dest='output_dir', help='Output directory')
     p_create.add_argument('--crs', required=True, help='Coordinate reference system (e.g. EPSG:32760)')
     p_create.add_argument('--features', nargs='*', default=[], help='Optional features to include')
-    # We parse --engine first to determine which dynamic args to add.  For the
-    # common case (hpc) we add HPC defaults; fv users pass --engine fv first.
-    # To keep things simple, always add HPC defaults (they're ignored for FV).
-    dynamic_dests = _add_dynamic_args(p_create, engine='hpc')
-    # Also add FV-only args (those not already in HPC defaults)
-    from .config.defaults import FACTORY_FV_DEFAULTS, FACTORY_HPC_DEFAULTS
-    _fv_only_keys = set(FACTORY_FV_DEFAULTS) - set(FACTORY_HPC_DEFAULTS)
-    from .config.defaults import FACTORY_DEFAULTS
-    _fv_only_keys -= set(FACTORY_DEFAULTS) | _FIXED_ARGS
-    for key in sorted(_fv_only_keys):
-        value = FACTORY_FV_DEFAULTS[key]
-        flag = f'--{key.replace("_", "-")}'
-        if isinstance(value, dict):
-            p_create.add_argument(flag, dest=key, default=None, metavar='JSON')
-        elif isinstance(value, list):
-            p_create.add_argument(flag, dest=key, nargs='*', default=None)
-        else:
-            p_create.add_argument(flag, dest=key, default=None)
-        if key not in dynamic_dests:
-            dynamic_dests.append(key)
+
+    try:
+        i = sys.argv.index('--engine')
+        engine = sys.argv[i+1]
+    except Exception as e:
+        # --engine is mandatory, let the argparser catch it later with correct error messaging
+        engine = ''
+
+    create_dynamic_dests = _add_dynamic_args(p_create, engine=engine)
 
     # insert
     p_insert = sub.add_parser('insert', help='Insert a feature into an existing project')
@@ -163,6 +168,8 @@ def main():
                           help='TUFLOW engine type (default: hpc)')
     p_insert.add_argument('--cf', required=True, help='Path to main control file (TCF or FVC)')
     p_insert.add_argument('--feature', required=True, help='feature name to insert')
+
+    insert_dynamic_dests = _add_dynamic_args(p_insert, engine=engine)
 
     # init-templates
     p_init = sub.add_parser('init-templates', help='Initialise user template cache')
@@ -176,9 +183,9 @@ def main():
     args = parser.parse_args()
 
     if args.command == 'create':
-        cmd_create(args, dynamic_dests)
+        cmd_create(args, create_dynamic_dests)
     elif args.command == 'insert':
-        cmd_insert(args)
+        cmd_insert(args, insert_dynamic_dests)
     elif args.command == 'init-templates':
         cmd_init_templates(args)
     elif args.command == 'list-features':

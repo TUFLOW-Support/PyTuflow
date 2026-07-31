@@ -136,5 +136,33 @@ class TemplateManager:
                 continue
         return configs
 
+    def get_defaults(self) -> tuple[dict, dict]:
+        self.init_cache()
+        defaults = {}
+        if self._cache_defaults.exists():
+            with open(self._cache_defaults, 'r') as fo:
+                defaults = json.load(fo)
+        elif self._bundled_defaults.exists():
+            with open(self._bundled_defaults, 'r') as fo:
+                defaults = json.load(fo)
+
+        engine_defaults = {}
+        if self.engine_type == 'hpc':
+            if self._cache_hpc_defaults.exists():
+                with open(self._cache_hpc_defaults, 'r') as fo:
+                    engine_defaults = json.load(fo)
+            if self._bundled_hpc_defaults.exists():
+                with open(self._bundled_hpc_defaults, 'r') as fo:
+                    engine_defaults = json.load(fo)
+        elif self.engine_type == 'fv':
+            if self._cache_fv_defaults.exists():
+                with open(self._cache_fv_defaults, 'r') as fo:
+                    engine_defaults = json.load(fo)
+            if self._bundled_fv_defaults.exists():
+                with open(self._bundled_fv_defaults, 'r') as fo:
+                    engine_defaults = json.load(fo)
+
+        return defaults, engine_defaults
+        
     def reset_cache(self) -> None:
         self.init_cache(force=True)

@@ -2,8 +2,6 @@ import json
 from pathlib import Path
 from typing import Any
 
-from .defaults import FACTORY_DEFAULTS, FACTORY_FV_DEFAULTS, FACTORY_HPC_DEFAULTS
-
 CACHE_ROOT = Path.home() / '.tuflow_model_files' / 'project_templates'
 
 
@@ -11,7 +9,6 @@ class Settings:
 
     def __init__(self, engine_type: str = 'hpc', **overrides):
         settings = {}
-        settings.update(FACTORY_DEFAULTS)
 
         # Try loading user defaults.json (shared across engines)
         user_defaults = CACHE_ROOT / 'defaults.json'
@@ -21,10 +18,8 @@ class Settings:
 
         # Engine-specific factory defaults
         if engine_type == 'hpc':
-            settings.update(FACTORY_HPC_DEFAULTS)
             user_engine_defaults = CACHE_ROOT / 'hpc_defaults.json'
         elif engine_type == 'fv':
-            settings.update(FACTORY_FV_DEFAULTS)
             user_engine_defaults = CACHE_ROOT / 'fv_defaults.json'
         else:
             user_engine_defaults = None
