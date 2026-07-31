@@ -1,6 +1,6 @@
 {
-  "name": "structculvert",
-  "display_name": "Structure - Culvert",
+  "name": "structed",
+  "display_name": "Structure - Energy Loss",
   "sort_order": 5,
   "template_files": [],
   "command_blocks": [
@@ -15,29 +15,29 @@
       ]
     },
     {
-      "id": "fvc_struct_culvert",
+      "id": "fvc_struct_energy_loss",
       "target_cf": "fvc",
       "placement_rule": "fvc_structures",
       "allow_multiple": true,
       "commands": [
-        "\nStructure == <culvert_connection_type>, <link1_id>, <link2_id>"
+        "\nStructure == <energy_loss_connection_type>, <link1_id>, <link2_id>"
       ]
     },
     {
-      "id": "struct_culvert_param",
+      "id": "struct_energy_loss_param",
       "target_cf": "fvc",
       "target_previous_block": true,
       "commands": [
-        "Flux Function == Culvert",
-        "Culvert File == <path/to/culvert_databsae.csv>"
+        "Energy Loss Function == Table",
+        "Energy Loss File == <path/to/table.csv>"
       ]
     },
     {
-        "id": "fvc_struct_culvert_nodestring",
+        "id": "fvc_struct_energy_loss_nodestring",
         "target_cf": "fvc",
         "placement_rule": "before_fvc_structures",
         "commands": [
-            "Read GIS Notestring == <path/to/2d_ns_culvert.shp>"
+            "Read GIS Notestring == <path/to/2d_ns_energy_loss.shp>"
         ]
 
     }
