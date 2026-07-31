@@ -30,7 +30,8 @@
       "commands": [
         "Energy Loss Function == Coefficient",
         "Form Loss Coefficient == <value>",
-        "Blockage File  == <path/to/table.csv>"
+        "! Blockage File  == <path/to/blockage_table.csv>",
+        "! Width File == .<path/to/width_table.csv>"
       ]
     },
     {
