@@ -1,6 +1,6 @@
 {
-  "name": "structel",
-  "display_name": "Structure - Energy Loss",
+  "name": "structcoeff",
+  "display_name": "Structure - Coefficient",
   "sort_order": 5,
   "template_files": [],
   "command_blocks": [
@@ -15,29 +15,30 @@
       ]
     },
     {
-      "id": "fvc_struct_energy_loss",
+      "id": "fvc_struct_coefficient",
       "target_cf": "fvc",
       "placement_rule": "fvc_structures",
       "allow_multiple": true,
       "commands": [
-        "\nStructure == <energy_loss_connection_type>, <link1_id>, <link2_id>"
+        "\nStructure == <coefficient_connection_type>, <link1_id>, <link2_id>"
       ]
     },
     {
-      "id": "struct_energy_loss_param",
+      "id": "struct_coefficient_param",
       "target_cf": "fvc",
       "target_previous_block": true,
       "commands": [
-        "Energy Loss Function == Table",
-        "Energy Loss File == <path/to/table.csv>"
+        "Energy Loss Function == Coefficient",
+        "Form Loss Coefficient == <value>",
+        "Blockage File  == <path/to/table.csv>"
       ]
     },
     {
-        "id": "fvc_struct_energy_loss_nodestring",
+        "id": "fvc_struct_coefficient_nodestring",
         "target_cf": "fvc",
         "placement_rule": "before_fvc_structures",
         "commands": [
-            "Read GIS Notestring == <path/to/2d_ns_energy_loss.shp>"
+            "Read GIS Notestring == <path/to/2d_ns_coefficient.shp>"
         ]
 
     }
