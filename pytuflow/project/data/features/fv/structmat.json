@@ -1,0 +1,45 @@
+{
+  "name": "structmat",
+  "display_name": "Structure - Matrix",
+  "sort_order": 5,
+  "template_files": [],
+  "command_blocks": [
+    {
+      "id": "fvc_struct_header",
+      "target_cf": "fvc",
+      "placement_rule": "before_fvc_structures",
+      "existence_check": "! HYDRAULIC STRUCTURES",
+      "commands": [
+        "\n!__________________________________________________________________________________________________________________________________________________________________________________________",
+        "! HYDRAULIC STRUCTURES"
+      ]
+    },
+    {
+      "id": "fvc_struct_matrix",
+      "target_cf": "fvc",
+      "placement_rule": "fvc_structures",
+      "allow_multiple": true,
+      "commands": [
+        "\nStructure == <matrix_connection_type>, <link1_id>, <link2_id>"
+      ]
+    },
+    {
+      "id": "struct_matrix_param",
+      "target_cf": "fvc",
+      "target_previous_block": true,
+      "commands": [
+        "Flux Function == Matrix",
+        "Flux File == <path/to/matrix.csv>",
+      ]
+    },
+    {
+        "id": "fvc_struct_matrix_nodestring",
+        "target_cf": "fvc",
+        "placement_rule": "before_fvc_structures",
+        "commands": [
+            "Read GIS Notestring == <path/to/2d_ns_matrix.shp>"
+        ]
+
+    }
+  ]
+}
