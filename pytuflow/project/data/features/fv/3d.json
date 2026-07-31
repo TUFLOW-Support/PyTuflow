@@ -1,0 +1,22 @@
+{
+    "name": "3d",
+    "display_name": "3D",
+    "sort_order": 5,
+    "template_files": [],
+    "command_blocks": [
+        {
+            "id": "fvc_3d_geometry",
+            "target_cf": "fvc",
+            "placement_rule": "fvc_geometry_2d",
+            "existence_check": "/^vertical mesh type$/i",
+            "commands": [
+                "\n! Vertical Mesh Geometry",
+                "Vertical Mesh Type == ${vertical_mesh_type}",
+                "Layer Faces == ..\\model\\csv\\2D_Z_Layers_${iter}.csv",
+                "Surface Sigma Layers == ${nsigma_layers}",
+                "Min Bottom Layer Thickness == ${min_bottom_thickness}",
+                "Cell 3D Depth == ${cell_3d_depth}"
+            ]
+        }
+    ]
+}

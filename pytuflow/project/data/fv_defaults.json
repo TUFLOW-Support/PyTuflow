@@ -3,5 +3,11 @@
   "latitude": "0.0",
   "spatial_order": "1,1",
   "hardware": "CPU",
-  "time_format": "HOURS"
+  "time_format": "HOURS",
+  "geometry_2d": "<path/to/geometry.2dm>",
+  "vertical_mesh_type": "z",
+  "nsigma_layers": 4,
+  "min_bottom_thickness": 0.5,
+  "cell_3d_depth": 1.0,
+  "output_interval": 3600
 }

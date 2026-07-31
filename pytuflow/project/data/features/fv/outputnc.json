@@ -19,7 +19,7 @@
       "target_previous_block": true,
       "commands": [
         "Output Parameters == h, v, d",
-        "Output Interval == 3600.",
+        "Output Interval == ${output_interval}",
         "! Suffix == HD  ! uncomment if writing multiple netcdf outputs"
       ]
     }

@@ -21,7 +21,7 @@
       "commands": [
         "Read GIS PO == <path/to/3d_po.shp>",
         "Output Parameters == h, v, d",
-        "Output Interval == 3600."
+        "Output Interval == ${output_interval}"
       ]
     }
   ]

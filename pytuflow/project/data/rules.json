@@ -62,5 +62,12 @@
     "commands": [
       "/^structure$/i"
     ]
+  },
+  "fvc_geometry_2d": {
+    "description": "Insert after 2D geometry command(s).",
+    "rule": "after",
+    "commands": [
+      "/^geometry 2d$/i"
+    ]
   }
 }
