@@ -1,6 +1,6 @@
 {
-  "name": "structweir",
-  "display_name": "Structure - Weir",
+  "name": "structweirdz",
+  "display_name": "Structure - Weir_dz",
   "sort_order": 5,
   "template_files": [],
   "command_blocks": [
@@ -15,29 +15,29 @@
       ]
     },
     {
-      "id": "fvc_struct_weir",
+      "id": "fvc_struct_weirdz",
       "target_cf": "fvc",
       "placement_rule": "fvc_structures",
       "allow_multiple": true,
       "commands": [
-        "\nStructure == <weir_connection_type>, <link1_id>, <link2_id>"
+        "\nStructure == Nodestring, <link1_id>"
       ]
     },
     {
-      "id": "struct_weir_param",
+      "id": "struct_weirdz_param",
       "target_cf": "fvc",
       "target_previous_block": true,
       "commands": [
-        "Flux Function == Weir",
-        "Properties == <H mRL>, 1.705, 1.5, 8.55, 0.556, 0.7"
+        "Flux Function == Weir_dz",
+        "Properties == <dz mL>, 1.705, 1.5, 8.55, 0.556, 0.7"
       ]
     },
     {
-        "id": "fvc_struct_weir_nodestring",
+        "id": "fvc_struct_weirdz_nodestring",
         "target_cf": "fvc",
         "placement_rule": "before_fvc_structures",
         "commands": [
-            "Read GIS Notestring == <path/to/2d_ns_weir.shp>"
+            "Read GIS Notestring == <path/to/2d_ns_weirdz.shp>"
         ]
 
     }
