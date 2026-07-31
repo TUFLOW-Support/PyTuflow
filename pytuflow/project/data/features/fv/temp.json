@@ -1,0 +1,24 @@
+{
+    "name": "temp",
+    "display_name": "Temperature",
+    "sort_order": 5,
+    "template_files": [],
+    "command_blocks": [
+        {
+            "id": "fvc_temperature",
+            "target_cf": "fvc",
+            "placement_rule": "fvc_simulation_configuration",
+            "commands": [
+                "Include Temperature == ${temp_active},${temp_density}"
+            ]
+        },
+        {
+            "id": "fvc_heat",
+            "target_cf": "fvc",
+            "placement_rule": "fvc_simulation_configuration",
+            "commands": [
+                "Include Heat == ${heat_active}"
+            ]
+        }
+    ]
+}

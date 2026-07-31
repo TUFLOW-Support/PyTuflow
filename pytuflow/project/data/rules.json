@@ -69,5 +69,18 @@
     "commands": [
       "/^geometry 2d$/i"
     ]
+  },
+  "fvc_simulation_configuration": {
+    "description": "Insert after other simulation configuration commands.",
+    "rule": "after",
+    "commands": [
+      "/^Bottom Drag Model$/i",
+      "/^Include Salinity$/i",
+      "/^Include Temperature$/i",
+      "/^Spatial Order$/i",
+      "/^Include Heat$/i",
+      "/^Spherical$/i",
+      "/^Latitude$/i"
+    ]
   }
 }

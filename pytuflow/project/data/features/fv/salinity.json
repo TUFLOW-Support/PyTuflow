@@ -1,0 +1,16 @@
+{
+    "name": "salinity",
+    "display_name": "Salinity",
+    "sort_order": 5,
+    "template_files": [],
+    "command_blocks": [
+        {
+            "id": "fvc_salinity",
+            "target_cf": "fvc",
+            "placement_rule": "fvc_simulation_configuration",
+            "commands": [
+                "Include Salinity == ${sal_active},${sal_density}"
+            ]
+        }
+    ]
+}

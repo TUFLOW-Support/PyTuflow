@@ -16,6 +16,15 @@ MI Projection == ..\model\gis\projection.mif						! Projection string used for G
 Units == ${units}															! {Metric} | US Customary | Imperial | English        
 Spherical == ${spherical}											! {0} Cartesian | 1 Spherical
 Latitude == ${latitude}												! {0.0} Representative latitude for study area
+##IF feature:salinity##
+##COMMANDS fvc_salinity##
+##ENDIF##
+##IF feature:temp##
+##COMMANDS fvc_temperature##
+##ENDIF##
+##IF feature:temp##
+##COMMANDS fvc_heat##
+##ENDIF##
 
 !__________________________________________________________________________________________________________________________________________________________________________________________
 ! HARDWARE (optional)
