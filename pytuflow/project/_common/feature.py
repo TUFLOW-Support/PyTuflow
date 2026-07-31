@@ -211,7 +211,11 @@ class BaseEngineFeature(BaseFeature):
             last_ref = None
             for cmd_entry in rule.get('commands', []):
                 pattern, is_regex, flags = _parse_filter(cmd_entry)
-                if '==' in pattern:
+                if pattern.lstrip() and pattern.lstrip()[0] == '!' or pattern.lstrip()[0] == '#':
+                    matches = cf.find_input(
+                        filter_by=pattern, recursive='similar', regex=is_regex, regex_flags=flags, comments=True
+                    )
+                elif '==' in pattern:
                     matches = cf.find_input(
                         filter_by=pattern, recursive='similar', regex=is_regex, regex_flags=flags
                     )

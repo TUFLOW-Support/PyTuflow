@@ -82,5 +82,23 @@
       "/^Spherical$/i",
       "/^Latitude$/i"
     ]
+  },
+  "fvc_initial_conditions": {
+    "description": "Insert after other initial conditions.",
+    "rule": "after",
+    "commands": [
+      "! INITIAL CONDITIONS",
+      "/^Initial Water Level$/i",
+      "/^Initial Tracer Concentration$/i",
+      "/^Initial Salinity$/i",
+      "/^Initial Temperature$/i",
+      "/^Initial WQ Concentration$/i",
+      "/^Initial Sediment Concentration$/i",
+      "/^Initial Condition 2D$/i",
+      "/^Initial Condition 3D$/i",
+      "/^Initial Condition OGCM$/i",
+      "/^Initial Condition Quiescent$/i",
+      "/^Initial Scalar Profile$/i"
+    ]
   }
 }

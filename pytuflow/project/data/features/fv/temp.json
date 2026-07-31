@@ -19,6 +19,24 @@
             "commands": [
                 "Include Heat == ${heat_active}"
             ]
+        },
+        {
+            "id": "fvc_initial_conditions_header",
+            "target_cf": "fvc",
+            "placement_rule": "fvc_geometry_2d",
+            "existence_check": "! INITIAL CONDITIONS",
+            "commands": [
+                "\n!______________________________________________________________________________________________________________________",
+                "! INITIAL CONDITIONS"
+            ]
+        },
+        {
+            "id": "fvc_initial_temp",
+            "target_cf": "fvc",
+            "placement_rule": "fvc_initial_conditions",
+            "commands": [
+                "Initial Temperature == ${initial_temp}"
+            ]
         }
     ]
 }

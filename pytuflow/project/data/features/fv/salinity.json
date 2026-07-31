@@ -11,6 +11,24 @@
             "commands": [
                 "Include Salinity == ${sal_active},${sal_density}"
             ]
+        },
+        {
+            "id": "fvc_initial_conditions_header",
+            "target_cf": "fvc",
+            "placement_rule": "fvc_geometry_2d",
+            "existence_check": "! INITIAL CONDITIONS",
+            "commands": [
+                "\n!______________________________________________________________________________________________________________________",
+                "! INITIAL CONDITIONS"
+            ]
+        },
+        {
+            "id": "fvc_initial_salinity",
+            "target_cf": "fvc",
+            "placement_rule": "fvc_initial_conditions",
+            "commands": [
+                "Initial Salinity == ${initial_sal}"
+            ]
         }
     ]
 }
