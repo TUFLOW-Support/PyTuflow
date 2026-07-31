@@ -113,7 +113,7 @@ class BaseEngineFeature(BaseFeature):
 
         # ── Atomic block mode (existence_check configured) ───────────────────
         existence_check = block.get('existence_check')
-        if existence_check is not None:
+        if existence_check is not None and not block.get('allow_multiple'):
             is_comment = existence_check.strip().startswith('!')
             pattern, is_regex, flags = _parse_filter(existence_check)
             if is_comment:
@@ -237,4 +237,4 @@ class BaseEngineFeature(BaseFeature):
         """Insert *cmd* after *ref_inp*, or append when *ref_inp* is ``None``."""
         if ref_inp is None:
             return cf.append_input(cmd)
-        return cf.insert_input(ref_inp, cmd, after=True if anchor_rule == 'after' else False, gap=1 if anchor_rule == 'before' else 0)
+        return cf.insert_input(ref_inp, cmd, after=False if anchor_rule == 'before' else True, gap=1 if anchor_rule == 'before' else 0)

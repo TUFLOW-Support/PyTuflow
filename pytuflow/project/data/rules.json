@@ -33,6 +33,9 @@
     "description": "Insert after all the fv output blocks.",
     "rule": "after",
     "commands": [
+      "Output Dir",
+      "Log Dir",
+      "Write Check Files",
       "/^output$/i"
     ]
   },
@@ -40,6 +43,9 @@
     "description": "Insert before all the fv output blocks.",
     "rule": "before",
     "commands": [
+      "Output Dir",
+      "Log Dir",
+      "Write Check Files",
       "/^output$/i"
     ]
   },

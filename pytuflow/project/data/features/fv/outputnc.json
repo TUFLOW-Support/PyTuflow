@@ -9,7 +9,6 @@
       "target_cf": "fvc",
       "placement_rule": "fvc_output",
       "allow_multiple": true,
-      "existence_check": "/^Output == netcdf$/i",
       "commands": [
         "\nOutput == netcdf"
       ]
