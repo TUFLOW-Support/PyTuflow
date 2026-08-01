@@ -20,8 +20,9 @@
       "target_previous_block": true,
       "commands": [
         "Read GIS PO == <path/to/3d_po.shp>",
-        "Output Parameters == h, v, d",
-        "Output Interval == ${output_interval}"
+        "Output Parameters == ${output_params}",
+        "Output Interval == ${output_interval}",
+        "Suffix == ${output_suffix}"
       ]
     }
   ]
