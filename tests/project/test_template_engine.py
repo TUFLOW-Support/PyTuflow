@@ -238,7 +238,7 @@ class TestSortOrder:
                 features=['po', 'sgs', 'estry'],  # unsorted: po=80, sgs=5, estry=20
             )
             instances = proj._get_feature_instances()
-            orders = [m._get_config().get('sort_order') for m in instances]
+            orders = [m._get_config().get('sort_order') for m, _ in instances]
             assert orders == sorted(orders), f"features not in sort_order: {orders}"
 
 

@@ -54,6 +54,27 @@ def _add_dynamic_args(parser, engine: str = 'hpc') -> list[str]:
     return dests
 
 
+def _parse_features_list(raw: list[str]) -> list[str | dict]:
+    """Parse each element of ``--features``.
+
+    Plain strings are kept as-is.  Anything that parses as a JSON object
+    (``{...}``) is returned as a dict — used for per-instance variable
+    overrides on ``allow_multiple`` features.
+    """
+    result = []
+    for item in raw:
+        stripped = item.strip()
+        if stripped.startswith('{'):
+            try:
+                result.append(json.loads(stripped))
+            except json.JSONDecodeError as e:
+                print(f"Invalid feature JSON '{stripped}': {e}", file=sys.stderr)
+                sys.exit(1)
+        else:
+            result.append(stripped)
+    return result
+
+
 def cmd_create(args, dynamic_dests: list[str]):
     engine = getattr(args, 'engine', 'hpc') or 'hpc'
     shared_defaults, engine_defaults = _get_engine_defaults(engine)
@@ -80,7 +101,7 @@ def cmd_create(args, dynamic_dests: list[str]):
     project = ProjectClass(
         name=args.name,
         output_dir=args.output_dir,
-        features=args.features or [],
+        features=_parse_features_list(args.features or []),
         crs=args.crs,
         **kwargs,
     )
@@ -114,7 +135,8 @@ def cmd_insert(args, dynamic_dests: list[str]):
                 sys.exit(1)
         kwargs[dest] = val
 
-    ProjectClass.insert_feature_into(args.feature, args.cf, **kwargs)
+    feature_arg = _parse_features_list([args.feature])[0] if args.feature else args.feature
+    ProjectClass.insert_feature_into(feature_arg, args.cf, **kwargs)
     print(f"feature '{args.feature}' inserted into {args.cf}")
 
 

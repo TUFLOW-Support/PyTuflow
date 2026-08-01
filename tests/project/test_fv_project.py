@@ -296,3 +296,82 @@ class TestFVBaseFeatureApplyToControlFiles:
         iheader = fvc.inputs.inputs(include_hidden=True).index(header[0])
         assert iheader < inodestring, '! HYDRAULIC STRUCTURES should be before Read GIS Nodestring '
         assert inodestring < iflux, 'Read GIS Nodestring should be before Structure =='
+
+
+class TestAllowMultipleWithInstanceOverrides:
+    """Tests for per-instance variable overrides on allow_multiple features."""
+
+    def test_dict_feature_same_as_string(self, project_dir):
+        """{'name': 'outputnc'} behaves identically to 'outputnc' with no overrides."""
+        p = FVProject(
+            name='mymodel', output_dir=project_dir,
+            crs='EPSG:32760', create_empties=False,
+            features=[{'name': 'outputnc'}],
+        )
+        p.create()
+        fvc = (project_dir / 'runs' / 'mymodel_001.fvc').read_text()
+        assert 'Output == netcdf' in fvc
+
+    def test_multiple_outputnc_both_inserted(self, project_dir):
+        """Two outputnc instances are both inserted with allow_multiple."""
+        p = FVProject(
+            name='mymodel', output_dir=project_dir,
+            crs='EPSG:32760', create_empties=False,
+            features=[
+                {'name': 'outputnc', 'output_interval': '3600.', 'suffix': 'HD'},
+                {'name': 'outputnc', 'output_interval': '900.', 'suffix': 'TS'},
+            ],
+        )
+        p.create()
+        fvc = (project_dir / 'runs' / 'mymodel_001.fvc').read_text()
+        assert fvc.count('Output == netcdf') == 2
+
+    def test_per_instance_variable_substituted(self, project_dir):
+        """Per-instance variables are substituted into commands."""
+        p = FVProject(
+            name='mymodel', output_dir=project_dir,
+            crs='EPSG:32760', create_empties=False,
+            features=[
+                {'name': 'outputnc', 'output_interval': '600.', 'suffix': 'DETAIL'},
+            ],
+        )
+        p.create()
+        fvc = (project_dir / 'runs' / 'mymodel_001.fvc').read_text()
+        assert 'Output == netcdf' in fvc
+
+    def test_plain_string_feature_still_works(self, project_dir):
+        """Plain string features continue to work as before."""
+        p = FVProject(
+            name='mymodel', output_dir=project_dir,
+            crs='EPSG:32760', create_empties=False,
+            features=['outputnc'],
+        )
+        p.create()
+        fvc = (project_dir / 'runs' / 'mymodel_001.fvc').read_text()
+        assert 'Output == netcdf' in fvc
+
+    def test_mixed_string_and_dict_features(self, project_dir):
+        """Mix of plain strings and dicts works together."""
+        p = FVProject(
+            name='mymodel', output_dir=project_dir,
+            crs='EPSG:32760', create_empties=False,
+            features=[
+                'outputflux',
+                {'name': 'outputnc', 'suffix': 'HD'},
+                {'name': 'outputnc', 'suffix': 'WQ'},
+            ],
+        )
+        p.create()
+        fvc = (project_dir / 'runs' / 'mymodel_001.fvc').read_text()
+        assert fvc.count('Output == netcdf') == 2
+        assert 'Output == flux' in fvc
+
+    def test_unknown_feature_in_dict_raises(self, project_dir):
+        """Dict with unknown feature name raises ValueError."""
+        p = FVProject(
+            name='mymodel', output_dir=project_dir,
+            crs='EPSG:32760', create_empties=False,
+            features=[{'name': 'nonexistent_feature'}],
+        )
+        with pytest.raises(ValueError, match='nonexistent_feature'):
+            p.create()

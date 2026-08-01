@@ -61,7 +61,9 @@ class BaseEngineProject(BaseProject):
     ):
         self.name = name
         self.output_dir = Path(output_dir)
-        self.feature_names: list[str] = list(features or [])
+        # Each element is either a plain feature name (str) or a dict with
+        # 'name' key plus per-instance variable overrides.
+        self.feature_names: list[str | dict] = list(features or [])
         self.create_empties = create_empties
         self.crs = crs
 
@@ -114,10 +116,15 @@ class BaseEngineProject(BaseProject):
 
         variables = dict(self.settings._settings)
         variables['model_name'] = self.name
-        active_features = list(self.feature_names)
+        # Build active_features list of plain names for template ##IF## directives
+        active_features = [
+            entry.get('name', '') if isinstance(entry, dict) else entry
+            for entry in self.feature_names
+        ]
 
-        features = self._get_feature_instances()
-        feature_configs = {m.NAME: m._get_config() for m in features}
+        feature_pairs = self._get_feature_instances()
+        features = [f for f, _ in feature_pairs]
+        feature_configs = {f.NAME: f._get_config() for f in features}
 
         # Create output directories
         for d in self.OUTPUT_DIRS:
@@ -158,7 +165,7 @@ class BaseEngineProject(BaseProject):
                 main_cf_path = out_path
 
         # Render and write feature template files
-        for feature in features:
+        for feature, _overrides in feature_pairs:
             for template_key, output_rel in feature.get_template_files(variables):
                 rendered_out = Template(output_rel).safe_substitute(variables)
                 text = self._manager.get_template(template_key)
@@ -175,8 +182,9 @@ class BaseEngineProject(BaseProject):
             secondary_cfs = self._load_secondary_cfs(main_cf, main_cf_path, features)
             control_files = {self.MAIN_CF_EXT: main_cf, **secondary_cfs}
 
-            for feature in features:
-                feature.apply_to_control_files(control_files, variables)
+            for feature, overrides in feature_pairs:
+                merged_vars = {**variables, **overrides} if overrides else variables
+                feature.apply_to_control_files(control_files, merged_vars)
 
             main_cf.write('inplace')
             for cf in secondary_cfs.values():
@@ -186,28 +194,43 @@ class BaseEngineProject(BaseProject):
         return self.output_dir
 
     @classmethod
-    def insert_feature_into(cls, feature_name: str, cf_path: str | Path, **kwargs):
+    def insert_feature_into(
+        cls,
+        feature_name: str | dict,
+        cf_path: str | Path,
+        **kwargs,
+    ):
         """Inserts a feature into an existing project.
-        
+
         Parameters
         ----------
-        feature_name : str
-            Name of the feature to insert
+        feature_name : str | dict
+            Name of the feature to insert, or a dict with ``'name'`` plus
+            per-instance variable overrides (only meaningful for features
+            with ``allow_multiple: true`` blocks).
         cf_path : str | Path
-            Path to the control file to insert the feature into. This should either a TCF or FVC,
-            and not an ancillary control file such as the TGC or FVWQ.
+            Path to the control file to insert the feature into. This should
+            either be a TCF or FVC, not an ancillary CF such as TGC or FVWQ.
         """
+        # Normalise feature_name → (name, overrides)
+        if isinstance(feature_name, dict):
+            name = feature_name.get('name', '')
+            instance_overrides = {k: v for k, v in feature_name.items() if k != 'name'}
+        else:
+            name = feature_name
+            instance_overrides = {}
+
         import pytuflow
         cf_path = Path(cf_path)
         project_dir = cf_path.parent.parent  # runs/ → project root
 
         registry = cls.get_available_features()
-        if feature_name not in registry:
+        if name not in registry:
             raise ValueError(
-                f"Unknown feature '{feature_name}'. Available: {list(registry.keys())}"
+                f"Unknown feature '{name}'. Available: {list(registry.keys())}"
             )
 
-        feature_cls = registry[feature_name]
+        feature_cls = registry[name]
         feature = feature_cls()
         feature_config = feature._get_config()
 
@@ -221,16 +244,20 @@ class BaseEngineProject(BaseProject):
         if 'model_name' in kwargs:
             variables['model_name'] = kwargs['model_name']
 
+        # Merge per-instance overrides last so they win over global vars
+        if instance_overrides:
+            variables = {**variables, **instance_overrides}
+
         engine = TemplateEngine()
         manager = TemplateManager(cls.ENGINE_TYPE)
-        feature_configs = {feature_name: feature_config}
+        feature_configs = {name: feature_config}
 
         for template_key, output_rel in feature.get_template_files(variables):
             rendered_out = Template(output_rel).safe_substitute(variables)
             out_path = project_dir / rendered_out
             if not out_path.exists():
                 text = manager.get_template(template_key)
-                rendered_text = engine.render(text, variables, [feature_name], feature_configs)
+                rendered_text = engine.render(text, variables, [name], feature_configs)
                 out_path.parent.mkdir(parents=True, exist_ok=True)
                 out_path.write_text(rendered_text, encoding='utf-8')
 
@@ -281,17 +308,31 @@ class BaseEngineProject(BaseProject):
     # Internal helpers (overridable by subclasses)
     # ------------------------------------------------------------------
 
-    def _get_feature_instances(self):
-        """Return sorted feature instances (by sort_order ascending)."""
+    def _get_feature_instances(self) -> list[tuple]:
+        """Return sorted ``(feature_instance, per_instance_overrides)`` pairs.
+
+        Each element of :attr:`feature_names` is either a plain ``str`` (no
+        overrides) or a ``dict`` with a ``'name'`` key plus any per-instance
+        variable overrides.  Dicts are only meaningful for features whose
+        blocks have ``allow_multiple: true`` — for other features the overrides
+        are passed through but ``_apply_block`` will still respect the normal
+        existence / duplicate checks.
+        """
         registry = self.get_available_features()
         instances = []
-        for name in self.feature_names:
+        for entry in self.feature_names:
+            if isinstance(entry, dict):
+                name = entry.get('name', '')
+                overrides = {k: v for k, v in entry.items() if k != 'name'}
+            else:
+                name = entry
+                overrides = {}
             if name not in registry:
                 raise ValueError(
                     f"Unknown feature '{name}'. Available: {list(registry.keys())}"
                 )
-            instances.append(registry[name]())
-        instances.sort(key=lambda m: m._get_config().get('sort_order', 50))
+            instances.append((registry[name](), overrides))
+        instances.sort(key=lambda pair: pair[0]._get_config().get('sort_order', 50))
         return instances
 
     def _load_secondary_cfs(self, main_cf, main_cf_path: Path, features) -> dict:
