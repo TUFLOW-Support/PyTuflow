@@ -81,7 +81,8 @@
       "/^Include Heat$/i",
       "/^Spherical$/i",
       "/^Latitude$/i",
-      "/^Ntracer$/i"
+      "/^Ntracer$/i",
+      "/^Include Sediment$/i"
     ]
   },
   "fvc_model_parameters": {
