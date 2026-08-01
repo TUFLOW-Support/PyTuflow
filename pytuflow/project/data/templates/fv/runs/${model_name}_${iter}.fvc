@@ -28,6 +28,9 @@ Latitude == ${latitude}												! {0.0} Representative latitude for study are
 ##IF feature:ad##
 ##COMMANDS fvc_ntracer##
 ##ENDIF##
+##IF feature:st##
+##COMMANDS fvc_include_sediment##
+##ENDIF##
 
 !__________________________________________________________________________________________________________________________________________________________________________________________
 ! HARDWARE (optional)
@@ -70,6 +73,9 @@ Global Horizontal Eddy Viscosity Limits == 0.05, 99999.					! {0.0} Minimum eddy
 ##COMMANDS fvc_tracer_block##
 ##COMMANDS fvc_tracer_block_params##
 End Tracer
+##ENDIF##
+##IF feature:st##
+##COMMANDS fvc_sediment_control_file##
 ##ENDIF##
 
 !__________________________________________________________________________________________________________________________________________________________________________________________

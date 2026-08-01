@@ -84,6 +84,40 @@
       "/^Ntracer$/i"
     ]
   },
+  "fvc_model_parameters": {
+    "description": "Insert after model parameter commands.",
+    "rule": "after",
+    "commands": [
+      "! MODEL PARAMETERS",
+      "/^Momentum mixing model$/i",
+      "/^Global horizontal eddy viscosity$/i",
+      "/^Global horizontal eddy viscosity limits$/i",
+      "/^Scalar mixing model$/i",
+      "/^Global horizontal scalar diffusivity$/i",
+      "/^Global horizontal scalar diffusivity limits$/i",
+      "/^Cell Wet/Dry Depths$/i",
+      "/^Vertical Mixing Model$/i",
+      "/^Vertical Mixing Parameters$/i",
+      "/^Global Vertical Eddy Viscosity Limits$/i",
+      "/^Global Vertical Scalar Diffusivity Limits$/i",
+      "/^Global Vertical TKE Limit$/i",
+      "/^Global Vertical EPS Limit$/i",
+      "/^Second Order Vertical Mixing Model$/i",
+      "/^Second Order Vertical Mixing Model Parameter Group$/i"
+    ]
+  },
+  "fv_control_files": {
+    "description": "Insert after other fv control files.",
+    "rule": "after",
+    "commands": [
+      "/^sediment control file$/i",
+      "/^water quality control file$/i",
+      "/^wq control file$/i",
+      "/^Water Quality Model Directory$/i",
+      "/^WQ Model Directory$/i",
+      "/^particle tracking control file/i"
+    ]
+  },
   "fvc_initial_conditions": {
     "description": "Insert after other initial conditions.",
     "rule": "after",

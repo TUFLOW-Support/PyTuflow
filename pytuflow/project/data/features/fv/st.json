@@ -1,0 +1,31 @@
+{
+    "name": "st",
+    "display_name": "Sediment Transport",
+    "sort_order": 5,
+    "template_files": [
+        {
+            "template_key": "stm/${model_name}_${iter}.fvsed",
+            "output_subdir": "stm"
+        }
+    ],
+    "command_blocks": [
+        {
+            "id": "fvc_include_sediment",
+            "target_cf": "fvc",
+            "placement_rule": "fvc_simulation_configuration",
+            "commands": [
+                "Include Sediment == ${sed_active},${sed_density}"
+            ]
+        },
+        {
+            "id": "fvc_sediment_control_file",
+            "target_cf": "fvc",
+            "placement_rule": "fvc_model_parameters",
+            "commands": [
+                "\n!______________________________________________________________________________________________________________________",
+                "! SEDIMENT CONTROL FILE",
+                "Sediment Control File == ..\\stm\\${model_name}_${iter}.fvsed"
+            ]
+        }
+    ]
+}

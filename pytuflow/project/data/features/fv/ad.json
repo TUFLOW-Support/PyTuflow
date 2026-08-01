@@ -1,6 +1,6 @@
 {
     "name": "ad",
-    "display_name": "AD",
+    "display_name": "Advection Dispersion",
     "sort_order": 5,
     "template_files": [],
     "command_blocks": [
