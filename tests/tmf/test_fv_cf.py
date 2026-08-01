@@ -96,9 +96,9 @@ def test_fvc_wq_include_file():
 
 
 def test_fv_nested_block_parsing():
-    p = Path('./tests/tmf/test_datasets/fv/nested_block.fvsed')
+    p = Path('./tests/tmf/test_datasets/fv/nested_blocks.fvsed')
     commands = list(get_fv_commands(p, TCFConfig()))
-    assert len(commands) == 7
+    assert len(commands) == 6
 
 
 def test_fv_isodate_format():
@@ -145,6 +145,31 @@ def test_FLD000_2d_001_fvc_write():
     with p.open() as f:
         original = f.read()
     _compare_control_files(output, original)
+
+
+def test_FMA2_SED_003_nested_block_write():
+    p = Path('./tests/tmf/test_datasets/fv/nested_blocks.fvsed')
+    fvsed = FVSed(p)
+    buf = io.StringIO()
+    fvsed.preview(buf)
+
+    output = buf.getvalue()
+    with p.open() as f:
+        original = f.read()
+    _compare_control_files(output, original)
+
+
+def test_FMA2_SED_003_nested_block_write_2():
+    p = Path('./tests/tmf/test_datasets/fv/nested_blocks_2.fvsed')
+    fvsed = FVSed(p)
+    buf = io.StringIO()
+    fvsed.preview(buf)
+
+    output = buf.getvalue()
+    with p.open() as f:
+        original = f.read()
+    _compare_control_files(output, original)
+
 
 def test_simple_wq_fvc():
     p = Path('./tests/tmf/test_datasets/fv/basic_wq.fvc')

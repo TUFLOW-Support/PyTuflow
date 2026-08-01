@@ -15,6 +15,10 @@ from ..scope_writer import ScopeWriter
 from ..parsers.fvcommand import FVCommand
 from ..inp.inputs import Inputs
 from ..inp.inp_build_state import InputBuildState
+from ..inp.block import BlockControlInput
+
+if typing.TYPE_CHECKING:
+    from ..scope import ScopeList
 
 
 class _BlockScope(Scope):
@@ -89,22 +93,31 @@ class BlockControl(ControlFileBuildState):
                 # exception should be thrown by the parser before it gets here
                 raise ValueError('Unexpected end of block control parser - did you forget to include an "END" command for the block?')
             
-    def write_block(self, fo: typing.TextIO, scope_writer_: ScopeWriter):
+    def write_block(self, fo: typing.TextIO, scope_writer_: ScopeWriter, nested_block_scope: 'ScopeList'):
         block_scope = _BlockScope('Block')
         block_scope.command = self.parent_input.command()
+        nested_block_scope.append(block_scope)
         inputs, _ = self._get_trd_inputs(self)
         if inputs:
-            inputs = inputs.copy()
             for inp in inputs.inputs(include_hidden=True):
-                inp.scope.append(block_scope)
+                inp.scope.extend(nested_block_scope)
         else:  # add an empty command, otherwise the scope writer won't close the block
             cmd = FVCommand('', self.config, self.fpath)
             inp = InputBuildState(self, cmd)
             inp.scope.append(block_scope)
             inputs.append(inp)
         
-        for inp, scope_writer_ in scope_writer_.inputs(fo, inputs):
-            inp.write(fo, scope_writer_)
+        for inp, scope_writer_1 in scope_writer_.inputs(fo, inputs):
+            inp.write(fo, scope_writer_1)
+            if isinstance(inp, BlockControlInput):
+                block = inp.block_control()
+                block.write_block(fo, scope_writer_1, nested_block_scope)
+
+        
+        for inp in inputs.inputs(include_hidden=True):
+            for _ in nested_block_scope:
+                inp.scope.pop()
+        nested_block_scope.pop()
 
     def context(self,
                 run_context: str | dict[str, str] = '',

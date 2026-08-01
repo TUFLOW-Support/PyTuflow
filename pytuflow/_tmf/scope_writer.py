@@ -105,6 +105,8 @@ class ScopeWriter:
                         yield from scope_writer.inputs(fo, inputs)
                         continue
                     scope_writer = ScopeWriter(self.active_scope_list, scope_list[self.idx + 1:])
+                    if len(self.active_scope_list) >= 2 and self.active_scope_list[-2:] == [Scope('Block'), Scope('Block')]:
+                        self.added_to_stack = False
                     yield from scope_writer.inputs(fo, inputs)
                     if scope_writer.else_or_else_if():
                         self._lost_focus = True
@@ -112,7 +114,7 @@ class ScopeWriter:
                      break
 
         # "else" / "else if" does not take ownership of writing the "end if" part
-        if self.active_scope and not self.else_or_else_if():
+        if self.active_scope and not self.else_or_else_if() and not (self.active_scope == Scope('Block') and not self.added_to_stack):
             fo.write(f'{self.indent(1)}{self.active_scope.to_string_end()}\n')
 
         if self.added_to_stack:

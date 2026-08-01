@@ -1,0 +1,6 @@
+Material == 0
+    Layer == 1
+        Dry density == 1890., 1890.
+        initial mass == 50.,2950.
+    End Layer
+End Material

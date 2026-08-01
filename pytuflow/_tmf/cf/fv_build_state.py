@@ -11,6 +11,7 @@ from ..inp.block import BlockControlInput
 from ..inp.inputs import Inputs
 from ..scope_writer import ScopeWriter
 from ..abc.fvc_base import FVBaseMixin
+from ..scope import ScopeList
 
 
 logger = logging.getLogger('pytuflow')
@@ -47,5 +48,6 @@ class FVControlFileBuildState(ControlFileBuildState, FVBaseMixin):
         for inp, scope_writer_ in scope_writer.inputs(fo, inputs):
             inp.write(fo, scope_writer_)
             if isinstance(inp, BlockControlInput):
+                nested_block_scope = ScopeList()
                 block = inp.block_control()
-                block.write_block(fo, scope_writer_)
+                block.write_block(fo, scope_writer_, nested_block_scope)
