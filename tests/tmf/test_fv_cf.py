@@ -149,28 +149,40 @@ def test_FLD000_2d_001_fvc_write():
     _compare_control_files(output, original)
 
 
-# def test_FMA2_SED_003_nested_block_write():
-#     p = Path('./tests/tmf/test_datasets/fv/nested_blocks.fvsed')
-#     fvsed = FVSed(p)
-#     buf = io.StringIO()
-#     fvsed.preview(buf)
+def test_basic_block_write():
+    p = Path('./tests/tmf/test_datasets/fv/basic_block.fvc')
+    fvc = FVC(p)
+    buf = io.StringIO()
+    fvc.preview(buf)
 
-#     output = buf.getvalue()
-#     with p.open() as f:
-#         original = f.read()
-#     _compare_control_files(output, original)
+    output = buf.getvalue()
+    with p.open() as f:
+        original = f.read()
+    _compare_control_files(output, original)
 
 
-# def test_FMA2_SED_003_nested_block_write_2():
-#     p = Path('./tests/tmf/test_datasets/fv/nested_blocks_2.fvsed')
-#     fvsed = FVSed(p)
-#     buf = io.StringIO()
-#     fvsed.preview(buf)
+def test_nested_block_write():
+    p = Path('./tests/tmf/test_datasets/fv/nested_blocks.fvsed')
+    fvsed = FVSed(p)
+    buf = io.StringIO()
+    fvsed.preview(buf)
 
-#     output = buf.getvalue()
-#     with p.open() as f:
-#         original = f.read()
-#     _compare_control_files(output, original)
+    output = buf.getvalue()
+    with p.open() as f:
+        original = f.read()
+    _compare_control_files(output, original)
+
+
+def test_nested_block_write_2():
+    p = Path('./tests/tmf/test_datasets/fv/nested_blocks_2.fvsed')
+    fvsed = FVSed(p)
+    buf = io.StringIO()
+    fvsed.preview(buf)
+
+    output = buf.getvalue()
+    with p.open() as f:
+        original = f.read()
+    _compare_control_files(output, original)
 
 
 def test_nested_block_inside_if():

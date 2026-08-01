@@ -48,6 +48,5 @@ class FVControlFileBuildState(ControlFileBuildState, FVBaseMixin):
         for inp, scope_writer_ in scope_writer.inputs(fo, inputs):
             inp.write(fo, scope_writer_)
             if isinstance(inp, BlockControlInput):
-                nested_block_scope = ScopeList()
                 block = inp.block_control()
-                block.write_block(fo, scope_writer_, nested_block_scope)
+                block.write_block(fo, scope_writer_)

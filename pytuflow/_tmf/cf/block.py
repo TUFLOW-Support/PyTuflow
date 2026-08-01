@@ -93,14 +93,13 @@ class BlockControl(ControlFileBuildState):
                 # exception should be thrown by the parser before it gets here
                 raise ValueError('Unexpected end of block control parser - did you forget to include an "END" command for the block?')
             
-    def write_block(self, fo: typing.TextIO, scope_writer_: ScopeWriter, nested_block_scope: 'ScopeList'):
+    def write_block(self, fo: typing.TextIO, scope_writer_: ScopeWriter, level: int = 0):
         block_scope = _BlockScope('Block')
         block_scope.command = self.parent_input.command()
-        nested_block_scope.append(block_scope)
         inputs, _ = self._get_trd_inputs(self)
         if inputs:
             for inp in inputs.inputs(include_hidden=True):
-                inp.scope.extend(nested_block_scope)
+                inp.scope.insert(0, block_scope)
         else:  # add an empty command, otherwise the scope writer won't close the block
             cmd = FVCommand('', self.config, self.fpath)
             inp = InputBuildState(self, cmd)
@@ -110,14 +109,13 @@ class BlockControl(ControlFileBuildState):
         for inp, scope_writer_1 in scope_writer_.inputs(fo, inputs):
             inp.write(fo, scope_writer_1)
             if isinstance(inp, BlockControlInput):
+                sub_level = level + 1
+                scope_writer_new = ScopeWriter(start_indentation_level=sub_level)
                 block = inp.block_control()
-                block.write_block(fo, scope_writer_1, nested_block_scope)
-
+                block.write_block(fo, scope_writer_new, sub_level)
         
         for inp in inputs.inputs(include_hidden=True):
-            for _ in nested_block_scope:
-                inp.scope.pop()
-        nested_block_scope.pop()
+            inp.scope.pop(0)
 
     def context(self,
                 run_context: str | dict[str, str] = '',

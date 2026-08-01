@@ -17,7 +17,8 @@ logger = logging.getLogger('pytuflow')
 class ScopeWriter:
     """Class to help manage scope blocks and indentation when writing to a file."""
 
-    def __init__(self, active_scope_list: list[Scope] = (), incoming_scope_list: list[Scope] = ()):
+    def __init__(self, active_scope_list: list[Scope] = (), incoming_scope_list: list[Scope] = (), start_indentation_level: int = 0):
+        self.start_indentation_level = start_indentation_level
         self.incoming_scope_list = incoming_scope_list.copy() if incoming_scope_list else []
         self.active_scope = None
         self.added_to_stack = False
@@ -102,12 +103,12 @@ class ScopeWriter:
                     if self._build_from_negative_scope(scope_list):  # no corresponding starting scope, need to build this
                         i = 0 if self.idx == -1 else self.idx + 1
                         scope_list = [scope_list[i].as_pos()]
-                        scope_writer = ScopeWriter(self.active_scope_list, scope_list)
+                        scope_writer = ScopeWriter(self.active_scope_list, scope_list, self.start_indentation_level)
                         yield from scope_writer.inputs(fo, inputs)
                         continue
-                    scope_writer = ScopeWriter(self.active_scope_list, scope_list[self.idx + 1:])
-                    if len(self.active_scope_list) >= 2 and self.active_scope_list[-2:] == [Scope('Block'), Scope('Block')]:
-                        do_not_close = True
+                    scope_writer = ScopeWriter(self.active_scope_list, scope_list[self.idx + 1:], self.start_indentation_level)
+                    # if len(self.active_scope_list) >= 2 and self.active_scope_list[-2:] == [Scope('Block'), Scope('Block')]:
+                    #     do_not_close = True
                     yield from scope_writer.inputs(fo, inputs)
                     if scope_writer.else_or_else_if():
                         self._lost_focus = True
@@ -159,7 +160,7 @@ class ScopeWriter:
         so :code:`i = 1` to remove one level of indentation.
         """
         # return '    ' * (max(0, len(self.active_scope) - 1 - i))
-        nindents = len([s for s in self.active_scope_list if not s.is_neg()])
+        nindents = len([s for s in self.active_scope_list if not s.is_neg()]) + self.start_indentation_level
         nindents += 1 if (self.active_scope and self.active_scope.is_neg()) or (self.active_scope_list and self.active_scope_list[-1].is_neg()) else 0
         return '    ' * (max(0, nindents - i))
 
