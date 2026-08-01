@@ -48,5 +48,7 @@ class FVControlFileBuildState(ControlFileBuildState, FVBaseMixin):
         for inp, scope_writer_ in scope_writer.inputs(fo, inputs):
             inp.write(fo, scope_writer_)
             if isinstance(inp, BlockControlInput):
+                scope_len = len(ScopeWriter.input_scope(inp))
+                scope_writer_new = ScopeWriter(start_indentation_level=scope_len)
                 block = inp.block_control()
-                block.write_block(fo, scope_writer_)
+                block.write_block(fo, scope_writer_new, level=scope_len)

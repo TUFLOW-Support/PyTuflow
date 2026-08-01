@@ -58,7 +58,7 @@ class ScopeWriter:
         return len(scope_list) > i and scope_list[i].is_neg()
 
     @staticmethod
-    def _input_scope(inp: 'T_Input') -> list[Scope]:
+    def input_scope(inp: 'T_Input') -> list[Scope]:
         # remove the global scope from the input scope list
         # noinspection PyTypeChecker
         scope_list = list(inp.scope)
@@ -91,7 +91,7 @@ class ScopeWriter:
             except StopIteration:
                 break
 
-            scope_list = self._input_scope(inp)
+            scope_list = self.input_scope(inp)
 
             if self.active_scope_list == scope_list:  # in scope
                 yield inp, self

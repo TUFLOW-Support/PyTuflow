@@ -196,16 +196,39 @@ def test_nested_block_inside_if():
     assert inp.scope == [Scope('global')]
 
 
-# def test_nested_block_inside_if_write():
-#     p = Path('./tests/tmf/test_datasets/fv/nested_block_inside_if.fvc')
-#     fvc = FVC(p)
-#     buf = io.StringIO()
-#     fvc.preview(buf)
+def test_nested_block_inside_if_write():
+    p = Path('./tests/tmf/test_datasets/fv/nested_block_inside_if.fvc')
+    fvc = FVC(p)
+    buf = io.StringIO()
+    fvc.preview(buf)
 
-#     output = buf.getvalue()
-#     with p.open() as f:
-#         original = f.read()
-#     _compare_control_files(output, original)
+    output = buf.getvalue()
+    with p.open() as f:
+        original = f.read()
+    _compare_control_files(output, original)
+
+
+def test_nested_if_inside_block():
+    p = Path('./tests/tmf/test_datasets/fv/nested_if_inside_block.fvc')
+    fvc = FVC(p)
+
+    inp = fvc.find_input('material')[0]
+    assert inp.scope == [Scope('global')]
+
+    inp = fvc.find_input('roughness')[0]
+    assert inp.scope == [Scope('scenario')]
+
+
+def test_nested_if_inside_block_write():
+    p = Path('./tests/tmf/test_datasets/fv/nested_if_inside_block.fvc')
+    fvc = FVC(p)
+    buf = io.StringIO()
+    fvc.preview(buf)
+
+    output = buf.getvalue()
+    with p.open() as f:
+        original = f.read()
+    _compare_control_files(output, original)
 
 
 def test_simple_wq_fvc():
