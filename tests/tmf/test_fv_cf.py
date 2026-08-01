@@ -37,6 +37,8 @@ def _compare_control_files(cf1, cf2):
     lines1 = cf1.splitlines()
     lines2 = cf2.splitlines()
 
+    assert len(lines1) == len(lines2)
+
     for line1, line2 in zip(lines1, lines2):
         lhs1, rhs1, comment1, leading_whitespace1 = _strip_command(line1)
         lhs2, rhs2, comment2, leading_whitespace2 = _strip_command(line2)
@@ -169,6 +171,18 @@ def test_FMA2_SED_003_nested_block_write_2():
     with p.open() as f:
         original = f.read()
     _compare_control_files(output, original)
+
+
+# def test_nested_block_inside_if():
+#     p = Path('./tests/tmf/test_datasets/fv/nested_block_inside_if.fvc')
+#     fvc = FVC(p)
+#     buf = io.StringIO()
+#     fvc.preview(buf)
+
+#     output = buf.getvalue()
+#     with p.open() as f:
+#         original = f.read()
+#     _compare_control_files(output, original)
 
 
 def test_simple_wq_fvc():

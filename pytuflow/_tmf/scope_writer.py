@@ -66,6 +66,7 @@ class ScopeWriter:
         return scope_list
 
     def inputs(self, fo: typing.TextIO, inputs: 'Inputs'):
+        do_not_close = False
         if self.active_scope:
             # write the start of the scope (e.g "If Scenario == DEV")
             if self.else_or_else_if():
@@ -106,7 +107,7 @@ class ScopeWriter:
                         continue
                     scope_writer = ScopeWriter(self.active_scope_list, scope_list[self.idx + 1:])
                     if len(self.active_scope_list) >= 2 and self.active_scope_list[-2:] == [Scope('Block'), Scope('Block')]:
-                        self.added_to_stack = False
+                        do_not_close = True
                     yield from scope_writer.inputs(fo, inputs)
                     if scope_writer.else_or_else_if():
                         self._lost_focus = True
@@ -114,10 +115,10 @@ class ScopeWriter:
                      break
 
         # "else" / "else if" does not take ownership of writing the "end if" part
-        if self.active_scope and not self.else_or_else_if() and not (self.active_scope == Scope('Block') and not self.added_to_stack):
+        if self.active_scope and not self.else_or_else_if() and not (self.active_scope == Scope('Block') and do_not_close):
             fo.write(f'{self.indent(1)}{self.active_scope.to_string_end()}\n')
 
-        if self.added_to_stack:
+        if self.added_to_stack and not do_not_close:  # do not close is triggered when using FV blocks
             self.active_scope_list.pop()
 
     def write(self, text: str, header: bool = False) -> str:
