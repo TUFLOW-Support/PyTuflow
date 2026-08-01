@@ -1,0 +1,5 @@
+If Scenario == TEST
+    Material == 1
+        Bottom Roughness == 0.05
+    End Material
+End If

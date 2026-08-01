@@ -147,6 +147,8 @@ def get_event_commands(control_file: Path, settings: 'TCFConfig | _ParseContext'
 
 def get_fv_commands(control_file: Path, settings: 'TCFConfig | _ParseContext') -> typing.Generator[fvcommand.FVCommand, None, None]:
     fv_blocks = []
+    define_blocks = []
+    prev_was_start_block = 0
     for command in get_commands(control_file, settings):
         fv_command = fvcommand.get_fv_command(control_file, command)
         fv_command.fv_blocks = fv_blocks.copy()
@@ -157,12 +159,23 @@ def get_fv_commands(control_file: Path, settings: 'TCFConfig | _ParseContext') -
                 else:
                     raise ValueError(f'Start FV block on line {fv_command.line_number} not a valid block command in the context of {fv_command.COMMAND_CONTEXT}')
             fv_blocks.append(fv_command)
+            prev_was_start_block = 2
         elif isinstance(fv_command, fvcommand.FVCommand) and fv_command.is_end_fv_block():
             if not fv_blocks:
                 raise ValueError(f'END FV block command found without matching start block at line {fv_command.line_number}')
             if not fv_command.is_correct_end_fv_block():
                 raise ValueError(f'END FV block command does not match the most recent start block at line {fv_command.line_number}')
             fv_blocks.pop()
+            fv_command.define_blocks = define_blocks.copy()
+            prev_was_start_block = 0
+
+        if prev_was_start_block == 1:
+            define_blocks = fv_command.define_blocks.copy()
+            fv_command.define_blocks.clear()
+
         yield fv_command
+
+        prev_was_start_block -= 1
+        
     if fv_blocks:
         raise ValueError(f'Start FV block command found without matching end block at line {fv_blocks[-1].line_number}')
