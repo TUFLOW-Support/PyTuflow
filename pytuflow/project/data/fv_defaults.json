@@ -10,6 +10,8 @@
   "min_bottom_thickness": 0.5,
   "cell_3d_depth": 1.0,
   "output_interval": 3600,
+  "output_params": "h, v, d",
+  "output_suffix": "HD",
   "sal_active": 1,
   "sal_density": 1,
   "temp_active": 1,

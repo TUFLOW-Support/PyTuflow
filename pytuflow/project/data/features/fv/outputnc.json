@@ -18,9 +18,9 @@
       "target_cf": "fvc",
       "target_previous_block": true,
       "commands": [
-        "Output Parameters == h, v, d",
+        "Output Parameters == ${output_params}",
         "Output Interval == ${output_interval}",
-        "! Suffix == HD  ! uncomment if writing multiple netcdf outputs"
+        "Suffix == ${output_suffix}  ! uncomment if writing multiple netcdf outputs"
       ]
     }
   ]
