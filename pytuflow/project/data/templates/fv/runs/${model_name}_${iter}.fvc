@@ -80,6 +80,9 @@ End Tracer
 ##IF feature:wqm##
 ##COMMANDS fvc_wq_control_file##
 ##ENDIF##
+##IF feature:ptm##
+##COMMANDS fvc_particle_tracking_control_file##
+##ENDIF##
 
 !__________________________________________________________________________________________________________________________________________________________________________________________
 ! WIND STRESS (optional)
@@ -107,7 +110,7 @@ Geometry 2D == ${geometry_2d}
 ##ENDIF##
 ##IF feature:ad##
 ##COMMANDS fvc_initial_tracer##
-##ENDIF''
+##ENDIF##
 ##IF feature:st##
 ##COMMANDS fvc_initial_sediment##
 ##ENDIF##
