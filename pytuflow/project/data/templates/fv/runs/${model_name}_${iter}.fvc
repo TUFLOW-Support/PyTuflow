@@ -105,6 +105,9 @@ Geometry 2D == ${geometry_2d}
 ##IF feature:temp##
 ##COMMANDS fvc_initial_temp##
 ##ENDIF##
+##IF feature:ad##
+##COMMANDS fvc_initial_tracer##
+##ENDIF''
 ##IF feature:st##
 ##COMMANDS fvc_initial_sediment##
 ##ENDIF##

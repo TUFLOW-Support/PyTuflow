@@ -42,6 +42,22 @@
                 "Evapo-Concentrate == 1",
                 "Water Age == 0"
             ]
+        },
+        {
+            "id": "fvc_initial_tracer",
+            "target_cf": "fvc",
+            "placement_rule": "fvc_initial_conditions",
+            "commands": [
+                "Initial Tracer Concentration == ${initial_tracer}"
+            ]
+        },
+        {
+            "id": "wq_bc_header",
+            "target_cf": "fvc",
+            "subtarget_cf": "/^BC == (?:WL|Q|QS).*/i",
+            "commands": [
+                "Tracer Header == ${tracer_bc_header}"
+            ]
         }
     ]
 }

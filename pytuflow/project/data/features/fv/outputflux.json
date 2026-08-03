@@ -27,7 +27,7 @@
         "target_cf": "fvc",
         "placement_rule": "before_fvc_output",
         "commands": [
-            "Read GIS Notestring == <path/to/2d_ns_flux.shp>"
+            "Read GIS Nodestring == <path/to/2d_ns_flux.shp>"
         ]
 
     }

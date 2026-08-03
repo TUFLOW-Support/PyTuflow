@@ -23,6 +23,9 @@
   "initial_temp": "<temp deg>",
   "initial_sed": "<conc mg/L>",
   "initial_wq": "<conc mg/L>, ...",
+  "initial_tracer": "<conc mg/L>, ...",
   "ntracer": 1,
-  "wq_bc_header": "<WQ BC column headers>"
+  "wq_bc_header": "<WQ BC column headers>",
+  "tracer_bc_header": "<Tracer BC column headers>",
+  "sed_bc_header": "<Sediment BC column headers>"
 }
