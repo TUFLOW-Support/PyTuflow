@@ -170,8 +170,8 @@ class HPCProject(BaseEngineProject):
 
         pytuflow-project insert \
             --engine hpc \
-            --feature po \
-            --cf models/TUFLOW/runs/Tutorial_Model_001.tcf
+            --cf models/TUFLOW/runs/Tutorial_Model_001.tcf \
+            --feature po
     """
 
     ENGINE_TYPE = 'hpc'

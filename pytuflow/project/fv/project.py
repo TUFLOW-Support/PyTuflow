@@ -61,6 +61,7 @@ class FVProject(BaseEngineProject):
     ...     print(mod)
     3d
     ad
+    events
     outputflux
     outputnc
     outputpoints
@@ -123,6 +124,13 @@ class FVProject(BaseEngineProject):
             --crs "EPSG:32760" \
             --features tutorial outputnc
 
+    FVProject uses variables that can be customised by the user. To see all the available variables, 
+    see the ``defaults.json`` and ``fv_defaults.json`` in the cache folder mentioned earlier. From the ``fv_defaults.json``, we
+    can see a "hardware" variable, as well as several output variables.
+
+    To see where the variables are used, see the fv templates files within the cache directory and the ``features/fv`` to view
+    the commands inserted for each "feature".
+
     Initialise an FV project with Tutorial model set to "On" and an output NetCDF with custom settings. Additionally, set the hardware to be GPU.
 
     >>> project = FVProject(
@@ -155,7 +163,7 @@ class FVProject(BaseEngineProject):
             --output-params "h, v, d"
 
     Most "features" within the TUFLOW FV project are singular and can only be added once to the project (e.g. "Tutorial Model == On") and if the command exists
-    already then nothing will be created or inserted. Some of the "features" are additive and allow multiple insertions.
+    already then nothing will be inserted. Some of the "features" are additive and allow multiple insertions.
     Outputs are one such feature, as it might be desirable to split outputs parameters into different files.
 
     As an example of multiple insertions via the create function, the example below includes water quality in the creation and adds an output NetCDF for both the
@@ -191,6 +199,22 @@ class FVProject(BaseEngineProject):
                 '{"name": "outputnc", "output_interval": 300, "output_params": "h, v, d", "output_suffix": "HD"}' \
                 '{"name": "outputnc", "output_interval": 300, "output_params": "WQ_ALL", "output_suffix": "WQ"}' \
                 '{"name": "outputnc", "output_interval": 300, "output_params": "WQ_Diag_ALL", "output_suffix": "WQ_Diag"}'
+
+    It's also possible to insert a "feature" into an existing model. The syntax for insertion is very similar to the create function, 
+    it can only be done one feature at a time.
+
+    Example, inserting events into the model created in any of the above examples:
+
+    >>> FVProject.insert_feature_into('events', 'models/TUFLOWFV/runs/Tutorial_Model_001.fvc')
+
+    Or via the CLI:
+
+    .. code-block:: console
+
+        pytuflow-project insert \
+            --engine fv \
+            --cf models/TUFLOW/runs/Tutorial_Model_001.fvc \
+            --feature events
     """
 
     ENGINE_TYPE = 'fv'
