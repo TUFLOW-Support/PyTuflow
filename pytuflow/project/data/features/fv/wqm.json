@@ -33,7 +33,6 @@
             "id": "wq_bc_header",
             "target_cf": "fvc",
             "subtarget_cf": "/^BC == (?:WL|Q|QS).*/i",
-            "loop_all_found_targets": true,
             "commands": [
                 "WQ Header == ${wq_bc_header}"
             ]

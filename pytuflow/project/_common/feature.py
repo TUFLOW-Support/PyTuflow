@@ -55,7 +55,7 @@ class BaseEngineFeature(BaseFeature):
         config = self._get_config()
         for block in config.get('command_blocks', []):
             target = block.get('target_cf', 'tcf' if self.ENGINE_TYPE == 'hpc' else 'fvc')
-            loop_all = block.get('loop_all_found_targets', False)
+            loop_all = block.get('loop_all_found_targets', True)
             cf = control_files.get(target)
             if cf is None or cf == []:
                 continue
