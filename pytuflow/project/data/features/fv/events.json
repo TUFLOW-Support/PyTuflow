@@ -10,8 +10,8 @@
   ],
   "command_blocks": [
     {
-      "id": "events_tcf",
-      "target_cf": "tcf",
+      "id": "events_fvc",
+      "target_cf": "fvc",
       "commands": [
         "\n!_______________________________________________________",
         "! SCENARIOS / EVENTS",

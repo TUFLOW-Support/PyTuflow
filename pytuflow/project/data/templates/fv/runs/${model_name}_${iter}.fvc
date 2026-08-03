@@ -45,6 +45,9 @@ Spatial Order == ${spatial_order}
 Time Format == ${time_format}								! {HOURS} | ISODATE
 Start Time == 0.0														! Simulation start time (dd/mm/yyyy hh:mm:ss)
 End Time == 6.0															! Simulation end time (dd/mm/yyyy hh:mm:ss)
+##IF feature:events##
+##COMMANDS events_fvc##
+##ENDIF##
 
 !__________________________________________________________________________________________________________________________________________________________________________________________
 ! COMPUTATIONAL TIMESTEP

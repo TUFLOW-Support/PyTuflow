@@ -85,6 +85,18 @@ class FVProject(BaseEngineProject):
     .. code-block:: console
 
         pytuflow-project list-features --engine fvc
+
+    (Re-)Initialise the template files:
+    
+    >>> from pytuflow.project import TemplateManager
+    >>> manager = TemplateManager(engine_type='fv')
+    >>> manager.init_cache(force=True)
+
+    Initialise the templates via the CLI:
+
+    .. code-block:: console
+
+        pytuflow-project init-templates --engine fv --force
     """
 
     ENGINE_TYPE = 'fv'
