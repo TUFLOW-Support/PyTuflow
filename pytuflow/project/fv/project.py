@@ -155,9 +155,8 @@ class FVProject(BaseEngineProject):
             --output-params "h, v, d"
 
     Most "features" within the TUFLOW FV project are singular and can only be added once to the project (e.g. "Tutorial Model == On") and if the command exists
-    already then nothing will be created or inserted. Some of the "features" are additive and allow multiple insertions or can be added multiple times in the create function.
-    Outputs are one such feature, as it might be desirable to split outputs parameters into different files (e.g. one output NetCDF dedicated to the hydrodynamic
-    results and one dedicated to the water quality results).
+    already then nothing will be created or inserted. Some of the "features" are additive and allow multiple insertions.
+    Outputs are one such feature, as it might be desirable to split outputs parameters into different files.
 
     As an example of multiple insertions via the create function, the example below includes water quality in the creation and adds an output NetCDF for both the
     hydrodynamics and the water quality results.
@@ -165,17 +164,33 @@ class FVProject(BaseEngineProject):
     >>> project = FVProject(
     ...     name='Tutorial_Model',
     ...     output_dir='models/TUFLOWFV',
-    ...     features=['tutorial', '3d', 'wqm'],
+    ...     features=[
+                'tutorial', '3d', 'temp', 'salinity', 'ad', 'wqm'
+                {'name': 'outputnc', 'output_interval': 300, 'output_params': 'h, v, d', 'output_suffix': 'HD'},
+                {'name': 'outputnc', 'output_interval': 300, 'output_params': 'WQ_ALL', 'output_suffix': 'WQ'},
+                {'name': 'outputnc', 'output_interval': 300, 'output_params': 'WQ_Diag_ALL', 'output_suffix': 'WQ_Diag'}
+            ],
     ...     crs='EPSG:32760',
-    ...     create_empties=True,
-    ...     hardware='GPU',
-    ...     output_interval=300,
-    ...     output_params="h, v, d
+    ...     create_empties=True
     ... )
     >>> project.validate() # list any errors - empy list is good
     []
     >>> project.create()
     PosixPath('models/TUFLOWFV')
+
+    Taking the same example as above, and initialising it via the CLI:
+
+    .. code-block:: console
+    
+        pytuflow-project create \
+            --engine fv \
+            --name Tutorial_Model \
+            --output-dir models/TUFLOWFV \
+            --crs "EPSG:32760" \
+            --features tutorial 3d temp salinity ad wqm \
+                '{"name": "outputnc", "output_interval": 300, "output_params": "h, v, d", "output_suffix": "HD"}' \
+                '{"name": "outputnc", "output_interval": 300, "output_params": "WQ_ALL", "output_suffix": "WQ"}' \
+                '{"name": "outputnc", "output_interval": 300, "output_params": "WQ_Diag_ALL", "output_suffix": "WQ_Diag"}'
     """
 
     ENGINE_TYPE = 'fv'
