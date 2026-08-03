@@ -1,6 +1,6 @@
 ! TUFLOW FV
 ##IF feature:tutorial##
-Tutorial Model == ON													! {OFF} | ON Enable license free tutorial mode
+##COMMANDS tutorial_model_activate##
 ##ENDIF##
 
 !__________________________________________________________________________________________________________________________________

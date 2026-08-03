@@ -1,7 +1,16 @@
 {
+  "top": {
+    "description": "Insert at the top of the control file after all comments, at the first blank line",
+    "rule": "before",
+    "match_first": true,
+    "commands": [
+      "/^\n$/"
+    ]
+  },
   "hpc_control_files": {
     "description": "Insert after the last command in the control files section. Any new control file command is placed at the bottom of the existing control file commands group.",
     "rule": "after",
+    "match_first": false,
     "commands": [
       "Geometry Control File",
       "BC Control File",
@@ -17,6 +26,7 @@
   "hpc_solution_scheme": {
     "description": "Insert after the last command in the solution scheme/hardware section.",
     "rule": "after",
+    "match_first": false,
     "commands": [
       "solution scheme",
       "hardware"
@@ -25,6 +35,7 @@
   "map_outputs": {
     "description": "Insert after all the map output commands.",
     "rule": "after",
+    "match_first": false,
     "commands": [
       "map output"
     ]
@@ -32,6 +43,7 @@
   "fvc_output": {
     "description": "Insert after all the fv output blocks.",
     "rule": "after",
+    "match_first": false,
     "commands": [
       "Output Dir",
       "Log Dir",
@@ -42,6 +54,7 @@
   "before_fvc_output": {
     "description": "Insert before all the fv output blocks.",
     "rule": "before",
+    "match_first": false,
     "commands": [
       "Output Dir",
       "Log Dir",
@@ -52,6 +65,7 @@
   "fvc_structures": {
     "description": "Insert after all the fv structure blocks.",
     "rule": "after",
+    "match_first": false,
     "commands": [
       "/^structure$/i"
     ]
@@ -59,6 +73,7 @@
   "before_fvc_structures": {
     "description": "Insert before all the fv structure blocks.",
     "rule": "before",
+    "match_first": false,
     "commands": [
       "/^structure$/i"
     ]
@@ -66,6 +81,7 @@
   "fvc_geometry_2d": {
     "description": "Insert after 2D geometry command(s).",
     "rule": "after",
+    "match_first": false,
     "commands": [
       "/^geometry 2d$/i"
     ]
@@ -73,6 +89,7 @@
   "fvc_simulation_configuration": {
     "description": "Insert after other simulation configuration commands.",
     "rule": "after",
+    "match_first": false,
     "commands": [
       "/^Bottom Drag Model$/i",
       "/^Include Salinity$/i",
@@ -88,6 +105,7 @@
   "fvc_model_parameters": {
     "description": "Insert after model parameter commands.",
     "rule": "after",
+    "match_first": false,
     "commands": [
       "! MODEL PARAMETERS",
       "/^Momentum mixing model$/i",
@@ -110,6 +128,7 @@
   "fv_control_files": {
     "description": "Insert after other fv control files.",
     "rule": "after",
+    "match_first": false,
     "commands": [
       "/^sediment control file$/i",
       "/^water quality control file$/i",
@@ -122,6 +141,7 @@
   "fvc_initial_conditions": {
     "description": "Insert after other initial conditions.",
     "rule": "after",
+    "match_first": false,
     "commands": [
       "! INITIAL CONDITIONS",
       "/^Initial Water Level$/i",
@@ -140,6 +160,7 @@
   "fvc_tracer_block_heading": {
     "description": "Insert after tracer block heading.",
     "rule": "after",
+    "match_first": false,
     "commands": [
       "! TRACER DEFINITION"
     ]

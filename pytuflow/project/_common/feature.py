@@ -224,7 +224,7 @@ class BaseEngineFeature(BaseFeature):
             last_ref = None
             for cmd_entry in rule.get('commands', []):
                 pattern, is_regex, flags = _parse_filter(cmd_entry)
-                if pattern.lstrip() and pattern.lstrip()[0] == '!' or pattern.lstrip()[0] == '#':
+                if not pattern.strip('\n\t ^$') or pattern.lstrip('\n\t ^$')[0] == '!' or pattern.lstrip('\n\t ^$')[0] == '#':
                     matches = cf.find_input(
                         filter_by=pattern, recursive='similar', regex=is_regex, regex_flags=flags, comments=True
                     )
@@ -237,7 +237,7 @@ class BaseEngineFeature(BaseFeature):
                         lhs=pattern, recursive='similar', regex=is_regex, regex_flags=flags
                     )
                 if matches:
-                    last_ref = matches[-1]
+                    last_ref = matches[0] if rule.get('match_first', False) else matches[-1]
             if last_ref is not None:
                 return last_ref, rule_type
 

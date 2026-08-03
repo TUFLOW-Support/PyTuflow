@@ -1,0 +1,16 @@
+{
+  "name": "tutorial",
+  "display_name": "Tutorial Model",
+  "sort_order": 2,
+  "template_files": [],
+  "command_blocks": [
+    {
+      "id": "tutorial_model_activate",
+      "target_cf": "fvc",
+      "placement_rule": "top",
+      "commands": [
+        "Tutorial Model == On"
+    ]
+    }
+  ]
+}
