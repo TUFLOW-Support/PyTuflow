@@ -1,5 +1,5 @@
 {
-    "name": "st",
+    "name": "stm",
     "display_name": "Sediment Transport",
     "sort_order": 5,
     "template_files": [
@@ -25,6 +25,14 @@
                 "\n!______________________________________________________________________________________________________________________",
                 "! SEDIMENT CONTROL FILE",
                 "Sediment Control File == ..\\stm\\${model_name}_${iter}.fvsed"
+            ]
+        },
+        {
+            "id": "fvc_initial_sediment",
+            "target_cf": "fvc",
+            "placement_rule": "fvc_initial_conditions",
+            "commands": [
+                "Initial Sediment concentration == ${initial_sed}"
             ]
         }
     ]

@@ -21,5 +21,7 @@
   "heat_active": 1,
   "initial_sal": "<sal mg/L>",
   "initial_temp": "<temp deg>",
-  "ntracer": 1
+  "initial_sed": "<conc mg/L>",
+  "ntracer": 1,
+  "wq_bc_header": "<WQ BC column headers>"
 }

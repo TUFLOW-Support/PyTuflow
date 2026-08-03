@@ -1,0 +1,41 @@
+{
+    "name": "wqm",
+    "display_name": "Water Quality",
+    "sort_order": 5,
+    "template_files": [
+        {
+            "template_key": "wqm/${model_name}_${iter}.fvwq",
+            "output_subdir": "wqm"
+        }
+    ],
+    "command_blocks": [
+        {
+            "id": "fvc_wq_control_file",
+            "target_cf": "fvc",
+            "placement_rule": "fvc_model_parameters",
+            "commands": [
+                "\n!______________________________________________________________________________________________________________________",
+                "! WATER QUALITY",
+                "Water Quality Model == tuflow",
+                "Water Quality Control File == ..\\wqm\\${model_name}_${iter}.fvwq",
+                "Water Quality Model Directory == ..\\wqm\\"
+            ]
+        },
+        {
+            "id": "fvc_initial_wq",
+            "target_cf": "fvc",
+            "placement_rule": "fvc_initial_conditions",
+            "commands": [
+                "initial wq concentration == ${initial_wq}"
+            ]
+        },
+        {
+            "id": "wq_bc_header",
+            "target_cf": "fvc",
+            "subtarget_cf": "/^BC == (?:WL|Q|QS).*/i",
+            "commands": [
+                "WQ Header == ${wq_bc_header}"
+            ]
+        }
+    ]
+}
