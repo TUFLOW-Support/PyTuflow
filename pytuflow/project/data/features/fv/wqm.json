@@ -17,7 +17,7 @@
                 "\n!______________________________________________________________________________________________________________________",
                 "! WATER QUALITY",
                 "Water Quality Model == tuflow",
-                "Water Quality Control File == ..\\wqm\\${model_name}_${iter}.fvwq",
+                "Water Quality Control File == ${model_name}_${iter}.fvwq",
                 "Water Quality Model Directory == ..\\wqm\\"
             ]
         },
@@ -33,6 +33,7 @@
             "id": "wq_bc_header",
             "target_cf": "fvc",
             "subtarget_cf": "/^BC == (?:WL|Q|QS).*/i",
+            "loop_all_found_targets": true,
             "commands": [
                 "WQ Header == ${wq_bc_header}"
             ]

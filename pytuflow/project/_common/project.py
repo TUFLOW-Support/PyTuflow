@@ -8,7 +8,7 @@ from ..abc.project import BaseProject
 from ..template.engine import TemplateEngine
 from ..template.manager import TemplateManager
 from ..config.settings import Settings
-from .utils import _create_projection_file, _normalize_rendered, _variables_from_cf_path
+from .utils import _create_projection_file, _normalize_rendered, _variables_from_cf_path, _parse_filter
 
 if TYPE_CHECKING:
     pass
@@ -44,10 +44,11 @@ class BaseEngineProject(BaseProject):
     MAIN_CF_EXT: ClassVar[str] = ''
     MAIN_CF_SUBDIR: ClassVar[str] = 'runs'
     MAIN_CF_CLASS: ClassVar[str] = ''
-    BASE_TEMPLATES: ClassVar[list[tuple[str, str]]] = []
     OUTPUT_DIRS: ClassVar[list[str]] = []
     EMPTIES_KEY: ClassVar[str] = ''
     SUPPORTED_GIS_FORMATS: ClassVar[frozenset[str]] = frozenset({'SHP', 'MIF', 'GPKG'})
+    BASE_TEMPLATES: ClassVar[list[tuple[str, str]]] = []
+    CF_TYPE_MAP: ClassVar = {}
 
     def __init__(
         self,
@@ -179,7 +180,7 @@ class BaseEngineProject(BaseProject):
         if main_cf_path is not None:
             import pytuflow
             main_cf = getattr(pytuflow, self.MAIN_CF_CLASS)(main_cf_path)
-            secondary_cfs = self._load_secondary_cfs(main_cf, main_cf_path, features)
+            secondary_cfs = self._load_secondary_cfs(main_cf, features)
             control_files = {self.MAIN_CF_EXT: main_cf, **secondary_cfs}
 
             for feature, overrides in feature_pairs:
@@ -262,7 +263,7 @@ class BaseEngineProject(BaseProject):
                 out_path.write_text(rendered_text, encoding='utf-8')
 
         main_cf = getattr(pytuflow, cls.MAIN_CF_CLASS)(cf_path)
-        secondary_cfs = cls._load_secondary_cfs_cls(main_cf, cf_path, [feature])
+        secondary_cfs = cls._load_secondary_cfs(main_cf, [feature])
         control_files = {cls.MAIN_CF_EXT: main_cf, **secondary_cfs}
 
         feature.apply_to_control_files(control_files, variables)
@@ -335,16 +336,35 @@ class BaseEngineProject(BaseProject):
         instances.sort(key=lambda pair: pair[0]._get_config().get('sort_order', 50))
         return instances
 
-    def _load_secondary_cfs(self, main_cf, main_cf_path: Path, features) -> dict:
-        """Load secondary control files referenced by *main_cf*.
+    @classmethod
+    def _load_secondary_cfs(cls, tcf, features) -> dict:
+        """Load secondary CFs (TGC, TBC, etc.) referenced in the TCF."""
+        import pytuflow as pt
 
-        Override in subclasses that have secondary CFs (e.g. HPC has TGC/TBC).
-        The default implementation returns an empty dict (no secondary CFs).
-        """
-        return {}
+        needed_types = cls._needed_cf_types(features)
+
+        result = pt.AppendDict()
+        for cf_type in needed_types:
+            if cf_type not in cls.CF_TYPE_MAP:
+                continue
+            lhs = cls.CF_TYPE_MAP[cf_type]['lhs']
+            pattern, is_regex, flags = _parse_filter(lhs)
+            inps = tcf.find_input(lhs=pattern, recursive='similar', regex=is_regex, regex_flags=flags)
+            if not inps:
+                continue
+            for inp in inps:
+                if inp.cf:
+                    result[cf_type] = inp.cf
+        return result
 
     @classmethod
-    def _load_secondary_cfs_cls(cls, main_cf, main_cf_path: Path, features) -> dict:
-        """Class-level variant of :meth:`_load_secondary_cfs` for use in
-        :meth:`insert_feature_into`.  Override in subclasses as needed."""
-        return {}
+    def _needed_cf_types(cls, features) -> set[str]:
+        """Collect all non-primary target_cf values across all features' command blocks."""
+        needed = set()
+        for feature in features:
+            config = feature._get_config()
+            for block in config.get('command_blocks', []):
+                target = block.get('target_cf', cls.MAIN_CF_EXT)
+                if target != 'tcf':
+                    needed.add(target)
+        return needed

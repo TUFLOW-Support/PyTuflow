@@ -6,15 +6,6 @@ from pathlib import Path
 from .._common.project import BaseEngineProject
 from .._common.utils import _variables_from_cf_path  # noqa: F401 — kept for back-compat
 
-# Maps CF type key → TCF command lhs that references it, and the pytuflow class to use.
-_CF_TYPE_MAP: dict[str, dict] = {
-    'tgc': {'lhs': 'geometry control file', 'class': 'TGC'},
-    'tbc': {'lhs': 'bc control file', 'class': 'TBC'},
-    'ecf': {'lhs': 'estry control file', 'class': 'ECF'},
-    'qcf': {'lhs': 'quadtree control file', 'class': 'QCF'},
-    'adcf': {'lhs': 'ad control file', 'class': 'ADCF'},
-}
-
 
 def get_available_features() -> dict[str, type]:
     """Discover all available HPC features from JSON files in the feature cache.
@@ -24,15 +15,6 @@ def get_available_features() -> dict[str, type]:
     in ``data/features/hpc/`` — no Python code changes needed.
     """
     return HPCProject.get_available_features()
-
-
-_BASE_TEMPLATES = [
-    ('runs/${model_name}_${iter}.tcf', 'runs/${model_name}_${iter}.tcf'),
-    ('model/${model_name}_${iter}.tgc', 'model/${model_name}_${iter}.tgc'),
-    ('model/${model_name}_${iter}.tbc', 'model/${model_name}_${iter}.tbc'),
-    ('bc_dbase/bc_dbase.csv', 'bc_dbase/bc_dbase.csv'),
-    ('model/${model_name}_mat.csv', 'model/${model_name}_mat.csv'),
-]
 
 
 class HPCProject(BaseEngineProject):
@@ -191,60 +173,31 @@ class HPCProject(BaseEngineProject):
     ENGINE_TYPE = 'hpc'
     MAIN_CF_EXT = 'tcf'
     MAIN_CF_CLASS = 'TCF'
-    BASE_TEMPLATES = _BASE_TEMPLATES
     OUTPUT_DIRS = ['runs', 'model', 'bc_dbase', 'results', 'check', 'runs/log']
     EMPTIES_KEY = 'hpc'
     SUPPORTED_GIS_FORMATS = frozenset({'SHP', 'MIF', 'GPKG'})
+    BASE_TEMPLATES = [
+        ('runs/${model_name}_${iter}.tcf', 'runs/${model_name}_${iter}.tcf'),
+        ('model/${model_name}_${iter}.tgc', 'model/${model_name}_${iter}.tgc'),
+        ('model/${model_name}_${iter}.tbc', 'model/${model_name}_${iter}.tbc'),
+        ('bc_dbase/bc_dbase.csv', 'bc_dbase/bc_dbase.csv'),
+        ('model/${model_name}_mat.csv', 'model/${model_name}_mat.csv'),
+    ]
+    CF_TYPE_MAP: dict[str, dict] = {
+        'tgc': {'lhs': 'geometry control file', 'class': 'TGC'},
+        'tbc': {'lhs': 'bc control file', 'class': 'TBC'},
+        'ecf': {'lhs': 'estry control file', 'class': 'ECF'},
+        'qcf': {'lhs': 'quadtree control file', 'class': 'QCF'},
+        'adcf': {'lhs': 'ad control file', 'class': 'ADCF'},
+        'tscf': {'lhs': 'swmm control file', 'class': 'TSCF'},
+        'toc': {'lhs': 'read operating controls file', 'class': 'TOC'},
+        'trfc': {'lhs': 'rainfall control file', 'class': 'TRFC'}
+    }
 
     @classmethod
     def _get_feature_base_class(cls):
         from .features._base import HPCBaseFeature
         return HPCBaseFeature
-
-    # ------------------------------------------------------------------
-    # Secondary CF loading (HPC-specific — TGC, TBC, ECF, QCF, ADCF)
-    # ------------------------------------------------------------------
-
-    def _load_secondary_cfs(self, main_cf, main_cf_path: Path, features) -> dict:
-        needed = _needed_cf_types(features)
-        return _load_secondary_cfs(main_cf, main_cf_path, needed)
-
-    @classmethod
-    def _load_secondary_cfs_cls(cls, main_cf, main_cf_path: Path, features) -> dict:
-        needed = _needed_cf_types(features)
-        return _load_secondary_cfs(main_cf, main_cf_path, needed)
-
-
-def _needed_cf_types(features) -> set[str]:
-    """Collect all non-primary target_cf values across all features' command blocks."""
-    needed = set()
-    for feature in features:
-        config = feature._get_config()
-        for block in config.get('command_blocks', []):
-            target = block.get('target_cf', 'tcf')
-            if target != 'tcf':
-                needed.add(target)
-    return needed
-
-
-def _load_secondary_cfs(tcf, tcf_path: Path, needed_types: set[str]) -> dict:
-    """Load secondary CFs (TGC, TBC, etc.) referenced in the TCF."""
-    import pytuflow as pt
-
-    cf_classes = {k: getattr(pt, v['class']) for k, v in _CF_TYPE_MAP.items()}
-    result = {}
-    for cf_type in needed_types:
-        if cf_type not in _CF_TYPE_MAP:
-            continue
-        lhs = _CF_TYPE_MAP[cf_type]['lhs']
-        inps = tcf.find_input(lhs=lhs, recursive=False)
-        if not inps:
-            continue
-        cf_rel = str(inps[0].rhs).replace('\\', '/')
-        cf_path = (tcf_path.parent / cf_rel).resolve()
-        if cf_path.exists():
-            result[cf_type] = cf_classes[cf_type](cf_path)
-    return result
 
 
 # Keep old name available for any code that imported it directly

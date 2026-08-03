@@ -55,24 +55,37 @@ class BaseEngineFeature(BaseFeature):
         config = self._get_config()
         for block in config.get('command_blocks', []):
             target = block.get('target_cf', 'tcf' if self.ENGINE_TYPE == 'hpc' else 'fvc')
+            loop_all = block.get('loop_all_found_targets', False)
             cf = control_files.get(target)
-            if cf is None:
+            if cf is None or cf == []:
                 continue
-            subtarget = block.get("subtarget_cf") or block.get("target_previous_block")
-            if subtarget:
-                if block.get("subtarget_cf"):
-                    pattern, is_regex, flags = _parse_filter(subtarget)
-                    if '==' in pattern:
-                        input_subtarget = cf.find_input(filter_by=pattern, regex=is_regex, regex_flags=flags)
+            elif not loop_all and isinstance(cf, list):
+                cf = cf[0]
+            cf_list = cf if isinstance(cf, list) else [cf]
+            subcf_list = []
+            subtarget = None
+            for cf in cf_list:
+                subtarget = block.get("subtarget_cf") or block.get("target_previous_block")
+                if subtarget:
+                    if block.get("subtarget_cf"):
+                        pattern, is_regex, flags = _parse_filter(subtarget)
+                        if '==' in pattern:
+                            input_subtarget = cf.find_input(filter_by=pattern, regex=is_regex, regex_flags=flags)
+                        else:
+                            input_subtarget = cf.find_input(lhs=pattern, regex=is_regex, regex_flags=flags)
+                        if not input_subtarget:
+                            continue
                     else:
-                        input_subtarget = cf.find_input(lhs=pattern, regex=is_regex, regex_flags=flags)
-                else:
-                    input_subtarget = [last_input] if last_input else []
-                for inp in input_subtarget:
-                    if inp.cf:
-                        cf = inp.cf[0]
-                        break
-            last_input = self._apply_block(cf, block, variables)
+                        input_subtarget = [last_input] if last_input else []
+                    for inp in input_subtarget:
+                        if inp.cf:
+                            subcf_list.extend(inp.cf if loop_all else inp.cf[:1])
+                            if not loop_all:
+                                break
+            if subtarget:
+                cf_list = subcf_list
+            for cf in cf_list:
+                last_input = self._apply_block(cf, block, variables)
 
     def apply_to_tcf(self, tcf, variables: dict) -> None:
         """Legacy shim — delegates to apply_to_control_files."""

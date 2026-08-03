@@ -28,7 +28,7 @@ Latitude == ${latitude}												! {0.0} Representative latitude for study are
 ##IF feature:ad##
 ##COMMANDS fvc_ntracer##
 ##ENDIF##
-##IF feature:st##
+##IF feature:stm##
 ##COMMANDS fvc_include_sediment##
 ##ENDIF##
 
@@ -74,8 +74,11 @@ Global Horizontal Eddy Viscosity Limits == 0.05, 99999.					! {0.0} Minimum eddy
 ##COMMANDS fvc_tracer_block_params##
 End Tracer
 ##ENDIF##
-##IF feature:st##
+##IF feature:stm##
 ##COMMANDS fvc_sediment_control_file##
+##ENDIF##
+##IF feature:wqm##
+##COMMANDS fvc_wq_control_file##
 ##ENDIF##
 
 !__________________________________________________________________________________________________________________________________________________________________________________________
@@ -108,22 +111,25 @@ Geometry 2D == ${geometry_2d}
 ##IF feature:wq##
 ##COMMANDS fvc_initial_wq##
 ##ENDIF##
+##IF feature:wqm##
+##COMMANDS fvc_initial_wq##
+##ENDIF##
 
 !__________________________________________________________________________________________________________________________________________________________________________________________
 ! MATERIALS
-! Example Material - uncomment and update if required
-! Material == 1															! {0} Material ID
-!   Bottom Roughness == 0.018								! Manning's 'n' roughness coefficient
-! End Material
+! Example Material
+Material == 1															! {0} Material ID
+  Bottom Roughness == 0.018								! Manning's 'n' roughness coefficient
+End Material
 
 !__________________________________________________________________________________________________________________________________________________________________________________________
 ! BOUNDARY CONDITIONS
 Read GIS Nodestring == <path/to/2d_ns.shp>
 
-! Example BC Block - Uncomment and update if required
-! BC == WL, 2, ..\bc_dbase\<wl_boundary.csv>
-!   BC Header == time, WL
-! End BC
+! Example BC Block
+BC == WL, 2, ..\bc_dbase\<wl_boundary.csv>
+    BC Header == time, WL
+End BC
 
 !__________________________________________________________________________________________________________________________________________________________________________________________
 ! MODEL OUTPUTS

@@ -8,12 +8,6 @@ def get_available_features() -> dict[str, type]:
     return FVProject.get_available_features()
 
 
-_BASE_TEMPLATES = [
-    ('runs/${model_name}_${iter}.fvc', 'runs/${model_name}_${iter}.fvc'),
-    ('bc_dbase/bc_dbase.csv', 'bc_dbase/bc_dbase.csv'),
-]
-
-
 class FVProject(BaseEngineProject):
     """TUFLOW FV project generator.
 
@@ -29,10 +23,18 @@ class FVProject(BaseEngineProject):
     ENGINE_TYPE = 'fv'
     MAIN_CF_EXT = 'fvc'
     MAIN_CF_CLASS = 'FVC'
-    BASE_TEMPLATES = _BASE_TEMPLATES
     OUTPUT_DIRS = ['runs', 'model', 'model/geo', 'model/gis', 'bc_dbase', 'results', 'check', 'runs/log']
     EMPTIES_KEY = 'fv'
     SUPPORTED_GIS_FORMATS = frozenset({'SHP', 'MIF'})
+    BASE_TEMPLATES = [
+        ('runs/${model_name}_${iter}.fvc', 'runs/${model_name}_${iter}.fvc'),
+        ('bc_dbase/bc_dbase.csv', 'bc_dbase/bc_dbase.csv'),
+    ]
+    CF_TYPE_MAP: dict[str, dict] = {
+        'fvsed': {'lhs': 'sediment control file', 'class': 'FVSed'},
+        'fvptm': {'lhs': 'particle tracking control file', 'class': 'FVPTM'},
+        'fvwq': {'lhs': '/(?:water quality|wq) control file/i', 'class': 'FVWQ'},
+    }
 
     @classmethod
     def _get_feature_base_class(cls):
