@@ -375,3 +375,120 @@ class TestAllowMultipleWithInstanceOverrides:
         )
         with pytest.raises(ValueError, match='nonexistent_feature'):
             p.create()
+
+
+class TestLoopAllFoundTargets:
+    """Tests for loop_all_found_targets behaviour (subtarget_cf applied to every match)."""
+
+    def test_wq_header_inserted_under_each_bc(self, project_dir):
+        """wqm feature inserts WQ Header == under every BC == WL/Q/QS block."""
+        from pytuflow.project.fv.project import get_available_features
+        WQM = get_available_features()['wqm']
+        from pytuflow import FVC
+
+        p = FVProject('mymodel', project_dir, crs='EPSG:32760', features=[])
+        p.create()
+
+        fvc_path = project_dir / 'runs' / 'mymodel_001.fvc'
+        fvc = FVC(fvc_path)
+
+        # Add two BC == WL blocks manually so subtarget_cf has two targets
+        inp1 = fvc.append_input('BC == WL')
+        bc1 = inp1.block_control()
+        bc1.append_input('BC Name == Boundary_1')
+        inp2 = fvc.append_input('BC == Q')
+        bc2 = inp2.block_control()
+        bc2.append_input('BC Name == Boundary_2')
+
+        feature = WQM()
+        variables = {
+            'model_name': 'mymodel', 'iter': '001',
+            'wq_bc_header': 'TRACER',
+            'initial_wq': '0.0',
+            'output_params': 'wq',
+            'output_interval': '3600.',
+        }
+        feature.apply_to_control_files({'fvc': fvc}, variables)
+
+        # WQ Header == should have been inserted under each BC block (template has 1, we added 2 = 3 total)
+        wq_headers = fvc.find_input(lhs='WQ Header', recursive='block')
+        bc_blocks = fvc.find_input(filter_by=r'^BC == (?:WL|Q|QS)', recursive=False, regex=True, regex_flags=re.IGNORECASE)
+        assert len(wq_headers) == len(bc_blocks), (
+            f"Expected one WQ Header == per BC block ({len(bc_blocks)}), got {len(wq_headers)}"
+        )
+        for h in wq_headers:
+            assert h.value.strip() == 'TRACER'
+
+    def test_wq_header_not_inserted_when_no_bc_blocks(self, project_dir):
+        """wqm feature inserts WQ Header == under every BC block, including those in the template."""
+        from pytuflow.project.fv.project import get_available_features
+        WQM = get_available_features()['wqm']
+        from pytuflow import FVC
+
+        p = FVProject('mymodel', project_dir, crs='EPSG:32760', features=[])
+        p.create()
+
+        fvc_path = project_dir / 'runs' / 'mymodel_001.fvc'
+        fvc = FVC(fvc_path)
+
+        feature = WQM()
+        variables = {
+            'model_name': 'mymodel', 'iter': '001',
+            'wq_bc_header': 'TRACER',
+            'initial_wq': '0.0',
+            'output_params': 'wq',
+            'output_interval': '3600.',
+        }
+        feature.apply_to_control_files({'fvc': fvc}, variables)
+
+        bc_blocks = fvc.find_input(filter_by=r'^BC == (?:WL|Q|QS)', recursive=False, regex=True, regex_flags=re.IGNORECASE)
+        wq_headers = fvc.find_input(lhs='WQ Header', recursive='block')
+        assert len(wq_headers) == len(bc_blocks), (
+            f"Expected one WQ Header == per BC block ({len(bc_blocks)}), got {len(wq_headers)}"
+        )
+
+    def test_loop_all_found_false_only_first_target(self, project_dir):
+        """When loop_all_found_targets is False a subtarget_cf only processes the first match."""
+        from pytuflow.project.fv.project import get_available_features
+        from pytuflow.project.fv.features._base import FVBaseFeature
+        from pytuflow import FVC
+        import json, tempfile, importlib
+
+        # Patch wqm config to add loop_all_found_targets: false on the wq_bc_header block
+        WQM = get_available_features()['wqm']
+        feature = WQM()
+        config = feature._get_config()
+        # Deep-copy and patch the third block
+        import copy
+        patched_config = copy.deepcopy(config)
+        for blk in patched_config['command_blocks']:
+            if blk.get('id') == 'wq_bc_header':
+                blk['loop_all_found_targets'] = False
+
+        p = FVProject('mymodel', project_dir, crs='EPSG:32760', features=[])
+        p.create()
+        fvc_path = project_dir / 'runs' / 'mymodel_001.fvc'
+        fvc = FVC(fvc_path)
+
+        inp1 = fvc.append_input('BC == WL')
+        bc1 = inp1.block_control()
+        bc1.append_input('BC Name == Boundary_1')
+        inp2 = fvc.append_input('BC == Q')
+        bc2 = inp2.block_control()
+        bc2.append_input('BC Name == Boundary_2')
+
+        # Monkey-patch _get_config to return the patched version
+        feature._get_config = lambda: patched_config
+        variables = {
+            'model_name': 'mymodel', 'iter': '001',
+            'wq_bc_header': 'TRACER',
+            'initial_wq': '0.0',
+            'output_params': 'wq',
+            'output_interval': '3600.',
+        }
+        feature.apply_to_control_files({'fvc': fvc}, variables)
+
+        wq_headers = fvc.find_input(lhs='WQ Header', recursive='block')
+        assert len(wq_headers) == 1, (
+            f"With loop_all_found_targets=False, expected only 1 WQ Header ==, got {len(wq_headers)}"
+        )
