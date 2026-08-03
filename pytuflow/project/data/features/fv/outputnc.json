@@ -20,7 +20,7 @@
       "commands": [
         "Output Parameters == ${output_params}",
         "Output Interval == ${output_interval}",
-        "Suffix == ${output_suffix}  ! uncomment if writing multiple netcdf outputs"
+        "Suffix == ${output_suffix}"
       ]
     }
   ]

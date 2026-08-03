@@ -107,6 +107,8 @@ class HPCProject(BaseEngineProject):
     ...     crs='EPSG:32760',
     ...     create_empties=True
     ... )
+    >>> project.validate() # list any errors - empy list is good
+    []
     >>> project.create()
     PosixPath('models/TUFLOW')
 
@@ -140,6 +142,8 @@ class HPCProject(BaseEngineProject):
     ...         }
     ...     }
     ... )
+    >>> project.validate() # list any errors - empy list is good
+    []
     >>> project.create()
     PosixPath('models/TUFLOW')
 

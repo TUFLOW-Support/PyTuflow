@@ -138,6 +138,15 @@ Read GIS Nodestring == <path/to/2d_ns.shp>
 ! Example BC Block
 BC == WL, 2, ..\bc_dbase\<wl_boundary.csv>
     BC Header == time, WL
+    ##IF module:ad##
+    ##COMMANDS tracer_bc_header##
+    ##ENDIF##
+    ##IF module:stm##
+    ##COMMANDS sediment_bc_header##
+    ##ENDIF##
+    ##IF module:wqm##
+    ##COMMANDS wq_bc_header##
+    ##ENDIF##
 End BC
 
 !__________________________________________________________________________________________________________________________________________________________________________________________

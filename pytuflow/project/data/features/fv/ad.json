@@ -52,7 +52,7 @@
             ]
         },
         {
-            "id": "wq_bc_header",
+            "id": "tracer_bc_header",
             "target_cf": "fvc",
             "subtarget_cf": "/^BC == (?:WL|Q|QS).*/i",
             "commands": [
