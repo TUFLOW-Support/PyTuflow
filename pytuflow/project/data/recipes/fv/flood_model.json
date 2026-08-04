@@ -3,6 +3,11 @@
   "description": "Standard 2D flood model with NetCDF HD output.",
   "variables": {},
   "features": [
-    "outputnc"
+    {
+      "name": "outputnc",
+      "output_params": "h, v, d",
+      "output_interval": 3600,
+      "output_suffix": "HD"
+    }
   ]
 }

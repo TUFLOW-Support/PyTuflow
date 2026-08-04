@@ -19,12 +19,14 @@ class TemplateManager:
         self._bundled_hpc_defaults = _BUNDLED_DATA_DIR / 'hpc_defaults.json'
         self._bundled_fv_defaults = _BUNDLED_DATA_DIR / 'fv_defaults.json'
         self._bundled_rules = _BUNDLED_DATA_DIR / 'rules.json'
+        self._bundled_recipes = _BUNDLED_DATA_DIR / 'recipes' / engine_type
         self._cache_dir = CACHE_ROOT / engine_type
         self._cache_features_dir = CACHE_ROOT / 'features' / engine_type
         self._cache_defaults = CACHE_ROOT / 'defaults.json'
         self._cache_hpc_defaults = CACHE_ROOT / 'hpc_defaults.json'
         self._cache_fv_defaults = CACHE_ROOT / 'fv_defaults.json'
         self._cache_rules = CACHE_ROOT / 'rules.json'
+        self._cache_recipes = CACHE_ROOT / 'recipes' / engine_type
 
     def init_cache(self, force: bool = False) -> None:
         """Copy bundled templates and feature configs to the user cache on first use."""
@@ -34,6 +36,7 @@ class TemplateManager:
         needs_hpc_defaults = not self._cache_hpc_defaults.exists() or force
         needs_fv_defaults = not self._cache_fv_defaults.exists() or force
         needs_rules = not self._cache_rules.exists() or force
+        needs_recipes = not self._cache_recipes.exists() or force
 
         if needs_templates:
             if self._cache_dir.exists():
@@ -64,6 +67,11 @@ class TemplateManager:
             if self._cache_rules.exists():
                 self._cache_rules.unlink()
             shutil.copy2(str(self._bundled_rules), str(self._cache_rules))
+
+        if needs_recipes:
+            if self._cache_recipes.exists():
+                shutil.rmtree(self._cache_recipes)
+            shutil.copytree(self._bundled_recipes, self._cache_recipes)
 
     def get_template(self, relative_key: str) -> str:
         """Read template text from cache (initialising cache first if needed).
@@ -163,41 +171,6 @@ class TemplateManager:
                     engine_defaults = json.load(fo)
 
         return defaults, engine_defaults
-        
-    def reset_cache(self) -> None:
-        self.init_cache(force=True)
-
-
-class RecipeManager:
-    """Manages recipe JSON files for a given engine.
-
-    Resolution order (first found wins):
-      1. User cache: ``~/.tuflow_model_files/project_templates/recipes/{engine}/``
-      2. Bundled:    ``data/recipes/{engine}/``
-    """
-
-    def __init__(self, engine_type: str = 'hpc'):
-        self.engine_type = engine_type
-        self._bundled_dir = _BUNDLED_DATA_DIR / 'recipes' / engine_type
-        self._cache_dir = CACHE_ROOT / 'recipes' / engine_type
-
-    # ------------------------------------------------------------------
-    # Public API
-    # ------------------------------------------------------------------
-
-    def load(self, recipe_name: str) -> dict:
-        """Load a recipe by name (without .json).
-
-        Raises ``FileNotFoundError`` if the recipe does not exist for this engine.
-        """
-        path = self._resolve(recipe_name)
-        if path is None:
-            raise FileNotFoundError(
-                f"Recipe '{recipe_name}' not found for engine '{self.engine_type}'. "
-                f"Use 'list-recipes --engine {self.engine_type}' to see available recipes."
-            )
-        with open(path, encoding='utf-8') as f:
-            return json.load(f)
 
     def list_recipes(self) -> list[tuple[str, str, str]]:
         """Return ``[(name, display_name, description), ...]`` sorted by name.
@@ -205,7 +178,7 @@ class RecipeManager:
         User-cache recipes take precedence over bundled ones of the same name.
         """
         seen: dict[str, Path] = {}
-        for directory in (self._bundled_dir, self._cache_dir):
+        for directory in (self._bundled_recipes, self._cache_dir):
             if not directory.exists():
                 continue
             for p in sorted(directory.glob('*.json')):
@@ -227,22 +200,26 @@ class RecipeManager:
                 logger.warning(f'Could not load recipe {path}')
         return results
 
-    def init_cache(self, force: bool = False) -> None:
-        """Copy bundled recipes to the user cache directory."""
-        needs = not self._cache_dir.exists() or force
-        if needs and self._bundled_dir.exists():
-            if self._cache_dir.exists():
-                shutil.rmtree(self._cache_dir)
-            shutil.copytree(self._bundled_dir, self._cache_dir)
+    def get_recipe(self, recipe_name: str) -> dict:
+        """Load a recipe by name (without .json).
 
-    # ------------------------------------------------------------------
-    # Internals
-    # ------------------------------------------------------------------
-
-    def _resolve(self, recipe_name: str) -> Path | None:
-        """Return the path for recipe_name, preferring user cache over bundled."""
-        for directory in (self._cache_dir, self._bundled_dir):
-            p = directory / f'{recipe_name}.json'
-            if p.exists():
-                return p
-        return None
+        Raises ``FileNotFoundError`` if the recipe does not exist for this engine.
+        """
+        def resolve(recipe_name: str) -> Path | None:
+            """Return the path for recipe_name, preferring user cache over bundled."""
+            for directory in (self._cache_recipes, self._bundled_recipes):
+                p = directory / f'{recipe_name}.json'
+                if p.exists():
+                    return p
+            return None
+        path = resolve(recipe_name)
+        if path is None:
+            raise FileNotFoundError(
+                f"Recipe '{recipe_name}' not found for engine '{self.engine_type}'. "
+                f"Use 'list-recipes --engine {self.engine_type}' to see available recipes."
+            )
+        with open(path, encoding='utf-8') as f:
+            return json.load(f)
+        
+    def reset_cache(self) -> None:
+        self.init_cache(force=True)

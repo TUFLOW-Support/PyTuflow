@@ -167,10 +167,10 @@ def cmd_list_features(args):
 
 def cmd_create_recipe(args):
     engine = getattr(args, 'engine', 'hpc') or 'hpc'
-    from .template.manager import RecipeManager
-    manager = RecipeManager(engine)
+    from .template.manager import TemplateManager
+    manager = TemplateManager(engine)
     try:
-        recipe = manager.load(args.recipe)
+        recipe = manager.get_recipe(args.recipe)
     except FileNotFoundError as e:
         print(str(e), file=sys.stderr)
         sys.exit(1)
@@ -203,8 +203,8 @@ def cmd_create_recipe(args):
 
 def cmd_list_recipes(args):
     engine = getattr(args, 'engine', 'hpc') or 'hpc'
-    from .template.manager import RecipeManager
-    manager = RecipeManager(engine)
+    from .template.manager import TemplateManager
+    manager = TemplateManager(engine)
     recipes = manager.list_recipes()
     if not recipes:
         print(f"  (no {engine.upper()} recipes found)")
@@ -257,8 +257,8 @@ def main():
     p_list.add_argument('--engine', default='hpc', choices=['hpc', 'fv'])
 
     # create-recipe — positional recipe name + fixed args only (no dynamic vars)
-    p_create_recipe = sub.add_parser('create-recipe', help='Create a project from a named recipe')
-    p_create_recipe.add_argument('recipe', help='Recipe name (e.g. flood_model)')
+    p_create_recipe = sub.add_parser('create-from-recipe', help='Create a project from a named recipe')
+    p_create_recipe.add_argument('--recipe', help='Recipe name (e.g. flood_model)')
     p_create_recipe.add_argument('--engine', required=True, choices=['hpc', 'fv'],
                                   help='TUFLOW engine type')
     p_create_recipe.add_argument('--name', required=True, help='Model name')
@@ -275,7 +275,7 @@ def main():
 
     if args.command == 'create':
         cmd_create(args, create_dynamic_dests)
-    elif args.command == 'create-recipe':
+    elif args.command == 'create-from-recipe':
         cmd_create_recipe(args)
     elif args.command == 'list-recipes':
         cmd_list_recipes(args)
