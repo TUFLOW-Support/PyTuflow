@@ -1,0 +1,8 @@
+{
+  "display_name": "Basic 2D Model",
+  "description": "Standard 2D HPC model with boundary conditions and map outputs.",
+  "variables": {},
+  "features": [
+    "bc"
+  ]
+}

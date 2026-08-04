@@ -166,3 +166,83 @@ class TemplateManager:
         
     def reset_cache(self) -> None:
         self.init_cache(force=True)
+
+
+class RecipeManager:
+    """Manages recipe JSON files for a given engine.
+
+    Resolution order (first found wins):
+      1. User cache: ``~/.tuflow_model_files/project_templates/recipes/{engine}/``
+      2. Bundled:    ``data/recipes/{engine}/``
+    """
+
+    def __init__(self, engine_type: str = 'hpc'):
+        self.engine_type = engine_type
+        self._bundled_dir = _BUNDLED_DATA_DIR / 'recipes' / engine_type
+        self._cache_dir = CACHE_ROOT / 'recipes' / engine_type
+
+    # ------------------------------------------------------------------
+    # Public API
+    # ------------------------------------------------------------------
+
+    def load(self, recipe_name: str) -> dict:
+        """Load a recipe by name (without .json).
+
+        Raises ``FileNotFoundError`` if the recipe does not exist for this engine.
+        """
+        path = self._resolve(recipe_name)
+        if path is None:
+            raise FileNotFoundError(
+                f"Recipe '{recipe_name}' not found for engine '{self.engine_type}'. "
+                f"Use 'list-recipes --engine {self.engine_type}' to see available recipes."
+            )
+        with open(path, encoding='utf-8') as f:
+            return json.load(f)
+
+    def list_recipes(self) -> list[tuple[str, str, str]]:
+        """Return ``[(name, display_name, description), ...]`` sorted by name.
+
+        User-cache recipes take precedence over bundled ones of the same name.
+        """
+        seen: dict[str, Path] = {}
+        for directory in (self._bundled_dir, self._cache_dir):
+            if not directory.exists():
+                continue
+            for p in sorted(directory.glob('*.json')):
+                seen.setdefault(p.stem, p)   # bundled first so cache overrides below
+        # Override bundled with cache
+        for directory in (self._cache_dir,):
+            if not directory.exists():
+                continue
+            for p in sorted(directory.glob('*.json')):
+                seen[p.stem] = p
+
+        results = []
+        for name, path in sorted(seen.items()):
+            try:
+                with open(path, encoding='utf-8') as f:
+                    d = json.load(f)
+                results.append((name, d.get('display_name', name), d.get('description', '')))
+            except Exception:
+                logger.warning(f'Could not load recipe {path}')
+        return results
+
+    def init_cache(self, force: bool = False) -> None:
+        """Copy bundled recipes to the user cache directory."""
+        needs = not self._cache_dir.exists() or force
+        if needs and self._bundled_dir.exists():
+            if self._cache_dir.exists():
+                shutil.rmtree(self._cache_dir)
+            shutil.copytree(self._bundled_dir, self._cache_dir)
+
+    # ------------------------------------------------------------------
+    # Internals
+    # ------------------------------------------------------------------
+
+    def _resolve(self, recipe_name: str) -> Path | None:
+        """Return the path for recipe_name, preferring user cache over bundled."""
+        for directory in (self._cache_dir, self._bundled_dir):
+            p = directory / f'{recipe_name}.json'
+            if p.exists():
+                return p
+        return None

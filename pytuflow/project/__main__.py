@@ -3,9 +3,12 @@
 Usage:
     python -m pytuflow.project create --name NAME --output-dir DIR --crs EPSG:XXXX
                                        [--engine hpc|fv] [--features M1 M2 ...] [--<variable> VALUE ...]
+    python -m pytuflow.project create-recipe RECIPE --name NAME --output-dir DIR --crs EPSG:XXXX
+                                              [--engine hpc|fv]
     python -m pytuflow.project insert --tcf TCF_PATH --feature feature_NAME
     python -m pytuflow.project init-templates [--engine hpc|fv] [--force]
     python -m pytuflow.project list-features [--engine hpc|fv]
+    python -m pytuflow.project list-recipes [--engine hpc|fv]
 
 Dynamic variables (--<variable>) are discovered from defaults.json / hpc_defaults.json / fv_defaults.json
 and can be extended by the user without modifying this file.
@@ -162,6 +165,57 @@ def cmd_list_features(args):
         print(f"  {name:12s}  {cls.DISPLAY_NAME}")
 
 
+def cmd_create_recipe(args):
+    engine = getattr(args, 'engine', 'hpc') or 'hpc'
+    from .template.manager import RecipeManager
+    manager = RecipeManager(engine)
+    try:
+        recipe = manager.load(args.recipe)
+    except FileNotFoundError as e:
+        print(str(e), file=sys.stderr)
+        sys.exit(1)
+
+    variables = recipe.get('variables', {})
+    features = _parse_features_list([
+        json.dumps(f) if isinstance(f, dict) else f
+        for f in recipe.get('features', [])
+    ])
+
+    if engine == 'fv':
+        from .fv.project import FVProject as ProjectClass
+    else:
+        from .hpc.project import HPCProject as ProjectClass
+
+    project = ProjectClass(
+        name=args.name,
+        output_dir=args.output_dir,
+        crs=args.crs,
+        features=features,
+        **variables,
+    )
+    errors = project.validate()
+    if errors:
+        print('\n'.join(errors), file=sys.stderr)
+        sys.exit(1)
+    out = project.create()
+    print(f"Project created from recipe '{args.recipe}': {out}")
+
+
+def cmd_list_recipes(args):
+    engine = getattr(args, 'engine', 'hpc') or 'hpc'
+    from .template.manager import RecipeManager
+    manager = RecipeManager(engine)
+    recipes = manager.list_recipes()
+    if not recipes:
+        print(f"  (no {engine.upper()} recipes found)")
+        return
+    for name, display_name, description in recipes:
+        line = f"  {name:20s}  {display_name}"
+        if description:
+            line += f"  —  {description}"
+        print(line)
+
+
 def main():
     parser = argparse.ArgumentParser(prog='python -m pytuflow.project')
     sub = parser.add_subparsers(dest='command')
@@ -202,10 +256,29 @@ def main():
     p_list = sub.add_parser('list-features', help='List available features')
     p_list.add_argument('--engine', default='hpc', choices=['hpc', 'fv'])
 
+    # create-recipe — positional recipe name + fixed args only (no dynamic vars)
+    p_create_recipe = sub.add_parser('create-recipe', help='Create a project from a named recipe')
+    p_create_recipe.add_argument('recipe', help='Recipe name (e.g. flood_model)')
+    p_create_recipe.add_argument('--engine', required=True, choices=['hpc', 'fv'],
+                                  help='TUFLOW engine type')
+    p_create_recipe.add_argument('--name', required=True, help='Model name')
+    p_create_recipe.add_argument('--output-dir', required=True, dest='output_dir',
+                                  help='Output directory')
+    p_create_recipe.add_argument('--crs', required=True,
+                                  help='Coordinate reference system (e.g. EPSG:32760)')
+
+    # list-recipes
+    p_list_recipes = sub.add_parser('list-recipes', help='List available recipes')
+    p_list_recipes.add_argument('--engine', default='hpc', choices=['hpc', 'fv'])
+
     args = parser.parse_args()
 
     if args.command == 'create':
         cmd_create(args, create_dynamic_dests)
+    elif args.command == 'create-recipe':
+        cmd_create_recipe(args)
+    elif args.command == 'list-recipes':
+        cmd_list_recipes(args)
     elif args.command == 'insert':
         cmd_insert(args, insert_dynamic_dests)
     elif args.command == 'init-templates':

@@ -1,0 +1,8 @@
+{
+  "display_name": "Flood Model",
+  "description": "Standard 2D flood model with NetCDF HD output.",
+  "variables": {},
+  "features": [
+    "outputnc"
+  ]
+}
