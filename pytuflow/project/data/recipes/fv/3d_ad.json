@@ -1,0 +1,38 @@
+{
+  "display_name": "3D Advection Dispersion Model",
+  "description": "Standard 2D flood model with NetCDF HD output.",
+  "variables": {
+    "spherical": 1,
+    "time_format": "ISODATE",
+    "start_time": "<dd/mm/yyyy hh:mm:ss>",
+    "end_time": "<dd/mm/yyyy hh:mm:ss>",
+    "spatial_order": "1,2",
+    "cfl": 0.6,
+    "timestep_limits": "0.5, 5",
+    "bottom_drag_model": "ks",
+    "Global Bottom Roughness": 0.02,
+    "momenutim_mixing_model": "Smagorinsky",
+    "glob_horiz_eddy_visc": 0.2,
+    "glob_horz_eddy_visc_lims": "0.05, 99999.0",
+    "vertical_mixing_model": "K-Omega",
+    "vertical_mixing_params": "0.55555, 0.075, 0.0768, 2.0, 2.0, 0.0, -0.637117",
+    "glob_vert_eddy_visc_lims": "1.0e-4, 1.0",
+    "glob_vert_scalar_diff_lims": "0., 1.0",
+    "glob_vert_tke_lim": "1.e-10",
+    "glob_vert_eps_lim": "1.e-14",
+    "second_order_vert_mixing_model": "Algebraic",
+    "second_order_vert_mixing_param_group": "CHCD01A"
+  },
+  "features": [
+    "3d",
+    "salinity",
+    "temp",
+    "ad",
+    {
+      "name": "outputnc",
+      "output_params": "h, v, d, temp, sal",
+      "output_interval": 3600,
+      "output_suffix": "HD"
+    }
+  ]
+}

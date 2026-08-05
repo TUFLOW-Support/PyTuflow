@@ -15,7 +15,9 @@ MI Projection == ..\model\gis\projection.mif						! Projection string used for G
 ##ENDIF##
 Units == ${units}															! {Metric} | US Customary | Imperial | English        
 Spherical == ${spherical}											! {0} Cartesian | 1 Spherical
+##IF spherical:0##
 Latitude == ${latitude}												! {0.0} Representative latitude for study area
+##ENDIF##
 ##IF feature:salinity##
 ##COMMANDS fvc_salinity##
 ##ENDIF##
@@ -43,8 +45,8 @@ Spatial Order == ${spatial_order}
 !__________________________________________________________________________________________________________________________________________________________________________________________
 ! SIMULATION TIME SETTINGS
 Time Format == ${time_format}								! {HOURS} | ISODATE
-Start Time == 0.0														! Simulation start time (dd/mm/yyyy hh:mm:ss)
-End Time == 6.0															! Simulation end time (dd/mm/yyyy hh:mm:ss)
+Start Time == ${start_time}														! Simulation start time (dd/mm/yyyy hh:mm:ss)
+End Time == ${end_time}															! Simulation end time (dd/mm/yyyy hh:mm:ss)
 ##IF feature:events##
 ##COMMANDS events_fvc##
 ##ENDIF##
@@ -69,6 +71,12 @@ Global Bottom Roughness == ${glob_bottom_rough}										! {1.0E-6} Manning's 'n
 Momentum Mixing Model == ${momenutim_mixing_model}									! None | Constant | Smagorinsky | Wu
 Global Horizontal Eddy Viscosity == ${glob_horiz_eddy_visc}									! {0.0} Smagorinksy coefficient
 Global Horizontal Eddy Viscosity Limits == ${glob_horz_eddy_visc_lims}					! {0.0} Minimum eddy viscosity (m^2/s), {99999.} Maximum eddy viscosity (m^2/s)
+
+##IF feature:3d##
+!__________________________________________________________________________________________________________________________________________________________________________________________
+! VERTICAL MIXING
+##COMMANDS fvc_3d_mixing##
+##ENDIF##
 
 ##IF feature:ad##
 !__________________________________________________________________________________________________________________________________________________________________________________________
@@ -95,7 +103,10 @@ End Tracer
 ! COMPUTATIONAL MESH
 ! Unstructured
 Geometry 2D == ${geometry_2d}
+
 ##IF feature:3d##
+!__________________________________________________________________________________________________________________________________________________________________________________________
+! VERTICAL MESH GEOMETRY
 ##COMMANDS fvc_3d_geometry##
 ##ENDIF##
 

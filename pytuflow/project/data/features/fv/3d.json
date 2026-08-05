@@ -5,12 +5,45 @@
     "template_files": [],
     "command_blocks": [
         {
-            "id": "fvc_3d_geometry",
+            "id": "fvc_3d_mixing_header",
+            "target_cf": "fvc",
+            "placement_rule": "fvc_horizontal_mixing_parameters",
+            "existence_check": "! Vertical Mixing",
+            "commands": [
+                "\n!______________________________________________________________________________________________________________________",
+                "! VERTICAL MIXING"
+            ]
+        },
+        {
+            "id": "fvc_3d_mixing",
+            "target_cf": "fvc",
+            "placement_rule": "fvc_vertical_mixing_header",
+            "commands": [
+                "Vertical Mixing Model == ${vertical_mixing_model}",
+                "Vertical Mixing Parameters == ${vertical_mixing_params}",
+                "Global Vertical Eddy Viscosity Limits == ${glob_vert_eddy_visc_lims}",
+                "Global Vertical Scalar Diffusivity Limits == ${glob_vert_scalar_diff_lims}",
+                "Global Vertical TKE Limit == ${glob_vert_tke_lim}",
+                "Global Vertical EPS Limit == ${glob_vert_eps_lim}",
+                "Second Order Vertical Mixing Model == ${second_order_vert_mixing_model}",
+                "Second Order Vertical Mixing Model Parameter Group == ${second_order_vert_mixing_param_group}"
+            ]
+        },
+        {
+            "id": "fvc_3d_geometry_header",
             "target_cf": "fvc",
             "placement_rule": "fvc_geometry_2d",
-            "existence_check": "/^vertical mesh type$/i",
+            "existence_check": "! VERTICAL MESH GEOMETRY",
             "commands": [
-                "\n! Vertical Mesh Geometry",
+                "\n!______________________________________________________________________________________________________________________",
+                "! VERTICAL MESH GEOMETRY"
+            ]
+        },
+        {
+            "id": "fvc_3d_geometry",
+            "target_cf": "fvc",
+            "placement_rule": "fvc_3d_geometry_header",
+            "commands": [
                 "Vertical Mesh Type == ${vertical_mesh_type}",
                 "Layer Faces == ..\\model\\csv\\2D_Z_Layers_${iter}.csv",
                 "Surface Sigma Layers == ${nsigma_layers}",

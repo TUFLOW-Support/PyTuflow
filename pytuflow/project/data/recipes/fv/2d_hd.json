@@ -1,7 +1,8 @@
 {
-  "display_name": "Flood Model",
+  "display_name": "2D Hydrodynamic Model",
   "description": "Standard 2D flood model with NetCDF HD output.",
   "variables": {
+    "time_format": "HOURS",
     "bottom_drag_model": "Manning",
     "Global Bottom Roughness": 0.018,
     "momenutim_mixing_model": "Smagorinsky",

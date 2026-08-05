@@ -78,6 +78,14 @@
       "/^structure$/i"
     ]
   },
+  "fvc_3d_geometry_header": {
+    "description": "Insert after 3D geometry header.",
+    "rule": "after",
+    "match_first": false,
+    "commands": [
+      "! VERTICAL MESH GEOMETRY"
+    ]
+  },
   "fvc_geometry_2d": {
     "description": "Insert after 2D geometry command(s).",
     "rule": "after",
@@ -100,6 +108,29 @@
       "/^Latitude$/i",
       "/^Ntracer$/i",
       "/^Include Sediment$/i"
+    ]
+  },
+  "fvc_vertical_mixing_header": {
+    "description": "Insert after model parameter commands.",
+    "rule": "after",
+    "match_first": false,
+    "commands": [
+      "! VERTICAL MIXING"
+    ]
+  },
+  "fvc_horizontal_mixing_parameters": {
+    "description": "Insert after model parameter commands.",
+    "rule": "after",
+    "match_first": false,
+    "commands": [
+      "! MODEL PARAMETERS",
+      "/^Momentum mixing model$/i",
+      "/^Global horizontal eddy viscosity$/i",
+      "/^Global horizontal eddy viscosity limits$/i",
+      "/^Scalar mixing model$/i",
+      "/^Global horizontal scalar diffusivity$/i",
+      "/^Global horizontal scalar diffusivity limits$/i",
+      "/^Cell Wet/Dry Depths$/i"
     ]
   },
   "fvc_model_parameters": {
