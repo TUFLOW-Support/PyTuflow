@@ -107,7 +107,8 @@
       "/^Spherical$/i",
       "/^Latitude$/i",
       "/^Ntracer$/i",
-      "/^Include Sediment$/i"
+      "/^Include Sediment$/i",
+      "/^mode split$/i"
     ]
   },
   "fvc_vertical_mixing_header": {
@@ -194,6 +195,29 @@
     "match_first": false,
     "commands": [
       "! TRACER DEFINITION"
+    ]
+  },
+  "fvsed_simulation_configuration": {
+    "description": "Insert after sediment control file configuration commands.",
+    "rule": "after",
+    "match_first": false,
+    "commands": [
+      "/^Morphological Coupling$/i",
+      "/^Bed roughness model$/i",
+      "/^Bed roughness parameters$/i",
+      "/^Bed roughness coupling$/i",
+      "/^Erosion Depth Limits$/i",
+      "/^Deposition Depth Limits$/i",
+      "/^Armour layer thickness$/i"
+    ]
+  },
+  "fvsed_fraction": {
+    "description": "Insert after sediment fraction blocks.",
+    "rule": "after",
+    "match_first": false,
+    "commands": [
+      "/!\\s*SEDIMENT FRACTION COMMANDS/i",
+      "/^fraction$/i"
     ]
   }
 }

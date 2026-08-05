@@ -1,0 +1,24 @@
+{
+  "display_name": "2D Sediment Transport Model",
+  "description": "2D sediment transport model",
+  "variables": {
+    "modesplit": 0,
+    "time_format": "ISODATE",
+    "start_time": "<dd/mm/yyyy hh:mm:ss>",
+    "end_time": "<dd/mm/yyyy hh:mm:ss>",
+    "bottom_drag_model": "Manning",
+    "Global Bottom Roughness": 0.04,
+    "momenutim_mixing_model": "Smagorinsky",
+    "glob_horiz_eddy_visc": 0.5,
+    "glob_horz_eddy_visc_lims": "1, 99999.0"
+  },
+  "features": [
+    "stm",
+    {
+      "name": "outputnc",
+      "output_params": "h, v, d, zb, Taub, SED_1, TSS, DEPOSITION_TOTAL, THICK, BED_MASS_TOTAL, PICKUP_TOTAL, NETSEDRATE_TOTAL, BEDLOAD_SED_2, BEDLOAD_TOTAL, SUSPLOAD_TOTAL, D50_Layer_1, D50_Layer_2, BED_MASS_LAYER_1_SED_1, BED_MASS_LAYER_1_SED_2, BED_MASS_LAYER_2_SED_1, BED_MASS_LAYER_2_SED_2",
+      "output_interval": 3600,
+      "output_suffix": "HD"
+    }
+  ]
+}

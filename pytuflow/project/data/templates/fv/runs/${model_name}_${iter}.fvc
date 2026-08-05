@@ -32,6 +32,7 @@ Latitude == ${latitude}												! {0.0} Representative latitude for study are
 ##ENDIF##
 ##IF feature:stm##
 ##COMMANDS fvc_include_sediment##
+##COMMANDS fvc_mode_split##
 ##ENDIF##
 
 !__________________________________________________________________________________________________________________________________________________________________________________________

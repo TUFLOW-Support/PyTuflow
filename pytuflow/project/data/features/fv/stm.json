@@ -17,6 +17,14 @@
                 "Include Sediment == ${sed_active},${sed_density}"
             ]
         },
+         {
+            "id": "fvc_mode_split",
+            "target_cf": "fvc",
+            "placement_rule": "fvc_simulation_configuration",
+            "commands": [
+                "Mode split == ${modesplit}"
+            ]
+        },
         {
             "id": "fvc_sediment_control_file",
             "target_cf": "fvc",
@@ -41,6 +49,16 @@
             "subtarget_cf": "/^BC == (?:WL|Q|QS).*/i",
             "commands": [
                 "Sed Header == ${sed_bc_header}"
+            ]
+        },
+        {
+            "id": "fvsed_fraction_header",
+            "target_cf": "fvsed",
+            "placement_rule": "fvsed_simulation_configuration",
+            "existence_check": "! SEDIMENT FRACTION COMMANDS",
+            "commands": [
+                "\n!______________________________________________________________________________________________________________________",
+                "! SEDIMENT FRACTION COMMANDS"
             ]
         }
     ]

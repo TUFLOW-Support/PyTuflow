@@ -1,6 +1,6 @@
 {
   "display_name": "3D Advection Dispersion Model",
-  "description": "Standard 2D flood model with NetCDF HD output.",
+  "description": "3D Advection Dispersion model with salinity and temperature.",
   "variables": {
     "spherical": 1,
     "time_format": "ISODATE",
