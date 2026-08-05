@@ -60,6 +60,16 @@
                 "\n!______________________________________________________________________________________________________________________",
                 "! SEDIMENT FRACTION COMMANDS"
             ]
+        },
+        {
+            "id": "fvsed_mat_header",
+            "target_cf": "fvsed",
+            "placement_rule": "fvsed_fraction",
+            "existence_check": "/!\\s*MATERIAL(?:\\s+SPEC)?(?:\\s+COMMANDS)?/i",
+            "commands": [
+                "\n!______________________________________________________________________________________________________________________",
+                "! MATERIAL SPEC COMMANDS"
+            ]
         }
     ]
 }

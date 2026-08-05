@@ -63,5 +63,8 @@
   "stm_erosion_params": "1.7, 0.2, 1.5",
   "stm_critical_stress_model": 0,
   "stm_bed_load_model": 0,
-  "stm_bed_load_params": "8.0, -1, 1.5"
+  "stm_bed_load_params": "8.0, -1, 1.5",
+  "stm_mat_id": "<mat_id>",
+  "stm_suspended_load_scale": 1.0,
+  "stm_mat_nlayers": 1
 }

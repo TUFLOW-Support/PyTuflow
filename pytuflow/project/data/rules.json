@@ -219,5 +219,14 @@
       "/!\\s*SEDIMENT FRACTION COMMANDS/i",
       "/^fraction$/i"
     ]
+  },
+  "fvsed_material": {
+    "description": "Insert after sediment material blocks.",
+    "rule": "after",
+    "match_first": false,
+    "commands": [
+      "/!\\s*MATERIAL SPEC COMMANDS/i",
+      "/^material$/i"
+    ]
   }
 }

@@ -145,11 +145,18 @@ class TemplateEngine:
             result = bool(set(feature_names).intersection(set(active_features)))
         else:
             # ${var}:value — variable equality check (case-insensitive)
-            m = re.match(r'^\$\{(\w+)\}:(.+)$', condition)
+            m = re.match(r'^\$\{(\w+)\}(:|==|>|<)(.+)$', condition)
             if m:
-                var_name, expected = m.group(1), m.group(2)
+                var_name, condition, expected = m.group(1), m.group(2), m.group(3)
                 actual = str(variables.get(var_name, ''))
-                result = actual.upper() == expected.upper()
+                if condition in [':', '==']:
+                    result = actual.upper() == expected.upper()
+                elif condition == '<':
+                    result = actual.upper() < expected.upper()
+                elif condition == '>':
+                    result = actual.upper() > expected.upper()
+                else:
+                    result = False
             else:
                 val = variables.get(condition)
                 result = bool(val)

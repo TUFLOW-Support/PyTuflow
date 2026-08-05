@@ -37,6 +37,15 @@
         "stm_bed_load_params": "8.0, -1, 1.5"
     },
     {
+        "name": "sedmat",
+        "stm_mat_id": 0,
+        "stm_suspended_load_scale": 1.0,
+        "stm_mat_nlayers": 1,
+        "stm_layers": {
+          "stm_mat_layer_dry_density": "1890, 1890"
+        }
+    },
+    {
       "name": "outputnc",
       "output_params": "h, v, d, zb, Taub, SED_1, TSS, DEPOSITION_TOTAL, THICK, BED_MASS_TOTAL, PICKUP_TOTAL, NETSEDRATE_TOTAL, BEDLOAD_SED_2, BEDLOAD_TOTAL, SUSPLOAD_TOTAL, D50_Layer_1, D50_Layer_2, BED_MASS_LAYER_1_SED_1, BED_MASS_LAYER_1_SED_2, BED_MASS_LAYER_2_SED_1, BED_MASS_LAYER_2_SED_2",
       "output_interval": 3600,

@@ -1,0 +1,30 @@
+{
+  "name": "sedmat",
+  "display_name": "Sediment Material",
+  "sort_order": 5,
+  "template_files": [],
+  "command_blocks": [
+    {
+      "id": "fvsed_material",
+      "target_cf": "fvsed",
+      "placement_rule": "fvsed_material",
+      "allow_multiple": true,
+      "commands": [
+        "Material == ${stm_mat_id}"
+      ]
+    },
+    {
+      "id": "fvsed_material_param",
+      "target_cf": "fvsed",
+      "target_previous_block": true,
+      "commands": [
+        "Suspended Load Scale == ${stm_suspended_load_scale}",
+        "##IF ${stm_mat_nlayers}>1##",
+        "Nlayers == ${stm_mat_nlayers}",
+        "##ENDIF##",
+        "##ITER:${stm_mat_layers}##",
+        "##ENDITER##"
+      ]
+    }
+  ]
+}
