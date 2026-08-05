@@ -20,7 +20,9 @@
       "commands": [
         "Output Parameters == ${output_params}",
         "Output Interval == ${output_interval}",
-        "Suffix == ${output_suffix}"
+        "##IF not:${output_suffix}:0##",
+        "Suffix == ${output_suffix}",
+        "##ENDIF##"
       ]
     }
   ]

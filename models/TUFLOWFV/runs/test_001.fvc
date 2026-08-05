@@ -1,0 +1,99 @@
+! TUFLOW FV
+
+!__________________________________________________________________________________________________________________________________
+! COORDINATE REFERENCE FRAME
+! Cartesian (Eastings and Northings) model in metric units
+GIS FORMAT == SHP											! {MIF} | SHP
+SHP Projection == ../model/gis/projection.shp						! Projection string used for GIS integration
+Units == Metric															! {Metric} | US Customary | Imperial | English        
+Spherical == 0											! {0} Cartesian | 1 Spherical
+Include Sediment == 1,1
+Mode split == 0
+
+!__________________________________________________________________________________________________________________________________________________________________________________________
+! HARDWARE (optional)
+Hardware == CPU
+
+!__________________________________________________________________________________________________________________________________________________________________________________________
+! SPATIAL ORDER (optional)
+Spatial Order == 1,1
+
+!__________________________________________________________________________________________________________________________________________________________________________________________
+! SIMULATION TIME SETTINGS
+Time Format == ISODATE								! {HOURS} | ISODATE
+Start Time == <dd/mm/yyyy hh:mm:ss>														! Simulation start time (dd/mm/yyyy hh:mm:ss)
+End Time == <dd/mm/yyyy hh:mm:ss>															! Simulation end time (dd/mm/yyyy hh:mm:ss)
+
+!__________________________________________________________________________________________________________________________________________________________________________________________
+! COMPUTATIONAL TIMESTEP
+CFL == 1.0																! {1.0} Courant stability criterion
+Timestep Limits == 1.2, 12.0											! {0.0} Minimum model timestep (s), {0.0} Maximum model timestep (s)
+
+!__________________________________________________________________________________________________________________________________________________________________________________________
+! WETTING AND DRYING (optional)
+! Set to default {1.e-5} Dry depth (m), {1.e-2} Wet depth (m)
+
+!__________________________________________________________________________________________________________________________________________________________________________________________
+! BOTTOM DRAG
+Bottom Drag Model == Manning											! {Manning} | ks
+Global Bottom Roughness == 0.018										! {1.0E-6} Manning's 'n' 
+
+!__________________________________________________________________________________________________________________________________________________________________________________________
+! HORIZONTAL MIXING
+! Turbulence
+Momentum Mixing Model == Smagorinsky									! None | Constant | Smagorinsky | Wu
+Global Horizontal Eddy Viscosity == 0.5									! {0.0} Smagorinksy coefficient
+Global Horizontal Eddy Viscosity Limits == 1, 99999.0					! {0.0} Minimum eddy viscosity (m^2/s), {99999.} Maximum eddy viscosity (m^2/s)
+
+
+
+!______________________________________________________________________________________________________________________
+! SEDIMENT CONTROL FILE
+Sediment Control File == ../stm/test_001.fvsed
+
+!__________________________________________________________________________________________________________________________________________________________________________________________
+! WIND STRESS (optional)
+! Default wind stress model and parameter adopted
+
+!__________________________________________________________________________________________________________________________________________________________________________________________
+! COMPUTATIONAL MESH
+! Unstructured
+Geometry 2D == <path/to/geometry.2dm>
+
+
+!__________________________________________________________________________________________________________________________________________________________________________________________
+! BATHYMETRY 
+! Bathymetry is assigned within mesh 2dm file
+
+!__________________________________________________________________________________________________________________________________________________________________________________________
+! INITIAL CONDITIONS
+Initial Water Level == 0
+Initial Sediment concentration == <conc mg/L>
+
+!__________________________________________________________________________________________________________________________________________________________________________________________
+! MATERIALS
+! Example Material
+Material == 1															! {0} Material ID
+    Bottom Roughness == 0.018								! Manning's 'n' roughness coefficient
+End Material
+
+!__________________________________________________________________________________________________________________________________________________________________________________________
+! BOUNDARY CONDITIONS
+Read GIS Nodestring == <path/to/2d_ns.shp>
+
+! Example BC Block
+BC == WL, 2, ../bc_dbase/<wl_boundary.csv>
+    BC Header == time, WL
+    Sed Header == <Sediment BC column headers>
+End BC
+
+!__________________________________________________________________________________________________________________________________________________________________________________________
+! MODEL OUTPUTS
+Output Dir == ../results												! Result output directory
+Log Dir == log															! Log and diagnostics directory
+Write Check Files == ../check											! Directory for GIS check files
+
+Output == netcdf
+    Output Parameters == h, v, d, zb, Taub, SED_1, TSS, DEPOSITION_TOTAL, THICK, BED_MASS_TOTAL, PICKUP_TOTAL, NETSEDRATE_TOTAL, BEDLOAD_SED_2, BEDLOAD_TOTAL, SUSPLOAD_TOTAL, D50_Layer_1, D50_Layer_2, BED_MASS_LAYER_1_SED_1, BED_MASS_LAYER_1_SED_2, BED_MASS_LAYER_2_SED_1, BED_MASS_LAYER_2_SED_2
+    Output Interval == 3600
+End Output

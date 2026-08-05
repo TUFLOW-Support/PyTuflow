@@ -6,6 +6,7 @@ from string import Template
 
 from ..abc.feature import BaseFeature
 from ..template.manager import TemplateManager
+from ..template.engine import TemplateEngine
 from .utils import _normalize_slashes, _parse_filter
 
 if typing.TYPE_CHECKING:
@@ -33,6 +34,24 @@ class BaseEngineFeature(BaseFeature):
         """Load the feature's rules config."""
         manager = TemplateManager(self.ENGINE_TYPE)
         return manager.get_rules()
+
+    def _process_directives(self, commands: list[str], variables: dict[str, typing.Any]) -> list[str]:
+        engine = TemplateEngine()
+        text = '\n'.join(commands)
+        feature_configs = {self.NAME: self._get_config()}
+        rendered_text = engine.render(text, variables, [self.NAME], feature_configs)
+        processed_commands = rendered_text.rstrip().split('\n')
+        # there are any blank commands, it is because the subsequent command started with a '\n'
+        recreated_commands = []
+        for i, j in zip(range(len(processed_commands) - 1), range(1, len(processed_commands))):
+            cmd = processed_commands[i]
+            if not cmd:
+                processed_commands[j] = f'\n{processed_commands[j]}'
+            else:
+                recreated_commands.append(cmd)
+        recreated_commands.append(processed_commands[-1])
+        return recreated_commands
+
 
     # ------------------------------------------------------------------
     # BaseFeature interface
@@ -116,13 +135,14 @@ class BaseEngineFeature(BaseFeature):
         if not raw_commands:
             return
 
+        commands = self._process_directives(raw_commands, variables)
+        if not commands:
+            return
+
         commands = [
             _normalize_slashes(Template(cmd).safe_substitute(variables))
-            for cmd in raw_commands
+            for cmd in commands
         ]
-
-        # if not any(c.strip() and not c.strip().startswith('!') for c in commands):
-        #     return
 
         # ── Atomic block mode (existence_check configured) ───────────────────
         existence_check = block.get('existence_check')

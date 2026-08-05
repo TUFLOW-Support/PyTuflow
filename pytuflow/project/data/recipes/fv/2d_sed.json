@@ -15,10 +15,32 @@
   "features": [
     "stm",
     {
+        "name": "sedfrac",
+        "stm_sed_frac_name": "fineSed",
+        "stm_d50": 0.0002,
+        "stm_particle_density": 2650,
+        "stm_settling_model": "constant",
+        "stm_settling_params": 0.026,
+        "stm_deposition_model": "ws0",
+        "stm_erosion_model": "Mehta",
+        "stm_erosion_params": "1.7, 0.2, 1.5"
+    },
+    {
+        "name": "sedfrac",
+        "stm_sed_frac_name": "Gravel",
+        "stm_d50": 0.032,
+        "stm_particle_density": 2650,
+        "stm_settling_model": "constant",
+        "stm_settling_params": 0.6,
+        "stm_critical_stress_model": "Soulsby",
+        "stm_bed_load_model": "MPM_Shimizu",
+        "stm_bed_load_params": "8.0, -1, 1.5"
+    },
+    {
       "name": "outputnc",
       "output_params": "h, v, d, zb, Taub, SED_1, TSS, DEPOSITION_TOTAL, THICK, BED_MASS_TOTAL, PICKUP_TOTAL, NETSEDRATE_TOTAL, BEDLOAD_SED_2, BEDLOAD_TOTAL, SUSPLOAD_TOTAL, D50_Layer_1, D50_Layer_2, BED_MASS_LAYER_1_SED_1, BED_MASS_LAYER_1_SED_2, BED_MASS_LAYER_2_SED_1, BED_MASS_LAYER_2_SED_2",
       "output_interval": 3600,
-      "output_suffix": "HD"
+      "output_suffix": 0
     }
   ]
 }

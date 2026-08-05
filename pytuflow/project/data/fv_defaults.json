@@ -29,7 +29,7 @@
   "cell_3d_depth": 1.0,
   "output_interval": 3600,
   "output_params": "h, v, d",
-  "output_suffix": "HD",
+  "output_suffix": 0,
   "sal_active": 1,
   "sal_density": 1,
   "temp_active": 1,
@@ -53,14 +53,15 @@
   "stm_erosion_dep_lims": "0.1, 0.2",
   "stm_deposition_dep_lims": "0.1, 0.2",
   "stm_armour_layer_thickness": "0.05, 0.2",
+  "stm_sed_frac_name": "<sediment_fraction_name>",
   "stm_d50": 0.0002,
   "stm_particle_density": 2650,
-  "stm_settling_model": 0,
+  "stm_settling_model": "constant",
   "stm_settling_params": "0.026",
   "stm_deposition_model": 0,
   "stm_erosion_model": 0,
   "stm_erosion_params": "1.7, 0.2, 1.5",
   "stm_critical_stress_model": 0,
   "stm_bed_load_model": 0,
-  "stm_bed_lad_params": "8.0, -1, 1.5"
+  "stm_bed_load_params": "8.0, -1, 1.5"
 }

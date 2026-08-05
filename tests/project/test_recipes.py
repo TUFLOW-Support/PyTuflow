@@ -37,7 +37,7 @@ class TestRecipeManagerLoad:
     def test_load_bundled_recipe(self):
         from pytuflow.project.template.manager import TemplateManager
         mgr = TemplateManager('fv')
-        recipe = mgr.get_recipe('flood_model')
+        recipe = mgr.get_recipe('2d_hd')
         assert 'features' in recipe
         assert 'display_name' in recipe
 
@@ -57,8 +57,8 @@ class TestRecipeManagerLoad:
         """flood_model is fv-only; looking it up under hpc should raise."""
         from pytuflow.project.template.manager import TemplateManager
         mgr = TemplateManager('hpc')
-        with pytest.raises(FileNotFoundError, match='flood_model'):
-            mgr.get_recipe('flood_model')
+        with pytest.raises(FileNotFoundError, match='2d_hd'):
+            mgr.get_recipe('2d_hd')
 
     def test_user_cache_overrides_bundled(self, tmp_path):
         from pytuflow.project.template.manager import TemplateManager, CACHE_ROOT
@@ -66,10 +66,10 @@ class TestRecipeManagerLoad:
         cache_recipe_dir.mkdir(parents=True, exist_ok=True)
         custom = {"display_name": "Custom", "description": "user override",
                   "variables": {"output_interval": "9999."}, "features": []}
-        (cache_recipe_dir / 'flood_model.json').write_text(json.dumps(custom))
+        (cache_recipe_dir / '2d_hd.json').write_text(json.dumps(custom))
         try:
             mgr = TemplateManager('fv')
-            recipe = mgr.get_recipe('flood_model')
+            recipe = mgr.get_recipe('2d_hd')
             assert recipe['variables']['output_interval'] == '9999.'
         finally:
             (cache_recipe_dir / 'flood_model.json').unlink(missing_ok=True)
@@ -95,7 +95,7 @@ class TestRecipeManagerListRecipes:
         mgr = TemplateManager('fv')
         recipes = mgr.list_recipes()
         names = [r[0] for r in recipes]
-        assert 'flood_model' in names
+        assert '2d_hd' in names
 
     def test_list_recipes_hpc(self):
         from pytuflow.project.template.manager import TemplateManager
@@ -144,7 +144,7 @@ class TestCreateFromRecipe:
         from pytuflow.project.fv.project import FVProject
         from pytuflow.project.template.manager import TemplateManager
         mgr = TemplateManager('fv')
-        recipe = mgr.get_recipe('flood_model')
+        recipe = mgr.get_recipe('2d_hd')
         variables = recipe.get('variables', {})
         features = recipe.get('features', [])
 
@@ -168,7 +168,7 @@ class TestCreateFromRecipe:
         from pytuflow import FVC
         import re
         mgr = TemplateManager('fv')
-        recipe = mgr.get_recipe('flood_model')
+        recipe = mgr.get_recipe('2d_hd')
         variables = recipe.get('variables', {})
         features = recipe.get('features', [])
 
@@ -200,7 +200,7 @@ class TestCreateRecipeCLI:
 
     def test_create_recipe_success(self, project_dir):
         rc, out, err = self._run([
-            'create-from-recipe', '--recipe', 'flood_model',
+            'create-from-recipe', '--recipe', '2d_hd',
             '--engine', 'fv',
             '--name', 'test',
             '--output-dir', str(project_dir),
@@ -223,19 +223,19 @@ class TestCreateRecipeCLI:
     def test_create_recipe_wrong_engine_exits_nonzero(self, project_dir):
         """flood_model is fv-only; requesting it for hpc should fail."""
         rc, out, err = self._run([
-            'create-from-recipe', '--recipe', 'flood_model',
+            'create-from-recipe', '--recipe', '2d_hd',
             '--engine', 'hpc',
             '--name', 'test',
             '--output-dir', str(project_dir),
             '--crs', 'EPSG:32760',
         ])
         assert rc == 1
-        assert 'flood_model' in err
+        assert '2d_hd' in err
 
     def test_list_recipes_command(self):
         rc, out, err = self._run(['list-recipes', '--engine', 'fv'])
         assert rc == 0, err
-        assert 'flood_model' in out
+        assert '2d_hd' in out
 
     def test_list_recipes_hpc(self):
         rc, out, err = self._run(['list-recipes', '--engine', 'hpc'])

@@ -1,0 +1,44 @@
+{
+  "name": "sedfrac",
+  "display_name": "Sediment Fraction",
+  "sort_order": 5,
+  "template_files": [],
+  "command_blocks": [
+    {
+      "id": "fvsed_fraction",
+      "target_cf": "fvsed",
+      "placement_rule": "fvsed_fraction",
+      "allow_multiple": true,
+      "commands": [
+        "Fraction == ${stm_sed_frac_name}"
+      ]
+    },
+    {
+      "id": "fvsed_fraction_param",
+      "target_cf": "fvsed",
+      "target_previous_block": true,
+      "commands": [
+        "d50 == ${stm_d50}",
+        "Particle density == ${stm_particle_density}",
+        "##IF not:${stm_settling_model}:0##",
+        "Settling model == ${stm_settling_model}",
+        "Settling parameters == ${stm_settling_params}",
+        "##ENDIF##",
+        "##IF not:${stm_deposition_model}:0##",
+        "Deposition model == ${stm_deposition_model}",
+        "##ENDIF##",
+        "##IF not:${stm_erosion_model}:0##",
+        "Erosion model == ${stm_erosion_model}",
+        "Erosion parameters == ${stm_erosion_params}",
+        "##ENDIF##",
+        "##IF not:${stm_critical_stress_model}:0##",
+        "Critical stress model == ${stm_critical_stress_model}",
+        "##ENDIF##",
+        "##IF not:${stm_bed_load_model}:0##",
+        "Bed load model == ${stm_bed_load_model}",
+        "Bed load parameters == ${stm_bed_load_params}",
+        "##ENDIF##"
+      ]
+    }
+  ]
+}

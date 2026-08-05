@@ -14,7 +14,7 @@
       "name": "outputnc",
       "output_params": "h, v, d",
       "output_interval": 3600,
-      "output_suffix": "HD"
+      "output_suffix": 0
     }
   ]
 }
