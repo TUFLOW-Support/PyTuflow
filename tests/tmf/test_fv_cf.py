@@ -185,6 +185,29 @@ def test_nested_block_write_2():
     _compare_control_files(output, original)
 
 
+def test_create_nested_blocks_then_write():
+    fvsed = FVSed()
+    mat_inp = fvsed.append_input('Material == 0')
+    mat_block = mat_inp.block_control()
+    layer_inp = mat_block.append_input('Layer == 1')
+    layer_block = layer_inp.block_control()
+    frac_inp = layer_block.append_input('Fraction == fineSed')
+
+    buf = io.StringIO()
+    fvsed.preview(buf)
+    output = buf.getvalue()
+
+    compare = \
+        'Material == 0\n' \
+        '    Layer == 1\n' \
+        '        Fraction == fineSed\n' \
+        '        End Fraction\n' \
+        '    End Layer\n' \
+        'End Material\n'
+    assert output == compare
+    
+
+
 def test_nested_block_inside_if():
     p = Path('./tests/tmf/test_datasets/fv/nested_block_inside_if.fvc')
     fvc = FVC(p)

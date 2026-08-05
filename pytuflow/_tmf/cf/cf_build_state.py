@@ -810,8 +810,7 @@ class ControlFileBuildState(BuildState, ControlFile):
     def _generate_initial_config(path: Path) -> TCFConfig:
         return TCFConfig(path)
     
-    @staticmethod
-    def _command_class() -> type[Command]:
+    def _command_class(self) -> type[Command]:
         return Command
     
     @staticmethod

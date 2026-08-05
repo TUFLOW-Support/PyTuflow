@@ -16,6 +16,7 @@ from ..parsers.fvcommand import FVCommand
 from ..inp.inputs import Inputs
 from ..inp.inp_build_state import InputBuildState
 from ..inp.block import BlockControlInput
+from ..parsers.command import Command
 
 if typing.TYPE_CHECKING:
     from ..scope import ScopeList
@@ -69,6 +70,11 @@ class BlockControl(ControlFileBuildState):
         self._fpath = Path(path) if path is not None else None
         self.parser = parser
         self.parent_input = parent_input
+        self.fv_blocks = []
+        if self.parent and isinstance(self.parent, BlockControl):
+            self.fv_blocks = self.parent.fv_blocks + [self.parent.parent_input.command()]
+            if not self.parent_input.command().fv_blocks:
+                self.parent_input.command().fv_blocks = self.fv_blocks
         if parser:
             self._load_block(parser)
 
@@ -124,6 +130,9 @@ class BlockControl(ControlFileBuildState):
         # docstring inherited
         ctx = context if context else Context(run_context, config=self.config)
         return BlockControlRunState(self, ctx, parent)
+
+    def _command_class(self) -> type[Command]:
+        return self.parent._command_class() if self.parent else Command
     
 
 

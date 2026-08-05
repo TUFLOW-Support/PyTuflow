@@ -60,8 +60,7 @@ class FVSed(ControlFileLoadMixin, FVControlFileBuildState, FVSedMixin):
         ctx = context if context else Context(run_context, config=self.config)
         return FVSedRunState(self, ctx, parent)
     
-    @staticmethod
-    def _command_class() -> type[Command]:
+    def _command_class(self) -> type[Command]:
         return FVSedCommand
 
 

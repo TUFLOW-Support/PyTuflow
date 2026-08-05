@@ -171,8 +171,7 @@ class FVWQMixin:
             logger.warning(f'Phyto block was not found: {phyto_name}')
         return False
     
-    @staticmethod
-    def _command_class() -> type[Command]:
+    def _command_class(self) -> type[Command]:
         return FVWaterQualityCommand
 
 

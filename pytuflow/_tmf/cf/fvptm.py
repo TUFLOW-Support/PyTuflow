@@ -34,6 +34,5 @@ class FVPTM(ControlFileLoadMixin, FVControlFileBuildState):
     """
     TUFLOW_TYPE = const.CONTROLFILE.FVPTM
     
-    @staticmethod
-    def _command_class() -> type[Command]:
+    def _command_class(self) -> type[Command]:
         return FVPTMCommand
