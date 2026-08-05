@@ -105,6 +105,7 @@ Geometry 2D == ${geometry_2d}
 
 !__________________________________________________________________________________________________________________________________________________________________________________________
 ! INITIAL CONDITIONS
+Initial Water Level == ${iwl}
 ##IF feature:salinity##
 ##COMMANDS fvc_initial_salinity##
 ##ENDIF##

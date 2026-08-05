@@ -2,5 +2,6 @@
   "iter": "001",
   "gis_format": "SHP",
   "hardware": "GPU",
-  "units": "Metric"
+  "units": "Metric",
+  "iwl": 0
 }

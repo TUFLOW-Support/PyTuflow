@@ -1,0 +1,25 @@
+{
+  "name": "outputmass",
+  "display_name": "Output Mass",
+  "sort_order": 5,
+  "template_files": [],
+  "command_blocks": [
+    {
+      "id": "fvc_output_mass",
+      "target_cf": "fvc",
+      "placement_rule": "fvc_output",
+      "allow_multiple": true,
+      "commands": [
+        "\nOutput == Mass"
+      ]
+    },
+    {
+      "id": "output_mass_param",
+      "target_cf": "fvc",
+      "target_previous_block": true,
+      "commands": [
+        "Output Interval == ${output_interval}"
+      ]
+    }
+  ]
+}
