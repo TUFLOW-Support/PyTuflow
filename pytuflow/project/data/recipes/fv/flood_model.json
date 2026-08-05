@@ -1,7 +1,13 @@
 {
   "display_name": "Flood Model",
   "description": "Standard 2D flood model with NetCDF HD output.",
-  "variables": {},
+  "variables": {
+    "bottom_drag_model": "Manning",
+    "Global Bottom Roughness": 0.018,
+    "momenutim_mixing_model": "Smagorinsky",
+    "glob_horiz_eddy_visc": 0.5,
+    "glob_horz_eddy_visc_lims": "0.05, 99999.0"
+  },
   "features": [
     {
       "name": "outputnc",

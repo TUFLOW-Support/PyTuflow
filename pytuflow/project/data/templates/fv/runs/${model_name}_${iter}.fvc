@@ -51,8 +51,8 @@ End Time == 6.0															! Simulation end time (dd/mm/yyyy hh:mm:ss)
 
 !__________________________________________________________________________________________________________________________________________________________________________________________
 ! COMPUTATIONAL TIMESTEP
-CFL == 1.0																! {1.0} Courant stability criterion
-Timestep Limits == 1.2, 12.0											! {0.0} Minimum model timestep (s), {0.0} Maximum model timestep (s)
+CFL == ${cfl}																! {1.0} Courant stability criterion
+Timestep Limits == ${timestep_limits}											! {0.0} Minimum model timestep (s), {0.0} Maximum model timestep (s)
 
 !__________________________________________________________________________________________________________________________________________________________________________________________
 ! WETTING AND DRYING (optional)
@@ -60,15 +60,15 @@ Timestep Limits == 1.2, 12.0											! {0.0} Minimum model timestep (s), {0.0}
 
 !__________________________________________________________________________________________________________________________________________________________________________________________
 ! BOTTOM DRAG
-Bottom Drag Model == Manning											! {Manning} | ks
-Global Bottom Roughness == 0.018										! {1.0E-6} Manning's 'n' 
+Bottom Drag Model == ${bottom_drag_model}											! {Manning} | ks
+Global Bottom Roughness == ${glob_bottom_rough}										! {1.0E-6} Manning's 'n' 
 
 !__________________________________________________________________________________________________________________________________________________________________________________________
 ! HORIZONTAL MIXING
 ! Turbulence
-Momentum Mixing Model == Smagorinsky									! None | Constant | Smagorinsky | Wu
-Global Horizontal Eddy Viscosity == 0.5									! {0.0} Smagorinksy coefficient
-Global Horizontal Eddy Viscosity Limits == 0.05, 99999.					! {0.0} Minimum eddy viscosity (m^2/s), {99999.} Maximum eddy viscosity (m^2/s)
+Momentum Mixing Model == ${momenutim_mixing_model}									! None | Constant | Smagorinsky | Wu
+Global Horizontal Eddy Viscosity == ${glob_horiz_eddy_visc}									! {0.0} Smagorinksy coefficient
+Global Horizontal Eddy Viscosity Limits == ${glob_horz_eddy_visc_lims}					! {0.0} Minimum eddy viscosity (m^2/s), {99999.} Maximum eddy viscosity (m^2/s)
 
 ##IF feature:ad##
 !__________________________________________________________________________________________________________________________________________________________________________________________
