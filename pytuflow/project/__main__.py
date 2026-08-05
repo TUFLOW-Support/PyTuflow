@@ -58,23 +58,15 @@ def _add_dynamic_args(parser, engine: str = 'hpc') -> list[str]:
 
 
 def _parse_features_list(raw: list[str]) -> list[str | dict]:
-    """Parse each element of ``--features``.
-
-    Plain strings are kept as-is.  Anything that parses as a JSON object
-    (``{...}``) is returned as a dict — used for per-instance variable
-    overrides on ``allow_multiple`` features.
-    """
+    from ._common.utils import _parse_feature
     result = []
     for item in raw:
         stripped = item.strip()
-        if stripped.startswith('{'):
-            try:
-                result.append(json.loads(stripped))
-            except json.JSONDecodeError as e:
-                print(f"Invalid feature JSON '{stripped}': {e}", file=sys.stderr)
-                sys.exit(1)
-        else:
-            result.append(stripped)
+        try:
+            result.append(_parse_feature(stripped))
+        except json.JSONDecodeError as e:
+            print(f"Invalid feature JSON '{stripped}': {e}", file=sys.stderr)
+            sys.exit(1)
     return result
 
 

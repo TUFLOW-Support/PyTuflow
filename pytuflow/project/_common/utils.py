@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import re
 from pathlib import Path
+import json
 
 
 def _normalize_slashes(cmd: str) -> str:
@@ -80,3 +81,24 @@ def _create_projection_file(
         p = TuflowPath(uri)
         with p.open_gis('w', 'Point', crs):
             pass  # no fields or features needed — CRS is embedded in the file
+
+
+def _parse_feature(raw: str) -> str | dict:
+    if raw.startswith('{'):
+        return json.loads(raw)
+    else:
+        return raw
+
+
+def _parse_features_list(raw: list[str]) -> list[str | dict]:
+    """Parse each element of ``--features``.
+
+    Plain strings are kept as-is.  Anything that parses as a JSON object
+    (``{...}``) is returned as a dict — used for per-instance variable
+    overrides on ``allow_multiple`` features.
+    """
+    result = []
+    for item in raw:
+        stripped = item.strip()
+        result.append(_parse_feature(stripped))
+    return result
