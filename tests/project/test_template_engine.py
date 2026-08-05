@@ -291,3 +291,171 @@ class TestNormalizeSlashes:
         assert os.sep in ecf_line, f"Expected {os.sep!r} in: {ecf_line}"
         wrong_sep = '/' if os.sep == '\\' else '\\'
         assert wrong_sep not in ecf_line, f"Unexpected {wrong_sep!r} in: {ecf_line}"
+
+
+class TestIterDirective:
+    """Tests for ##ITER:${var}## / ##ENDITER## directive."""
+
+    def test_iter_basic_list_of_dicts(self, engine):
+        """Each dict in the list produces one rendered block."""
+        tmpl = (
+            "##ITER:${layers}##\n"
+            "Layer == ${layer_num}\n"
+            "##ENDITER##\n"
+        )
+        result = engine.render(tmpl, {
+            'layers': [{'layer_num': 1}, {'layer_num': 2}],
+        }, active_features=[])
+        assert 'Layer == 1' in result
+        assert 'Layer == 2' in result
+
+    def test_iter_multiple_keys_per_dict(self, engine):
+        """All keys from each dict are substituted within the block."""
+        tmpl = (
+            "##ITER:${layers}##\n"
+            "Layer == ${layer_num}\n"
+            "    Dry density == ${dry_density}\n"
+            "    initial mass == ${initial_mass}\n"
+            "end layer\n"
+            "##ENDITER##\n"
+        )
+        layers = [
+            {'layer_num': 1, 'dry_density': '1890., 1890', 'initial_mass': '50., 2950'},
+            {'layer_num': 2, 'dry_density': '1890., 1890', 'initial_mass': '1000, 1000'},
+        ]
+        result = engine.render(tmpl, {'layers': layers}, active_features=[])
+        assert result.count('Layer ==') == 2
+        assert result.count('end layer') == 2
+        assert '50., 2950' in result
+        assert '1000, 1000' in result
+
+    def test_iter_outer_vars_visible_inside(self, engine):
+        """Variables from the outer scope remain accessible inside ##ITER##."""
+        tmpl = (
+            "##ITER:${layers}##\n"
+            "${mat_id} Layer == ${layer_num}\n"
+            "##ENDITER##\n"
+        )
+        result = engine.render(tmpl, {
+            'mat_id': '1',
+            'layers': [{'layer_num': 1}, {'layer_num': 2}],
+        }, active_features=[])
+        assert '1 Layer == 1' in result
+        assert '1 Layer == 2' in result
+
+    def test_iter_inner_key_overrides_outer(self, engine):
+        """A key present in both outer scope and the iter dict: iter dict wins."""
+        tmpl = (
+            "##ITER:${layers}##\n"
+            "value == ${x}\n"
+            "##ENDITER##\n"
+        )
+        result = engine.render(tmpl, {
+            'x': 'outer',
+            'layers': [{'x': 'inner1'}, {'x': 'inner2'}],
+        }, active_features=[])
+        assert 'value == inner1' in result
+        assert 'value == inner2' in result
+        assert 'value == outer' not in result
+
+    def test_iter_empty_list_produces_no_output(self, engine):
+        """##ITER## over an empty list emits nothing."""
+        tmpl = "before\n##ITER:${layers}##\nLayer == ${layer_num}\n##ENDITER##\nafter\n"
+        result = engine.render(tmpl, {'layers': []}, active_features=[])
+        assert 'before' in result
+        assert 'after' in result
+        assert 'Layer ==' not in result
+
+    def test_iter_missing_variable_produces_no_output(self, engine):
+        """##ITER## over an undefined variable is silently skipped."""
+        tmpl = "before\n##ITER:${layers}##\nLayer == ${layer_num}\n##ENDITER##\nafter\n"
+        result = engine.render(tmpl, {}, active_features=[])
+        assert 'Layer ==' not in result
+
+    def test_iter_directives_not_in_output(self, engine):
+        """##ITER## and ##ENDITER## tags must not appear in the rendered output."""
+        tmpl = "##ITER:${layers}##\nLayer == ${layer_num}\n##ENDITER##\n"
+        result = engine.render(tmpl, {'layers': [{'layer_num': 1}]}, active_features=[])
+        assert '##ITER' not in result
+        assert '##ENDITER##' not in result
+
+    def test_iter_nested(self, engine):
+        """##ITER## inside ##ITER## — inner list comes from the outer iter dict."""
+        tmpl = (
+            "material == ${mat_id}\n"
+            "##ITER:${materials}##\n"
+            "material == ${mat_id}\n"
+            "    Nlayers == ${nlayers}\n"
+            "    ##ITER:${layers}##\n"
+            "    Layer == ${layer_num}\n"
+            "        Dry density == ${dry_density}\n"
+            "    end layer\n"
+            "    ##ENDITER##\n"
+            "end material\n"
+            "##ENDITER##\n"
+        )
+        variables = {
+            'mat_id': '0',
+            'materials': [
+                {
+                    'mat_id': '1',
+                    'nlayers': 2,
+                    'layers': [
+                        {'layer_num': 1, 'dry_density': '1890'},
+                        {'layer_num': 2, 'dry_density': '2000'},
+                    ],
+                },
+                {
+                    'mat_id': '2',
+                    'nlayers': 1,
+                    'layers': [
+                        {'layer_num': 1, 'dry_density': '1600'},
+                    ],
+                },
+            ],
+        }
+        result = engine.render(tmpl, variables, active_features=[])
+        # Outer material == 0 (from top-level outer scope, before ##ITER##)
+        assert result.startswith('material == 0\n')
+        assert result.count('material == 1') == 1
+        assert result.count('material == 2') == 1
+        assert result.count('end material') == 2
+        assert result.count('Layer ==') == 3  # 2 from mat 1, 1 from mat 2
+        assert '1890' in result
+        assert '1600' in result
+
+    def test_iter_json_string_from_cli(self, engine):
+        """When the variable is a JSON string (as passed from the CLI), it is parsed."""
+        import json
+        tmpl = "##ITER:${layers}##\nLayer == ${layer_num}\n##ENDITER##\n"
+        layers_json = json.dumps([{'layer_num': 1}, {'layer_num': 2}])
+        result = engine.render(tmpl, {'layers': layers_json}, active_features=[])
+        assert 'Layer == 1' in result
+        assert 'Layer == 2' in result
+
+    def test_iter_non_dict_items_get_item_key(self, engine):
+        """If an iter list contains plain values, they become available as ${item}."""
+        tmpl = "##ITER:${values}##\nval == ${item}\n##ENDITER##\n"
+        result = engine.render(tmpl, {'values': ['a', 'b']}, active_features=[])
+        assert 'val == a' in result
+        assert 'val == b' in result
+
+    def test_iter_inside_if(self, engine):
+        """##ITER## inside a ##IF## block only renders when condition is true."""
+        tmpl = (
+            "##IF ${gis_format}:SHP##\n"
+            "##ITER:${layers}##\n"
+            "Layer == ${layer_num}\n"
+            "##ENDITER##\n"
+            "##ENDIF##\n"
+        )
+        result_shp = engine.render(tmpl, {
+            'gis_format': 'SHP',
+            'layers': [{'layer_num': 1}],
+        }, active_features=[])
+        result_mif = engine.render(tmpl, {
+            'gis_format': 'MIF',
+            'layers': [{'layer_num': 1}],
+        }, active_features=[])
+        assert 'Layer == 1' in result_shp
+        assert 'Layer ==' not in result_mif

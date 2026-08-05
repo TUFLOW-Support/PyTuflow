@@ -39,12 +39,7 @@ class TemplateEngine:
 
         processed = self._process_directives(lines, variables, active_features, block_lookup)
         result = ''.join(processed)
-
-        str_vars = {
-            k: (', '.join(str(i) for i in v) if isinstance(v, list) else str(v))
-            for k, v in variables.items()
-        }
-        return Template(result).safe_substitute(str_vars)
+        return Template(result).safe_substitute(_to_str_vars(variables))
 
     def _process_directives(self, lines, variables, active_features, block_lookup):
         result = []
@@ -72,6 +67,49 @@ class TemplateEngine:
                     i += 1
                 if self._eval_condition(condition, active_features, variables):
                     result.extend(self._process_directives(block_lines, variables, active_features, block_lookup))
+                i += 1
+                continue
+
+            # ##ITER:${var}## / ##ENDITER##
+            # var must resolve to a list of dicts.  Each dict is merged on top of
+            # the outer variable scope so outer variables remain accessible.
+            m = re.match(r'^##ITER:\$\{(\w+)\}##\s*$', stripped)
+            if m:
+                var_name = m.group(1).strip()
+                block_lines = []
+                i += 1
+                depth = 1
+                while i < len(lines):
+                    inner = lines[i].strip()
+                    if re.match(r'^##ITER:\$\{', inner):
+                        depth += 1
+                    elif inner == '##ENDITER##':
+                        depth -= 1
+                        if depth == 0:
+                            break
+                    block_lines.append(lines[i])
+                    i += 1
+                items = variables.get(var_name, [])
+                if isinstance(items, str):
+                    # Allow a JSON string to be passed from CLI / recipe
+                    import json as _json
+                    try:
+                        items = _json.loads(items)
+                    except Exception:
+                        items = []
+                if not isinstance(items, list):
+                    items = [items] if items else []
+                for item in items:
+                    if not isinstance(item, dict):
+                        item = {'item': item}
+                    iter_vars = {**variables, **item}
+                    expanded = self._process_directives(block_lines, iter_vars, active_features, block_lookup)
+                    # Substitute iter-scoped variables immediately — the outer
+                    # render() safe_substitute pass only has the top-level vars.
+                    str_iter_vars = _to_str_vars(iter_vars)
+                    result.extend(
+                        Template(ln).safe_substitute(str_iter_vars) for ln in expanded
+                    )
                 i += 1
                 continue
 
@@ -121,6 +159,7 @@ class TemplateEngine:
                         k: (', '.join(str(x) for x in v) if isinstance(v, list) else str(v))
                         for k, v in variables.items()
                     }
+                    commands = self._process_directives(commands, str_vars, active_features, block_lookup)
                     for cmd in commands:
                         rendered_cmd = Template(cmd).safe_substitute(str_vars)
                         result.append(rendered_cmd + '\n')
@@ -150,7 +189,8 @@ class TemplateEngine:
                 var_name, condition, expected = m.group(1), m.group(2), m.group(3)
                 actual = str(variables.get(var_name, ''))
                 if condition in [':', '==']:
-                    result = actual.upper() == expected.upper()
+                    expected = [x.upper() for x in expected.split(';')]
+                    result = actual.upper() in expected
                 elif condition == '<':
                     result = actual.upper() < expected.upper()
                 elif condition == '>':
@@ -173,3 +213,12 @@ def _build_block_lookup(feature_configs: dict[str, dict]) -> dict[str, list[str]
             if block_id:
                 lookup[block_id] = block.get('commands', [])
     return lookup
+
+
+def _to_str_vars(variables: dict) -> dict:
+    """Flatten all variable values to strings for Template.safe_substitute."""
+    return {
+        k: (', '.join(str(x) for x in v) if isinstance(v, list) else str(v))
+        for k, v in variables.items()
+        if not isinstance(v, (dict, list)) or isinstance(v, list)
+    }

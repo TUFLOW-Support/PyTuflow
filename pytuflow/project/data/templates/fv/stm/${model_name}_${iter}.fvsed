@@ -12,33 +12,4 @@ Erosion Depth Limits == ${stm_erosion_dep_lims}						! Depth to scale Erosion to
 Deposition Depth Limits == ${stm_deposition_dep_lims}				! Depth to scale Deposition to Zero (<0.1m no deposition, >0.2m full deposition)
 Armour layer thickness == ${stm_armour_layer_thickness}				! Specify Min and Max Armour Layer Thickness [m]
 
-!_________________________________________________________________
-! MATERIAL SPECS COMMANDS 
-! Bed Sediment properties for each material.
-material == 2,3,4,5,6,7,8,9 										! Default material definition
-	Suspended Load Scale == 1.0 									! Calibration Factor for suspended load
-	Layer == 1 														! Begin Layer Definition
-		! Material specific erosion parameters
-		Fraction == fineSed
-			Erosion Parameters == 0.1, 99999., 0.5 					! Never erode. In this instance there is no erosion of material 0
-		end fraction
-		! Material specific Bed Load parameters.
-		Fraction == Gravel	
-			Bed Load Parameters == 8, 99999., 1.5 					! Bedload Model Parameters. Never erode.
-		end fraction
-		Dry Density == 1890, 1890 									! Dry Density of Sediment Fractions [kg/m3]
-	end layer
-end material
-material == 1 														! River material definition
-	Suspended Load Scale == 1.0 									! Calibration Factor for suspended load
-	Nlayers == 2 													! Number of bed layers
-	Layer == 1 														! Begin Layer Definition	
-		Dry density == 1890., 1890 									! Dry Density of Sediment Fractions [kg/m3]
-		initial mass == 50., 2950 									! Initial mass of sediment fractions [kg/m2]
-	end layer 														! End layer definition
-	Layer == 2 														! Begin Layer Definition
-		Dry density == 1890., 1890 									! Dry Density of Sediment Fractions [kg/m3]
-		initial mass == 1000, 1000 									! Initial mass of sediment fractions [kg/m2]
-	end layer 														! End layer definition
-end material 														! End material definition
 Write restart dt == 12 												! Write Restart File Interval [hrs]

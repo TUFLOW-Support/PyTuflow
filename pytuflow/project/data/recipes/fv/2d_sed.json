@@ -40,10 +40,37 @@
         "name": "sedmat",
         "stm_mat_id": 0,
         "stm_suspended_load_scale": 1.0,
-        "stm_mat_nlayers": 1,
-        "stm_layers": {
-          "stm_mat_layer_dry_density": "1890, 1890"
-        }
+        "stm_mat_nlayers": 2,
+        "stm_mat_layers": [
+          {
+            "stm_mat_layer_id": 1,
+            "stm_mat_layer_dry_density": "1890, 1890", 
+            "stm_mat_layer_initial_mass": 0,
+            "stm_mat_layer_fractions": [
+              {
+                "stm_sed_frac_name": "fineSed",
+                "stm_settling_model": 0,
+                "stm_deposition_model": 0,
+                "stm_bed_load_model": 0,
+                "stm_erosion_model": "Mehta",
+                "stm_erosion_params": "0.1, 99999., 0.5"
+              },
+              {
+                "stm_sed_frac_name": "Gravel",
+                "stm_settling_model": 0,
+                "stm_deposition_model": 0,
+                "stm_erosion_model": 0,
+                "stm_bed_load_model": "MPM_Shimizu",
+                "stm_bed_params": "8, 99999., 1.5"
+              }
+            ]
+          },
+          {
+            "stm_mat_layer_id": 2,
+            "stm_mat_layer_dry_density": "1890, 1890",
+            "stm_mat_layer_initial_mass": "1000, 1000"
+          }
+        ]
     },
     {
       "name": "outputnc",

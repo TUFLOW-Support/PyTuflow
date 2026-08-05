@@ -73,6 +73,8 @@ class BaseEngineFeature(BaseFeature):
         last_input = None
         config = self._get_config()
         for block in config.get('command_blocks', []):
+            if block.get('by_directive_only', False):  # command block can only get inserted via ##COMMANDS ##
+                continue
             target = block.get('target_cf', 'tcf' if self.ENGINE_TYPE == 'hpc' else 'fvc')
             loop_all = block.get('loop_all_found_targets', True)
             cf = control_files.get(target)
@@ -131,6 +133,21 @@ class BaseEngineFeature(BaseFeature):
 
         Returns the last inserted input.
         """
+        def add_block_commands_by_directive(cmd_iter_, current_ref_, cf_):
+            """Adds commands to the previous input assuming it is a block header."""
+            subcf = current_ref_.cf[0] if current_ref_ and current_ref_.cf else cf_
+            while True:
+                try:
+                    subcmd = next(cmd_iter)
+                except StopIteration:
+                    return
+                if subcmd == '##ENDBLOCK##':
+                    return
+                if subcmd == '##STARTBLOCK##':
+                    add_block_commands_by_directive(cmd_iter, current_ref_, subcf)
+                    continue
+                current_ref_ = self._insert_or_append(subcf, None, subcmd, anchor_rule='after')
+
         raw_commands: list[str] = block.get('commands', [])
         if not raw_commands:
             return
@@ -174,11 +191,20 @@ class BaseEngineFeature(BaseFeature):
         pending_decorators: list[str] = []
         past_first_real_command = False
 
-        for cmd in commands:
+        cmd_iter = iter(commands)
+        while True:
+            try:
+                cmd = next(cmd_iter)
+            except StopIteration:
+                break
             stripped = cmd.strip()
 
             if not stripped or (stripped.startswith('!') and not past_first_real_command):
                 pending_decorators.append(cmd)
+                continue
+
+            if stripped == '##STARTBLOCK##':
+                add_block_commands_by_directive(cmd_iter, current_ref, cf)
                 continue
 
             past_first_real_command = True
