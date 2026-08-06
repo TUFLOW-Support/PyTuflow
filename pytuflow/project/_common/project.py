@@ -12,7 +12,7 @@ from ..config.settings import Settings
 from .utils import _create_projection_file, _normalize_rendered, _variables_from_cf_path, _parse_filter, _parse_features_list
 
 if TYPE_CHECKING:
-    pass
+    from .feature import BaseEngineFeature
 
 
 class BaseEngineProject(BaseProject):
@@ -176,6 +176,7 @@ class BaseEngineProject(BaseProject):
                 out_path = self.output_dir / rendered_out
                 out_path.parent.mkdir(parents=True, exist_ok=True)
                 out_path.write_text(rendered_text, encoding='utf-8')
+                feature.rendered_templates[template_key] = out_path
 
         # Apply features to control files
         if main_cf_path is not None:
@@ -189,9 +190,10 @@ class BaseEngineProject(BaseProject):
                 feature.apply_to_control_files(control_files, merged_vars)
 
             main_cf.write('inplace')
-            for cf in secondary_cfs.values():
-                if getattr(cf, 'dirty', False):
-                    cf.write('inplace')
+            for cfs in secondary_cfs.values():
+                for cf in cfs:
+                    if getattr(cf, 'dirty', False):
+                        cf.write('inplace')
 
         return self.output_dir
 
@@ -257,6 +259,7 @@ class BaseEngineProject(BaseProject):
         for template_key, output_rel in feature.get_template_files(variables):
             rendered_out = Template(output_rel).safe_substitute(variables)
             out_path = project_dir / rendered_out
+            feature.rendered_templates[template_key] = out_path
             if not out_path.exists():
                 text = manager.get_template(template_key)
                 rendered_text = engine.render(text, variables, [name], feature_configs)
@@ -342,30 +345,60 @@ class BaseEngineProject(BaseProject):
         """Load secondary CFs (TGC, TBC, etc.) referenced in the TCF."""
         import pytuflow as pt
 
+        def check_for_template_key(key: str):
+            feature = needed_types[key]
+            config = feature._get_config()
+            for template_config in config.get('template_files', []):
+                template_key = template_config.get('template_key', '')
+                if Path(template_key).suffix.lower() == f'.{key}':
+                    return template_key
+
+        def load_via_template_key(key: str, template_key: str = ''):
+            feature = needed_types.get(key)
+            if not feature:
+                return
+            template_key = key if not template_key else template_key
+            out_path = feature.rendered_templates.get(template_key, '')
+            if not Path(out_path).suffix:  # either doesn't exist or isn't a file path
+                return
+            cf_type = Path(out_path).suffix[1:].lower()
+            if out_path.exists() and cf_type in cf_classes:
+                result[cf_type] = cf_classes[cf_type](out_path)
+
         needed_types = cls._needed_cf_types(features)
+        cf_classes = {k: getattr(pt, v['class']) for k, v in cls.CF_TYPE_MAP.items()}
 
         result = pt.AppendDict()
         for cf_type in needed_types:
             if cf_type not in cls.CF_TYPE_MAP:
                 continue
-            lhs = cls.CF_TYPE_MAP[cf_type]['lhs']
-            pattern, is_regex, flags = _parse_filter(lhs)
-            inps = tcf.find_input(lhs=pattern, recursive='similar', regex=is_regex, regex_flags=flags)
-            if not inps:
-                continue
-            for inp in inps:
-                if inp.cf:
-                    result[cf_type] = inp.cf
+            if Path(cf_type).suffix:  # this is referencing a template, not a control file type
+                load_via_template_key(cf_type)
+            else: 
+                lhs = cls.CF_TYPE_MAP[cf_type]['lhs']
+                pattern, is_regex, flags = _parse_filter(lhs)
+                inps = tcf.find_input(lhs=pattern, recursive='similar', regex=is_regex, regex_flags=flags)
+                if not inps:
+                    # template file command may not be added to TCF/FVC yet, so find the load the control from the copied template path
+                    template_key = check_for_template_key(cf_type)
+                    if template_key:
+                        load_via_template_key(cf_type, template_key)
+                    continue
+                for inp in inps:
+                    if inp.cf:
+                        result[cf_type] = inp.cf
         return result
 
     @classmethod
-    def _needed_cf_types(cls, features) -> set[str]:
+    def _needed_cf_types(cls, features) -> dict[str, 'BaseFeature']:
         """Collect all non-primary target_cf values across all features' command blocks."""
-        needed = set()
+        needed = {}
         for feature in features:
             config = feature._get_config()
             for block in config.get('command_blocks', []):
                 target = block.get('target_cf', cls.MAIN_CF_EXT)
                 if target != 'tcf':
-                    needed.add(target)
+                    if target not in needed:
+                        needed[target] = feature
+                    
         return needed

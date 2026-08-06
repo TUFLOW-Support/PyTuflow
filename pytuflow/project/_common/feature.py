@@ -25,6 +25,9 @@ class BaseEngineFeature(BaseFeature):
     NAME: str = ''
     DISPLAY_NAME: str = ''
 
+    def __init__(self, *args, **kwargs):
+        self.rendered_templates = {}  # {template_key: str: out_path: Path} records templates that have been rendered 
+
     def _get_config(self) -> dict:
         """Load this feature's JSON config via the TemplateManager (reads from cache)."""
         manager = TemplateManager(self.ENGINE_TYPE)
