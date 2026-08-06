@@ -274,51 +274,6 @@ class BaseEngineProject(BaseProject):
             if getattr(cf, 'dirty', False):
                 cf.write('inplace')
 
-    @classmethod
-    def create_from_recipe(cls, recipe: str, name: str, output_dir: str | Path, crs: str, create_empties: bool = True) -> Path:
-        """Creates a project from a recipe, which is a pre-configured json file that configures which feature sets
-        to use and sets variables.
-
-        There are a number of preconfigured recipes which the user can customise, or the user is also free to create their own.
-        
-        Parameters
-        ----------
-        recipe : str
-            The name of the recipe. It must correspond to a json file with the same within the cache directory.
-        name : str
-            The name of the model.
-        output_dir : str | Path
-            The directory to create the project.
-        crs : str
-            The model Coordinate Reference System
-        create_empties : bool, optional
-            Whether to create empty files.
-
-        Returns
-        -------
-        Path
-            The created model output directory
-        """
-        manager = TemplateManager(cls.ENGINE_TYPE)
-        recipe = manager.get_recipe(recipe)
-        variables = recipe.get('variables', {})
-        features = _parse_features_list([
-            json.dumps(f) if isinstance(f, dict) else f
-            for f in recipe.get('features', [])
-        ])
-
-        project = cls(
-            name=name,
-            output_dir=output_dir,
-            crs=crs,
-            features=features,
-            **variables,
-        )
-        errors = project.validate()
-        if errors:
-            raise Exception('Project validation failed: \n'.join(errors))
-        return project.create()
-
     # ------------------------------------------------------------------
     # feature registry
     # ------------------------------------------------------------------

@@ -200,26 +200,41 @@ class TemplateManager:
                 logger.warning(f'Could not load recipe {path}')
         return results
 
-    def get_recipe(self, recipe_name: str) -> dict:
-        """Load a recipe by name (without .json).
+    def get_recipe(self, recipe: str) -> dict:
+        """Load a recipe from a name, file path, or inline JSON string.
 
-        Raises ``FileNotFoundError`` if the recipe does not exist for this engine.
+        Resolution order:
+          1. If ``recipe`` is valid JSON (starts with ``{``): parse and return directly.
+          2. If ``recipe`` is an existing file path: load from that file.
+          3. Otherwise treat as a recipe name and search user cache then bundled dir.
+
+        Raises ``FileNotFoundError`` if a name-based lookup finds nothing.
         """
-        def resolve(recipe_name: str) -> Path | None:
-            """Return the path for recipe_name, preferring user cache over bundled."""
-            for directory in (self._cache_recipes, self._bundled_recipes):
-                p = directory / f'{recipe_name}.json'
-                if p.exists():
-                    return p
-            return None
-        path = resolve(recipe_name)
-        if path is None:
-            raise FileNotFoundError(
-                f"Recipe '{recipe_name}' not found for engine '{self.engine_type}'. "
-                f"Use 'list-recipes --engine {self.engine_type}' to see available recipes."
-            )
-        with open(path, encoding='utf-8') as f:
-            return json.load(f)
+        # 1. Inline JSON string
+        stripped = recipe.strip()
+        if stripped.startswith('{'):
+            try:
+                return json.loads(stripped)
+            except json.JSONDecodeError as exc:
+                raise ValueError(f"Invalid recipe JSON: {exc}") from exc
+
+        # 2. File path
+        p = Path(recipe)
+        if p.exists() and p.is_file():
+            with open(p, encoding='utf-8') as f:
+                return json.load(f)
+
+        # 3. Name lookup (user cache overrides bundled)
+        for directory in (self._cache_recipes, self._bundled_recipes):
+            candidate = directory / f'{recipe}.json'
+            if candidate.exists():
+                with open(candidate, encoding='utf-8') as f:
+                    return json.load(f)
+
+        raise FileNotFoundError(
+            f"Recipe '{recipe}' not found for engine '{self.engine_type}'. "
+            f"Use 'list-recipes --engine {self.engine_type}' to see available recipes."
+        )
         
     def reset_cache(self) -> None:
         self.init_cache(force=True)

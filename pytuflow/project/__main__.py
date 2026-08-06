@@ -1,17 +1,21 @@
 """CLI for pytuflow.project.
 
 Usage:
-    python -m pytuflow.project create --name NAME --output-dir DIR --crs EPSG:XXXX
-                                       [--engine hpc|fv] [--features M1 M2 ...] [--<variable> VALUE ...]
-    python -m pytuflow.project create-recipe RECIPE --name NAME --output-dir DIR --crs EPSG:XXXX
-                                              [--engine hpc|fv]
-    python -m pytuflow.project insert --tcf TCF_PATH --feature feature_NAME
+    python -m pytuflow.project create --engine hpc|fv --name NAME --output-dir DIR --crs EPSG:XXXX
+                                       [--recipe NAME|PATH|JSON]
+                                       [--features M1 M2 ...] [--<variable> VALUE ...]
+    python -m pytuflow.project insert --cf CF_PATH --feature FEATURE_NAME [--engine hpc|fv]
     python -m pytuflow.project init-templates [--engine hpc|fv] [--force]
     python -m pytuflow.project list-features [--engine hpc|fv]
     python -m pytuflow.project list-recipes [--engine hpc|fv]
 
-Dynamic variables (--<variable>) are discovered from defaults.json / hpc_defaults.json / fv_defaults.json
-and can be extended by the user without modifying this file.
+When --recipe is given it sets the base features and variables.  Any --<variable>
+flag on the CLI overwrites the same-named variable from the recipe.  Plain-string
+--features entries overwrite the same feature name from the recipe; dict-style
+--features entries (e.g. '{"name":"outputnc","suffix":"AD"}') are additive.
+
+Dynamic variables (--<variable>) are discovered from defaults.json / hpc_defaults.json /
+fv_defaults.json and can be extended by the user without modifying this file.
 """
 import argparse
 import json
@@ -19,7 +23,8 @@ import sys
 
 
 # Fixed args that are NOT driven by defaults.json
-_FIXED_ARGS = {'name', 'output_dir', 'output-dir', 'crs', 'features', 'create_empties', 'engine'}
+_FIXED_ARGS = {'name', 'output_dir', 'output-dir', 'crs', 'features', 'recipe',
+               'create_empties', 'engine'}
 
 
 def _get_engine_defaults(engine: str) -> tuple[dict, dict]:
@@ -58,16 +63,67 @@ def _add_dynamic_args(parser, engine: str = 'hpc') -> list[str]:
 
 
 def _parse_features_list(raw: list[str]) -> list[str | dict]:
-    from ._common.utils import _parse_feature
+    """Parse each element of ``--features``.
+
+    Plain strings are kept as-is.  Anything that parses as a JSON object
+    (``{...}``) is returned as a dict.
+    """
     result = []
     for item in raw:
         stripped = item.strip()
-        try:
-            result.append(_parse_feature(stripped))
-        except json.JSONDecodeError as e:
-            print(f"Invalid feature JSON '{stripped}': {e}", file=sys.stderr)
-            sys.exit(1)
+        if stripped.startswith('{'):
+            try:
+                result.append(json.loads(stripped))
+            except json.JSONDecodeError as e:
+                print(f"Invalid feature JSON '{stripped}': {e}", file=sys.stderr)
+                sys.exit(1)
+        else:
+            result.append(stripped)
     return result
+
+
+def _merge_recipe(
+    recipe: dict,
+    cli_features: list,
+    cli_kwargs: dict,
+) -> tuple[list, dict]:
+    """Merge recipe base with CLI overrides.
+
+    Rules:
+    - Recipe variables are the base; CLI kwargs overwrite them by key.
+    - Plain-string CLI features overwrite the same-named feature from the recipe.
+    - Dict CLI features (allow_multiple style) are additive — appended after recipe features.
+
+    Returns ``(merged_features, merged_vars)``.
+    """
+    recipe_features: list = list(recipe.get('features', []))
+    recipe_vars: dict = dict(recipe.get('variables', {}))
+
+    # Split CLI features into plain-string overrides and dict additives
+    cli_plain = {f for f in cli_features if isinstance(f, str)}
+    cli_dicts = [f for f in cli_features if isinstance(f, dict)]
+
+    # Plain-string CLI features: replace same name in recipe list; any not in recipe are appended
+    merged_features = []
+    replaced = set()
+    for rf in recipe_features:
+        name = rf if isinstance(rf, str) else rf.get('name', '')
+        if name in cli_plain:
+            merged_features.append(name)   # CLI version (plain string) wins
+            replaced.add(name)
+        else:
+            merged_features.append(rf)
+    # Append plain-string CLI features not already in recipe
+    for f in cli_features:
+        if isinstance(f, str) and f not in replaced:
+            merged_features.append(f)
+    # Additive dict features always go at the end
+    merged_features.extend(cli_dicts)
+
+    # Variables: recipe base, CLI overwrites
+    merged_vars = {**recipe_vars, **cli_kwargs}
+
+    return merged_features, merged_vars
 
 
 def cmd_create(args, dynamic_dests: list[str]):
@@ -75,7 +131,8 @@ def cmd_create(args, dynamic_dests: list[str]):
     shared_defaults, engine_defaults = _get_engine_defaults(engine)
     all_defaults = {**shared_defaults, **engine_defaults}
 
-    kwargs = {}
+    # Collect explicitly supplied CLI variable overrides
+    cli_kwargs = {}
     for dest in dynamic_dests:
         val = getattr(args, dest, None)
         if val is None:
@@ -86,7 +143,22 @@ def cmd_create(args, dynamic_dests: list[str]):
             except json.JSONDecodeError as e:
                 print(f"Invalid --{dest.replace('_', '-')} JSON: {e}", file=sys.stderr)
                 sys.exit(1)
-        kwargs[dest] = val
+        cli_kwargs[dest] = val
+
+    cli_features = _parse_features_list(args.features or [])
+
+    # Recipe base (optional)
+    recipe_arg = getattr(args, 'recipe', None)
+    if recipe_arg:
+        from .template.manager import TemplateManager
+        try:
+            recipe = TemplateManager(engine).get_recipe(recipe_arg)
+        except (FileNotFoundError, ValueError) as e:
+            print(str(e), file=sys.stderr)
+            sys.exit(1)
+        features, kwargs = _merge_recipe(recipe, cli_features, cli_kwargs)
+    else:
+        features, kwargs = cli_features, cli_kwargs
 
     if engine == 'fv':
         from .fv.project import FVProject as ProjectClass
@@ -96,7 +168,7 @@ def cmd_create(args, dynamic_dests: list[str]):
     project = ProjectClass(
         name=args.name,
         output_dir=args.output_dir,
-        features=_parse_features_list(args.features or []),
+        features=features,
         crs=args.crs,
         **kwargs,
     )
@@ -105,7 +177,8 @@ def cmd_create(args, dynamic_dests: list[str]):
         print('\n'.join(errors), file=sys.stderr)
         sys.exit(1)
     out = project.create()
-    print(f"Project created: {out}")
+    recipe_note = f" (recipe: {recipe_arg})" if recipe_arg else ""
+    print(f"Project created{recipe_note}: {out}")
 
 
 def cmd_insert(args, dynamic_dests: list[str]):
@@ -157,42 +230,6 @@ def cmd_list_features(args):
         print(f"  {name:12s}  {cls.DISPLAY_NAME}")
 
 
-def cmd_create_recipe(args):
-    engine = getattr(args, 'engine', 'hpc') or 'hpc'
-    from .template.manager import TemplateManager
-    manager = TemplateManager(engine)
-    try:
-        recipe = manager.get_recipe(args.recipe)
-    except FileNotFoundError as e:
-        print(str(e), file=sys.stderr)
-        sys.exit(1)
-
-    variables = recipe.get('variables', {})
-    features = _parse_features_list([
-        json.dumps(f) if isinstance(f, dict) else f
-        for f in recipe.get('features', [])
-    ])
-
-    if engine == 'fv':
-        from .fv.project import FVProject as ProjectClass
-    else:
-        from .hpc.project import HPCProject as ProjectClass
-
-    project = ProjectClass(
-        name=args.name,
-        output_dir=args.output_dir,
-        crs=args.crs,
-        features=features,
-        **variables,
-    )
-    errors = project.validate()
-    if errors:
-        print('\n'.join(errors), file=sys.stderr)
-        sys.exit(1)
-    out = project.create()
-    print(f"Project created from recipe '{args.recipe}': {out}")
-
-
 def cmd_list_recipes(args):
     engine = getattr(args, 'engine', 'hpc') or 'hpc'
     from .template.manager import TemplateManager
@@ -215,17 +252,21 @@ def main():
     # create — fixed args + dynamic args from defaults
     p_create = sub.add_parser('create', help='Create a new project skeleton')
     p_create.add_argument('--engine', required=True, choices=['hpc', 'fv'],
-                          help='TUFLOW engine type (default: hpc)')
+                          help='TUFLOW engine type')
     p_create.add_argument('--name', required=True, help='Model name')
     p_create.add_argument('--output-dir', required=True, dest='output_dir', help='Output directory')
     p_create.add_argument('--crs', required=True, help='Coordinate reference system (e.g. EPSG:32760)')
     p_create.add_argument('--features', nargs='*', default=[], help='Optional features to include')
+    p_create.add_argument(
+        '--recipe', default=None,
+        help='Recipe name, path to a .json file, or inline JSON string to use as a base',
+    )
 
     try:
         i = sys.argv.index('--engine')
         engine = sys.argv[i+1]
-    except Exception as e:
-        # --engine is mandatory, let the argparser catch it later with correct error messaging
+    except Exception:
+        # --engine is mandatory; let argparser report the error later
         engine = ''
 
     create_dynamic_dests = _add_dynamic_args(p_create, engine=engine)
@@ -235,7 +276,7 @@ def main():
     p_insert.add_argument('--engine', default='hpc', choices=['hpc', 'fv'],
                           help='TUFLOW engine type (default: hpc)')
     p_insert.add_argument('--cf', required=True, help='Path to main control file (TCF or FVC)')
-    p_insert.add_argument('--feature', required=True, help='feature name to insert')
+    p_insert.add_argument('--feature', required=True, help='Feature name to insert')
 
     insert_dynamic_dests = _add_dynamic_args(p_insert, engine=engine)
 
@@ -248,17 +289,6 @@ def main():
     p_list = sub.add_parser('list-features', help='List available features')
     p_list.add_argument('--engine', default='hpc', choices=['hpc', 'fv'])
 
-    # create-recipe — positional recipe name + fixed args only (no dynamic vars)
-    p_create_recipe = sub.add_parser('create-from-recipe', help='Create a project from a named recipe')
-    p_create_recipe.add_argument('--recipe', help='Recipe name (e.g. flood_model)')
-    p_create_recipe.add_argument('--engine', required=True, choices=['hpc', 'fv'],
-                                  help='TUFLOW engine type')
-    p_create_recipe.add_argument('--name', required=True, help='Model name')
-    p_create_recipe.add_argument('--output-dir', required=True, dest='output_dir',
-                                  help='Output directory')
-    p_create_recipe.add_argument('--crs', required=True,
-                                  help='Coordinate reference system (e.g. EPSG:32760)')
-
     # list-recipes
     p_list_recipes = sub.add_parser('list-recipes', help='List available recipes')
     p_list_recipes.add_argument('--engine', default='hpc', choices=['hpc', 'fv'])
@@ -267,16 +297,14 @@ def main():
 
     if args.command == 'create':
         cmd_create(args, create_dynamic_dests)
-    elif args.command == 'create-from-recipe':
-        cmd_create_recipe(args)
-    elif args.command == 'list-recipes':
-        cmd_list_recipes(args)
     elif args.command == 'insert':
         cmd_insert(args, insert_dynamic_dests)
     elif args.command == 'init-templates':
         cmd_init_templates(args)
     elif args.command == 'list-features':
         cmd_list_features(args)
+    elif args.command == 'list-recipes':
+        cmd_list_recipes(args)
     else:
         parser.print_help()
         sys.exit(1)
