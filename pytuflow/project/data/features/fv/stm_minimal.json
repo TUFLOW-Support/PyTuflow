@@ -4,7 +4,7 @@
     "sort_order": 5,
     "template_files": [
         {
-            "template_key": "stm/${model_name}_${iter}.fvsed",
+            "template_key": "stm/${model_name}_${iter}-minimal.fvsed",
             "output_subdir": "stm",
             "target_name": "${model_name}_${iter}.fvsed"
         }
