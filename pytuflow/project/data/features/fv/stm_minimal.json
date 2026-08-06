@@ -1,0 +1,76 @@
+{
+    "name": "stm_minimal",
+    "display_name": "Sediment Transport (minimal) with no fractions or materials in FVSed template.",
+    "sort_order": 5,
+    "template_files": [
+        {
+            "template_key": "stm/${model_name}_${iter}.fvsed",
+            "output_subdir": "stm",
+            "target_name": "${model_name}_${iter}.fvsed"
+        }
+    ],
+    "command_blocks": [
+        {
+            "id": "fvc_include_sediment",
+            "target_cf": "fvc",
+            "placement_rule": "fvc_simulation_configuration",
+            "commands": [
+                "Include Sediment == ${sed_active},${sed_density}"
+            ]
+        },
+         {
+            "id": "fvc_mode_split",
+            "target_cf": "fvc",
+            "placement_rule": "fvc_simulation_configuration",
+            "commands": [
+                "Mode split == ${modesplit}"
+            ]
+        },
+        {
+            "id": "fvc_sediment_control_file",
+            "target_cf": "fvc",
+            "placement_rule": "fvc_model_parameters",
+            "commands": [
+                "\n!______________________________________________________________________________________________________________________",
+                "! SEDIMENT CONTROL FILE",
+                "Sediment Control File == ..\\stm\\${model_name}_${iter}.fvsed"
+            ]
+        },
+        {
+            "id": "fvc_initial_sediment",
+            "target_cf": "fvc",
+            "placement_rule": "fvc_initial_conditions",
+            "commands": [
+                "Initial Sediment concentration == ${initial_sed}"
+            ]
+        },
+        {
+            "id": "sediment_bc_header",
+            "target_cf": "fvc",
+            "subtarget_cf": "/^BC == (?:WL|Q|QS).*/i",
+            "commands": [
+                "Sed Header == ${sed_bc_header}"
+            ]
+        },
+        {
+            "id": "fvsed_fraction_header",
+            "target_cf": "fvsed",
+            "placement_rule": "fvsed_simulation_configuration",
+            "existence_check": "! SEDIMENT FRACTION COMMANDS",
+            "commands": [
+                "\n!______________________________________________________________________________________________________________________",
+                "! SEDIMENT FRACTION COMMANDS"
+            ]
+        },
+        {
+            "id": "fvsed_mat_header",
+            "target_cf": "fvsed",
+            "placement_rule": "fvsed_fraction",
+            "existence_check": "/!\\s*MATERIAL(?:\\s+SPEC)?(?:\\s+COMMANDS)?/i",
+            "commands": [
+                "\n!______________________________________________________________________________________________________________________",
+                "! MATERIAL SPEC COMMANDS"
+            ]
+        }
+    ]
+}

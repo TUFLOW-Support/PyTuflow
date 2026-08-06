@@ -64,7 +64,8 @@ class BaseEngineFeature(BaseFeature):
             template_key = tf['template_key']
             subdir = tf.get('output_subdir', 'model')
             filename = Template(template_key.split('/')[-1]).safe_substitute(variables)
-            output_rel = f'{subdir}/{filename}'
+            target_name = tf.get('target_name', filename)
+            output_rel = f'{subdir}/{target_name}'
             result.append((template_key, output_rel))
         return result
 

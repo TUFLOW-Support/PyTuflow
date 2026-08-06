@@ -13,7 +13,7 @@
     "glob_horz_eddy_visc_lims": "1, 99999.0"
   },
   "features": [
-    "stm",
+    "stm_minimal",
     {
         "name": "sedfrac",
         "stm_sed_frac_name": "fineSed",
