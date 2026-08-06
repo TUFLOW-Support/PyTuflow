@@ -149,6 +149,12 @@ class TemplateEngine:
                 i += 1
                 continue
 
+            # eatup any comments
+            m = re.match(r'^##COMMENT.*$', stripped)
+            if m:
+                i += 1
+                continue
+
             # ##COMMANDS block_id##
             m = re.match(r'^##COMMANDS\s+(.+?)##\s*$', stripped)
             if m:
