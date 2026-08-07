@@ -159,14 +159,14 @@ class TemplateManager:
             if self._cache_hpc_defaults.exists():
                 with open(self._cache_hpc_defaults, 'r') as fo:
                     engine_defaults = json.load(fo)
-            if self._bundled_hpc_defaults.exists():
+            elif self._bundled_hpc_defaults.exists():
                 with open(self._bundled_hpc_defaults, 'r') as fo:
                     engine_defaults = json.load(fo)
         elif self.engine_type == 'fv':
             if self._cache_fv_defaults.exists():
                 with open(self._cache_fv_defaults, 'r') as fo:
                     engine_defaults = json.load(fo)
-            if self._bundled_fv_defaults.exists():
+            elif self._bundled_fv_defaults.exists():
                 with open(self._bundled_fv_defaults, 'r') as fo:
                     engine_defaults = json.load(fo)
 
