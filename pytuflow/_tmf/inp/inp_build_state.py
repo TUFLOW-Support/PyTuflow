@@ -94,6 +94,8 @@ class InputBuildState(BuildState, Input):
 
     @rhs.setter
     def rhs(self, value: str):
+        if self.TUFLOW_TYPE == const.INPUT.COMMENT:
+            return
         inputs = Inputs()
         inputs.append(self)
         self.record_change(inputs, 'update_value')

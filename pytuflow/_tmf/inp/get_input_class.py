@@ -31,8 +31,8 @@ def get_input_class(cmd: Command) -> type[inp_build_state.InputBuildState]:
         return file.FileInput
     elif cmd.is_folder(cmd.value, cmd.part_count, cmd.part_index):
         return folder.FolderInput
+    elif cmd.command in ['', None]:
+        return comment.CommentInput
     elif cmd.is_valid():
         return setting.SettingInput
-    elif cmd.command is None:
-        return comment.CommentInput
     raise ValueError('Unknown command type: {}'.format(cmd.command)) from None
