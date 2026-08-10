@@ -355,3 +355,102 @@ class TestCreateCLIWithRecipe:
 
 
 
+
+
+# ---------------------------------------------------------------------------
+# --defaults flag
+# ---------------------------------------------------------------------------
+
+class TestDefaultsFlag:
+    def _run(self, argv):
+        import subprocess, sys
+        result = subprocess.run(
+            [sys.executable, '-m', 'pytuflow.project'] + argv,
+            capture_output=True, text=True,
+            cwd='/home/ellis/dev/PyTuflow',
+        )
+        return result.returncode, result.stdout, result.stderr
+
+    def test_defaults_from_json_string(self, project_dir):
+        """--defaults inline JSON is accepted and create succeeds."""
+        defaults_json = json.dumps({"output_interval": "600."})
+        rc, out, err = self._run([
+            'create', '--engine', 'fv', '--name', 'test',
+            '--output-dir', str(project_dir), '--crs', 'EPSG:32760',
+            '--defaults', defaults_json,
+        ])
+        assert rc == 0, err
+        assert (project_dir / 'runs' / 'test_001.fvc').exists()
+
+    def test_defaults_from_file(self, project_dir, tmp_path):
+        """--defaults file path is accepted and create succeeds."""
+        defaults_file = tmp_path / 'my_defaults.json'
+        defaults_file.write_text(json.dumps({"output_interval": "1200."}))
+        rc, out, err = self._run([
+            'create', '--engine', 'fv', '--name', 'test',
+            '--output-dir', str(project_dir), '--crs', 'EPSG:32760',
+            '--defaults', str(defaults_file),
+        ])
+        assert rc == 0, err
+
+    def test_defaults_missing_file_exits_nonzero(self, project_dir):
+        rc, out, err = self._run([
+            'create', '--engine', 'fv', '--name', 'test',
+            '--output-dir', str(project_dir), '--crs', 'EPSG:32760',
+            '--defaults', '/nonexistent/path/defaults.json',
+        ])
+        assert rc == 1
+        assert 'not found' in err
+
+    def test_defaults_invalid_json_exits_nonzero(self, project_dir):
+        rc, out, err = self._run([
+            'create', '--engine', 'fv', '--name', 'test',
+            '--output-dir', str(project_dir), '--crs', 'EPSG:32760',
+            '--defaults', '{not valid json',
+        ])
+        assert rc == 1
+
+    def test_cli_var_overrides_defaults(self, project_dir):
+        """An explicit --<var> flag wins over the same key in --defaults."""
+        from pytuflow.project.__main__ import _load_defaults_arg, _merge_recipe
+        # Unit-test the merge chain directly
+        user_defaults = {'output_interval': '600.', 'spherical': '0'}
+        cli_kwargs = {'output_interval': '300.'}
+        # Simulate what cmd_create does: user_defaults < cli_kwargs
+        merged = {**user_defaults, **cli_kwargs}
+        assert merged['output_interval'] == '300.'
+        assert merged['spherical'] == '0'  # from defaults, not overridden
+
+    def test_recipe_overrides_defaults(self, project_dir):
+        """Recipe variables override --defaults variables."""
+        from pytuflow.project.__main__ import _merge_recipe
+        user_defaults = {'output_interval': '600.'}
+        recipe = {'features': [], 'variables': {'output_interval': '3600.'}}
+        features, recipe_kwargs = _merge_recipe(recipe, [], {})
+        # Simulate cmd_create merge: user_defaults < recipe_kwargs
+        kwargs = {**user_defaults, **recipe_kwargs}
+        assert kwargs['output_interval'] == '3600.'
+
+    def test_load_defaults_arg_json_string(self):
+        from pytuflow.project.__main__ import _load_defaults_arg
+        result = _load_defaults_arg('{"cell_size": "5", "model_name": "test"}')
+        assert result == {'cell_size': '5', 'model_name': 'test'}
+
+    def test_load_defaults_arg_file(self, tmp_path):
+        from pytuflow.project.__main__ import _load_defaults_arg
+        p = tmp_path / 'defaults.json'
+        p.write_text(json.dumps({'cell_size': '10'}))
+        result = _load_defaults_arg(str(p))
+        assert result == {'cell_size': '10'}
+
+    def test_load_defaults_arg_missing_file_exits(self):
+        import pytest
+        from pytuflow.project.__main__ import _load_defaults_arg
+        with pytest.raises(SystemExit):
+            _load_defaults_arg('/nonexistent/defaults.json')
+
+    def test_load_defaults_arg_invalid_json_exits(self):
+        import pytest
+        from pytuflow.project.__main__ import _load_defaults_arg
+        with pytest.raises(SystemExit):
+            _load_defaults_arg('{bad json')

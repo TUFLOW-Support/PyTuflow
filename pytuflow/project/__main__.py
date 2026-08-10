@@ -3,11 +3,19 @@
 Usage:
     python -m pytuflow.project create --engine hpc|fv --name NAME --output-dir DIR --crs EPSG:XXXX
                                        [--recipe NAME|PATH|JSON]
+                                       [--defaults PATH|JSON]
                                        [--features M1 M2 ...] [--<variable> VALUE ...]
     python -m pytuflow.project insert --cf CF_PATH --feature FEATURE_NAME [--engine hpc|fv]
+                                       [--defaults PATH|JSON]
     python -m pytuflow.project init-templates [--engine hpc|fv] [--force]
     python -m pytuflow.project list-features [--engine hpc|fv]
     python -m pytuflow.project list-recipes [--engine hpc|fv]
+
+Override priority (lowest → highest):
+  bundled defaults  →  --defaults  →  recipe variables  →  explicit --<var> flags
+
+--defaults accepts a path to a JSON file or an inline JSON string.
+--recipe  accepts a recipe name, path to a .json file, or an inline JSON string.
 
 When --recipe is given it sets the base features and variables.  Any --<variable>
 flag on the CLI overwrites the same-named variable from the recipe.  Plain-string
@@ -24,7 +32,32 @@ import sys
 
 # Fixed args that are NOT driven by defaults.json
 _FIXED_ARGS = {'name', 'output_dir', 'output-dir', 'crs', 'features', 'recipe',
-               'create_empties', 'engine'}
+               'defaults', 'create_empties', 'engine'}
+
+
+def _load_defaults_arg(defaults_arg: str) -> dict:
+    """Load a --defaults value (file path or inline JSON string) into a dict.
+
+    Raises ``SystemExit`` with an error message on failure.
+    """
+    stripped = defaults_arg.strip()
+    if stripped.startswith('{'):
+        try:
+            return json.loads(stripped)
+        except json.JSONDecodeError as e:
+            print(f"Invalid --defaults JSON: {e}", file=sys.stderr)
+            sys.exit(1)
+    from pathlib import Path
+    p = Path(stripped)
+    if not p.exists():
+        print(f"--defaults file not found: {stripped}", file=sys.stderr)
+        sys.exit(1)
+    try:
+        with open(p, encoding='utf-8') as f:
+            return json.load(f)
+    except json.JSONDecodeError as e:
+        print(f"Invalid JSON in --defaults file '{stripped}': {e}", file=sys.stderr)
+        sys.exit(1)
 
 
 def _get_engine_defaults(engine: str) -> tuple[dict, dict]:
@@ -131,6 +164,12 @@ def cmd_create(args, dynamic_dests: list[str]):
     shared_defaults, engine_defaults = _get_engine_defaults(engine)
     all_defaults = {**shared_defaults, **engine_defaults}
 
+    # --defaults: user baseline, sits above bundled defaults
+    user_defaults = {}
+    defaults_arg = getattr(args, 'defaults', None)
+    if defaults_arg:
+        user_defaults = _load_defaults_arg(defaults_arg)
+
     # Collect explicitly supplied CLI variable overrides
     cli_kwargs = {}
     for dest in dynamic_dests:
@@ -147,7 +186,7 @@ def cmd_create(args, dynamic_dests: list[str]):
 
     cli_features = _parse_features_list(args.features or [])
 
-    # Recipe base (optional)
+    # Recipe base (optional); recipe vars override user_defaults
     recipe_arg = getattr(args, 'recipe', None)
     if recipe_arg:
         from .template.manager import TemplateManager
@@ -156,9 +195,12 @@ def cmd_create(args, dynamic_dests: list[str]):
         except (FileNotFoundError, ValueError) as e:
             print(str(e), file=sys.stderr)
             sys.exit(1)
-        features, kwargs = _merge_recipe(recipe, cli_features, cli_kwargs)
+        features, recipe_kwargs = _merge_recipe(recipe, cli_features, cli_kwargs)
+        # Priority: user_defaults < recipe_vars < cli_kwargs (already merged in recipe_kwargs)
+        kwargs = {**user_defaults, **recipe_kwargs}
     else:
-        features, kwargs = cli_features, cli_kwargs
+        features = cli_features
+        kwargs = {**user_defaults, **cli_kwargs}
 
     if engine == 'fv':
         from .fv.project import FVProject as ProjectClass
@@ -190,7 +232,14 @@ def cmd_insert(args, dynamic_dests: list[str]):
 
     shared_defaults, engine_defaults = _get_engine_defaults(engine)
     all_defaults = {**shared_defaults, **engine_defaults}
-    kwargs = {}
+
+    # --defaults: user baseline
+    user_defaults = {}
+    defaults_arg = getattr(args, 'defaults', None)
+    if defaults_arg:
+        user_defaults = _load_defaults_arg(defaults_arg)
+
+    cli_kwargs = {}
     for dest in dynamic_dests:
         val = getattr(args, dest, None)
         if val is None:
@@ -201,8 +250,9 @@ def cmd_insert(args, dynamic_dests: list[str]):
             except json.JSONDecodeError as e:
                 print(f"Invalid --{dest.replace('_', '-')} JSON: {e}", file=sys.stderr)
                 sys.exit(1)
-        kwargs[dest] = val
+        cli_kwargs[dest] = val
 
+    kwargs = {**user_defaults, **cli_kwargs}
     feature_arg = _parse_features_list([args.feature])[0] if args.feature else args.feature
     ProjectClass.insert_feature_into(feature_arg, args.cf, **kwargs)
     print(f"feature '{args.feature}' inserted into {args.cf}")
@@ -261,6 +311,11 @@ def main():
         '--recipe', default=None,
         help='Recipe name, path to a .json file, or inline JSON string to use as a base',
     )
+    p_create.add_argument(
+        '--defaults', default=None, dest='defaults',
+        help='Path to a JSON file or inline JSON string of variable defaults '
+             '(overrides bundled defaults; overridden by --recipe and explicit --<var> flags)',
+    )
 
     try:
         i = sys.argv.index('--engine')
@@ -277,6 +332,10 @@ def main():
                           help='TUFLOW engine type (default: hpc)')
     p_insert.add_argument('--cf', required=True, help='Path to main control file (TCF or FVC)')
     p_insert.add_argument('--feature', required=True, help='Feature name to insert')
+    p_insert.add_argument(
+        '--defaults', default=None, dest='defaults',
+        help='Path to a JSON file or inline JSON string of variable defaults',
+    )
 
     insert_dynamic_dests = _add_dynamic_args(p_insert, engine=engine)
 
