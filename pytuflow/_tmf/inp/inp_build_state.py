@@ -78,7 +78,7 @@ class InputBuildState(BuildState, Input):
         cmd = deepcopy(self._command)
         cmd.value = str(value)
         leading_new_lines = ''.join(re.findall(r'^\n*', cmd.original_text))
-        new_value = '{0}{1} == {2}'.format(leading_new_lines, cmd.command_orig, cmd.value)
+        new_value = '{0}{1} == {2}'.format(leading_new_lines, value, cmd.value_orig)
         new_value = cmd.re_add_comments(new_value, True)
         cmd = self._command.__class__(new_value, cmd.config)
         # test
