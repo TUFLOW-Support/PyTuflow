@@ -40,8 +40,11 @@ class Command(TuflowLine):
         self.command = self.command_orig.upper() if self.command_orig is not None else None
 
         # tuflow treats "/path/to/file" the same as "./path/to/file" - therefore, so must this parser
-        abs_path = re.findall(r'(([A-Za-z]:\\)|\\\\)', str(self.value_orig)) and sys.platform == 'win32'
-        if not abs_path and self.is_value_a_file() and str(self.value_orig)[0] in ['\\', '/']:
+        if sys.platform == 'win32':
+            abs_path = isinstance(self.value_orig, str) and re.findall(r'(([A-Za-z]:\\)|\\\\)', str(self.value_orig))
+        else:
+            abs_path = isinstance(self.value_orig, str) and self.value_orig.startswith('/')
+        if not abs_path and self.is_value_a_file() and self.value_orig and str(self.value_orig)[0] in ['\\', '/']:
             self.value_orig = f'.{self.value_orig}'
 
         # expand the value (variables, gpkg syntax) and expand the path to its absolute value

@@ -6,9 +6,10 @@ import pytest
 
 from ...pytuflow import FVC, FVSed, FVWQ, RunState, GridDefinitionFileBlockInput, Scope
 from ...pytuflow._tmf.parsers.fvcommand import FVCommand, FVWaterQualityCommand
-from ...pytuflow._tmf.settings import TCFConfig
+from ...pytuflow._tmf.settings import TCFConfig, FVCConfig
 from ...pytuflow._tmf.parsers.non_recursive_basic_parser import get_fv_commands
 from ...pytuflow._tmf import const
+from ...pytuflow._tmf.inp.get_input_class import get_input_class
 
 
 def _strip_command(text):
@@ -1084,3 +1085,10 @@ def test_set_rhs_and_write():
         new_line = new_line[:new_line.index('!')]
     new_line = new_line.strip()
     assert new_line == 'BC == Q, FC04, ../models/shp/bc_dbase/EG00_001.csv'
+
+
+def test_load_command_with_absolute_fpath_linux():
+    line = 'Read GIS Nodestring == /home/usr/TUFLOWFV/models/gis/2d_ns_001.shp'
+    cmd = FVCommand(line, FVCConfig())
+    inp = get_input_class(cmd)(None, cmd)
+    assert inp.rhs == '/home/usr/TUFLOWFV/models/gis/2d_ns_001.shp'
