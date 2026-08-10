@@ -1067,3 +1067,20 @@ def test_bc_include_file():
     bc_dbase = fvc.bc_dbase()
     df = bc_dbase.value('2')
     assert df.shape == (744, 1)
+
+
+def test_set_rhs_and_write():
+    p = Path('./tests/tmf/test_datasets/fv/basic_block.fvc')
+    fvc = FVC(p)
+    inp = fvc.find_input(lhs=r'^BC$', regex=True, regex_flags=re.IGNORECASE)[0]
+    inp.rhs = 'Q, FC04, ../models/shp/bc_dbase/EG00_001.csv'
+
+    buf = io.StringIO()
+    fvc.preview(buf)
+
+    output = buf.getvalue()
+    new_line = output.splitlines()[0]
+    if '!' in new_line:
+        new_line = new_line[:new_line.index('!')]
+    new_line = new_line.strip()
+    assert new_line == 'BC == Q, FC04, ../models/shp/bc_dbase/EG00_001.csv'

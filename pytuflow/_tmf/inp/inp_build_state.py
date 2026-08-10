@@ -78,7 +78,7 @@ class InputBuildState(BuildState, Input):
         cmd.value = str(value)
         new_value = '{0} == {1}'.format(value, cmd.value_orig)
         new_value = cmd.re_add_comments(new_value, True)
-        cmd = Command(new_value, cmd.config)
+        cmd = self._command.__class__(new_value, cmd.config)
         # test
         inp = get_input_class(cmd)(self.parent, cmd)
         # noinspection PyUnreachableCode
@@ -101,7 +101,7 @@ class InputBuildState(BuildState, Input):
         cmd.value = str(value)
         new_value = '{0} == {1}'.format(cmd.command_orig, cmd.value)
         new_value = cmd.re_add_comments(new_value, True)
-        cmd = Command(new_value, cmd.config)
+        cmd = self._command.__class__(new_value, cmd.config)
         self.__init__(self.parent, cmd)
         self.dirty = True
 
@@ -117,7 +117,7 @@ class InputBuildState(BuildState, Input):
         cmd = deepcopy(self._command)
         cmd.comment = value
         new_value = cmd.re_add_comments(cmd.original_text, True)
-        cmd = Command(new_value, cmd.config)
+        cmd = self._command.__class__(new_value, cmd.config)
         self._command = cmd
         self.dirty = True
 
@@ -217,6 +217,9 @@ class InputBuildState(BuildState, Input):
         """
         for file in self.files:
             self._file_to_scope[str(file)] = Scope.resolve_scope(self.file_scope(file), str(self._file_to_original[file]), str(file), scope_list)
+
+    def _command_class(self) -> type[Command]:
+        raise NotImplementedError
 
     def _load(self, load_control_files: bool):
         pass
