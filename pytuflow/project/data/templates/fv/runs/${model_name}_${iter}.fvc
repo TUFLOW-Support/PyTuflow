@@ -146,7 +146,7 @@ End Material
 
 !__________________________________________________________________________________________________________________________________________________________________________________________
 ! BOUNDARY CONDITIONS
-Read GIS Nodestring == <path/to/2d_ns.shp>
+Read GIS Nodestring == ${nodestring_path}
 
 ! Example BC Block
 BC == WL, 2, ..\bc_dbase\<wl_boundary.csv>
