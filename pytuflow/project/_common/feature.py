@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import re
 import typing
 from string import Template
@@ -299,9 +300,19 @@ class BaseEngineFeature(BaseFeature):
 
         return None, rule_type  # append mode
 
-    @staticmethod
-    def _insert_or_append(cf, ref_inp, cmd: str, anchor_rule: str):
+    @classmethod
+    def _insert_or_append(cls, cf, ref_inp, cmd: str, anchor_rule: str):
         """Insert *cmd* after *ref_inp*, or append when *ref_inp* is ``None``."""
         if ref_inp is None:
-            return cf.append_input(cmd)
-        return cf.insert_input(ref_inp, cmd, after=False if anchor_rule == 'before' else True, gap=1 if anchor_rule == 'before' else 0)
+            inp = cf.append_input(cmd)
+        else:
+            inp = cf.insert_input(ref_inp, cmd, after=False if anchor_rule == 'before' else True, gap=1 if anchor_rule == 'before' else 0)
+        inp.rhs = cls._make_relative(cf, inp.rhs)
+        return inp
+
+    @classmethod
+    def _make_relative(cls, cf, rhs: str | None) -> str | None:
+        """If the rhs is a filepath, make relative if it is absolute"""
+        if cf.fpath and rhs and (rhs.startswith('/') or rhs.startswith(r'\\') or re.findall(r'^[A-Za-z]:(?:\\|/)', rhs)):
+            return os.path.relpath(rhs, str(cf.fpath.parent))
+        return rhs

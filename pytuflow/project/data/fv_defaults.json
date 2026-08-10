@@ -37,6 +37,8 @@
   "sed_active": 1,
   "sed_density": 1,
   "heat_active": 1,
+  "nodestring_path": "<path/to/2d_ns.shp>",
+  "culv_conn_type": "<connection_type>",
   "initial_sal": "<sal mg/L>",
   "initial_temp": "<temp deg>",
   "initial_sed": "<conc mg/L>",

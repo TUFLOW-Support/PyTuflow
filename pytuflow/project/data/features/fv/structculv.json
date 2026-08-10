@@ -20,7 +20,7 @@
       "placement_rule": "fvc_structures",
       "allow_multiple": true,
       "commands": [
-        "\nStructure == <culvert_connection_type>, <link1_id>, <link2_id>"
+        "\nStructure == ${culv_conn_type}, <link1_id>, <link2_id>"
       ]
     },
     {
@@ -29,15 +29,16 @@
       "target_previous_block": true,
       "commands": [
         "Flux Function == Culvert",
-        "Culvert File == <path/to/culvert_databsae.csv>"
+        "Culvert File == <path/to/culvert_database.csv>"
       ]
     },
     {
         "id": "fvc_struct_culvert_nodestring",
         "target_cf": "fvc",
         "placement_rule": "before_fvc_structures",
+        "allow_multiple": true,
         "commands": [
-            "Read GIS Notestring == <path/to/2d_ns_culvert.shp>"
+            "Read GIS Nodestring == ${nodestring_path}"
         ]
 
     }
