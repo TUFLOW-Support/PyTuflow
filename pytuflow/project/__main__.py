@@ -219,8 +219,7 @@ def cmd_create(args, dynamic_dests: list[str]):
         print('\n'.join(errors), file=sys.stderr)
         sys.exit(1)
     out = project.create()
-    recipe_note = f" (recipe: {recipe_arg})" if recipe_arg else ""
-    print(f"Project created{recipe_note}: {out}")
+    print(f"Project created: {out}")
 
 
 def cmd_insert(args, dynamic_dests: list[str]):
