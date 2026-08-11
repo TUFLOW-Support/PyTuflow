@@ -161,14 +161,16 @@ class TemplateEngine:
                 block_id = m.group(1).strip()
                 commands = block_lookup.get(block_id, [])
                 if commands:
+                    commands = self._process_directives(commands, variables, active_features, block_lookup)
                     str_vars = {
                         k: (', '.join(str(x) for x in v) if isinstance(v, list) else str(v))
                         for k, v in variables.items()
                     }
-                    commands = self._process_directives(commands, str_vars, active_features, block_lookup)
                     for cmd in commands:
                         rendered_cmd = Template(cmd).safe_substitute(str_vars)
-                        result.append(rendered_cmd + '\n')
+                        if rendered_cmd and rendered_cmd[-1] != '\n':
+                            rendered_cmd = f'{rendered_cmd}\n'
+                        result.append(rendered_cmd)
                 else:
                     # Block ID not found — leave as a comment for visibility
                     result.append(f'! ##COMMANDS {block_id}## (unresolved)\n')

@@ -146,9 +146,9 @@ class BaseEngineFeature(BaseFeature):
                     subcmd = next(cmd_iter)
                 except StopIteration:
                     return
-                if subcmd == '##ENDBLOCK##':
+                if subcmd.strip() == '##ENDBLOCK##':
                     return
-                if subcmd == '##STARTBLOCK##':
+                if subcmd.strip() == '##STARTBLOCK##':
                     add_block_commands_by_directive(cmd_iter, current_ref_, subcf)
                     continue
                 current_ref_ = self._insert_or_append(subcf, None, subcmd, anchor_rule='after')
