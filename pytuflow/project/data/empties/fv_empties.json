@@ -1,4 +1,126 @@
 {
-  "types": [],
-  "schemas": []
+  "types": [
+    {
+      "name": "3d_po",
+      "geom": "PL"
+    },
+    {
+      "name": "2d_ns",
+      "geom": "L"
+    },
+    {
+      "name": "2d_mat",
+      "geom": "R"
+    },
+    {
+      "name": "2d_sa",
+      "geom": "R"
+    },
+    {
+      "name": "2d_zn",
+      "geom": "R"
+    },
+    {
+      "name": "2d_zln",
+      "geom": "PLR"
+    }
+  ],
+  "schemas": [
+    {
+      "name": "3d_po",
+      "schema": [
+        {
+          "name": "Type",
+          "field_type": "string",
+          "width": 20,
+          "prec": -1
+        },
+        {
+          "name": "Label",
+          "field_type": "string",
+          "width": 30,
+          "prec": -1
+        },
+        {
+          "name": "Comment",
+          "field_type": "string",
+          "width": 250,
+          "prec": -1
+        },
+        {
+          "name": "Vert_min",
+          "field_type": "real",
+          "width": 15,
+          "prec": 5
+        },
+        {
+          "name": "Vert_max",
+          "field_type": "real",
+          "width": 15,
+          "prec": 5
+        }
+      ]
+    },
+    {
+      "name": "2d_mat",
+      "schema": [
+        {
+          "name": "Material",
+          "field_type": "int",
+          "width": 8,
+          "prec": -1
+        }
+      ]
+    },
+    {
+      "name": "2d_ns",
+      "schema": [
+        {
+          "name": "ID",
+          "field_type": "string",
+          "width": 100,
+          "prec": -1
+        },
+        {
+          "name": "Flags",
+          "field_type": "string",
+          "width": "3",
+          "prec": -1
+        }
+      ]
+    },
+    {
+      "name": "2d_sa",
+      "schema": [
+        {
+          "name": "Name",
+          "field_type": "string",
+          "width": 100,
+          "prec": -1
+        }
+      ]
+    },
+    {
+      "name": "2d_zln",
+      "schema": [
+        {
+          "name": "Material",
+          "field_type": "int",
+          "width": 8,
+          "prec": -1
+        }
+      ]
+    },
+    {
+      "name": "2d_zn",
+      "schema": [
+        {
+          "name": "Name",
+          "field_type": "string",
+          "width": 100,
+          "prec": -1
+        }
+      ]
+    }
+  ]
 }
