@@ -1203,6 +1203,7 @@ class Mesh(MapOutput):
             # the default callback behaviour is only when the slider is released
             # if you want to add a callback each time the slider is changed, add the following line
             slider.AddObserver('InteractionEvent', lambda w, e: update_time(w.GetRepresentation().GetValue()))
+            pl.enable_terrain_style()
             pl.show()
 
         .. video:: ../_static/videos/mesh_dataset_example_3.mp4
@@ -1302,12 +1303,54 @@ class Mesh(MapOutput):
                 arrows.copy_from(new_arrows)
 
                 pl.write_frame()
+                print(f'Rendered frame {time_}')
 
             pl.close()
 
         .. video:: ../_static/videos/mesh_dataset_example_4.mp4
             :width: 720
             :caption: Output of the rendered movie with velocity vectors
+
+        The above example requires the camera position, the best way to obtain this is to set a keyboard shortcut to copy the camera position to the
+        clipboard. This way the camera can be positioned in the plotter, then the position can be obtained and pasted into the animation script.
+
+        .. code-block:: python
+
+            import pytuflow
+            import pyvista as pv
+            import tkinter as tk
+
+            def copy_camera_to_clipboard():
+                formatted_code = f"camera_position = {pl.camera_position}"
+
+                # Push the string into the system clipboard
+                root = tk.Tk()
+                root.withdraw()  # Hide the main window
+                root.clipboard_clear()
+                root.clipboard_append(formatted_code)
+                root.update()  # Keep it in memory after closing
+                root.destroy()
+            
+            res = pytuflow.XMDF('/path/to/result.xmdf')
+            mesh = res.mesh_dataset()
+            wl_mesh = res.mesh_dataset('max water level', reindex=True) # reindex removes inactive cells
+            pl = pv.Plotter() # init the plotter
+            _ = pl.add_mesh(mesh, scalars='bed level', cmap='Spectral_r', smooth_shading=True)
+            _ = pl.add_mesh(
+                    wl_mesh,
+                    scalars='max water level',
+                    cmap='Blues',
+                    smooth_shading=True,
+                    opacity=0.75,
+                    show_scalar_bar=False
+                )
+            pl.set_scale(zscale=5) # exagerate the z scale
+            pl.enable_terrain_style()
+
+            # setup the keyboard shortcut so that "c" copies the camera position
+            pl.add_key_event("c", copy_camera_to_clipboard)
+
+            pl.show()
         
         """
         if not PyMesh.available():
