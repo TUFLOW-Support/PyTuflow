@@ -2,7 +2,12 @@
     "name": "3d",
     "display_name": "3D",
     "sort_order": 5,
-    "template_files": [],
+    "template_files": [
+        {
+            "template_key": "model/csv/2D_Z_Layers_${iter}.csv",
+            "output_subdir": "model/csv"
+        }
+    ],
     "command_blocks": [
         {
             "id": "fvc_3d_mixing_header",
