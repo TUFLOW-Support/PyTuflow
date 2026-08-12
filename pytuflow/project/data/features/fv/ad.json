@@ -37,10 +37,10 @@
             "target_cf": "fvc",
             "target_previous_block": true,
             "commands": [
-                "Decay Rate == <trace_Kd>",
-                "Settling Velocity == <settling_velocity>",
-                "Evapo-Concentrate == 1",
-                "Water Age == 0"
+                "Decay Rate == ${tracer_decay_rate}",
+                "Settling Velocity == ${tracer_settling_velocity}",
+                "Evapo-Concentrate == ${tracer_evapo_concentrate}",
+                "Water Age == ${tracer_water_age}"
             ]
         },
         {
