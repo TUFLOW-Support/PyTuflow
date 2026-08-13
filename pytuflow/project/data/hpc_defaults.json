@@ -16,6 +16,10 @@
   "sgs_map_extent_trim": "All",
   "swmm_inp_path": "<path/to/swmm.inp>",
   "swmm_check_inp_save_date": "WARNING",
+  "qdt_origin": "TGC",
+  "qdt_orientatin_angle": "TGC",
+  "qdt_base_cell_size": "TGC",
+  "qdt_gis_nesting_path": "<path/to/2d_qnl.shp",
   "output_formats": {
     "XMDF": {
       "data_types": ["h", "v", "d", "q"],

@@ -14,7 +14,7 @@ Set Code == 1  ! TODO set to zero when GIS command below is uncommented
 !_______________________________________________________
 ! MODEL TOPOGRAPHY
 Set Zpts == 0
-! Read GRID Zpts == <path/to/DEM.tif>
+Read GRID Zpts == ${dem_path}
 
 !_______________________________________________________
 ! MODEL MATERIAL (LANDUSE)

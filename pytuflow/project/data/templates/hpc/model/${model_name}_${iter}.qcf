@@ -1,4 +1,4 @@
-Model Origin and Extent == TGC
-Orientation Angle == TGC
-Base Cell Size	== TGC
-Read GIS Nesting == <path/to/2d_qnl>
+Model Origin and Extent == ${qdt_origin}
+Orientation Angle == ${qdt_orientatin_angle}
+Base Cell Size	== ${qdt_base_cell_size}
+Read GIS Nesting == ${qdt_gis_nesting_path}

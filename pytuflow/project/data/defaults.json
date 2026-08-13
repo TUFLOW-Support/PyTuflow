@@ -10,5 +10,6 @@
   "start_time": 0,
   "end_time": 1,
   "timestep": 1,
+  "dem_path": "<path/to/dem.tif>",
   "po_path": "<path/to/po.shp>"
 }
