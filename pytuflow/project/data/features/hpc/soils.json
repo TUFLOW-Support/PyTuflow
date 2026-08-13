@@ -24,7 +24,7 @@
         "!_______________________________________________________",
         "! Soil - Infiltration commands",
         "Set Soil == 1  ! defines top layer",
-        "! Read GIS Soil == <path/to/2d_soil>  ! e.g. of reading vector layer"
+        "! Read GIS Soil == ${gis_soil_path}"
       ]
     }
   ]

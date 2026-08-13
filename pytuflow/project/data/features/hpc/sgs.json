@@ -12,7 +12,7 @@
         "\n!_______________________________________________________",
         "! SGS SETTINGS",
         "SGS == ON",
-        "SGS Sample Target Distance == <distance>  ! TODO update to appropriate value based on model cell size"
+        "SGS Sample Target Distance == ${sgs_sample_distance}  ! TODO update to appropriate value based on model cell size"
       ]
     },
     {
@@ -22,9 +22,9 @@
       "commands": [
         "\n!_______________________________________________________",
         "! MAP OUTPUT SETTINGS",
-        "SGS Map Extent Trim == All",
-        "SGS Depth Output == Cell Average",
-        "! Map Cutoff Depth == 0.01  ! uncomment if required"
+        "SGS Map Extent Trim == ${sgs_map_extent_trim}",
+        "SGS Depth Output == ${sgs_depth_output}",
+        "! Map Cutoff Depth == ${map_cutoff_depth}  ! uncomment if required"
       ]
     }
   ]
