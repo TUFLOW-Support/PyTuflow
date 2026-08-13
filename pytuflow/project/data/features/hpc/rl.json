@@ -1,11 +1,11 @@
 {
-  "name": "po",
-  "display_name": "Plot Output (PO)",
-  "sort_order": 80,
+  "name": "rl",
+  "display_name": "Reporting Location (RL)",
+  "sort_order": 90,
   "template_files": [],
   "command_blocks": [
     {
-      "id": "po_header",
+      "id": "rl_header",
       "target_cf": "tcf",
       "existence_check": "! PLOT OUTPUT",
       "placement_rule": "before_po_commands",
@@ -15,19 +15,19 @@
       ]
     },
     {
-      "id": "po_commands",
+      "id": "rl_commands",
       "target_cf": "tcf",
       "placement_rule": "after_po_commands",
       "commands": [
-        "Read GIS PO == ${po_path}"
+        "Read GIS Reporting Location == ${rl_path}"
       ]
     },
     {
-      "id": "tcf_time_series_output_interval",
+      "id": "tcf_time_series_output_interval_rl",
       "target_cf": "tcf",
       "placement_rule": "after_po_commands",
       "commands": [
-        "Time Series Output Interval == ${time_series_interval}"
+        "##COMMANDS tcf_time_series_output_interval##"
       ]
     }
   ]

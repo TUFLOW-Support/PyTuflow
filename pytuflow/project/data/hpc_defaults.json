@@ -6,6 +6,7 @@
   "model_domain_size": "<X, Y>  ! TODO",
   "bc_gis_path_1d": "<path/to/1d_bc>",
   "po_path": "<path/to/2d_po>",
+  "rl_path": "<path/to/0d_rl>",
   "gis_soil_path": "<path/to/2d_soil>",
   "time_series_interval": 60,
   "map_cutoff_depth": 0.05,
