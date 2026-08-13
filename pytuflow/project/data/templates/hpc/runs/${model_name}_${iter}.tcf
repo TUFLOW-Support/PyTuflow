@@ -5,7 +5,7 @@ Spatial Database == ..\model\gis\${model_name}_${iter}.gpkg
 !_______________________________________________________
 ! GIS
 GIS Format == ${gis_format}
-GRID Format == TIF
+GRID Format == ${grid_format}
 ##IF ${gis_format}:SHP##
 SHP Projection == ..\model\gis\projection.shp
 ##ENDIF##
@@ -23,7 +23,6 @@ MI Projection == ..\model\gis\projection.mif
 ##ENDIF##
 Solution scheme == ${engine}
 Hardware == ${hardware}
-
 ##IF feature:sgs##
 ##COMMANDS sgs_on##
 ##ENDIF##
@@ -55,18 +54,24 @@ Read Materials File == ..\model\${model_name}_mat.csv
 ##IF feature:swmm##
 ##COMMANDS swmm_tcf##
 ##ENDIF##
+##IF not:${iwl}==0##
 
 !_______________________________________________________
 ! INITIAL WATER LEVEL
-! Set IWL == <Value>
+Set IWL == ${iwl}
+##ENDIF##
 
 !_______________________________________________________
 ! SIMULATION CONTROLS
-Start Time == 0
-End Time == <hrs>  ! TODO
-! Timestep == <sec>  ! TODO uncomment if using Classic
-! Timestep Initial == <sec>  ! TODO uncomment if using HPC
-! Timestep Maximum == <sec>  ! uncomment if required (value should be based on cell size)
+Start Time == ${start_time}
+End Time == ${end_time}
+##IF ${engine}==HPC##
+Timestep Initial == ${timestep}
+! Timestep Maximum == ${timestep_maximum}  ! uncomment if required (value should be based on cell size)
+##ENDIF##
+##IF not:${engine}==HPC##
+Timestep == ${timestep}
+##ENDIF##
 
 !_______________________________________________________
 ! OUTPUT FOLDERS
@@ -79,10 +84,16 @@ Write Check Files == ..\check\
 ! MAP OUTPUT FORMATS
 Map Output Format == ${map_output_formats_str}
 ${output_format_setting_lines}
-
 ##IF feature:sgs##
 ##COMMANDS sgs_output_settings##
 ##ENDIF##
+##IF feature:po;rl##
+##COMMANDS po_header##
+##COMMANDS tcf_time_series_output_interval##
 ##IF feature:po##
 ##COMMANDS po_commands##
+##ENDIF##
+##IF feature:rl##
+##COMMANDS rl_commands##
+##ENDIF##
 ##ENDIF##

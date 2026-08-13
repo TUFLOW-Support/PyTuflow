@@ -188,7 +188,7 @@ class TemplateEngine:
             condition = condition[4:]
 
         if condition.startswith('feature:'):
-            feature_names = condition[8:].split(',')
+            feature_names = condition[8:].split(';')
             result = bool(set(feature_names).intersection(set(active_features)))
         else:
             # ${var}:value — variable equality check (case-insensitive)

@@ -1,5 +1,6 @@
 {
   "engine": "HPC",
+  "timestep_maximum": "<maximum_timestep (s)>",
   "cell_size": "<cell size>  ! TODO populate with appropriate value",
   "model_domain_origin": "0, 0",
   "model_domain_angle": "0",
