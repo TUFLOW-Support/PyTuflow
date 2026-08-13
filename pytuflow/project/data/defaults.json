@@ -3,5 +3,7 @@
   "gis_format": "SHP",
   "hardware": "GPU",
   "units": "Metric",
-  "iwl": 0
+  "iwl": 0,
+  "event_name": "<EVENT_NAME>",
+  "event_text": "<EVENT_TEXT>"
 }
