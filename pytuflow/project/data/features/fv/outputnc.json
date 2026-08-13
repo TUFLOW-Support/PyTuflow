@@ -21,7 +21,7 @@
         "Output Parameters == ${output_params}",
         "Output Interval == ${output_interval}",
         "##IF not:${output_suffix}:0##",
-        "Suffix == ${output_suffix}",
+          "Suffix == ${output_suffix}",
         "##ENDIF##"
       ]
     }

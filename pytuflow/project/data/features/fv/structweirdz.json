@@ -29,7 +29,7 @@
       "target_previous_block": true,
       "commands": [
         "Flux Function == Weir_dz",
-        "Properties == <dz mL>, 1.705, 1.5, 8.55, 0.556, 0.7"
+        "Properties == ${struct_weir_dz}, 1.705, 1.5, 8.55, 0.556, 0.7"
       ]
     },
     {
@@ -37,7 +37,7 @@
         "target_cf": "fvc",
         "placement_rule": "before_fvc_structures",
         "commands": [
-            "Read GIS Notestring == <path/to/2d_ns_weirdz.shp>"
+            "Read GIS Notestring == ${nodestring_path}"
         ]
 
     }

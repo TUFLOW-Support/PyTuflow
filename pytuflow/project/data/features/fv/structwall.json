@@ -36,7 +36,7 @@
         "target_cf": "fvc",
         "placement_rule": "before_fvc_structures",
         "commands": [
-            "Read GIS Notestring == <path/to/2d_ns_wall.shp>"
+            "Read GIS Notestring == ${nodestring_path}"
         ]
 
     }

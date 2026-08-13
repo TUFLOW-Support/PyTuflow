@@ -20,7 +20,7 @@
       "placement_rule": "fvc_structures",
       "allow_multiple": true,
       "commands": [
-        "\nStructure == ${culv_conn_type}, <link1_id>, <link2_id>"
+        "\nStructure == ${struct_conn_type}, <link1_id>, <link2_id>"
       ]
     },
     {
@@ -29,7 +29,7 @@
       "target_previous_block": true,
       "commands": [
         "Flux Function == Culvert",
-        "Culvert File == <path/to/culvert_database.csv>"
+        "Culvert File == ${struct_culvert_csv}"
       ]
     },
     {

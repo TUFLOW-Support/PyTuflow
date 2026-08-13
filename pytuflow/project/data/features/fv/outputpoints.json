@@ -19,7 +19,7 @@
       "target_cf": "fvc",
       "target_previous_block": true,
       "commands": [
-        "Read GIS PO == <path/to/3d_po.shp>",
+        "Read GIS PO == ${po_path}",
         "Output Parameters == ${output_params}",
         "Output Interval == ${output_interval}",
         "Suffix == ${output_suffix}"

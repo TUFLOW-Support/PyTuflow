@@ -20,7 +20,7 @@
       "placement_rule": "fvc_structures",
       "allow_multiple": true,
       "commands": [
-        "\nStructure == <porous_connection_type>, <link1_id>, <link2_id>"
+        "\nStructure == ${struct_conn_type}, <link1_id>, <link2_id>"
       ]
     },
     {
@@ -29,7 +29,7 @@
       "target_previous_block": true,
       "commands": [
         "Flux Function == Porous",
-        "Properties == <K m/s>, <Flow Path Lengh m>"
+        "Properties == ${struct_porous_k}, ${struct_flowpath_length}"
       ]
     },
     {
@@ -37,7 +37,7 @@
         "target_cf": "fvc",
         "placement_rule": "before_fvc_structures",
         "commands": [
-            "Read GIS Notestring == <path/to/2d_ns_porous.shp>"
+            "Read GIS Notestring == ${nodestring_path}"
         ]
 
     }

@@ -20,7 +20,7 @@
       "placement_rule": "fvc_structures",
       "allow_multiple": true,
       "commands": [
-        "\nStructure == <coefficient_connection_type>, <link1_id>, <link2_id>"
+        "\nStructure == ${struct_conn_type}, <link1_id>, <link2_id>"
       ]
     },
     {
@@ -29,9 +29,9 @@
       "target_previous_block": true,
       "commands": [
         "Energy Loss Function == Coefficient",
-        "Form Loss Coefficient == <value>",
-        "! Blockage File  == <path/to/blockage_table.csv>",
-        "! Width File == .<path/to/width_table.csv>"
+        "Form Loss Coefficient == ${struct_coeff}",
+        "! Blockage File  == ${struct_blockage_csv}",
+        "! Width File == ${struct_width_csv}"
       ]
     },
     {
@@ -39,7 +39,7 @@
         "target_cf": "fvc",
         "placement_rule": "before_fvc_structures",
         "commands": [
-            "Read GIS Notestring == <path/to/2d_ns_coefficient.shp>"
+            "Read GIS Notestring == ${nodestring_path}"
         ]
 
     }
