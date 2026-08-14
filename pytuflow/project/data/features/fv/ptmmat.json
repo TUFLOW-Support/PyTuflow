@@ -42,7 +42,7 @@
       "by_directive_only": true,
       "allow_multiple": true,
       "commands": [
-        "Group == ${ptm_mat_grp_id}",
+        "Group == ${ptm_grp_id}",
         "##STARTBLOCK##",
         "##IF not:${stm_settling_model}:0;none##",
           "Settling parameters == ${stm_settling_params}",

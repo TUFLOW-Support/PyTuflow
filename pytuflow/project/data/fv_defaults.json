@@ -113,9 +113,15 @@
   "ptm_mobility_model": "<mobility model name>",
   "ptm_mobility_params": "<mobility model params>",
   "ptm_mobility_start_time": 0,
+  "ptm_grp_id": "<particle group name>",
   "ptm_mat_grp_id": 1,
   "ptm_mat_bed_roughness_params": 0,
   "ptm_mat_suspended_load_scale": 0,
   "ptm_mat_groups": [],
-  "ptm_mat_layers": []
+  "ptm_mat_layers": [],
+  "ptm_seeding_timeseries_csv": "..\\bc_dbase\\ptm_seeding_time_series.csv",
+  "ptm_seeding_poly_csv": "..\\bc_dbase\\ptm_seeding_poly.csv",
+  "ptm_seeding_vertical_distr_csv": "..\\bc_dbase\\ptm_vertical_distribution.csv",
+  "ptm_seeding_vertical_coord_type": "depth",
+  "ptm_group_mass": "<grp1_mass, ... (g)>"
 }

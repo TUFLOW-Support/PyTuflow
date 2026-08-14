@@ -99,6 +99,20 @@
             ]
         },
         {
+            "name": "ptmseedpnt",
+            "ptm_grp_id": "microplastics",
+            "ptm_seed_pnt_x": "<x-coord>",
+            "ptm_seed_pnt_y": "<y-coord>",
+            "ptm_seeding_timeseries_csv": "..\\bc_dbase\\ptm_seeding_time_series.csv"
+        },
+        {
+            "name": "ptmseedpoly",
+            "ptm_grp_id": "sediment",
+            "ptm_seeding_vertical_coord_type": "depth",
+            "ptm_seeding_vertical_distr_csv": "..\\bc_dbase\\ptm_vertical_distribution.csv",
+            "ptm_group_mass": 1000
+        },
+        {
             "name": "outputnc",
             "output_params": "h, d, v, TAUCW, Rhow, Taub, TauC, PTM_1, PTM_2, PTM_BED_2",
             "output_interval": 3600,

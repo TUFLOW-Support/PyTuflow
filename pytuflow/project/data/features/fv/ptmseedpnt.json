@@ -1,0 +1,26 @@
+{
+  "name": "ptmseedpnt",
+  "display_name": "Seed particles (point)",
+  "sort_order": 100,
+  "template_files": [],
+  "command_blocks": [
+    {
+      "id": "fvptm_seed",
+      "target_cf": "fvptm",
+      "placement_rule": "fvptm_seed",
+      "allow_multiple": true,
+      "commands": [
+        "Seed particles == point, ${ptm_seed_pnt_x}, ${ptm_seed_pnt_y}"
+      ]
+    },
+    {
+      "id": "fvptm_seed_param",
+      "target_previous_block": true,
+      "commands": [
+        "Particle groups == ${ptm_grp_id}",
+        "Timeseries file == ${ptm_seeding_timeseries_csv}",
+        "Timeseries header == Date,${ptm_grp_id}"
+      ]
+    }
+  ]
+}

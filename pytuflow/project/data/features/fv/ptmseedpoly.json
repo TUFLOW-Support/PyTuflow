@@ -1,0 +1,28 @@
+{
+  "name": "ptmseedpoly",
+  "display_name": "Seed particles (poly)",
+  "sort_order": 100,
+  "template_files": [],
+  "command_blocks": [
+    {
+      "id": "fvptm_seed_poly",
+      "target_cf": "fvptm",
+      "placement_rule": "fvptm_seed",
+      "allow_multiple": true,
+      "commands": [
+        "Seed particles == polygon"
+      ]
+    },
+    {
+      "id": "fvptm_seed_param",
+      "target_previous_block": true,
+      "commands": [
+        "Particle groups == ${ptm_grp_id}",
+        "Polygon file == ${ptm_seeding_poly_csv}",
+        "Vertical coordinate type == ${ptm_seeding_vertical_coord_type}",
+        "Vertical distribution file == ${ptm_seeding_vertical_distr_csv}",
+        "group mass == ${ptm_group_mass}"
+      ]
+    }
+  ]
+}

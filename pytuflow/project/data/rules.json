@@ -261,5 +261,14 @@
       "/!\\s*PARTICLE GROUP.*/i",
       "/^group$/i"
     ]
+  },
+  "fvptm_seed": {
+    "description": "Insert after particle seed blocks.",
+    "rule": "after",
+    "match_first": false,
+    "commands": [
+      "/!\\s*PARTICLE SEED.*/i",
+      "/^seed particles$/i"
+    ]
   }
 }
