@@ -152,7 +152,10 @@
       "/^Scalar mixing model$/i",
       "/^Global horizontal scalar diffusivity$/i",
       "/^Global horizontal scalar diffusivity limits$/i",
-      "/^Cell Wet/Dry Depths$/i"
+      "/^Cell Wet/Dry Depths$/i",
+      "/^Scalar Mixing Model$/i",
+      "/^Global Horizontal Scalar Diffusivity$/i",
+      "/^Global Horizontal Scalar Diffusivity Limits$/i"
     ]
   },
   "fvc_model_parameters": {

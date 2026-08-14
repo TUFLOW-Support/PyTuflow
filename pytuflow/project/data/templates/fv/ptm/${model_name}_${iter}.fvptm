@@ -1,7 +1,7 @@
 ! PTM to assess fate of CSO Outfall
 
 ! use nodestring definition from HD model to allow particles to leave model domain. 
-Open boundary nodestring == 2  ! downstream tidal boundary
+Open boundary nodestring == ${ptm_bndry_ns_id}
 
 !_________________________________________________________________
 ! TIME COMMANDS

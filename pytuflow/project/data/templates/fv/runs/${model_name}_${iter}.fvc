@@ -72,6 +72,13 @@ Global Bottom Roughness == ${glob_bottom_rough}										! {1.0E-6} Manning's 'n
 Momentum Mixing Model == ${momenutim_mixing_model}									! None | Constant | Smagorinsky | Wu
 Global Horizontal Eddy Viscosity == ${glob_horiz_eddy_visc}									! {0.0} Smagorinksy coefficient
 Global Horizontal Eddy Viscosity Limits == ${glob_horz_eddy_visc_lims}					! {0.0} Minimum eddy viscosity (m^2/s), {99999.} Maximum eddy viscosity (m^2/s)
+##IF not:${scalar_mixing_model}:none##
+
+! Scalars
+Scalar Mixing Model == ${scalar_mixing_model}
+Global Horizontal Scalar Diffusivity == ${glob_horiz_scalar_diffusivity}
+Global Horizontal Scalar Diffusivity Limits == ${glob_horiz_scalar_diffusivity_lims}
+##ENDIF##
 
 ##IF feature:3d##
 !__________________________________________________________________________________________________________________________________________________________________________________________

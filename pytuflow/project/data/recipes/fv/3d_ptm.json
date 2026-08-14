@@ -1,0 +1,98 @@
+{
+    "name": "3d_ptm",
+    "description": "3D particle tracking model",
+    "variables": {
+        "hardware": "CPU",
+        "spherical": 1,
+        "time_format": "ISODATE",
+        "start_time": "<dd/mm/yyyy hh:mm:ss>",
+        "end_time": "<dd/mm/yyyy hh:mm:ss>",
+        "cfl": 0.6,
+        "timestep_limits": "0.5, 5.0",
+        "spatial_order": "1,2",
+        "bottom_drag_model": "ks",
+        "Global Bottom Roughness": 0.02,
+        "momenutim_mixing_model": "Smagorinsky",
+        "glob_horiz_eddy_visc": 0.2,
+        "glob_horz_eddy_visc_lims": "0.05, 99999.0",
+        "scalar_mixing_model": "Smagorinsky",
+        "glob_horiz_scalar_diffusivity": 0.2,
+        "glob_horiz_scalar_diffusivity_lims": "0.05, 99999."
+    },
+    "features": [
+        {
+            "name": "salinity",
+            "sal_active": 1,
+            "sal_density": 1,
+            "initial_sal": "<sal mg/L>"
+        },
+        {
+            "name": "temp",
+            "temp_active": 1,
+            "temp_density": 1,
+            "heat_active": 1,
+            "initial_temp": "<temp deg C>"
+        },
+        {
+            "name": "3d",
+            "vertical_mixing_model": "K-Omega",
+            "vertical_mixing_params": "0.55555, 0.075, 0.0768, 2.0, 2.0, 0.0, -0.637117",
+            "glob_vert_eddy_visc_lims": "1.0e-4, 1.0",
+            "glob_vert_scalar_diff_lims": "0., 1.0",
+            "glob_vert_tke_lim": "1.e-10",
+            "glob_vert_eps_lim": "1.e-14",
+            "second_order_vert_mixing_model": "Algebraic",
+            "second_order_vert_mixing_param_group": "CHCD01A",
+            "vertical_mesh_type": "Z",
+            "nsigma_layers": "4",
+            "min_bottom_thickness": 0.5,
+            "cell_3d_depth": 1.0
+        },
+        {
+            "name": "ptm_minimal",
+            "ptm_bndry_ns_id": "<nodestring id>",
+            "ptm_lagragian_timestep": 60.0,
+            "ptm_eulerian_timestep": 60.0,
+            "ptm_nscalar": "1,2,3",
+            "stm_bed_roughness_model": "ks",
+            "stm_bed_roughness_params": "0.01,0.01",
+            "stm_erosion_dep_lims": "0.01, 0.05",
+            "stm_deposition_dep_lims": "0.01, 0.05"
+        },
+        {
+            "name": "ptmgroup",
+            "ptm_group_name": "microplastics",
+            "ptm_initial_scalar_mass": 10,
+            "stm_d50": 0,
+            "stm_settling_model": "none",
+            "stm_deposition_model": "none",
+            "stm_erosion_model": "none",
+            "ptm_horiz_dispersion_model": "constant",
+            "ptm_horiz_dispersion_params": 1.0,
+            "ptm_vert_dispersion_model": "HD",
+            "ptm_vert_dispersion_params": 1.0
+        },
+        {
+            "name": "ptmgroup",
+            "ptm_group_name": "sediment",
+            "ptm_initial_scalar_mass": 1,
+            "stm_d50": 0.000002,
+            "stm_settling_model": "constant",
+            "stm_settling_params": 0.0002,
+            "stm_deposition_model": "Krone",
+            "stm_deposition_params": 0.25,
+            "stm_erosion_model": "Mehta",
+            "stm_erosion_params": "0.1, 0.2, 1.0",
+            "ptm_horiz_dispersion_model": "constant",
+            "ptm_horiz_dispersion_params": 1.0,
+            "ptm_vert_dispersion_model": "HD",
+            "ptm_vert_dispersion_params": 1.0
+        },
+        {
+            "name": "outputnc",
+            "output_params": "h, d, v, TAUCW, Rhow, Taub, TauC, PTM_1, PTM_2, PTM_BED_2",
+            "output_interval": 3600,
+            "output_suffix": 0
+        }
+    ]
+}

@@ -1,7 +1,7 @@
 {
   "name": "ptmgroup",
   "display_name": "Particle Group",
-  "sort_order": 5,
+  "sort_order": 100,
   "template_files": [],
   "command_blocks": [
     {
@@ -15,17 +15,17 @@
     },
     {
       "id": "fvptm_group_param",
-      "target_cf": "fvsed",
+      "target_cf": "fvptm",
       "target_previous_block": true,
       "commands": [
-        "Initial scalar mass == ${ptm_initial_scala_mass}",
+        "Initial scalar mass == ${ptm_initial_scalar_mass}",
         "##IF not:${stm_d50}:0##",
             "d50 == ${stm_d50}",
             "Particle density == ${stm_particle_density}",
         "##ENDIF##",
         "##IF not:${stm_settling_model}:0##",
           "Settling model == ${stm_settling_model}",
-          "##IF not:${stm_settling_model:none##",
+          "##IF not:${stm_settling_model}:none##",
             "Settling parameters == ${stm_settling_params}",
           "##ENDIF##",
         "##ENDIF##",
