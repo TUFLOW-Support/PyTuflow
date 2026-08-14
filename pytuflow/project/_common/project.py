@@ -346,24 +346,23 @@ class BaseEngineProject(BaseProject):
         import pytuflow as pt
 
         def check_for_template_key(key: str):
-            feature = needed_types[key]
-            config = feature._get_config()
-            for template_config in config.get('template_files', []):
-                template_key = template_config.get('template_key', '')
-                if Path(template_key).suffix.lower() == f'.{key}':
-                    return template_key
+            for feature in features:
+                config = feature._get_config()
+                for template_config in config.get('template_files', []):
+                    template_key = template_config.get('template_key', '')
+                    if Path(template_key).suffix.lower() == f'.{key}':
+                        return template_key
 
         def load_via_template_key(key: str, template_key: str = ''):
-            feature = needed_types.get(key)
-            if not feature:
-                return
-            template_key = key if not template_key else template_key
-            out_path = feature.rendered_templates.get(template_key, '')
-            if not Path(out_path).suffix:  # either doesn't exist or isn't a file path
-                return
-            cf_type = Path(out_path).suffix[1:].lower()
-            if out_path.exists() and cf_type in cf_classes:
-                result[cf_type] = cf_classes[cf_type](out_path)
+            for feature in features:
+                template_key = key if not template_key else template_key
+                out_path = feature.rendered_templates.get(template_key, '')
+                if not Path(out_path).suffix:  # either doesn't exist or isn't a file path
+                    continue
+                cf_type = Path(out_path).suffix[1:].lower()
+                if out_path.exists() and cf_type in cf_classes:
+                    result[cf_type] = cf_classes[cf_type](out_path)
+                    return
 
         needed_types = cls._needed_cf_types(features)
         cf_classes = {k: getattr(pt, v['class']) for k, v in cls.CF_TYPE_MAP.items()}
