@@ -1,0 +1,31 @@
+! PTM to assess fate of CSO Outfall
+
+! use nodestring definition from HD model to allow particles to leave model domain. 
+Open boundary nodestring == 2  ! downstream tidal boundary
+
+!_________________________________________________________________
+! TIME COMMANDS
+lagrangian timestep == ${ptm_lagragian_timestep}
+eulerian timestep == ${ptm_eulerian_timestep}
+
+! Global COMMANDS
+Nscalar == ${ptm_nscalar}
+
+! Sediment Transport COMMANDS (required if a particle group interacts with bed)
+bed roughness model == ${stm_bed_roughness_model}
+bed roughness parameters == ${stm_bed_roughness_params}
+
+! Depth Limit commands
+erosion depth limits == ${stm_erosion_dep_lims}
+deposition depth limits == ${stm_deposition_dep_lims}
+
+!_________________________________________________________________
+! PARTICLE GROUP COMMANDS
+
+!_________________________________________________________________
+! MATERIAL SPEC COMMANDS
+
+!_________________________________________________________________
+! OUTPUT SETTINGS
+
+output dir == ..\results\

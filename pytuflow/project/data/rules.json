@@ -246,8 +246,17 @@
     "rule": "after",
     "match_first": false,
     "commands": [
-      "/!\\s*MATERIAL SPEC COMMANDS/i",
+      "/!\\s*MATERIAL ?:\\sSPEC\\s)?COMMANDS/i",
       "/^material$/i"
+    ]
+  },
+  "fvptm_group": {
+    "description": "Insert after particle group blocks.",
+    "rule": "after",
+    "match_first": false,
+    "commands": [
+      "/!\\s*PARTICLE GROUP.*/i",
+      "/^group$/i"
     ]
   }
 }

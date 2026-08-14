@@ -3,25 +3,24 @@
 ! use nodestring definition from HD model to allow particles to leave model domain. 
 Open boundary nodestring == 2  ! downstream tidal boundary
 
-!TIME COMMANDS
 !_________________________________________________________________
-lagrangian timestep == 60. ! seconds
-eulerian timestep == 60. ! seconds
+! TIME COMMANDS
+lagrangian timestep == ${ptm_lagragian_timestep}
+eulerian timestep == ${ptm_eulerian_timestep}
 
-
-!Global COMMANDS
-Nscalar == 1,2,3
+! Global COMMANDS
+Nscalar == ${ptm_nscalar}
 
 ! Sediment Transport COMMANDS (required if a particle group interacts with bed)
-bed roughness model == ks
-bed roughness parameters == 0.01,0.01				! ksc, ksw
+bed roughness model == ${stm_bed_roughness_model}
+bed roughness parameters == ${stm_bed_roughness_params}
 
 ! Depth Limit commands
-erosion depth limits == 0.01, 0.05      			! Analagous to sediment transport
-deposition depth limits == 0.01, 0.05   			! Analagous to sediment transport
+erosion depth limits == ${stm_erosion_dep_lims}
+deposition depth limits == ${stm_deposition_dep_lims}
 
-!PARTICLE GROUP COMMANDS 
 !_________________________________________________________________
+! PARTICLE GROUP COMMANDS 
 
 group == microplastics
   initial scalar mass == 10
@@ -51,6 +50,7 @@ group == sediment
  end group
 
 !_________________________________________________________________
+! MATERIAL SPEC COMMANDS
 
 ! This is required due to adding deposition and settling.
 Material == 0					! Default material. If wanting spatial distribution require multiple blocks
@@ -59,7 +59,7 @@ Material == 0					! Default material. If wanting spatial distribution require mu
 	End layer
 end material
 
-!CSO
+! CSO
 seed particles == point,  159.09971,  -31.39463,
 	particle groups == microplastics
 	timeseries file ==  ..\bc_dbase\CSO.csv
@@ -75,9 +75,8 @@ seed particles == polygon
 	group mass == 1000
 end seed
 
-
-! OUTPUT SETTINGS
 !_________________________________________________________________
+! OUTPUT SETTINGS
 
 output dir == ..\results\
 
