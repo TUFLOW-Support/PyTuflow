@@ -30,5 +30,4 @@ deposition depth limits == ${stm_deposition_dep_lims}
 
 !_________________________________________________________________
 ! OUTPUT SETTINGS
-
 output dir == ..\results\

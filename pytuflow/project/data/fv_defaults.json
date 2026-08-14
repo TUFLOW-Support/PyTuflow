@@ -123,5 +123,6 @@
   "ptm_seeding_poly_csv": "..\\bc_dbase\\ptm_seeding_poly.csv",
   "ptm_seeding_vertical_distr_csv": "..\\bc_dbase\\ptm_vertical_distribution.csv",
   "ptm_seeding_vertical_coord_type": "depth",
-  "ptm_group_mass": "<grp1_mass, ... (g)>"
+  "ptm_group_mass": "<grp1_mass, ... (g)>",
+  "ptm_output_groups": "<grp1, ... >"
 }

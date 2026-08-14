@@ -117,6 +117,12 @@
             "output_params": "h, d, v, TAUCW, Rhow, Taub, TauC, PTM_1, PTM_2, PTM_BED_2",
             "output_interval": 3600,
             "output_suffix": 0
+        },
+        {
+            "name": "outputnc_ptm",
+            "ptm_output_groups": "microplastics, sediment",
+            "output_params": "uvw, depth, water_depth, uvw_water, state_age",
+            "output_interval": 1800
         }
     ]
 }
