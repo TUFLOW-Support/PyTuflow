@@ -1,7 +1,7 @@
 {
   "name": "sedmat",
   "display_name": "Sediment Material",
-  "sort_order": 5,
+  "sort_order": 110,
   "template_files": [],
   "command_blocks": [
     {

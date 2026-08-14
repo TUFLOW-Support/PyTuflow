@@ -51,7 +51,6 @@ group == sediment
 
 !_________________________________________________________________
 ! MATERIAL SPEC COMMANDS
-
 ! This is required due to adding deposition and settling.
 Material == 0					! Default material. If wanting spatial distribution require multiple blocks
 	Layer == 1
@@ -59,6 +58,8 @@ Material == 0					! Default material. If wanting spatial distribution require mu
 	End layer
 end material
 
+!_________________________________________________________________
+! PARTICLE SEED COMMANDS
 ! CSO
 seed particles == point,  159.09971,  -31.39463,
 	particle groups == microplastics

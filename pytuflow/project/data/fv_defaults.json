@@ -112,5 +112,10 @@
   "ptm_mobility_models": [],
   "ptm_mobility_model": "<mobility model name>",
   "ptm_mobility_params": "<mobility model params>",
-  "ptm_mobility_start_time": 0
+  "ptm_mobility_start_time": 0,
+  "ptm_mat_grp_id": 1,
+  "ptm_mat_bed_roughness_params": 0,
+  "ptm_mat_suspended_load_scale": 0,
+  "ptm_mat_groups": [],
+  "ptm_mat_layers": []
 }

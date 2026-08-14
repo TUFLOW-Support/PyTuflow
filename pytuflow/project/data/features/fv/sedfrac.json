@@ -1,7 +1,7 @@
 {
   "name": "sedfrac",
   "display_name": "Sediment Fraction",
-  "sort_order": 5,
+  "sort_order": 110,
   "template_files": [],
   "command_blocks": [
     {

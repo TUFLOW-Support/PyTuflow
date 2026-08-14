@@ -89,6 +89,16 @@
             "ptm_vert_dispersion_params": 1.0
         },
         {
+            "name": "ptmmat",
+            "stm_mat_id": "0",
+            "ptm_mat_layers": [
+                {
+                    "stm_mat_layer_dry_density": "1631.,1631.",
+                    "ptm_mat_groups": []
+                }
+            ]
+        },
+        {
             "name": "outputnc",
             "output_params": "h, d, v, TAUCW, Rhow, Taub, TauC, PTM_1, PTM_2, PTM_BED_2",
             "output_interval": 3600,

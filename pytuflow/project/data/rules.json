@@ -249,7 +249,7 @@
     "rule": "after",
     "match_first": false,
     "commands": [
-      "/!\\s*MATERIAL ?:\\sSPEC\\s)?COMMANDS/i",
+      "/!\\s*MATERIAL(?:\\s+SPEC\\s+)?COMMANDS/i",
       "/^material$/i"
     ]
   },

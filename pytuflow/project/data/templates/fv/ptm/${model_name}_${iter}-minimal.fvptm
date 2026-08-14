@@ -26,6 +26,9 @@ deposition depth limits == ${stm_deposition_dep_lims}
 ! MATERIAL SPEC COMMANDS
 
 !_________________________________________________________________
+! PARTICLE SEED COMMANDS
+
+!_________________________________________________________________
 ! OUTPUT SETTINGS
 
 output dir == ..\results\
