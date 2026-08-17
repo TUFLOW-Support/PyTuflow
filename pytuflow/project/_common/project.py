@@ -169,9 +169,10 @@ class BaseEngineProject(BaseProject):
         # Render and write feature template files
         for feature, _overrides in feature_pairs:
             for template_key, output_rel in feature.get_template_files(variables):
-                rendered_out = Template(output_rel).safe_substitute(variables)
+                merged_vars = {**variables, **_overrides} if _overrides else variables
+                rendered_out = Template(output_rel).safe_substitute(merged_vars)
                 text = self._manager.get_template(template_key)
-                rendered_text = self._engine.render(text, variables, active_features, feature_configs)
+                rendered_text = self._engine.render(text, merged_vars, active_features, feature_configs)
                 rendered_text = _normalize_rendered(rendered_text)
                 out_path = self.output_dir / rendered_out
                 out_path.parent.mkdir(parents=True, exist_ok=True)

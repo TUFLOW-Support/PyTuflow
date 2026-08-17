@@ -1,0 +1,139 @@
+! TUFLOW FV
+
+!__________________________________________________________________________________________________________________________________
+! COORDINATE REFERENCE FRAME
+! Cartesian (Eastings and Northings) model in metric units
+GIS FORMAT == SHP											! {MIF} | SHP
+SHP Projection == ../model/gis/projection.shp						! Projection string used for GIS integration
+Units == Metric															! {Metric} | US Customary | Imperial | English        
+Spherical == 1											! {0} Cartesian | 1 Spherical
+Include Salinity == 1,1
+Include Temperature == 1,1
+Include Heat == 1
+
+!__________________________________________________________________________________________________________________________________________________________________________________________
+! HARDWARE (optional)
+Hardware == CPU
+
+!__________________________________________________________________________________________________________________________________________________________________________________________
+! SPATIAL ORDER (optional)
+Spatial Order == 1,2
+
+!__________________________________________________________________________________________________________________________________________________________________________________________
+! SIMULATION TIME SETTINGS
+Time Format == ISODATE								! {HOURS} | ISODATE
+Start Time == <dd/mm/yyyy hh:mm:ss>														! Simulation start time (dd/mm/yyyy hh:mm:ss)
+End Time == <dd/mm/yyyy hh:mm:ss>															! Simulation end time (dd/mm/yyyy hh:mm:ss)
+
+!__________________________________________________________________________________________________________________________________________________________________________________________
+! COMPUTATIONAL TIMESTEP
+CFL == 0.6																! {1.0} Courant stability criterion
+Timestep Limits == 0.4, 15.0											! {0.0} Minimum model timestep (s), {0.0} Maximum model timestep (s)
+
+!__________________________________________________________________________________________________________________________________________________________________________________________
+! WETTING AND DRYING (optional)
+! Set to default {1.e-5} Dry depth (m), {1.e-2} Wet depth (m)
+
+!__________________________________________________________________________________________________________________________________________________________________________________________
+! BOTTOM DRAG
+Bottom Drag Model == ks											! {Manning} | ks
+Global Bottom Roughness == 0.018										! {1.0E-6} Manning's 'n' 
+
+!__________________________________________________________________________________________________________________________________________________________________________________________
+! HORIZONTAL MIXING
+! Turbulence
+Momentum Mixing Model == Smagorinsky									! None | Constant | Smagorinsky | Wu
+Global Horizontal Eddy Viscosity == 0.2									! {0.0} Smagorinksy coefficient
+Global Horizontal Eddy Viscosity Limits == 0.05, 99999.0					! {0.0} Minimum eddy viscosity (m^2/s), {99999.} Maximum eddy viscosity (m^2/s)
+
+! Scalars
+Scalar Mixing Model == Smagorinsky
+Global Horizontal Scalar Diffusivity == 0.2
+Global Horizontal Scalar Diffusivity Limits == 0.05, 99999.
+
+!__________________________________________________________________________________________________________________________________________________________________________________________
+! VERTICAL MIXING
+Vertical Mixing Model == K-Omega
+Vertical Mixing Parameters == 0.55555, 0.075, 0.0768, 2.0, 2.0, 0.0, -0.637117
+Global Vertical Eddy Viscosity Limits == 1.0e-4, 1.0
+Global Vertical Scalar Diffusivity Limits == 0., 1.0
+Global Vertical TKE Limit == 1.e-10
+Global Vertical EPS Limit == 1.e-14
+Second Order Vertical Mixing Model == Algebraic
+Second Order Vertical Mixing Model Parameter Group == CHCD01A
+
+
+!______________________________________________________________________________________________________________________
+! WATER QUALITY
+Water Quality Model == tuflow
+Water Quality Control File == test_001.fvwq
+Water Quality Model Directory == ../wqm/
+
+!__________________________________________________________________________________________________________________________________________________________________________________________
+! WIND STRESS (optional)
+! Default wind stress model and parameter adopted
+
+!__________________________________________________________________________________________________________________________________________________________________________________________
+! COMPUTATIONAL MESH
+! Unstructured
+Geometry 2D == <path/to/geometry.2dm>
+
+!__________________________________________________________________________________________________________________________________________________________________________________________
+! VERTICAL MESH GEOMETRY
+Vertical Mesh Type == z
+Layer Faces == ../model/csv/2D_Z_Layers_001.csv
+Surface Sigma Layers == 4
+Min Bottom Layer Thickness == 0.5
+Cell 3D Depth == 1.0
+
+!__________________________________________________________________________________________________________________________________________________________________________________________
+! BATHYMETRY 
+! Bathymetry is assigned within mesh 2dm file
+
+!__________________________________________________________________________________________________________________________________________________________________________________________
+! INITIAL CONDITIONS
+Initial Water Level == 0
+Initial Salinity == <sal mg/L>
+Initial Temperature == <temp deg>
+initial wq concentration == <conc mg/L>, ...
+
+!__________________________________________________________________________________________________________________________________________________________________________________________
+! MATERIALS
+! Example Material
+Material == 1															! {0} Material ID
+    Bottom Roughness == 0.018								! Manning's 'n' roughness coefficient
+End Material
+
+!__________________________________________________________________________________________________________________________________________________________________________________________
+! BOUNDARY CONDITIONS
+Read GIS Nodestring == <path/to/2d_ns.shp>
+
+! Example BC Block
+BC == WL, 2, ../bc_dbase/<wl_boundary.csv>
+    BC Header == time, WL
+    WQ Header == <WQ BC column headers>
+End BC
+
+!__________________________________________________________________________________________________________________________________________________________________________________________
+! MODEL OUTPUTS
+Output Dir == ../results												! Result output directory
+Log Dir == log															! Log and diagnostics directory
+Write Check Files == ../check											! Directory for GIS check files
+
+Output == netcdf
+    Output Parameters == h,v,d, temp, sal, sed_1
+    Output Interval == 3600
+    Suffix == HD
+End Output
+
+Output == netcdf
+    Output Parameters == wq_all
+    Output Interval == 3600
+    Suffix == WQ
+End Output
+
+Output == netcdf
+    Output Parameters == wq_diag_all
+    Output Interval == 3600
+    Suffix == WQ_Diag
+End Output

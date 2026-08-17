@@ -1,0 +1,76 @@
+{
+    "name": "3d_wqm",
+    "description": "3D water quality model",
+    "variables": {
+        "hardware": "CPU",
+        "spherical": 1,
+        "time_format": "ISODATE",
+        "start_time": "<dd/mm/yyyy hh:mm:ss>",
+        "end_time": "<dd/mm/yyyy hh:mm:ss>",
+        "cfl": 0.6,
+        "timestep_limits": "0.4, 15.0",
+        "spatial_order": "1,2",
+        "bottom_drag_model": "ks",
+        "Global Bottom Roughness": 0.04,
+        "momenutim_mixing_model": "Smagorinsky",
+        "glob_horiz_eddy_visc": 0.2,
+        "glob_horz_eddy_visc_lims": "0.05, 99999.0",
+        "scalar_mixing_model": "Smagorinsky",
+        "glob_horiz_scalar_diffusivity": 0.2,
+        "glob_horiz_scalar_diffusivity_lims": "0.05, 99999."
+    },
+    "features": [
+        {
+            "name": "salinity",
+            "sal_active": 1,
+            "sal_density": 1,
+            "initial_sal": "<sal mg/L>"
+        },
+        {
+            "name": "temp",
+            "temp_active": 1,
+            "temp_density": 1,
+            "heat_active": 1,
+            "initial_temp": "<temp deg C>"
+        },
+        {
+            "name": "3d",
+            "vertical_mixing_model": "K-Omega",
+            "vertical_mixing_params": "0.55555, 0.075, 0.0768, 2.0, 2.0, 0.0, -0.637117",
+            "glob_vert_eddy_visc_lims": "1.0e-4, 1.0",
+            "glob_vert_scalar_diff_lims": "0., 1.0",
+            "glob_vert_tke_lim": "1.e-10",
+            "glob_vert_eps_lim": "1.e-14",
+            "second_order_vert_mixing_model": "Algebraic",
+            "second_order_vert_mixing_param_group": "CHCD01A",
+            "vertical_mesh_type": "Z",
+            "nsigma_layers": "4",
+            "min_bottom_thickness": 0.5,
+            "cell_3d_depth": 1.0
+        },
+        {
+            "name": "wqm",
+            "wqm_simulation_class": "Organics",
+            "wqm_dt": 1800.0,
+            "wq_units": "mgL"
+        },
+        {
+            "name": "outputnc",
+            "output_params": "h,v,d, temp, sal, sed_1",
+            "output_interval": 3600,
+            "output_suffix": "HD"
+        },
+        {
+            "name": "outputnc",
+            "output_params": "wq_all",
+            "output_interval": 3600,
+            "output_suffix": "WQ"
+        },
+        {
+            "name": "outputnc",
+            "output_params": "wq_diag_all",
+            "output_interval": 3600,
+            "output_suffix": "WQ_Diag"
+        }
+    ]
+}
