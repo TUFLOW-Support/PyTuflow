@@ -124,5 +124,8 @@
   "ptm_seeding_vertical_distr_csv": "..\\bc_dbase\\ptm_vertical_distribution.csv",
   "ptm_seeding_vertical_coord_type": "depth",
   "ptm_group_mass": "<grp1_mass, ... (g)>",
-  "ptm_output_groups": "<grp1, ... >"
+  "ptm_output_groups": "<grp1, ... >",
+  "wqm_simulation_class": "DO",
+  "wqm_dt": "<dt (sec)>",
+  "wqm_units": "mgl"
 }

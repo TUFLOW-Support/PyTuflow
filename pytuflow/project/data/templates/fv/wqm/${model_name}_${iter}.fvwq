@@ -1,9 +1,10 @@
 ! ORGANICS SIMULATION CLASS
 !_________________________________________________________________
 ! SIMULATION CONTROLS
-Simulation Class == organics
-WQ dt == 1800.0
-WQ Units == mgl
+Simulation Class == ${wqm_simulation_class}
+WQ dt == ${wqm_dt}
+WQ Units == ${wqm_units}
+
 !_________________________________________________________________
 ! CONSTITUENT MODEL SETTINGS
 ! Oxygen
@@ -12,6 +13,7 @@ Oxygen Model == O2
 	Oxygen Benthic == 0.5, 1.08
 End Oxygen Model
 
+##IF not:${wqm_simulation_class}==DO##
 ! Silicate
 Silicate Model == si
 	Silicate Min Max == 0.0, 100.0
@@ -59,7 +61,9 @@ Phyto Model == basic, green
 	Nitrogen Fixing == 0.001, 0.5
 	Settling == constant, -0.05
 End Phyto Model
+##ENDIF##
 
+##IF ${wqm_simulation_class}==Organics##
 ! Organics
 Organic Matter Model == refractory
 	Carbon Min Max == 0.0, 10.0, 0.0, 10.0
@@ -79,17 +83,23 @@ Organic Matter Model == refractory
 	Ref Self Shading == 0.0, 0.0
 	Ref Settling == stokes, 0.00000045, 2450.8
 End Organic Matter Model
+##ENDIF##
+
 !_________________________________________________________________
 ! MATERIAL SPECIFICATIONS
 Material == default
 	Oxygen Flux ==  -10.0
+##IF not:${wqm_simulation_class}==DO##
 	Silicate Flux == 10.0
 	Ammonium Flux == 20.0
 	Nitrate Flux == 30.0
 	FRP Flux == 5.0
+##ENDIF##
+##IF ${wqm_simulation_class}==Organics##
 	DOC Flux == 20.0
 	DON Flux == 10.0
 	DOP Flux == 5.0
+##ENDIF##
 End Material
 
 Material == 1
