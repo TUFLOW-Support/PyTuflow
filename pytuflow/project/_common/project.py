@@ -155,29 +155,43 @@ class BaseEngineProject(BaseProject):
         main_cf_path = None
         for template_key, output_rel in self.BASE_TEMPLATES:
             rendered_out = Template(output_rel).safe_substitute(variables)
-            text = self._manager.get_template(template_key)
-            rendered_text = self._engine.render(text, variables, active_features, feature_configs)
-            rendered_text = _normalize_rendered(rendered_text)
             out_path = self.output_dir / rendered_out
-            out_path.write_text(rendered_text, encoding='utf-8')
             if (
                 template_key.startswith(f'{self.MAIN_CF_SUBDIR}/')
                 and template_key.endswith(f'.{self.MAIN_CF_EXT}')
             ):
                 main_cf_path = out_path
+            if out_path.exists():
+                overwrite = None
+                while not isinstance(overwrite, str) or overwrite.lower() not in ['y', 'yes', 'n', 'no']:
+                    overwrite = input(f'File {out_path} already exists. Overwrite? (y/n) ')
+                if overwrite.lower() in ['n', 'no']:
+                    continue
+
+            text = self._manager.get_template(template_key)
+            rendered_text = self._engine.render(text, variables, active_features, feature_configs)
+            rendered_text = _normalize_rendered(rendered_text)
+            out_path.write_text(rendered_text, encoding='utf-8')            
 
         # Render and write feature template files
         for feature, _overrides in feature_pairs:
             for template_key, output_rel in feature.get_template_files(variables):
                 merged_vars = {**variables, **_overrides} if _overrides else variables
                 rendered_out = Template(output_rel).safe_substitute(merged_vars)
+                out_path = self.output_dir / rendered_out
+                feature.rendered_templates[template_key] = out_path
+                if out_path.exists():
+                    overwrite = None
+                    while not isinstance(overwrite, str) or overwrite.lower() not in ['y', 'yes', 'n', 'no']:
+                        overwrite = input(f'File {out_path} already exists. Overwrite? (y/n) ')
+                    if overwrite.lower() in ['n', 'no']:
+                        continue
+                
                 text = self._manager.get_template(template_key)
                 rendered_text = self._engine.render(text, merged_vars, active_features, feature_configs)
                 rendered_text = _normalize_rendered(rendered_text)
-                out_path = self.output_dir / rendered_out
                 out_path.parent.mkdir(parents=True, exist_ok=True)
                 out_path.write_text(rendered_text, encoding='utf-8')
-                feature.rendered_templates[template_key] = out_path
 
         # Apply features to control files
         if main_cf_path is not None:
