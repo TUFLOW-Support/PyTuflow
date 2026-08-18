@@ -1,6 +1,6 @@
 {
-  "display_name": "Basic 2D Model (HPC)",
-  "description": "Basic 2D HPC model with SGS, events, and PO.",
+  "display_name": "Quadtree 2D Model",
+  "description": "2D HPC model with quadtree, SGS, events, and PO.",
   "variables": {
     "engine": "HPC",
     "hardware": "GPU",
@@ -11,6 +11,7 @@
     "timestep": 1
   },
   "features": [
+    "quadtree",
     "events",
     {
       "name": "sgs",

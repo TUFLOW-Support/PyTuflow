@@ -12,7 +12,14 @@
         "\n!_______________________________________________________",
         "! SGS SETTINGS",
         "SGS == ON",
-        "SGS Sample Target Distance == ${sgs_sample_distance}  ! TODO update to appropriate value based on model cell size"
+        "##IF ${sgs_sample_frequency}>0##",
+        "SGS Sample Frequency == ${sgs_sample_frequency}",
+        "##ENDIF##",
+        "##IF ${sgs_sample_frequency}<1##",
+        "##IF not:${sgs_sample_distance}>0##",
+        "SGS Sample Target Distance == ${sgs_sample_distance}",
+        "##ENDIF##",
+        "##ENDIF##"
       ]
     },
     {
@@ -24,7 +31,12 @@
         "! MAP OUTPUT SETTINGS",
         "SGS Map Extent Trim == ${sgs_map_extent_trim}",
         "SGS Depth Output == ${sgs_depth_output}",
-        "! Map Cutoff Depth == ${map_cutoff_depth}  ! uncomment if required"
+        "##IF ${map_cutoff_depth}>0##",
+        "Map Cutoff Depth == ${map_cutoff_depth}",
+        "##ENDIF##",
+        "##IF not:${map_cutoff_depth}>0##",
+        "! Map Cutoff Depth == <val (m)>  ! uncomment if required",
+        "##ENDIF##"
       ]
     }
   ]

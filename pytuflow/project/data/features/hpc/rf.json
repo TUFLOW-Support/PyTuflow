@@ -1,6 +1,6 @@
 {
   "name": "rf",
-  "display_name": "RF (Rainfall)",
+  "display_name": "RF (Gridded rainfall)",
   "sort_order": 70,
   "template_files": [
     {

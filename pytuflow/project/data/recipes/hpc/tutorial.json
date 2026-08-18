@@ -1,6 +1,6 @@
 {
-  "display_name": "Basic 2D Model (HPC)",
-  "description": "Basic 2D HPC model with SGS, events, and PO.",
+  "display_name": "Tutorial model",
+  "description": "Minimal 2D HPC model with SGS.",
   "variables": {
     "engine": "HPC",
     "hardware": "GPU",
@@ -11,7 +11,7 @@
     "timestep": 1
   },
   "features": [
-    "events",
+    "tutorial",
     {
       "name": "sgs",
       "sgs_sample_frequency": 11,
@@ -19,11 +19,6 @@
       "sgs_map_extent_trim": "All",
       "sgs_depth_output": "Cell Average",
       "map_cutoff_depth": -1
-    },
-    {
-      "name": "po",
-      "time_series_interval": 60,
-      "po_path": "<path/to/2d_po>"
     }
   ]
 }
