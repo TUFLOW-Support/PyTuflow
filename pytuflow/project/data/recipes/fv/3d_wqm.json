@@ -1,5 +1,5 @@
 {
-    "name": "3d_wqm",
+    "display_name": "3D Water Quality Model",
     "description": "3D water quality model",
     "variables": {
         "hardware": "CPU",

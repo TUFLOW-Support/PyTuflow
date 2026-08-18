@@ -1,5 +1,5 @@
 {
-    "name": "3d_ptm",
+    "display_name": "3D Particle Tracking Model",
     "description": "3D particle tracking model",
     "variables": {
         "hardware": "CPU",
