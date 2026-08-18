@@ -73,7 +73,7 @@ class BaseEngineFeature(BaseFeature):
             result.append((template_key, output_rel))
         return result
 
-    def apply_to_control_files(self, control_files: dict, variables: dict) -> None:
+    def apply_to_control_files(self, control_files: dict, variables: dict, skip_targets: list[str] = ()) -> None:
         """Apply this feature's command blocks to the supplied control file objects."""
         last_input = None
         config = self._get_config()
@@ -81,6 +81,8 @@ class BaseEngineFeature(BaseFeature):
             if block.get('by_directive_only', False):  # command block can only get inserted via ##COMMANDS ##
                 continue
             target = block.get('target_cf', 'tcf' if self.ENGINE_TYPE == 'hpc' else 'fvc')
+            if target in skip_targets:
+                continue
             loop_all = block.get('loop_all_found_targets', True)
             cf = control_files.get(target)
             if cf is None or cf == []:

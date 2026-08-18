@@ -350,7 +350,7 @@ def main():
         '--defaults', default=None, dest='defaults',
         help='Path to a JSON file or inline JSON string of variable defaults',
     )
-    group = p_create.add_mutually_exclusive_group()
+    group = p_insert.add_mutually_exclusive_group()
     group.add_argument('--force', '-f', action='store_true', help='Overwrite existing files.')
     group.add_argument('--yes', '-y', action='store_true', help='Overwrite existing files.')
     group.add_argument('--no', '-n', action='store_true', help='Skip existing files.')

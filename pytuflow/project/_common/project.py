@@ -116,6 +116,8 @@ class BaseEngineProject(BaseProject):
         if errors:
             raise ValueError('\n'.join(errors))
 
+        skipped_templates = []
+
         variables = dict(self.settings._settings)
         variables['model_name'] = self.name
         # Build active_features list of plain names for template ##IF## directives
@@ -163,6 +165,7 @@ class BaseEngineProject(BaseProject):
                 main_cf_path = out_path
             if out_path.exists() and overwrite_behaviour != 'force':
                 if overwrite_behaviour == 'skip':
+                    skipped_templates.append(Path(template_key).suffix.lower()[1:])
                     continue
                 elif overwrite_behaviour != 'interactive':
                     raise AttributeError(f'{overwrite_behaviour} is not recognised overwrite behaviour')
@@ -170,6 +173,7 @@ class BaseEngineProject(BaseProject):
                 while not isinstance(overwrite, str) or overwrite.lower() not in ['y', 'yes', 'n', 'no']:
                     overwrite = input(f'File {out_path} already exists. Overwrite? (y/n) ')
                 if overwrite.lower() in ['n', 'no']:
+                    skipped_templates.append(Path(template_key).suffix.lower()[1:])
                     continue
 
             text = self._manager.get_template(template_key)
@@ -186,9 +190,16 @@ class BaseEngineProject(BaseProject):
                 feature.rendered_templates[template_key] = out_path
                 if out_path.exists() and overwrite_behaviour != 'force':
                     if overwrite_behaviour == 'skip':
+                        skipped_templates.append(Path(template_key).suffix.lower()[1:])
                         continue
                     elif overwrite_behaviour != 'interactive':
                         raise AttributeError(f'{overwrite_behaviour} is not recognised overwrite behaviour')
+                    overwrite = None
+                    while not isinstance(overwrite, str) or overwrite.lower() not in ['y', 'yes', 'n', 'no']:
+                        overwrite = input(f'File {out_path} already exists. Overwrite? (y/n) ')
+                    if overwrite.lower() in ['n', 'no']:
+                        skipped_templates.append(Path(template_key).suffix.lower()[1:])
+                        continue
                 
                 text = self._manager.get_template(template_key)
                 rendered_text = self._engine.render(text, merged_vars, active_features, feature_configs)
@@ -205,7 +216,7 @@ class BaseEngineProject(BaseProject):
 
             for feature, overrides in feature_pairs:
                 merged_vars = {**variables, **overrides} if overrides else variables
-                feature.apply_to_control_files(control_files, merged_vars)
+                feature.apply_to_control_files(control_files, merged_vars, skip_targets=skipped_templates)
 
             main_cf.write('inplace')
             for cfs in secondary_cfs.values():

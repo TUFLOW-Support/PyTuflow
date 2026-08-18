@@ -10,7 +10,7 @@ class BaseFeature(ABC):
         """Returns list of (template_key, output_relative_path) pairs."""
 
     @abstractmethod
-    def apply_to_control_files(self, control_files: dict, variables: dict) -> None:
+    def apply_to_control_files(self, control_files: dict, variables: dict, skip_targets: list[str] = ()) -> None:
         """Apply this module's command blocks to the supplied control file objects.
 
         Parameters
