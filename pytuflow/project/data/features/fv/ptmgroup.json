@@ -86,7 +86,7 @@
           "##IF not:${ptm_mobility_start_time}:0##",
             "Mobility start time == ${ptm_mobility_start_time}",
           "##ENDIF##",
-        "##ENDBLOCK"
+        "##ENDBLOCK##"
       ]
     }
   ]
