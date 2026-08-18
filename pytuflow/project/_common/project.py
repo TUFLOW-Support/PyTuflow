@@ -275,6 +275,13 @@ class BaseEngineProject(BaseProject):
             rendered_out = Template(output_rel).safe_substitute(variables)
             out_path = project_dir / rendered_out
             feature.rendered_templates[template_key] = out_path
+            if out_path.exists():
+                overwrite = None
+                while not isinstance(overwrite, str) or overwrite.lower() not in ['y', 'yes', 'n', 'no']:
+                    overwrite = input(f'File {out_path} already exists. Overwrite? (y/n) ')
+                if overwrite.lower() in ['n', 'no']:
+                    continue
+
             if not out_path.exists():
                 text = manager.get_template(template_key)
                 rendered_text = engine.render(text, variables, [name], feature_configs)
