@@ -1166,3 +1166,179 @@ class TestAllowMultiple:
         # The commented weir line stays commented; culvert is added fresh
         assert '! Structure == weir' in content
         assert 'Structure == culvert' in content
+
+
+class TestHPCProjectOverwriteBehaviour:
+    """Tests for overwrite_behaviour options: force, skip, interactive (y/n), and invalid."""
+
+    @pytest.fixture
+    def basic_project(self, tmp_path):
+        return HPCProject(
+            name='mymodel',
+            output_dir=tmp_path / 'my_project',
+            crs='EPSG:32760',
+            create_empties=False,
+        )
+
+    def _create_twice(self, project_factory, tmp_path, overwrite_behaviour, sentinel='SENTINEL_CONTENT'):
+        """Create the project twice; on the second call use *overwrite_behaviour*.
+        Before the second call, overwrite the TCF with sentinel content.
+        Returns (tcf_path, content_after_second_create).
+        """
+        p = project_factory()
+        p.create()
+        tcf_path = tmp_path / 'my_project' / 'runs' / 'mymodel_001.tcf'
+        tcf_path.write_text(sentinel, encoding='utf-8')
+
+        p2 = project_factory()
+        p2.create(overwrite_behaviour=overwrite_behaviour)
+        return tcf_path, tcf_path.read_text(encoding='utf-8')
+
+    # --force / -f / --yes / -y  → overwrite_behaviour='force'
+
+    def test_force_overwrites_existing_file(self, tmp_path):
+        """overwrite_behaviour='force' overwrites existing files without prompting."""
+        factory = lambda: HPCProject(
+            name='mymodel', output_dir=tmp_path / 'my_project',
+            crs='EPSG:32760', create_empties=False,
+        )
+        tcf_path, content = self._create_twice(factory, tmp_path, 'force')
+        assert 'SENTINEL_CONTENT' not in content, "force must overwrite the sentinel file"
+        assert 'mymodel' in content
+
+    def test_force_does_not_prompt(self, tmp_path):
+        """overwrite_behaviour='force' never calls input()."""
+        factory = lambda: HPCProject(
+            name='mymodel', output_dir=tmp_path / 'my_project',
+            crs='EPSG:32760', create_empties=False,
+        )
+        factory().create()
+        with patch('builtins.input') as mock_input:
+            factory().create(overwrite_behaviour='force')
+            mock_input.assert_not_called()
+
+    # --no / -n  → overwrite_behaviour='skip'
+
+    def test_skip_preserves_existing_file(self, tmp_path):
+        """overwrite_behaviour='skip' leaves existing files untouched."""
+        factory = lambda: HPCProject(
+            name='mymodel', output_dir=tmp_path / 'my_project',
+            crs='EPSG:32760', create_empties=False,
+        )
+        tcf_path, content = self._create_twice(factory, tmp_path, 'skip')
+        assert content.strip() == 'SENTINEL_CONTENT', "skip must not overwrite the sentinel file"
+
+    def test_skip_does_not_prompt(self, tmp_path):
+        """overwrite_behaviour='skip' never calls input()."""
+        factory = lambda: HPCProject(
+            name='mymodel', output_dir=tmp_path / 'my_project',
+            crs='EPSG:32760', create_empties=False,
+        )
+        factory().create()
+        with patch('builtins.input') as mock_input:
+            factory().create(overwrite_behaviour='skip')
+            mock_input.assert_not_called()
+
+    def test_skip_still_returns_output_dir(self, tmp_path):
+        """create() returns the output directory even when all files are skipped."""
+        out_dir = tmp_path / 'my_project'
+        p = HPCProject(name='mymodel', output_dir=out_dir, crs='EPSG:32760', create_empties=False)
+        p.create()
+        p2 = HPCProject(name='mymodel', output_dir=out_dir, crs='EPSG:32760', create_empties=False)
+        result = p2.create(overwrite_behaviour='skip')
+        assert result == out_dir
+
+    # --interactive / -i  (default) → overwrite_behaviour='interactive'
+
+    def test_interactive_yes_overwrites(self, tmp_path):
+        """interactive mode: answering 'y' causes the file to be overwritten."""
+        factory = lambda: HPCProject(
+            name='mymodel', output_dir=tmp_path / 'my_project',
+            crs='EPSG:32760', create_empties=False,
+        )
+        factory().create()
+        tcf_path = tmp_path / 'my_project' / 'runs' / 'mymodel_001.tcf'
+        tcf_path.write_text('SENTINEL_CONTENT', encoding='utf-8')
+
+        with patch('builtins.input', return_value='y'):
+            factory().create(overwrite_behaviour='interactive')
+
+        content = tcf_path.read_text(encoding='utf-8')
+        assert 'SENTINEL_CONTENT' not in content, "interactive 'y' must overwrite the file"
+        assert 'mymodel' in content
+
+    def test_interactive_no_skips(self, tmp_path):
+        """interactive mode: answering 'n' preserves the existing file."""
+        factory = lambda: HPCProject(
+            name='mymodel', output_dir=tmp_path / 'my_project',
+            crs='EPSG:32760', create_empties=False,
+        )
+        factory().create()
+        tcf_path = tmp_path / 'my_project' / 'runs' / 'mymodel_001.tcf'
+        tcf_path.write_text('SENTINEL_CONTENT', encoding='utf-8')
+
+        with patch('builtins.input', return_value='n'):
+            factory().create(overwrite_behaviour='interactive')
+
+        content = tcf_path.read_text(encoding='utf-8')
+        assert content.strip() == 'SENTINEL_CONTENT', "interactive 'n' must not overwrite the file"
+
+    def test_interactive_prompts_for_each_existing_file(self, tmp_path):
+        """interactive mode calls input() once per pre-existing template file."""
+        out_dir = tmp_path / 'my_project'
+        p = HPCProject(name='mymodel', output_dir=out_dir, crs='EPSG:32760', create_empties=False)
+        p.create()
+
+        p2 = HPCProject(name='mymodel', output_dir=out_dir, crs='EPSG:32760', create_empties=False)
+        with patch('builtins.input', return_value='n') as mock_input:
+            p2.create(overwrite_behaviour='interactive')
+        # At least one file already existed → input() must have been called
+        assert mock_input.call_count > 0
+
+    def test_interactive_default_behaviour(self, tmp_path):
+        """Calling create() with no arguments defaults to interactive mode."""
+        out_dir = tmp_path / 'my_project'
+        p = HPCProject(name='mymodel', output_dir=out_dir, crs='EPSG:32760', create_empties=False)
+        p.create()
+
+        p2 = HPCProject(name='mymodel', output_dir=out_dir, crs='EPSG:32760', create_empties=False)
+        with patch('builtins.input', return_value='n') as mock_input:
+            p2.create()  # no overwrite_behaviour arg
+        assert mock_input.call_count > 0
+
+    # Invalid overwrite_behaviour
+
+    def test_invalid_overwrite_behaviour_raises(self, tmp_path):
+        """An unrecognised overwrite_behaviour raises AttributeError on the second create."""
+        out_dir = tmp_path / 'my_project'
+        p = HPCProject(name='mymodel', output_dir=out_dir, crs='EPSG:32760', create_empties=False)
+        p.create()
+
+        p2 = HPCProject(name='mymodel', output_dir=out_dir, crs='EPSG:32760', create_empties=False)
+        with pytest.raises(AttributeError):
+            p2.create(overwrite_behaviour='invalid_option')
+
+    # Skipped file must not be edited by feature apply step
+
+    def test_skip_prevents_editing_of_skipped_tcf(self, tmp_path):
+        """When the TCF is skipped, feature apply_to_control_files must not modify it."""
+        out_dir = tmp_path / 'my_project'
+        # First create: no features
+        p = HPCProject(name='mymodel', output_dir=out_dir, crs='EPSG:32760', create_empties=False)
+        p.create()
+
+        # Stamp the TCF with sentinel content so we can detect any modification
+        tcf_path = out_dir / 'runs' / 'mymodel_001.tcf'
+        tcf_path.write_text('SENTINEL_CONTENT', encoding='utf-8')
+
+        # Second create with estry feature but skip mode — TCF should be left alone
+        p2 = HPCProject(
+            name='mymodel', output_dir=out_dir, crs='EPSG:32760',
+            create_empties=False, features=['estry'],
+        )
+        p2.create(overwrite_behaviour='skip')
+
+        content = tcf_path.read_text(encoding='utf-8')
+        assert content.strip() == 'SENTINEL_CONTENT', (
+            "skipped TCF must not be edited by feature apply_to_control_files"
+        )
