@@ -31,7 +31,7 @@
     },
     "subblock": {
         "fraction": {},
-        "mobility model": {},
+        "mobility model": {"end command": "end mobility"},
         "sediment layer": {"command": "layer", "subblocks": ["fraction"]},
         "particle layer": {"command": "layer", "subblocks": ["group"]},
         "group": {"subblocks": []}
