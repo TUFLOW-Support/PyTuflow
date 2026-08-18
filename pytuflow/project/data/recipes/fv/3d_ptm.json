@@ -70,7 +70,8 @@
             "ptm_horiz_dispersion_model": "constant",
             "ptm_horiz_dispersion_params": 1.0,
             "ptm_vert_dispersion_model": "HD",
-            "ptm_vert_dispersion_params": 1.0
+            "ptm_vert_dispersion_params": 1.0,
+            "ptm_mobility_models": []
         },
         {
             "name": "ptmgroup",
@@ -86,7 +87,8 @@
             "ptm_horiz_dispersion_model": "constant",
             "ptm_horiz_dispersion_params": 1.0,
             "ptm_vert_dispersion_model": "HD",
-            "ptm_vert_dispersion_params": 1.0
+            "ptm_vert_dispersion_params": 1.0,
+            "ptm_mobility_models": []
         },
         {
             "name": "ptmmat",
