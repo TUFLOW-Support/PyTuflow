@@ -218,7 +218,12 @@ def cmd_create(args, dynamic_dests: list[str]):
     if errors:
         print('\n'.join(errors), file=sys.stderr)
         sys.exit(1)
-    out = project.create()
+
+    force = getattr(args, 'force') or getattr(args, 'yes') or False
+    skip = getattr(args, 'no') or False
+    overwrite_behaviour = 'force' if force else ('skip' if skip else 'interactive')
+    
+    out = project.create(overwrite_behaviour)
     print(f"Project created: {out}")
 
 
@@ -253,7 +258,12 @@ def cmd_insert(args, dynamic_dests: list[str]):
 
     kwargs = {**user_defaults, **cli_kwargs}
     feature_arg = _parse_features_list([args.feature])[0] if args.feature else args.feature
-    ProjectClass.insert_feature_into(feature_arg, args.cf, **kwargs)
+
+    force = getattr(args, 'force') or getattr(args, 'yes') or False
+    skip = getattr(args, 'no') or False
+    overwrite_behaviour = 'force' if force else ('skip' if skip else 'interactive')
+
+    ProjectClass.insert_feature_into(feature_arg, args.cf, overwrite_behaviour=overwrite_behaviour, **kwargs)
     print(f"feature '{args.feature}' inserted into {args.cf}")
 
 
@@ -315,6 +325,11 @@ def main():
         help='Path to a JSON file or inline JSON string of variable defaults '
              '(overrides bundled defaults; overridden by --recipe and explicit --<var> flags)',
     )
+    group = p_create.add_mutually_exclusive_group()
+    group.add_argument('--force', '-f', action='store_true', help='Overwrite existing files.')
+    group.add_argument('--yes', '-y', action='store_true', help='Overwrite existing files.')
+    group.add_argument('--no', '-n', action='store_true', help='Skip existing files.')
+    group.add_argument('--interactive', '-i', action='store_false', help='Interactively select to overwrite existing files.')
 
     try:
         i = sys.argv.index('--engine')
@@ -335,13 +350,18 @@ def main():
         '--defaults', default=None, dest='defaults',
         help='Path to a JSON file or inline JSON string of variable defaults',
     )
+    group = p_create.add_mutually_exclusive_group()
+    group.add_argument('--force', '-f', action='store_true', help='Overwrite existing files.')
+    group.add_argument('--yes', '-y', action='store_true', help='Overwrite existing files.')
+    group.add_argument('--no', '-n', action='store_true', help='Skip existing files.')
+    group.add_argument('--interactive', '-i', action='store_false', help='Interactively select to overwrite existing files.')
 
     insert_dynamic_dests = _add_dynamic_args(p_insert, engine=engine)
 
     # init-templates
     p_init = sub.add_parser('init-templates', help='Initialise user template cache')
     p_init.add_argument('--engine', default='hpc', choices=['hpc', 'fv'])
-    p_init.add_argument('--force', action='store_true', help='Overwrite existing cache')
+    p_init.add_argument('--force', '-f', action='store_true', help='Overwrite existing cache')
 
     # list-features
     p_list = sub.add_parser('list-features', help='List available features')

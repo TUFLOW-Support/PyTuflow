@@ -103,7 +103,7 @@ class BaseEngineProject(BaseProject):
             )
         return errors
 
-    def create(self) -> Path:
+    def create(self, overwrite_behaviour: str = 'interactive') -> Path:
         """The execuation step when creating a project. This method copies template files, fills in variables, and
         parses the control files and follows directives.
         
@@ -161,7 +161,11 @@ class BaseEngineProject(BaseProject):
                 and template_key.endswith(f'.{self.MAIN_CF_EXT}')
             ):
                 main_cf_path = out_path
-            if out_path.exists():
+            if out_path.exists() and overwrite_behaviour != 'force':
+                if overwrite_behaviour == 'skip':
+                    continue
+                elif overwrite_behaviour != 'interactive':
+                    raise AttributeError(f'{overwrite_behaviour} is not recognised overwrite behaviour')
                 overwrite = None
                 while not isinstance(overwrite, str) or overwrite.lower() not in ['y', 'yes', 'n', 'no']:
                     overwrite = input(f'File {out_path} already exists. Overwrite? (y/n) ')
@@ -180,12 +184,11 @@ class BaseEngineProject(BaseProject):
                 rendered_out = Template(output_rel).safe_substitute(merged_vars)
                 out_path = self.output_dir / rendered_out
                 feature.rendered_templates[template_key] = out_path
-                if out_path.exists():
-                    overwrite = None
-                    while not isinstance(overwrite, str) or overwrite.lower() not in ['y', 'yes', 'n', 'no']:
-                        overwrite = input(f'File {out_path} already exists. Overwrite? (y/n) ')
-                    if overwrite.lower() in ['n', 'no']:
+                if out_path.exists() and overwrite_behaviour != 'force':
+                    if overwrite_behaviour == 'skip':
                         continue
+                    elif overwrite_behaviour != 'interactive':
+                        raise AttributeError(f'{overwrite_behaviour} is not recognised overwrite behaviour')
                 
                 text = self._manager.get_template(template_key)
                 rendered_text = self._engine.render(text, merged_vars, active_features, feature_configs)
@@ -217,6 +220,7 @@ class BaseEngineProject(BaseProject):
         cls,
         feature_name: str | dict,
         cf_path: str | Path,
+        overwrite_behaviour: str = 'interactive',
         **kwargs,
     ):
         """Inserts a feature into an existing project.
@@ -275,12 +279,11 @@ class BaseEngineProject(BaseProject):
             rendered_out = Template(output_rel).safe_substitute(variables)
             out_path = project_dir / rendered_out
             feature.rendered_templates[template_key] = out_path
-            if out_path.exists():
-                overwrite = None
-                while not isinstance(overwrite, str) or overwrite.lower() not in ['y', 'yes', 'n', 'no']:
-                    overwrite = input(f'File {out_path} already exists. Overwrite? (y/n) ')
-                if overwrite.lower() in ['n', 'no']:
+            if out_path.exists() and overwrite_behaviour != 'force':
+                if overwrite_behaviour == 'skip':
                     continue
+                elif overwrite_behaviour != 'interactive':
+                    raise AttributeError(f'{overwrite_behaviour} is not recognised overwrite behaviour')
 
             if not out_path.exists():
                 text = manager.get_template(template_key)
