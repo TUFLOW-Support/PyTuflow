@@ -93,6 +93,7 @@
         {
             "name": "ptmmat",
             "stm_mat_id": "0",
+            "ptm_mat_groups": [],
             "ptm_mat_layers": [
                 {
                     "stm_mat_layer_dry_density": "1631.,1631.",
