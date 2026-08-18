@@ -255,7 +255,7 @@ class TestFVBaseFeatureApplyToControlFiles:
         fvc.write('inplace')
 
         fvc2 = FVC(fvc_path)
-        flux = fvc2.find_input(filter_by='^output == flux$', recursive=False, regex=True, regex_flags=re.IGNORECASE)
+        flux = fvc2.find_input(filter_by=r'^output == flux$', recursive=False, regex=True, regex_flags=re.IGNORECASE)
         assert flux, "Output == flux should have been inserted via placement rule"
         nodestring = fvc2.find_input(filter_by='Read GIS Nodestring', recursive=False)
         assert nodestring, "Read GIS Nodestring should have been inserted via placement rule"
@@ -283,11 +283,11 @@ class TestFVBaseFeatureApplyToControlFiles:
         fvc.write('inplace')
 
         fvc2 = FVC(fvc_path)
-        flux = fvc2.find_input(lhs='^structure$', recursive=False, regex=True, regex_flags=re.IGNORECASE)
+        flux = fvc2.find_input(lhs=r'^structure$', recursive=False, regex=True, regex_flags=re.IGNORECASE)
         assert flux, "Structure block should have been inserted via placement rule"
-        weir = fvc2.find_input(filter_by='^Flux Function == Weir$', recursive='block', regex=True, regex_flags=re.IGNORECASE)
+        weir = fvc2.find_input(filter_by=r'^Flux Function == Weir$', recursive='block', regex=True, regex_flags=re.IGNORECASE)
         assert weir, "Flux function == Weir should be present"
-        nodestring = fvc2.find_input(filter_by='^Read GIS Notestring == <path/to/2d_ns_weir.shp>$', recursive=False, regex=True, regex_flags=re.IGNORECASE)
+        nodestring = fvc2.find_input(filter_by=r'^Read GIS Nodestring == \${nodestring_path}$', recursive=False, regex=True, regex_flags=re.IGNORECASE)
         assert weir, "Flux function == Weir should be present"
         header = fvc.find_input(filter_by='! HYDRAULIC STRUCTURES', recursive=False, comments=True)
         assert header, "Structure header should have been inserted"

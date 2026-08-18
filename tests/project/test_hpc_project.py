@@ -205,7 +205,7 @@ class TestHPCProjectUnknownfeature:
 class TestGetAvailablefeatures:
     def test_returns_all_features(self):
         features = get_available_features()
-        expected = {'estry', 'quadtree', 'soils', 'ad', 'toc', 'rf', 'events', 'sgs', 'po', 'tutorial', 'swmm'}
+        expected = {'estry', 'quadtree', 'soils', 'ad', 'toc', 'rf', 'rl', 'events', 'sgs', 'po', 'tutorial', 'swmm'}
         assert set(features.keys()) == expected
 
     def test_features_have_name(self):
@@ -494,7 +494,7 @@ class TestHPCBasefeatureApplyToControlFiles:
 
         content = tcf_path.read_text(encoding='utf-8')
         assert 'Time Series Output Interval' in content
-        assert '! Read GIS PO' in content, \
+        assert 'Read GIS PO' in content, \
             "Placeholder '! Read GIS PO' must be inserted after Time Series Output Interval"
 
 

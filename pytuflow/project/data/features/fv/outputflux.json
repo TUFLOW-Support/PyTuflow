@@ -26,6 +26,7 @@
         "id": "fvc_flux_nodestring",
         "target_cf": "fvc",
         "placement_rule": "before_fvc_output",
+        "allow_multiple": true,
         "commands": [
             "Read GIS Nodestring == ${nodestring_path}"
         ]

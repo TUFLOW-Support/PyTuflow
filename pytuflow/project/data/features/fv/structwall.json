@@ -35,8 +35,9 @@
         "id": "fvc_struct_wall_nodestring",
         "target_cf": "fvc",
         "placement_rule": "before_fvc_structures",
+        "allow_multiple": true,
         "commands": [
-            "Read GIS Notestring == ${nodestring_path}"
+            "Read GIS Nodestring == ${nodestring_path}"
         ]
 
     }
