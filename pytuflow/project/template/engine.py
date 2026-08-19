@@ -1,5 +1,7 @@
 import re
 from string import Template
+from pathlib import Path
+import os
 
 
 class TemplateEngine:
@@ -40,6 +42,24 @@ class TemplateEngine:
         processed = self._process_directives(lines, variables, active_features, block_lookup)
         result = ''.join(processed)
         return Template(result).safe_substitute(_to_str_vars(variables))
+
+    @staticmethod
+    def make_relative(text: str, out_path: Path, variables: dict) -> dict:
+        """Searches for absolute file paths and turns them into relative paths.
+        Returns modified variables dict.
+        """
+        if not out_path or out_path == Path():
+            return variables
+        mod_variables = variables.copy()
+        for line in text.splitlines():
+            if line.strip().startswith('##'):
+                continue
+            template = Template(line)
+            for var in template.get_identifiers():
+                if var in variables and isinstance(variables[var], str) and os.path.isabs(variables[var]):
+                    relpath = os.path.relpath(variables[var], out_path.parent)
+                    mod_variables[var] = relpath
+        return mod_variables
 
     def _process_directives(self, lines, variables, active_features, block_lookup):
         result = []

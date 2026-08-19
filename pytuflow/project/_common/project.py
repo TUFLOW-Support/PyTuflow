@@ -177,7 +177,8 @@ class BaseEngineProject(BaseProject):
                     continue
 
             text = self._manager.get_template(template_key)
-            rendered_text = self._engine.render(text, variables, active_features, feature_configs)
+            mod_variables = self._engine.make_relative(text, out_path, variables)
+            rendered_text = self._engine.render(text, mod_variables, active_features, feature_configs)
             rendered_text = _normalize_rendered(rendered_text)
             out_path.write_text(rendered_text, encoding='utf-8')            
 
@@ -202,6 +203,7 @@ class BaseEngineProject(BaseProject):
                         continue
                 
                 text = self._manager.get_template(template_key)
+                mod_variables = self._engine.make_relative(text, out_path, variables)
                 rendered_text = self._engine.render(text, merged_vars, active_features, feature_configs)
                 rendered_text = _normalize_rendered(rendered_text)
                 out_path.parent.mkdir(parents=True, exist_ok=True)
