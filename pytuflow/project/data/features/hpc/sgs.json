@@ -12,12 +12,12 @@
         "\n!_______________________________________________________",
         "! SGS SETTINGS",
         "SGS == ON",
+        "##IF ${sgs_sample_distance}>0##",
+        "SGS Sample Target Distance == ${sgs_sample_distance}",
+        "##ENDIF##",
+        "##IF not:${sgs_sample_distance}>0##",
         "##IF ${sgs_sample_frequency}>0##",
         "SGS Sample Frequency == ${sgs_sample_frequency}",
-        "##ENDIF##",
-        "##IF ${sgs_sample_frequency}<1##",
-        "##IF not:${sgs_sample_distance}>0##",
-        "SGS Sample Target Distance == ${sgs_sample_distance}",
         "##ENDIF##",
         "##ENDIF##"
       ]
