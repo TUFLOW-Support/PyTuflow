@@ -119,7 +119,7 @@ Insert a feature into an existing TUFLOW project.
 
 .. code-block:: text
 
-    pytuflow-project insert --cf <CF> --feature <FEATURE> [options]
+    pytuflow-project insert --cf <CF> --feature <FEATURE> [--engine {hpc, fv}] [options]
 
 **Required arguments:**
 
@@ -232,4 +232,226 @@ List the defaults for a given engine. The defaults also serve as a list of optio
 Customisation
 -------------
 
-Text
+``pytuflow-project`` uses a combination of :ref:`template_control_files`, :ref:`Modular Features<features>`, :ref:`variables`, and :ref:`directives`, which are fully customisable and extendable by the user. 
+    
+When the tool is run for the first time, template files are copied locally to the users home directory:
+
+- Windows: ``%userprofile%\.tuflow_model_files\project_templates``
+- Linux: ``~/.tuflow_model_files/project_templates``
+
+Subsequent calls will use these cached templates, and the user is free to modify and/or extend them. The templates can be re-copied (potentially erasing any modifications made by the user) at any time by running the :ref:`init-templates` subcommand.
+
+.. _template_control_files:
+
+Template Control files
+^^^^^^^^^^^^^^^^^^^^^^
+
+Template control files are found within the ``hpc`` and ``fv`` subdirectories. The user is free to modify the templates to their preferred setup.
+
+Template control files are made up of standard TUFLOW commands as well as :ref:`directives<directives>` and :ref:`variables<variables>`.
+
+- :ref:`Directives`:  Directives are simple logic blocks that allow commands to be inserted based on certain conditions. E.g. whether a particular feature is present or based on a variables value. Other directives allow dynamic insertion of command blocks using an ID (see :ref:`features`).
+- :ref:`Variables`: Variables are placeholders that allow values to be dynamically assigned at the tool's runtime.
+
+.. _directives:
+
+Directives
+^^^^^^^^^^
+
+Directives are simple logic blocks that allow commands to be inserted based on certain conditions. E.g. whether a particular feature is present or based on a variables value. Other directives allow dynamic insertion of command blocks using an ID.
+
+Directives take the form of ``##<directive>##``. Directives can reside in the template control files and also within command blocks defined in :ref:`features`.
+
+**Logic**
+
+.. code-block:: text
+
+  ##IF [not:]<condition>##
+  ...
+  ##ENDIF##
+
+Conditions can check if a :ref:`feature<list-features>` exists:
+
+.. code-block:: text
+
+  ##IF feature:quadtree##
+  ...
+  ##ENDIF##
+
+The feature is assessed against wither it exists in the subcommand (either :ref:`create` or :ref:`insert`) via the ``--features`` argument. It does not look to see if the feature exists within the model in general. E.g. checking against quadtree does not check for a quadtree control file, it must have been passed in via ``--features quadtree``.
+
+Conditions can also be checked against a variable's value (``==`` and ``:`` are synonymous operators for variables):
+
+.. code-block:: text
+
+  ##IF ${gis_format}==GPKG##
+  ...
+  ##ENDIF##
+
+Other supported operators are ``>`` and ``<``. ``not:`` can be put infront to negate the outcome.
+
+A semicolon ``;`` can be used to check against multiple values:
+
+.. code-block:: text
+
+  ##IF ${gis_format}==GPKG;SHP##
+  ...
+  ##ENDIF##
+
+**Command insertion**
+
+Commands can be inserted with ``##COMMANDS <command_id>##``. Command blocks within the :ref:`features` set will be searched for the appropriate command block to insert at that location. The command placement rules will be ignored in this case as the directive takes precendence and places the command block at an exact location.
+
+**Iteration**
+
+If a variable is a list of values, then these can be iterated over with the following directive:
+
+.. code-block:: text
+
+  ##ITER:${var_name}##
+  ...
+  ##ENDITER##
+
+**Blocks**
+
+TUFLOW FV uses blocks within its control file, and these blocks can contain nested blocks, and so on. It can sometimes be required to tell pytuflow about these blocks with a directive. This is typically not required within template files, but can be needed for feature commands when adding nested blocks. See either the ``ptmmat`` or ``sedmat`` features as an example usecase.
+
+.. code-block:: text
+
+  Mobility model == velocity
+  ##STARTBLOCK##
+  ...
+  ##ENDBLOCK##  
+
+.. _variables:
+
+Variables
+^^^^^^^^^
+
+Variables are placeholders that allow values to be dynamically assigned at the tool's runtime.
+
+Variables are always in the form of ``${var_name}``. They can be used in any control file command or in file names.
+
+See :ref:`defaults` for more information on how to modify/extend the available variables.
+
+.. _features:
+
+Features
+^^^^^^^^
+
+Feature settings can be found in:
+
+- ``features/hpc``
+- ``features/fv``
+
+The ``json`` files can be modified by the user to be setup to their preference. New features can also be added by creating new files in the appropriate location and they will automatically become available via the CLI.
+
+Feature ``json`` settings are made up of templates files that will be copied into the model, and commands blocks that will be inserted into a given control file. :ref:`template_control_files` are stored within cache directory. Any new template files added by the user should also be placed here.
+
+A brief overview of the settings within the ``json`` files are described below:
+
+**General**
+
+.. list-table::
+  :widths: 35 75
+  :header-rows: 1
+
+  * - Variable
+    - Description
+  * - name
+    - Name of the feature. Should match the file name and be unique.
+  * - display_name
+    - A prettier version of the name. Applications that use ``pytuflow-project`` can choose to use this rather than the name variable.
+  * - sort_order
+    - The order to add features if multiple features are being added.
+  * - template_files
+    - List of template files to copy into the model (see below)
+  * - command_blocks
+    - List of command blocks to insert into the model (see below)
+
+**Template files**
+
+.. list-table::
+  :widths: 35 75
+  :header-rows: 1
+
+  * - Variable
+    - Description
+  * - template_key
+    - The location of the template file (relative to the relevant cache folder) to copy
+  * - output_subdir
+    - Where to copy the template file relative to the model's root directory
+  * - target_name
+    - Optional setting if the copied template file should have a different name to the original file.
+
+**Command blocks**
+
+.. list-table::
+  :widths: 35 75
+  :header-rows: 1
+
+  * - Variable
+    - Description
+  * - id
+    - Unique ID that can be used by directives to find the command
+  * - target_cf
+    - The control file to target when inserting the commands
+  * - placement_rule
+    - How to place the command into the control file. If omitted, then the command will be appended to the end of the control file. The rules are defined in ``rules.json`` and list commands to insert the command block either before or after
+  * - allow_multiple
+    - If set to ``true``, the command can be inserted multiple times. If set to ``false`` (default), then the command will not be inserted again if it already exists within the control file (by default checks against the left-hand side of the command)
+  * - existence_check
+    - If included, will override what pytuflow looks for when checking for the given command's existence. If included, it will be the existence for the entire command block, which can consist of multiple commands. If omitted, each command in the command block is checked. It's possible to use regex by bracketing the command with a foward slash ``/``. Flags can be added after the trailing slash, e.g. ``/<regex>/i`` to ignore case.
+  * - target_previous_block
+    - FV specific option. It will insert the commands as subcommands to the previously inserted command block. This is required if the previous command is the start of an FV block (e.g. ``Output == netcdf``) and the current commands belong beneath that block.
+  * - by_directive_only
+    - If set to ``true``, this command block will not be inserted unless by a :ref:`directive<directives>`. Default is ``false``.
+  * - commands
+    - A list of commands to insert. :ref:`directives` are accepted.
+
+.. _recipes:
+
+Recipes
+^^^^^^^
+
+Recipes are predefined combinations of feature sets and variable defaults.
+
+PyTUFLOW comes bundled with default recipes which can be modified by the user, or the user can create new recipes. To create a new recipe, the user should add a new ``json`` file within the appropriate directory.
+
+Recipes can be found within for following subdirectories:
+
+- ``recipes/hpc``
+- ``recipes/fv``
+
+The ``json`` file settings are briefly descibed below:
+
+.. list-table::
+  :widths: 35 75
+  :header-rows: 1
+
+  * - Variable
+    - Description
+  * - display_name
+    - A prettier version of the recipe file name
+  * - description
+    - A high level description of what the recipe contains
+  * - variables
+    - A dictionary of variables which override the defaults. Default overrides passed in via the CLI will take precedence
+  * - features
+    - A list of features included in the recipe. The features can be added in the same method as they are added in the CLI :ref:`create` subcommand (by just the name or by a json string). Variables defined via a json string will take precedence over variables defined in the "variables" section (above), however will still be overriden by variable overrides in the CLI.
+
+.. _defaults:
+
+Defaults
+^^^^^^^^
+
+Defaults are default variable values that are used if the user has not overriden them via the CLI. The default values are saved in:
+
+- ``defaults.json``
+- ``hpc_defaults.json``
+- ``fv_defaults.json``
+
+Engine specific defaults (e.g. ``hpc_defaults.json``) will take precedence if there are any conflicts with the shared defaults (``defaults.json``).
+
+The user is free to update the defaults to their preferred settings. The defaults can also be extended by the user. Any new defaults added by the user will automatically become overridable via the CLI as an optional argument in the :ref:`create` and :ref:`insert` subcommands.
+
