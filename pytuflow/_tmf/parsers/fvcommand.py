@@ -117,8 +117,8 @@ class FVCommand(Command):
                 command_str = block_data.get('command', block_id)
                 if self.command.upper() == command_str.upper():
                     return True
-        for _, subblock_data in _FV_BLOCK_TYPES['subblock'].items():
-            command_str = subblock_data.get('command', None)
+        for block_id, subblock_data in _FV_BLOCK_TYPES['subblock'].items():
+            command_str = subblock_data.get('command', block_id)
             if command_str and self.command.upper() == command_str.upper():
                 return True
         return False
