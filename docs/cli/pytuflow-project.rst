@@ -119,7 +119,7 @@ Insert a feature into an existing TUFLOW project.
 
 .. code-block:: text
 
-    pytuflow-project insert --cf <CF> --feature <FEATURE> [--engine {hpc, fv}] [options]
+    pytuflow-project insert --cf <CF> --feature <FEATURE> [--engine {hpc,fv}] [options]
 
 **Required arguments:**
 
@@ -159,7 +159,7 @@ Insert a feature into an existing TUFLOW project.
 
 **Example:**
 
-The below example:
+The following example:
   - Inserts ESTRY as a feature into an existing TUFLOW Classic/HPC model
   - Sets the time series output interval to be every 2 minutes. If the relevant command already exists, it will have no effect.
 
@@ -234,7 +234,7 @@ Customisation
 
 ``pytuflow-project`` uses a combination of :ref:`template_control_files`, :ref:`Modular Features<features>`, :ref:`variables`, and :ref:`directives`, which are fully customisable and extendable by the user. 
     
-When the tool is run for the first time, template files are copied locally to the users home directory:
+When the tool is run for the first time, template files are copied locally to the user's home directory:
 
 - Windows: ``%userprofile%\.tuflow_model_files\project_templates``
 - Linux: ``~/.tuflow_model_files/project_templates``
@@ -250,7 +250,7 @@ Template control files are found within the ``hpc`` and ``fv`` subdirectories. T
 
 Template control files are made up of standard TUFLOW commands as well as :ref:`directives<directives>` and :ref:`variables<variables>`.
 
-- :ref:`Directives`:  Directives are simple logic blocks that allow commands to be inserted based on certain conditions. E.g. whether a particular feature is present or based on a variables value. Other directives allow dynamic insertion of command blocks using an ID (see :ref:`features`).
+- :ref:`Directives`:  Directives are simple logic blocks that allow commands to be inserted based on certain conditions. E.g. whether a particular feature is present or based on a variable's value. Other directives allow dynamic insertion of command blocks using an ID (see :ref:`features`).
 - :ref:`Variables`: Variables are placeholders that allow values to be dynamically assigned at the tool's runtime.
 
 .. _directives:
@@ -258,7 +258,7 @@ Template control files are made up of standard TUFLOW commands as well as :ref:`
 Directives
 ^^^^^^^^^^
 
-Directives are simple logic blocks that allow commands to be inserted based on certain conditions. E.g. whether a particular feature is present or based on a variables value. Other directives allow dynamic insertion of command blocks using an ID.
+Directives are simple logic blocks that allow commands to be inserted based on certain conditions. E.g. whether a particular feature is present or based on a variable's value. Other directives allow dynamic insertion of command blocks using an ID.
 
 Directives take the form of ``##<directive>##``. Directives can reside in the template control files and also within command blocks defined in :ref:`features`.
 
@@ -278,7 +278,7 @@ Conditions can check if a :ref:`feature<list-features>` exists:
   ...
   ##ENDIF##
 
-The feature is assessed against wither it exists in the subcommand (either :ref:`create` or :ref:`insert`) via the ``--features`` argument. It does not look to see if the feature exists within the model in general. E.g. checking against quadtree does not check for a quadtree control file, it must have been passed in via ``--features quadtree``.
+The feature is assessed against whether it exists in the subcommand (either :ref:`create` or :ref:`insert`) via the ``--features`` argument. It does not look to see if the feature exists within the model in general. E.g. checking against quadtree does not check for a quadtree control file, it must have been passed in via ``--features quadtree``.
 
 Conditions can also be checked against a variable's value (``==`` and ``:`` are synonymous operators for variables):
 
@@ -288,7 +288,7 @@ Conditions can also be checked against a variable's value (``==`` and ``:`` are 
   ...
   ##ENDIF##
 
-Other supported operators are ``>`` and ``<``. ``not:`` can be put infront to negate the outcome.
+Other supported operators are ``>`` and ``<``. ``not:`` can be put in front to negate the outcome.
 
 A semicolon ``;`` can be used to check against multiple values:
 
@@ -300,7 +300,7 @@ A semicolon ``;`` can be used to check against multiple values:
 
 **Command insertion**
 
-Commands can be inserted with ``##COMMANDS <command_id>##``. Command blocks within the :ref:`features` set will be searched for the appropriate command block to insert at that location. The command placement rules will be ignored in this case as the directive takes precendence and places the command block at an exact location.
+Commands can be inserted with ``##COMMANDS <command_id>##``. Command blocks within the :ref:`features` set will be searched for the appropriate command block to insert at that location. The command placement rules will be ignored in this case as the directive takes precedence and places the command block at an exact location.
 
 **Iteration**
 
@@ -314,7 +314,7 @@ If a variable is a list of values, then these can be iterated over with the foll
 
 **Blocks**
 
-TUFLOW FV uses blocks within its control file, and these blocks can contain nested blocks, and so on. It can sometimes be required to tell pytuflow about these blocks with a directive. This is typically not required within template files, but can be needed for feature commands when adding nested blocks. See either the ``ptmmat`` or ``sedmat`` features as an example usecase.
+TUFLOW FV uses blocks within its control file, and these blocks can contain nested blocks, and so on. It can sometimes be required to tell pytuflow about these blocks with a directive. This is typically not required within template files, but can be needed for feature commands when adding nested blocks. See either the ``ptmmat`` or ``sedmat`` features as an example use case.
 
 .. code-block:: text
 
@@ -346,7 +346,7 @@ Feature settings can be found in:
 
 The ``json`` files can be modified by the user to be setup to their preference. New features can also be added by creating new files in the appropriate location and they will automatically become available via the CLI.
 
-Feature ``json`` settings are made up of templates files that will be copied into the model, and commands blocks that will be inserted into a given control file. :ref:`template_control_files` are stored within cache directory. Any new template files added by the user should also be placed here.
+Feature ``json`` settings are made up of template files that will be copied into the model, and command blocks that will be inserted into a given control file. :ref:`template_control_files` are stored within the cache directory. Any new template files added by the user should also be placed there.
 
 A brief overview of the settings within the ``json`` files are described below:
 
@@ -401,7 +401,7 @@ A brief overview of the settings within the ``json`` files are described below:
   * - allow_multiple
     - If set to ``true``, the command can be inserted multiple times. If set to ``false`` (default), then the command will not be inserted again if it already exists within the control file (by default checks against the left-hand side of the command)
   * - existence_check
-    - If included, will override what pytuflow looks for when checking for the given command's existence. If included, it will be the existence for the entire command block, which can consist of multiple commands. If omitted, each command in the command block is checked. It's possible to use regex by bracketing the command with a foward slash ``/``. Flags can be added after the trailing slash, e.g. ``/<regex>/i`` to ignore case.
+    - If included, will override what pytuflow looks for when checking for the given command's existence. If included, it will be the existence for the entire command block, which can consist of multiple commands. If omitted, each command in the command block is checked. It's possible to use regex by bracketing the command with a forward slash ``/``. Flags can be added after the trailing slash, e.g. ``/<regex>/i`` to ignore case.
   * - target_previous_block
     - FV specific option. It will insert the commands as subcommands to the previously inserted command block. This is required if the previous command is the start of an FV block (e.g. ``Output == netcdf``) and the current commands belong beneath that block.
   * - by_directive_only
@@ -418,12 +418,12 @@ Recipes are predefined combinations of feature sets and variable defaults.
 
 PyTUFLOW comes bundled with default recipes which can be modified by the user, or the user can create new recipes. To create a new recipe, the user should add a new ``json`` file within the appropriate directory.
 
-Recipes can be found within for following subdirectories:
+Recipes can be found within the following subdirectories:
 
 - ``recipes/hpc``
 - ``recipes/fv``
 
-The ``json`` file settings are briefly descibed below:
+The ``json`` file settings are briefly described below:
 
 .. list-table::
   :widths: 35 75
@@ -438,14 +438,14 @@ The ``json`` file settings are briefly descibed below:
   * - variables
     - A dictionary of variables which override the defaults. Default overrides passed in via the CLI will take precedence
   * - features
-    - A list of features included in the recipe. The features can be added in the same method as they are added in the CLI :ref:`create` subcommand (by just the name or by a json string). Variables defined via a json string will take precedence over variables defined in the "variables" section (above), however will still be overriden by variable overrides in the CLI.
+    - A list of features included in the recipe. The features can be added in the same method as they are added in the CLI :ref:`create` subcommand (by just the name or by a json string). Variables defined via a json string will take precedence over variables defined in the "variables" section (above),     however will still be overridden by variable overrides in the CLI.
 
 .. _defaults:
 
 Defaults
 ^^^^^^^^
 
-Defaults are default variable values that are used if the user has not overriden them via the CLI. The default values are saved in:
+Defaults are default variable values that are used if the user has not overridden them via the CLI. The default values are saved in:
 
 - ``defaults.json``
 - ``hpc_defaults.json``
