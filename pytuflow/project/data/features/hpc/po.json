@@ -27,7 +27,7 @@
       "target_cf": "tcf",
       "placement_rule": "after_po_commands",
       "commands": [
-        "Time Series Output Interval == ${time_series_interval}"
+        "Time Series Output Interval == ${time_series_output_interval}"
       ]
     }
   ]

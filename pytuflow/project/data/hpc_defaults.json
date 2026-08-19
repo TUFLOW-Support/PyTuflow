@@ -9,7 +9,7 @@
   "po_path": "<path/to/2d_po>",
   "rl_path": "<path/to/0d_rl>",
   "gis_soil_path": "<path/to/2d_soil>",
-  "time_series_interval": 60,
+  "time_series_output_interval": 60,
   "map_cutoff_depth": 0,
   "sgs_sample_requency": 11,
   "sgs_sample_distance": "<sample_distance>",
