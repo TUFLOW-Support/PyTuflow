@@ -236,7 +236,20 @@ def cmd_create(args, dynamic_dests: list[str]):
 
 
 def cmd_insert(args, dynamic_dests: list[str]):
-    engine = getattr(args, 'engine', 'hpc') or 'hpc'
+    from pathlib import Path
+    def engine_from_cf(args):
+        if Path(args.cf).suffix.lower() == '.tcf':
+            return 'hpc'
+        elif Path(args.cf).suffix.lower() == '.fvc':
+            return 'fv'
+        return ''
+    engine = getattr(args, 'engine', 'hpc') or engine_from_cf(args)
+    if not engine:
+        print(
+            'Unable to determine engine from control file (extension: {0}). Must provide either TCF or FVC, ' \
+            'or use --engine {hpc, fv} if control file has non-standard extension.'.format(Path(args.cf).suffix)
+        )
+        sys.exit(1)
     if engine == 'fv':
         from .fv.project import FVProject as ProjectClass
     else:
@@ -362,7 +375,7 @@ def main():
 
     # insert
     p_insert = sub.add_parser('insert', help='Insert a feature into an existing project')
-    p_insert.add_argument('--engine', default='hpc', choices=['hpc', 'fv'],
+    p_insert.add_argument('--engine', choices=['hpc', 'fv'],
                           help='TUFLOW engine type (default: hpc)')
     p_insert.add_argument('--cf', required=True, help='Path to main control file (TCF or FVC)')
     p_insert.add_argument('--feature', required=True, help='Feature name to insert')
