@@ -186,7 +186,7 @@ def cmd_create(args, dynamic_dests: list[str]):
 
     cli_features = _parse_features_list(args.features or [])
 
-    # Recipe base (optional); recipe vars override user_defaults
+    # Recipe base (optional); recipe vars override user_defaults, but not CLI variables
     recipe_arg = getattr(args, 'recipe', None)
     if recipe_arg:
         from .template.manager import TemplateManager
@@ -201,6 +201,14 @@ def cmd_create(args, dynamic_dests: list[str]):
     else:
         features = cli_features
         kwargs = {**user_defaults, **cli_kwargs}
+
+    # CLI variables always take preference on conflict
+    for feature in features:
+        if not isinstance(feature, dict):
+            continue
+        for key, val in feature.items():
+            if key in cli_kwargs:
+                feature[key] = cli_kwargs[key]
 
     if engine == 'fv':
         from .fv.project import FVProject as ProjectClass
@@ -304,6 +312,18 @@ def cmd_list_recipes(args):
         print(line)
 
 
+def cmd_list_defaults(args):
+    engine = getattr(args, 'engine', 'hpc') or 'hpc'
+    from .template.manager import TemplateManager
+    manager = TemplateManager(engine)
+    defaults, engine_defaults = manager.get_defaults()
+    defaults_merged = {**defaults, **engine_defaults}
+    for key, value in defaults_merged.items():
+        key = '--{0}'.format(key.replace('_', '-'))
+        line = f'  {key:30s}  {value}'
+        print(line)
+
+
 def main():
     parser = argparse.ArgumentParser(prog='python -m pytuflow.project')
     sub = parser.add_subparsers(dest='command')
@@ -360,16 +380,20 @@ def main():
 
     # init-templates
     p_init = sub.add_parser('init-templates', help='Initialise user template cache')
-    p_init.add_argument('--engine', default='hpc', choices=['hpc', 'fv'])
+    p_init.add_argument('--engine', required=True, choices=['hpc', 'fv'])
     p_init.add_argument('--force', '-f', action='store_true', help='Overwrite existing cache')
 
     # list-features
     p_list = sub.add_parser('list-features', help='List available features')
-    p_list.add_argument('--engine', default='hpc', choices=['hpc', 'fv'])
+    p_list.add_argument('--engine', required=True, choices=['hpc', 'fv'])
 
     # list-recipes
     p_list_recipes = sub.add_parser('list-recipes', help='List available recipes')
-    p_list_recipes.add_argument('--engine', default='hpc', choices=['hpc', 'fv'])
+    p_list_recipes.add_argument('--engine', required=True, choices=['hpc', 'fv'])
+
+    # list-defaults
+    p_list_defaults = sub.add_parser('list-defaults', help='List all defaults')
+    p_list_defaults.add_argument('--engine', required=True, choices=['hpc', 'fv'])
 
     args = parser.parse_args()
 
@@ -383,6 +407,8 @@ def main():
         cmd_list_features(args)
     elif args.command == 'list-recipes':
         cmd_list_recipes(args)
+    elif args.command == 'list-defaults':
+        cmd_list_defaults(args)
     else:
         parser.print_help()
         sys.exit(1)
