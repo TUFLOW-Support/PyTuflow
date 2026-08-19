@@ -1,5 +1,6 @@
 {
   "engine": "HPC",
+  "gis_format": "GPKG",
   "timestep_maximum": "<maximum_timestep (s)>",
   "cell_size": "<cell size>  ! TODO populate with appropriate value",
   "model_domain_origin": "0, 0",

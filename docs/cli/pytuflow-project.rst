@@ -4,7 +4,9 @@ pytuflow-project
 ================
 
 The ``pytuflow-project`` command provides tools for creating and managing TUFLOW project skeletons.
-It supports both the classic HPC (2D/1D) and TUFLOW FV (finite volume) engines.
+It supports both TUFLOW Classic/HPC and TUFLOW FV.
+
+The templates used by ``pytuflow-project`` are highly customisable and extendable. For more information on how to do this, see the :ref:`pytuflow-project_customisation` section below.
 
 .. code-block:: text
 
@@ -12,6 +14,8 @@ It supports both the classic HPC (2D/1D) and TUFLOW FV (finite volume) engines.
 
 Subcommands
 -----------
+
+.. _create:
 
 create
 ^^^^^^
@@ -36,7 +40,7 @@ Create a new TUFLOW project skeleton from scratch.
    * - Argument
      - Description
    * - ``--engine {hpc,fv}``
-     - TUFLOW engine type. Use ``hpc`` for the classic 2D/1D engine or ``fv`` for TUFLOW FV.
+     - TUFLOW engine type. Use ``hpc`` for Classic/HPC models or ``fv`` for TUFLOW FV models.
    * - ``--name <NAME>``
      - Model name used to label generated files and directories.
    * - ``--output-dir <OUTPUT_DIR>``
@@ -72,7 +76,7 @@ Create a new TUFLOW project skeleton from scratch.
 **Example 1:**
 
 The following example:
-  - Creates a new Classic/HPC model from the "basic_2d" recipe template. 
+  - Creates a new Classic/HPC model from the "basic_2d" recipe template (see :ref:`pytuflow-project_customisation` for more details on how to view recipe settings). 
   - Overrides the SGS sample distance and sets the value to 1m. 
   - Sets the DEM path. The DEM is not copied into the project folder, so the path should be set to where the DEM for the project will be (it is ok if it does not exist). Absolute paths can be provided and will be converted to a relative path in the template control file.
 
@@ -106,6 +110,8 @@ The following example:
     --spherical 1 \
     --features salinity temp 3d '{"name": "outputnc", "output_params": "h v d SAL TEMP"}'
 
+.. _insert:
+
 insert
 ^^^^^^
 
@@ -113,19 +119,19 @@ Insert a feature into an existing TUFLOW project.
 
 .. code-block:: text
 
-    pytuflow-project insert --cf CF --feature FEATURE [options]
+    pytuflow-project insert --cf <CF> --feature <FEATURE> [options]
 
 **Required arguments:**
 
 .. list-table::
-   :widths: 25 75
+   :widths: 35 75
    :header-rows: 1
 
    * - Argument
      - Description
-   * - ``--cf CF``
-     - Path to the main control file (``*.tcf`` for HPC or ``*.fvc`` for FV).
-   * - ``--feature FEATURE``
+   * - ``--cf <CF>``
+     - Path to the main control file (``*.tcf`` for Classic/HPC or ``*.fvc`` for FV).
+   * - ``--feature <FEATURE>``
      - Name of the feature to insert (see :ref:`list-features`).
 
 **Optional arguments:**
@@ -137,22 +143,32 @@ Insert a feature into an existing TUFLOW project.
    * - Argument
      - Description
    * - ``--engine {hpc,fv}``
-     - TUFLOW engine type (default: ``hpc``).
+     - TUFLOW engine type. If not provided, the control file extension will be used to determine the engine.
    * - ``--defaults DEFAULTS``
      - Path to a JSON file or inline JSON string of variable defaults.
-   * - ``--force`` / ``-f``, ``--yes`` / ``-y``, ``--no`` / ``-n``, ``--interactive`` / ``-i``
-     - File conflict resolution (same as ``create``).
-   * - ``--iter``, ``--gis-format``, ``--grid-format``, ``--hardware``, ``--units``, ``--iwl``, ``--event-name``, ``--event-text``, ``--start-time``, ``--end-time``, ``--timestep``, ``--dem-path``, ``--po-path``
-     - Variable overrides (same as ``create``).
+   * - ``--force`` / ``-f``
+     - Overwrite existing files without prompting.
+   * - ``--yes`` / ``-y``
+     - Same as ``--force``.
+   * - ``--no`` / ``-n``
+     - Skip any files that already exist.
+   * - ``--interactive`` / ``-i``
+     - Prompt for each existing file before overwriting.
+   * - ``[default overrides]``
+     - Override default settings. (see :ref:`list-defaults`).
 
 **Example:**
+
+The below example:
+  - Inserts ESTRY as a feature into an existing TUFLOW Classic/HPC model
+  - Sets the time series output interval to be every 2 minutes. If the relevant command already exists, it will have no effect.
 
 .. code-block:: bash
 
     pytuflow-project insert \
-        --engine hpc \
         --cf ./projects/my_flood_model/runs/MyFloodModel.tcf \
-        --feature estry
+        --feature estry \
+        --time-series-output-interval 120
 
 .. _init-templates:
 
@@ -184,71 +200,9 @@ list-features
 
 List the features available for a given engine.
 
-.. code-block:: text
+.. code-block:: bash
 
-    pytuflow-project list-features [--engine {hpc,fv}]
-
-**HPC features:**
-
-.. list-table::
-   :widths: 20 80
-   :header-rows: 1
-
-   * - Name
-     - Description
-   * - ``ad``
-     - AD (Advection-Diffusion)
-   * - ``estry``
-     - Estry (1D Drainage)
-   * - ``events``
-     - Events (Event File)
-   * - ``po``
-     - Plot Output (PO)
-   * - ``quadtree``
-     - Quadtree (Variable Resolution)
-   * - ``rf``
-     - RF (Gridded Rainfall)
-   * - ``rl``
-     - Reporting Location (RL)
-   * - ``sgs``
-     - Sub-grid Sampling (SGS)
-   * - ``soils``
-     - Soils (Infiltration)
-   * - ``swmm``
-     - SWMM (EPA-SWMM)
-   * - ``toc``
-     - TOC (Operational Controls)
-   * - ``tutorial``
-     - Tutorial Model
-
-**FV features (selection):**
-
-.. list-table::
-   :widths: 20 80
-   :header-rows: 1
-
-   * - Name
-     - Description
-   * - ``3d``
-     - 3D
-   * - ``ad``
-     - Advection Dispersion
-   * - ``events``
-     - Events (Event File)
-   * - ``ptm``
-     - Particle Tracking
-   * - ``salinity``
-     - Salinity
-   * - ``stm``
-     - Sediment Transport
-   * - ``temp``
-     - Temperature
-   * - ``wqm``
-     - Water Quality
-   * - ``tutorial``
-     - Tutorial Model
-
-Run ``pytuflow-project list-features --engine fv`` for the full FV feature list.
+    pytuflow-project list-features --engine {hpc,fv}
 
 .. _list-recipes:
 
@@ -258,47 +212,24 @@ list-recipes
 List the built-in recipes for a given engine.
 A recipe is a predefined combination of features and variable defaults.
 
-.. code-block:: text
+.. code-block:: bash
 
-    pytuflow-project list-recipes [--engine {hpc,fv}]
-
-**HPC recipes:**
-
-.. list-table::
-   :widths: 25 75
-   :header-rows: 1
-
-   * - Name
-     - Description
-   * - ``basic_2d``
-     - Basic 2D Model — Basic 2D HPC model with SGS, events, and PO.
-   * - ``quadtree``
-     - Quadtree 2D Model — 2D HPC model with quadtree, SGS, events, and PO.
-   * - ``tutorial``
-     - Tutorial model — Minimal 2D HPC model with SGS.
-
-**FV recipes:**
-
-.. list-table::
-   :widths: 25 75
-   :header-rows: 1
-
-   * - Name
-     - Description
-   * - ``2d_hd``
-     - 2D Hydrodynamic Model — Standard 2D flood model with NetCDF HD output.
-   * - ``2d_sed``
-     - 2D Sediment Transport Model — 2D sediment transport model.
-   * - ``3d_ad``
-     - 3D Advection Dispersion Model — 3D advection dispersion model with salinity and temperature.
-   * - ``3d_ptm``
-     - 3D Particle Tracking Model — 3D particle tracking model.
-   * - ``3d_wqm``
-     - 3D Water Quality Model — 3D water quality model.
+    pytuflow-project list-recipes --engine {hpc,fv}
 
 .. _list-defaults:
 
 list-defaults
 ^^^^^^^^^^^^^
+
+List the defaults for a given engine. The defaults also serve as a list of optional arguments that can be passed into the :ref:`create` and :ref:`insert` subcommands.
+
+.. code-block:: bash
+
+    pytuflow-project list-defaults --engine {hpc,fv}
+
+.. _pytuflow-project_customisation:
+
+Customisation
+-------------
 
 Text
