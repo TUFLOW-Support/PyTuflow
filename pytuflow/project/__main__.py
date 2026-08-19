@@ -290,10 +290,15 @@ def cmd_insert(args, dynamic_dests: list[str]):
 
 def cmd_init_templates(args):
     from .template.manager import TemplateManager
-    engine = getattr(args, 'engine', 'hpc') or 'hpc'
-    manager = TemplateManager(engine)
-    manager.init_cache(force=getattr(args, 'force', False))
-    print(f"Templates initialised at {manager._cache_dir}")
+    engine = getattr(args, 'engine', 'hpc')
+    if not engine:
+        engines = ('hpc', 'fv')
+    else:
+        engines = [engine]
+    for eng in engines:
+        manager = TemplateManager(eng)
+        manager.init_cache(force=getattr(args, 'force', False))
+        print(f"Templates initialised at {manager._cache_dir}")
 
 
 def cmd_list_features(args):
@@ -393,7 +398,7 @@ def main():
 
     # init-templates
     p_init = sub.add_parser('init-templates', help='Initialise user template cache')
-    p_init.add_argument('--engine', required=True, choices=['hpc', 'fv'])
+    p_init.add_argument('--engine', choices=['hpc', 'fv'])
     p_init.add_argument('--force', '-f', action='store_true', help='Overwrite existing cache')
 
     # list-features
