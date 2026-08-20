@@ -1,3 +1,9 @@
+code,
+pre {
+    font-family: "Cascadia Code", monospace;
+    font-variant-ligatures: none;
+}
+
 /* Light mode overrides */
 html[data-theme="light"] {
   --pst-color-primary: #005581;    /* Main accent color */
