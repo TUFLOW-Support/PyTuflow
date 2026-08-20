@@ -12,6 +12,11 @@ The templates used by ``pytuflow-project`` are highly customisable and extendabl
 
     pytuflow-project <subcommand> [options]
 
+The underpinning API for ``pytuflow-project`` are the following classes:
+
+- :class:`~pytuflow.HPCProject`
+- :class:`~pytuflow.FVProject`
+
 Subcommands
 -----------
 
@@ -24,11 +29,11 @@ Create a new TUFLOW project skeleton from scratch.
 
 .. code-block:: bash
 
-    pytuflow-project create        \
-        --engine {hpc,fv}          \
-        --name <NAME>              \
-        --output-dir <OUTPUT_DIR>  \
-        --crs <CRS>                \
+    pytuflow-project create \
+        --engine {hpc,fv} \
+        --name <NAME> \
+        --output-dir <OUTPUT_DIR> \
+        --crs <CRS> \
         [options]
 
 **Required arguments:**
@@ -42,7 +47,7 @@ Create a new TUFLOW project skeleton from scratch.
    * - ``--engine {hpc,fv}``
      - TUFLOW engine type. Use ``hpc`` for Classic/HPC models or ``fv`` for TUFLOW FV models.
    * - ``--name <NAME>``
-     - Model name used to label generated files and directories.
+     - Model name used to label generated files.
    * - ``--output-dir <OUTPUT_DIR>``
      - Directory in which the project skeleton will be created.
    * - ``--crs <CRS>``
@@ -57,7 +62,7 @@ Create a new TUFLOW project skeleton from scratch.
    * - Argument
      - Description
    * - ``--features <FEATURES> ...``
-     - One or more optional feature names to include (see :ref:`list-features`).
+     - One or more optional features to include (see :ref:`list-features`).
    * - ``--recipe <RECIPE>``
      - Recipe name, path to a ``.json`` file, or inline JSON string to use as a base (see :ref:`list-recipes`).
    * - ``--defaults <DEFAULTS>``
@@ -78,7 +83,7 @@ Create a new TUFLOW project skeleton from scratch.
 The following example:
   - Creates a new Classic/HPC model from the "basic_2d" recipe template (see :ref:`pytuflow-project_customisation` for more details on how to view recipe settings). 
   - Overrides the SGS sample distance and sets the value to 1m. 
-  - Sets the DEM path. The DEM is not copied into the project folder, so the path should be set to where the DEM for the project will be (it is ok if it does not exist). Absolute paths can be provided and will be converted to a relative path in the template control file.
+  - Sets the DEM path. The DEM is not copied into the project folder, so the path should be set to where the DEM for the project will be (it is ok if it does not exist). Absolute paths can be provided and they will be converted to a relative path in the template control file (relative paths will always be copied without modification).
 
 .. code-block:: bash
 
@@ -95,10 +100,10 @@ The following example:
 
 The following example:
   - Creates a TUFLOW FV model
+  - Overrides the spherical setting
   - It does not use a recipe template, but instead lists the features that should be added.
-  - Overrides spherical setting
-  - Features are added by using the feature name (``salinity``, ``temp``, ``3d``)
-  - Features are added using a literal json string with specific settings (``outputnc``).
+  - It adds features by using the feature name (``salinity``, ``temp``, ``3d``)
+  - It adds the ``outputnc`` feature with local settings using a literal json string.
 
 .. code-block:: bash
 
@@ -143,7 +148,7 @@ Insert a feature into an existing TUFLOW project.
    * - Argument
      - Description
    * - ``--engine {hpc,fv}``
-     - TUFLOW engine type. If not provided, the control file extension will be used to determine the engine.
+     - TUFLOW engine type. If not provided, the control file extension will be used to determine the engine (a ``.tcf`` or ``.fvc`` extension is expected).
    * - ``--defaults DEFAULTS``
      - Path to a JSON file or inline JSON string of variable defaults.
    * - ``--force`` / ``-f``
@@ -176,7 +181,11 @@ init-templates
 ^^^^^^^^^^^^^^
 
 Initialise (or refresh) the local user template cache.
-Run this once after installation, or again with ``--force`` to reset to bundled defaults.
+Run this once after installation, or again with ``--force`` to reset to bundled defaults. 
+
+.. warning::
+
+  Any customisations made by the user could be overriden by this process if ``--force`` is used.
 
 .. code-block:: text
 
@@ -240,6 +249,9 @@ When the tool is run for the first time, template files are copied locally to th
 - Linux: ``~/.tuflow_model_files/project_templates``
 
 Subsequent calls will use these cached templates, and the user is free to modify and/or extend them. The templates can be re-copied (potentially erasing any modifications made by the user) at any time by running the :ref:`init-templates` subcommand.
+
+The following sections go into details about the various building blocks of the ``pytuflow-project`` utility. Files and subdirectories listed
+in the sections assume the root directory are the cache directories listed above.
 
 .. _template_control_files:
 
@@ -361,7 +373,7 @@ A brief overview of the settings within the ``json`` files are described below:
   * - name
     - Name of the feature. Should match the file name and be unique.
   * - display_name
-    - A prettier version of the name. Applications that use ``pytuflow-project`` can choose to use this rather than the name variable.
+    - A prettier version of the name.
   * - sort_order
     - The order to add features if multiple features are being added.
   * - template_files
@@ -397,11 +409,11 @@ A brief overview of the settings within the ``json`` files are described below:
   * - target_cf
     - The control file to target when inserting the commands
   * - placement_rule
-    - How to place the command into the control file. If omitted, then the command will be appended to the end of the control file. The rules are defined in ``rules.json`` and list commands to insert the command block either before or after
+    - How to place the command into the control file. If omitted, then the command will be appended to the end of the control file. The rules are defined in ``rules.json`` and each rule lists commands to insert the command block either before or after
   * - allow_multiple
     - If set to ``true``, the command can be inserted multiple times. If set to ``false`` (default), then the command will not be inserted again if it already exists within the control file (by default checks against the left-hand side of the command)
   * - existence_check
-    - If included, will override what pytuflow looks for when checking for the given command's existence. If included, it will be the existence for the entire command block, which can consist of multiple commands. If omitted, each command in the command block is checked. It's possible to use regex by bracketing the command with a forward slash ``/``. Flags can be added after the trailing slash, e.g. ``/<regex>/i`` to ignore case.
+    - If included, will override what PyTUFLOW looks for when checking for the given command's existence. If included, it will be the existence check for the entire command block, which can consist of multiple commands. If omitted, each command in the command block is checked. It's possible to use regex by bracketing the command with a forward slash ``/``. Flags can be added after the trailing slash, e.g. ``/<regex>/i`` to ignore case.
   * - target_previous_block
     - FV specific option. It will insert the commands as subcommands to the previously inserted command block. This is required if the previous command is the start of an FV block (e.g. ``Output == netcdf``) and the current commands belong beneath that block.
   * - by_directive_only
@@ -416,7 +428,7 @@ Recipes
 
 Recipes are predefined combinations of feature sets and variable defaults.
 
-PyTUFLOW comes bundled with default recipes which can be modified by the user, or the user can create new recipes. To create a new recipe, the user should add a new ``json`` file within the appropriate directory.
+PyTUFLOW comes bundled with default recipes which can be modified by the user, or the user can create new recipes. To create a new recipe, the user should add a new ``json`` file within the appropriate directory and it will automatically become avaiable via the CLI.
 
 Recipes can be found within the following subdirectories:
 
