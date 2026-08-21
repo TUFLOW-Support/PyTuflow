@@ -24,7 +24,7 @@ class FVProject(BaseEngineProject):
     Subsequent calls will use these cached templates, and the user is free to modify and/or extend them.
 
     Projects can also be created via the CLI with ``pytuflow-project create --engine fv``.
-    See below for examples.
+    The CLI is documented on the following page: :doc:`../../cli/pytuflow-project`
 
     It is also possible to insert features into an existing project using 
     :meth:`FVProject.insert_feature_into()<pytuflow.FVProject.insert_feature_into>` or via the CLI
@@ -83,7 +83,7 @@ class FVProject(BaseEngineProject):
 
     Or list the features via the CLI:
     
-    .. code-block:: console
+    .. code-block:: bash
 
         pytuflow-project list-features --engine fvc
 
@@ -95,7 +95,7 @@ class FVProject(BaseEngineProject):
 
     Initialise the templates via the CLI:
 
-    .. code-block:: console
+    .. code-block:: bash
 
         pytuflow-project init-templates --engine fv --force
 
@@ -115,7 +115,7 @@ class FVProject(BaseEngineProject):
 
     Taking the same example as above, and initialising it via the CLI:
 
-    .. code-block:: console
+    .. code-block:: bash
 
         pytuflow-project create \
             --engine fv \
@@ -150,7 +150,7 @@ class FVProject(BaseEngineProject):
 
     Taking the same example as above, and initialising it via the CLI:
 
-    .. code-block:: console
+    .. code-block:: bash
 
         pytuflow-project create \
             --engine fv \
@@ -188,7 +188,7 @@ class FVProject(BaseEngineProject):
 
     Taking the same example as above, and initialising it via the CLI:
 
-    .. code-block:: console
+    .. code-block:: bash
     
         pytuflow-project create \
             --engine fv \
@@ -209,7 +209,7 @@ class FVProject(BaseEngineProject):
 
     Or via the CLI:
 
-    .. code-block:: console
+    .. code-block:: bash
 
         pytuflow-project insert \
             --engine fv \

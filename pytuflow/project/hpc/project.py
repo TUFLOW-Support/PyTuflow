@@ -33,7 +33,7 @@ class HPCProject(BaseEngineProject):
     Subsequent calls will use these cached templates, and the user is free to modify and/or extend them.
 
     Projects can also be created via the CLI with ``pytuflow-project create --engine hpc``.
-    See below for examples.
+    The CLI is documented on the following page: :doc:`../../cli/pytuflow-project`
 
     It is also possible to insert features into an existing project using 
     :meth:`HPCProject.insert_feature_into()<pytuflow.HPCProject.insert_feature_into>` or via the CLI
@@ -82,7 +82,7 @@ class HPCProject(BaseEngineProject):
 
     Or list the features via the CLI:
 
-    .. code-block:: console
+    .. code-block:: bash
 
         pytuflow-project list-features --engine hpc
 
@@ -94,7 +94,7 @@ class HPCProject(BaseEngineProject):
 
     Initialise the templates via the CLI:
 
-    .. code-block:: console
+    .. code-block:: bash
 
         pytuflow-project init-templates --engine hpc --force
 
@@ -114,7 +114,7 @@ class HPCProject(BaseEngineProject):
 
     Taking the same example as above, and initialising it via the CLI:
 
-    .. code-block:: console
+    .. code-block:: bash
 
         pytuflow-project create \
             --engine hpc \
@@ -149,7 +149,7 @@ class HPCProject(BaseEngineProject):
 
     Initialising the same example via the CLI.
 
-    .. code-block:: console
+    .. code-block:: bash
 
         pytuflow-project create \
             --engine hpc \
@@ -166,7 +166,7 @@ class HPCProject(BaseEngineProject):
 
     Insert PO int an existing model using the CLI:
 
-    .. code-block:: console
+    .. code-block:: bash
 
         pytuflow-project insert \
             --engine hpc \
