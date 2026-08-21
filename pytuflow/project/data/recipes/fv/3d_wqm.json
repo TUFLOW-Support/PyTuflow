@@ -23,13 +23,13 @@
         {
             "name": "salinity",
             "sal_active": 1,
-            "sal_density": 1,
+            "sal_density_active": 1,
             "initial_sal": "<sal mg/L>"
         },
         {
             "name": "temp",
             "temp_active": 1,
-            "temp_density": 1,
+            "temp_density_active": 1,
             "heat_active": 1,
             "initial_temp": "<temp deg C>"
         },

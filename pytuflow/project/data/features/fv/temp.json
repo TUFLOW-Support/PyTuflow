@@ -9,7 +9,7 @@
             "target_cf": "fvc",
             "placement_rule": "fvc_simulation_configuration",
             "commands": [
-                "Include Temperature == ${temp_active},${temp_density}"
+                "Include Temperature == ${temp_active},${temp_density_active}"
             ]
         },
         {

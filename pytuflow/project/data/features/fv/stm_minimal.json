@@ -15,7 +15,7 @@
             "target_cf": "fvc",
             "placement_rule": "fvc_simulation_configuration",
             "commands": [
-                "Include Sediment == ${sed_active},${sed_density}"
+                "Include Sediment == ${sed_active},${sed_density_active}"
             ]
         },
          {
