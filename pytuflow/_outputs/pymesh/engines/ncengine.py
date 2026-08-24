@@ -49,7 +49,9 @@ class NCEngine(DatasetEngine):
 
     def get_name(self) -> str:
         with self.open():
-            return list(self.hnd.groups.keys())[0]
+            if self.hnd.groups.keys():
+                return list(self.hnd.groups.keys())[0]
+            return ''
 
     def is_xmdf(self) -> bool:
         with self.open():

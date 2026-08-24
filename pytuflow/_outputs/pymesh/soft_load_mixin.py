@@ -17,6 +17,8 @@ class SoftLoadMixin:
         _ = [x.open() for x in extractors]
         try:
             for dtype in self.data_types():
+                if dtype.startswith('File Type'):
+                    break
                 if dtype.lower() == 'bed elevation' and bed_level_count == 0:
                     yield DatasetGroup(dtype, 'scalar', [0.], 1)
                     bed_level_count += 1
