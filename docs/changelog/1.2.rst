@@ -190,3 +190,4 @@ Bug Fixes
 ^^^^^^^^^
 
 - Fixed a bug in the ``MapOutput`` classes where reading in an empty GIS file would cause an unexpected Python error. When an empty GIS file is provided, an exception is still thrown, but gives a more informative message about the issue.
+- Fixed a bug where if a ``.prj`` file was used in a TUFLOW projection command, and the accompanying shapefiles were missing (i.e. the ``.shp``, ``.dbf`` etc), then the projection was not read in correctly and produced a warning. This is now fixed and the ``.prj`` is no opened and the projection string is read directly from the file.
