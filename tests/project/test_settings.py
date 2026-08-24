@@ -10,7 +10,7 @@ class TestSettingsDefaults:
     def test_factory_defaults_present(self):
         s = Settings()
         assert s.iter == '001'
-        assert s.gis_format == 'SHP'
+        assert s.gis_format == 'GPKG'
 
     def test_hpc_defaults_present(self):
         s = Settings()
