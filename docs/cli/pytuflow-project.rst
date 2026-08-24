@@ -3,6 +3,10 @@
 pytuflow-project
 ================
 
+.. note::
+
+  This is an experimental feature. This means that the CLI is not considered final and can change in future versions without provision for backward compatibility.
+
 The ``pytuflow-project`` command provides tools for creating and managing TUFLOW project skeletons.
 It supports both TUFLOW Classic/HPC and TUFLOW FV.
 

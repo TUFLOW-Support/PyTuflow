@@ -18,6 +18,10 @@ Support has been added for TUFLOW FV control files. The workflow and data struct
 Project Creation
 ^^^^^^^^^^^^^^^^
 
+.. note::
+
+  This is an experimental feature. This means that the CLI is not considered final and can change in future versions without provision for backward compatibility.
+
 PyTUFLOW now supports project initialisation and creation of a skeleton directory and control files via :doc:`../cli/pytuflow-project`. Alternatively, via the classes :class:`~pytuflow.HPCProject` and :class:`~pytuflow.FVProject`.
 
 .. _flux:
