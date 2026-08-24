@@ -44,7 +44,7 @@ def get_database_name(file):
     if '>>' in str(file) and str(file).count('>>') > str(file).count('<<'):
         return [x.strip() for x in SPLIT_DATABASE_REGEX.split(file, maxsplit=1)]
     else:
-        if Path(file).suffix.upper() == '.PRJ':
+        if Path(file).suffix.upper() == '.PRJ' and Path(file).with_suffix('.shp').exists():
             file = Path(file).with_suffix('.shp')
         return [str(file), Path(file).stem]
 

@@ -26,6 +26,7 @@ from ...pytuflow._tmf.settings import TCFConfig
 from ...pytuflow._tmf.tfpathlib import TuflowPath
 from ...pytuflow._tmf import const
 from ...pytuflow._tmf.inp.get_input_class import get_input_class
+from ..test_time_series import custom_log_handler
 
 
 def test_control_file_init_blank():
@@ -1656,3 +1657,10 @@ def test_find_input_fvc_recurse_similar():
     fvc = FVC(p)
     inp = fvc.find_input('output == netcdf', recursive='similar')
     assert len(inp) == 1
+
+
+def test_load_prj_with_no_shp():
+    p = './tests/tmf/test_datasets/models/prj_with_no_shp/runs/model.tcf'
+    with custom_log_handler.with_filter(None) as custom_logger:
+        tcf = TCF(p)
+        assert custom_logger.msg_count == 0

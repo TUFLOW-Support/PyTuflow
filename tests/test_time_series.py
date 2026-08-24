@@ -35,7 +35,10 @@ class CustomLoggingHandler(StreamHandler):
     @contextmanager
     def with_filter(self, msgs):
         """Use a context manager so that the previous handlers can be restored no matter how the test exits."""
-        self.msg_filters = msgs.copy()
+        if msgs is not None:
+            self.msg_filters = msgs.copy()
+        else:
+            self.msg_filters = None
         logger = logging.getLogger('pytuflow')
         exist_hdlrs = logger.handlers.copy()
         for hdlr in exist_hdlrs:
@@ -45,11 +48,12 @@ class CustomLoggingHandler(StreamHandler):
         logger.removeHandler(self)
         for hdlr in exist_hdlrs:
             logger.addHandler(hdlr)
-        self.msg_filters.clear()
+        if self.msg_filters is not None:
+            self.msg_filters = []
         self.msg_count = 0
 
     def handle(self, record):
-        if record.msg in self.msg_filters:
+        if self.msg_filters is None or record.msg in self.msg_filters:
             self.msg_count += 1
         else:
             super().handle(record)
