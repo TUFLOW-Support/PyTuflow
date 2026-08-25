@@ -7,23 +7,37 @@ import json
 
 
 def _normalize_slashes(cmd: str) -> str:
-    """Normalize all path separators in *cmd* to the OS-native separator, except inside <...> blocks.
+    """Normalize all path separators in *cmd* to the OS-native separator, except inside <...> blocks or inside comments.
 
-    Example: "a/b <path/to/file> c\\d" -> "a{sep}b <path/to/file> c{sep}d"
+    Example 1: "a/b <path/to/file> c\\d" -> "a{sep}b <path/to/file> c{sep}d"
+    
+    Example 2: "! 1D/2D linking" is unaffected
     """
     protected = []
 
-    # Protect angle-bracket sections like <path/to/file>
-    def _protect(match: re.Match) -> str:
-        protected.append(match.group(0))
+    def _protect(s: str) -> str:
+        protected.append(s)
         return f"__PROTECTED_{len(protected)-1}__"
 
-    temp = re.sub(r"<[^<>]*>", _protect, cmd)
+    # 1) Protect comments first (so any <...> inside comments is untouched)
+    #    Comment marker recognized at start-of-line or after whitespace.
+    temp = re.sub(
+        r"(?m)(^|\s)([#!].*)$",
+        lambda m: m.group(1) + _protect(m.group(2)),
+        cmd,
+    )
 
-    # Replace both slash types outside protected blocks
+    # 2) Protect angle-bracket sections in non-comment text
+    temp = re.sub(
+        r"<[^<>]*>",
+        lambda m: _protect(m.group(0)),
+        temp,
+    )
+
+    # 3) Replace both slash types outside protected blocks
     temp = temp.replace("/", os.sep).replace("\\", os.sep)
 
-    # Restore protected blocks
+    # 4) Restore protected blocks
     for i, original in enumerate(protected):
         temp = temp.replace(f"__PROTECTED_{i}__", original)
 

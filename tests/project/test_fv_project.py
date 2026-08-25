@@ -109,8 +109,11 @@ class TestFVProjectCreate:
 
     def test_fvc_slashes_normalized(self, basic_project, project_dir):
         import os
+        from pytuflow import FVC
         basic_project.create()
-        fvc_text = (project_dir / 'runs' / 'mymodel_001.fvc').read_text()
+        fvc_path = (project_dir / 'runs' / 'mymodel_001.fvc')
+        fvc = FVC(fvc_path)
+        fvc_text = '\n'.join([x.rhs for x in fvc.inputs if not x.rhs.startswith('<')])
         sep = os.sep
         if sep == '/':
             assert '\\' not in fvc_text
