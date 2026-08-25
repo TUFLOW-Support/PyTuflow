@@ -1,4 +1,5 @@
 from pathlib import Path
+import logging
 
 try:
     from netCDF4 import Dataset
@@ -21,6 +22,9 @@ from .._pytuflow_types import PathLike
 from ..results import ResultTypeError
 
 from .pymesh import PyNCMesh
+
+
+logger = logging.getLogger('pytuflow')
 
 
 class NCMesh(Mesh):
@@ -194,25 +198,30 @@ class NCMesh(Mesh):
     def _looks_like_this(fpath: Path) -> bool:
         if fpath.suffix.lower() != '.nc':
             return False
-        try:
-            if has_nc:
+        if has_nc:
+            try:
                 with Dataset(fpath, 'r') as nc:
                     if 'Type' in nc.ncattrs() and nc.getncattr('Type') == 'Cell-centred TUFLOWFV output':
                         return True
-            elif has_gdal:
+            except Exception:
+                logger.debug('Failed to read NetCDF file using netCDF4 library.', exc_info=True)
+        if has_gdal:
+            try:
                 ds = gdal.Open(str(fpath))
                 attr = ds.GetMetadata()
                 type_ = attr.get('NC_GLOBAL#Type', '')
                 if type_ == 'Cell-centred TUFLOWFV output':
                     return True
                 ds = None
-            else:
-                with open(fpath, "rb") as f:
-                    head = f.read(8192).decode("latin1", errors="ignore")
-                if "Cell-centred TUFLOWFV output" in head:
-                    return True
+            except Exception:
+                logger.debug('Failed to read NetCDF file using GDAL library.', exc_info=True)
+        try:
+            with open(fpath, "rb") as f:
+                head = f.read(8192).decode("latin1", errors="ignore")
+            if "Cell-centred TUFLOWFV output" in head:
+                return True
         except Exception:
-            return False
+            logger.debug('Failed to open NetCDF file using open().', exc_info=True)
 
         return False
 
