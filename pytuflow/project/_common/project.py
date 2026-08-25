@@ -176,8 +176,21 @@ class BaseEngineProject(BaseProject):
                     skipped_templates.append(Path(template_key).suffix.lower()[1:])
                     continue
 
+            # get feature variable overrides - these need to be applied for the directives to use them
+            # feature specific variables could interact badly with global variables, although should be rare unless
+            # a feature can be added multiple times
+            merged_vars = variables.copy()
+            for feature, _overrides in feature_pairs:
+                allow_multiple = False
+                for cmd in feature._get_config().get('command_blocks', []):
+                    if cmd.get('allow_multiple', False):
+                        allow_multiple = True
+                        break
+                if not allow_multiple:
+                    merged_vars = {**merged_vars, **_overrides} if _overrides else merged_vars
+
             text = self._manager.get_template(template_key)
-            mod_variables = self._engine.make_relative(text, out_path, variables)
+            mod_variables = self._engine.make_relative(text, out_path, merged_vars)
             rendered_text = self._engine.render(text, mod_variables, active_features, feature_configs)
             rendered_text = _normalize_rendered(rendered_text)
             out_path.write_text(rendered_text, encoding='utf-8')            
