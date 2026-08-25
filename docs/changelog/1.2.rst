@@ -4,7 +4,7 @@ Changelog for 1.2
 1.2.0
 -----
 
-Release date: XX XXX 2026
+Release date: 28 August 2026
 
 .. _fv_changelog_entry:
 
