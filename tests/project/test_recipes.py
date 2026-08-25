@@ -255,8 +255,7 @@ class TestCreateCLIWithRecipe:
         import subprocess, sys
         result = subprocess.run(
             [sys.executable, '-m', 'pytuflow.project'] + argv,
-            capture_output=True, text=True,
-            cwd='/home/ellis/dev/PyTuflow',
+            capture_output=True, text=True
         )
         return result.returncode, result.stdout, result.stderr
 
@@ -366,8 +365,7 @@ class TestDefaultsFlag:
         import subprocess, sys
         result = subprocess.run(
             [sys.executable, '-m', 'pytuflow.project'] + argv,
-            capture_output=True, text=True,
-            cwd='/home/ellis/dev/PyTuflow',
+            capture_output=True, text=True
         )
         return result.returncode, result.stdout, result.stderr
 
