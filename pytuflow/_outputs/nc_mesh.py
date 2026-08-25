@@ -216,9 +216,9 @@ class NCMesh(Mesh):
             except Exception:
                 logger.debug('Failed to read NetCDF file using GDAL library.', exc_info=True)
         try:
-            with open(fpath, "rb") as f:
-                head = f.read(8192).decode("latin1", errors="ignore")
-            if "Cell-centred TUFLOWFV output" in head:
+            with open(fpath, 'rb') as f:
+                head = f.read(8192).decode('latin1', errors='ignore')
+            if 'Cell-centred TUFLOWFV output' in head:
                 return True
         except Exception:
             logger.debug('Failed to open NetCDF file using open().', exc_info=True)
