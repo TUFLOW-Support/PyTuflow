@@ -1,5 +1,6 @@
 from collections import OrderedDict
 from pathlib import Path
+import logging
 
 try:
     import pandas as pd
@@ -11,6 +12,9 @@ from .driver import DatabaseDriver
 from .river_unit_handler import RiverUnit
 from .dat import Dat
 from ...tmf_types import PathLike
+
+
+logger = logging.getLogger('pytuflow')
 
 
 class FmCrossSection(RiverUnit, CrossSection):
@@ -60,8 +64,8 @@ class FmCrossSectionDatabaseDriver(DatabaseDriver):
                             return True
                         if i > 10:
                             break
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f'Error occurred: {e}')
         return False
 
     def name(self) -> str:

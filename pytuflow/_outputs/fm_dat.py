@@ -98,8 +98,8 @@ class DATCrossSections(TabularOutput):
                     if line.upper().startswith('END GENERAL'):
                         for _ in f:  # check if there is another line
                             return False
-        except Exception:
-            pass
+        except Exception as e:
+            print(f'Error: {e}')
         return True
 
     def times(self, filter_by: str = None, fmt: str = 'relative') -> list[TimeLike]:

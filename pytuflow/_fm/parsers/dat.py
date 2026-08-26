@@ -120,8 +120,8 @@ class DAT:
             pass
         except ValueError:
             pass
-        except Exception:
-            pass
+        except Exception as e:
+            print(f'Error: {e}')
 
         return fixed_field_length
 
