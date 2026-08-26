@@ -237,7 +237,7 @@ class TuflowBinaries:
         versions = {}
         search = cmd_search + [f'{cls.NAME}*']
         try:
-            output = subprocess.check_output(search, stderr=subprocess.PIPE, text=True)
+            output = subprocess.check_output(search, stderr=subprocess.PIPE, text=True)  # nosec B603
             bin_names = [x.split('\t')[0] for x in output.splitlines()]
             for bin_name in bin_names:
                 query = cmd_query + [bin_name]

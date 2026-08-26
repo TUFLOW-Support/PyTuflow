@@ -24,7 +24,7 @@ class TuflowFVBinaries(TuflowBinaries):
         """Only tested post 2026."""
         import subprocess
         try:
-            output = subprocess.check_output([bin_path, '-version'], stderr=subprocess.PIPE, text=True)
+            output = subprocess.check_output([bin_path, '-version'], stderr=subprocess.PIPE, text=True)  # nosec B603
             version_text = [x for x in output.splitlines() if x.startswith('TUFLOW Build:')]
             if not version_text:
                 return None
@@ -37,7 +37,7 @@ class TuflowFVBinaries(TuflowBinaries):
             return v
         except (subprocess.CalledProcessError, FileNotFoundError):
             try:
-                output = subprocess.run([bin_path], input='\n', text=True, capture_output=True)
+                output = subprocess.run([bin_path], input='\n', text=True, capture_output=True)  # nosec B603
                 line = [x for x in output.stdout.splitlines() if 'Build version:' in x]
                 if line:
                     return line[0].split(':')[-1].strip()
