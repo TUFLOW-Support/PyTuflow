@@ -1,5 +1,6 @@
 from pathlib import Path
 import io
+import os
 import re
 from datetime import datetime
 import pytest
@@ -1087,6 +1088,7 @@ def test_set_rhs_and_write():
     assert new_line == 'BC == Q, FC04, ../models/shp/bc_dbase/EG00_001.csv'
 
 
+@pytest.mark.skipif(os.name != 'posix', reason='Test is for linux only')
 def test_load_command_with_absolute_fpath_linux():
     line = 'Read GIS Nodestring == /home/usr/TUFLOWFV/models/gis/2d_ns_001.shp'
     cmd = FVCommand(line, FVCConfig())

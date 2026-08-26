@@ -856,8 +856,7 @@ class TestCLICommands:
                 '--crs', 'EPSG:32760',
                 '--iter', '001',
             ],
-            capture_output=True, text=True,
-            cwd='/home/ellis/dev/PyTuflow',
+            capture_output=True, text=True
         )
         assert result.returncode == 0, result.stderr
         assert (tmp_path / 'out' / 'runs' / 'testmodel_001.tcf').exists()
