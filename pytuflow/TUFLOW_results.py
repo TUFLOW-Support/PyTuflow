@@ -4253,7 +4253,7 @@ class ResData():
     def set_reference_time(self, reference_time):
         """Sets results reference time - old time will be overridden"""
 
-        assert type(reference_time) is datetime, "input reference time must be an DateTime object"
+        assert type(reference_time) is datetime, "input reference time must be an DateTime object"  # nosec B101
         if not self.has_reference_time:
             self.has_reference_time = True
         elif self._tmp_reference_time is None:
