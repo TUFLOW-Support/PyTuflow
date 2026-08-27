@@ -112,16 +112,17 @@ class PyNCMeshGeometry(PyMeshGeometry, GeometryLazyLoadMixin, VTKGeometryMixin):
                 self._data(nc, 'node_Zb')
             ))
             if np.ma.isMaskedArray(self._vertices):
+                a = np.array(self._vertices)
                 if np.ma.is_masked(self._vertices):
-                    self._vertices = self._vertices.filled(np.nan)
-                else:
-                    self._vertices = np.array(self._vertices)
+                    a[self._vertices.mask] = np.nan
+                self._vertices = a
             cell_node = self._data(nc, 'cell_node')
             if np.ma.isMaskedArray(cell_node):
+                a = np.array(cell_node)
                 if np.ma.is_masked(cell_node):
+                    a[cell_node.mask] = np.nan
                     cell_node = cell_node.filled(np.nan)
-                else:
-                    cell_node = np.array(cell_node)
+                cell_node = a
             columns = ['n1', 'n2', 'n3', 'n4'] if cell_node.shape[1] == 4 else ['n1', 'n2', 'n3']
 
             self._cells_df = pd.DataFrame(

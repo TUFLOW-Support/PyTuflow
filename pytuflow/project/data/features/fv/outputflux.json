@@ -1,0 +1,36 @@
+{
+  "name": "outputflux",
+  "display_name": "Output Flux",
+  "sort_order": 5,
+  "template_files": [],
+  "command_blocks": [
+    {
+      "id": "fvc_output_flux",
+      "target_cf": "fvc",
+      "placement_rule": "fvc_output",
+      "allow_multiple": true,
+      "existence_check": "/^output == flux$/i",
+      "commands": [
+        "\nOutput == flux"
+      ]
+    },
+    {
+      "id": "output_flux_param",
+      "target_cf": "fvc",
+      "target_previous_block": true,
+      "commands": [
+        "Output Interval == ${output_interval}"
+      ]
+    },
+    {
+        "id": "fvc_flux_nodestring",
+        "target_cf": "fvc",
+        "placement_rule": "before_fvc_output",
+        "allow_multiple": true,
+        "commands": [
+            "Read GIS Nodestring == ${nodestring_path}"
+        ]
+
+    }
+  ]
+}

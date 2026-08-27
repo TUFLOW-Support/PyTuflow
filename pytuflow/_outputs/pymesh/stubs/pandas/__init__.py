@@ -2,15 +2,21 @@ __version__ = '0.0.0'
 
 
 class DataFrame:
-    pass
+
+    def __init__(self, *args, **kwargs):
+        pass
 
 
 class Series:
-    pass
+
+    def __init__(self, *args, **kwargs):
+        pass
 
 
 class Index:
-    pass
+
+    def __init__(self, *args, **kwargs):
+        pass
 
 
 def read_csv(*args, **kwargs):

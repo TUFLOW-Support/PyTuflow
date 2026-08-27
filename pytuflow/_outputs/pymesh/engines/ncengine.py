@@ -49,7 +49,9 @@ class NCEngine(DatasetEngine):
 
     def get_name(self) -> str:
         with self.open():
-            return list(self.hnd.groups.keys())[0]
+            if self.hnd.groups.keys():
+                return list(self.hnd.groups.keys())[0]
+            return ''
 
     def is_xmdf(self) -> bool:
         with self.open():
@@ -91,12 +93,15 @@ class NCEngine(DatasetEngine):
             if idx is None:
                 a = grp.variables[varname][:]
             else:
-                a = grp.variables[varname][idx]
+                contiguous, post_idx = self._to_contiguous(idx)
+                a = grp.variables[varname][contiguous]
+                if post_idx is not None:
+                    a = np.asarray(a)[post_idx]
             if np.ma.isMaskedArray(a):
+                a_ = np.array(a)
                 if np.ma.is_masked(a):
-                    a = a.filled(np.nan)
-                else:
-                    a = np.array(a)
+                    a_[a.mask] = np.nan
+                a = a_
             return a
 
     def _group(self, data_path: str) -> tuple[Group | Dataset, str]:

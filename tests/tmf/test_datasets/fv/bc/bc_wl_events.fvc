@@ -1,0 +1,4 @@
+BC == WL, 2, bc_dbase\Downstream_WL_001.csv
+	BC Header == time,~EVENT~
+End BC
+Event File == bc_events.tef

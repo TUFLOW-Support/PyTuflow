@@ -1,0 +1,34 @@
+{
+  "name": "po",
+  "display_name": "Plot Output (PO)",
+  "sort_order": 80,
+  "template_files": [],
+  "command_blocks": [
+    {
+      "id": "po_header",
+      "target_cf": "tcf",
+      "existence_check": "! PLOT OUTPUT",
+      "placement_rule": "before_po_commands",
+      "commands": [
+        "\n!_______________________________________________________",
+        "! PLOT OUTPUT"
+      ]
+    },
+    {
+      "id": "po_commands",
+      "target_cf": "tcf",
+      "placement_rule": "after_po_commands",
+      "commands": [
+        "Read GIS PO == ${po_path}"
+      ]
+    },
+    {
+      "id": "tcf_time_series_output_interval",
+      "target_cf": "tcf",
+      "placement_rule": "after_po_commands",
+      "commands": [
+        "Time Series Output Interval == ${time_series_output_interval}"
+      ]
+    }
+  ]
+}

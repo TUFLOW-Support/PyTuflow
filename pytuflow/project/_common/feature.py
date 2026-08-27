@@ -1,0 +1,320 @@
+from __future__ import annotations
+
+import os
+import re
+import typing
+from string import Template
+
+from ..abc.feature import BaseFeature
+from ..template.manager import TemplateManager
+from ..template.engine import TemplateEngine
+from .utils import _normalize_slashes, _parse_filter
+
+if typing.TYPE_CHECKING:
+    from ..._tmf.abc.input import Input
+
+
+class BaseEngineFeature(BaseFeature):
+    """Shared base for all engine features (HPC, FV, …).
+
+    Command configuration is driven by a JSON file cached at
+    ``~/.tuflow_model_files/project_templates/features/<engine>/<name>.json``.
+    Subclasses must set ``ENGINE_TYPE`` (e.g. ``'hpc'`` or ``'fv'``).
+    """
+
+    ENGINE_TYPE: str = ''
+    NAME: str = ''
+    DISPLAY_NAME: str = ''
+
+    def __init__(self, *args, **kwargs):
+        self.rendered_templates = {}  # {template_key: str: out_path: Path} records templates that have been rendered 
+
+    def _get_config(self) -> dict:
+        """Load this feature's JSON config via the TemplateManager (reads from cache)."""
+        manager = TemplateManager(self.ENGINE_TYPE)
+        return manager.get_feature_config(self.NAME)
+
+    def _get_rules(self) -> dict:
+        """Load the feature's rules config."""
+        manager = TemplateManager(self.ENGINE_TYPE)
+        return manager.get_rules()
+
+    def _process_directives(self, commands: list[str], variables: dict[str, typing.Any]) -> list[str]:
+        engine = TemplateEngine()
+        text = '\n'.join(commands)
+        feature_configs = {self.NAME: self._get_config()}
+        rendered_text = engine.render(text, variables, [self.NAME], feature_configs)
+        processed_commands = rendered_text.rstrip().split('\n')
+        # there are any blank commands, it is because the subsequent command started with a '\n'
+        recreated_commands = []
+        for i, j in zip(range(len(processed_commands) - 1), range(1, len(processed_commands))):
+            cmd = processed_commands[i]
+            if not cmd:
+                processed_commands[j] = f'\n{processed_commands[j]}'
+            else:
+                recreated_commands.append(cmd)
+        recreated_commands.append(processed_commands[-1])
+        return recreated_commands
+
+
+    # ------------------------------------------------------------------
+    # BaseFeature interface
+    # ------------------------------------------------------------------
+
+    def get_template_files(self, variables: dict) -> list[tuple[str, str]]:
+        config = self._get_config()
+        result = []
+        for tf in config.get('template_files', []):
+            template_key = tf['template_key']
+            subdir = tf.get('output_subdir', 'model')
+            filename = Template(template_key.split('/')[-1]).safe_substitute(variables)
+            target_name = tf.get('target_name', filename)
+            output_rel = f'{subdir}/{target_name}'
+            result.append((template_key, output_rel))
+        return result
+
+    def apply_to_control_files(self, control_files: dict, variables: dict, skip_targets: list[str] = ()) -> None:
+        """Apply this feature's command blocks to the supplied control file objects."""
+        last_input = None
+        config = self._get_config()
+        for block in config.get('command_blocks', []):
+            if block.get('by_directive_only', False):  # command block can only get inserted via ##COMMANDS ##
+                continue
+            target = block.get('target_cf', 'tcf' if self.ENGINE_TYPE == 'hpc' else 'fvc')
+            if target in skip_targets:
+                continue
+            loop_all = block.get('loop_all_found_targets', True)
+            cf = control_files.get(target)
+            if cf is None or cf == []:
+                continue
+            elif not loop_all and isinstance(cf, list):
+                cf = cf[0]
+            cf_list = cf if isinstance(cf, list) else [cf]
+            subcf_list = []
+            subtarget = None
+            for cf in cf_list:
+                subtarget = block.get("subtarget_cf") or block.get("target_previous_block")
+                if subtarget:
+                    if block.get("subtarget_cf"):
+                        pattern, is_regex, flags = _parse_filter(subtarget)
+                        if '==' in pattern:
+                            input_subtarget = cf.find_input(filter_by=pattern, regex=is_regex, regex_flags=flags)
+                        else:
+                            input_subtarget = cf.find_input(lhs=pattern, regex=is_regex, regex_flags=flags)
+                        if not input_subtarget:
+                            continue
+                    else:
+                        input_subtarget = [last_input] if last_input else []
+                    for inp in input_subtarget:
+                        if inp.cf:
+                            subcf_list.extend(inp.cf if loop_all else inp.cf[:1])
+                            if not loop_all:
+                                break
+            if subtarget:
+                cf_list = subcf_list
+            for cf in cf_list:
+                last_input = self._apply_block(cf, block, variables)
+
+    def apply_to_tcf(self, tcf, variables: dict) -> None:
+        """Legacy shim — delegates to apply_to_control_files."""
+        self.apply_to_control_files({'tcf': tcf}, variables)
+
+    # ------------------------------------------------------------------
+    # Internal helpers
+    # ------------------------------------------------------------------
+
+    def _apply_block(self, cf, block: dict, variables: dict) -> Input | None:
+        """Apply a single command block to a control file.
+
+        Supports two modes:
+
+        **Atomic mode** (``existence_check`` configured): the sentinel is
+        checked once; if found the entire block is skipped; if absent all
+        commands are inserted unconditionally.
+
+        **Per-command mode** (no ``existence_check``): each command is
+        checked individually — skip if uncommented exists, uncomment if
+        commented version found, otherwise insert.  Pre-command comments
+        are buffered as *decorators* and only flushed when a real command
+        needs inserting.
+
+        Returns the last inserted input.
+        """
+        def add_block_commands_by_directive(cmd_iter_, current_ref_, cf_):
+            """Adds commands to the previous input assuming it is a block header."""
+            subcf = current_ref_.cf[0] if current_ref_ and current_ref_.cf else cf_
+            while True:
+                try:
+                    subcmd = next(cmd_iter)
+                except StopIteration:
+                    return
+                if subcmd.strip() == '##ENDBLOCK##':
+                    return
+                if subcmd.strip() == '##STARTBLOCK##':
+                    add_block_commands_by_directive(cmd_iter, current_ref_, subcf)
+                    continue
+                current_ref_ = self._insert_or_append(subcf, None, subcmd, anchor_rule='after')
+
+        raw_commands: list[str] = block.get('commands', [])
+        if not raw_commands:
+            return
+
+        commands = self._process_directives(raw_commands, variables)
+        if not commands:
+            return
+
+        commands = [
+            _normalize_slashes(Template(cmd).safe_substitute(variables))
+            for cmd in commands
+        ]
+
+        # ── Atomic block mode (existence_check configured) ───────────────────
+        existence_check = block.get('existence_check')
+        if existence_check is not None and not block.get('allow_multiple'):
+            is_comment = existence_check.strip().startswith('!')
+            pattern, is_regex, flags = _parse_filter(existence_check)
+            if is_comment:
+                found = cf.find_input(filter_by=pattern, recursive='similar', comments=True, regex=is_regex, regex_flags=flags)
+            else:
+                if '==' in pattern:
+                    found = cf.find_input(filter_by=pattern, recursive='similar', regex=is_regex, regex_flags=flags)
+                else:
+                    found = cf.find_input(lhs=pattern, recursive='similar', regex=is_regex, regex_flags=flags)
+            if found:
+                return found[0]  # sentinel present — block already inserted
+
+            current_ref, anchor_rule = self._find_block_anchor(cf, block)
+            if current_ref:
+                cf = current_ref.parent
+            for cmd in commands:
+                if cmd.strip():
+                    current_ref = self._insert_or_append(cf, current_ref, cmd, anchor_rule)
+                anchor_rule = 'after'  # switch back to after so that subsequent commands appear in expected order
+            return current_ref
+
+        # ── Per-command mode (no existence_check) ────────────────────────────
+        allow_multiple = block.get('allow_multiple', False)
+        current_ref, anchor_rule = self._find_block_anchor(cf, block)
+        pending_decorators: list[str] = []
+        past_first_real_command = False
+
+        cmd_iter = iter(commands)
+        while True:
+            try:
+                cmd = next(cmd_iter)
+            except StopIteration:
+                break
+            stripped = cmd.strip()
+
+            if not stripped or (stripped.startswith('!') and not past_first_real_command):
+                pending_decorators.append(cmd)
+                continue
+
+            if stripped == '##STARTBLOCK##':
+                add_block_commands_by_directive(cmd_iter, current_ref, cf)
+                continue
+
+            past_first_real_command = True
+            lhs = stripped.split('==')[0].strip()
+
+            if stripped.startswith('!'):
+                existing = cf.find_input(stripped, comments=True)
+            else:
+                existing = cf.find_input(lhs=lhs, recursive=False)
+            if existing and not allow_multiple:
+                pending_decorators.clear()
+                current_ref = existing[0]
+                continue
+
+            if not allow_multiple:
+                escaped_lhs = re.escape(lhs)
+                auto_pattern = rf'^\s*!\s*{escaped_lhs}\s*=='
+                commented = cf.find_input(
+                    filter_by=auto_pattern,
+                    comments=True,
+                    recursive='similar',
+                    regex=True,
+                    regex_flags=re.IGNORECASE,
+                )
+                if commented:
+                    cf.uncomment(commented[0])
+                    pending_decorators.clear()
+                    current_ref = commented[0]
+                    continue
+
+            if current_ref:
+                cf = current_ref.parent
+
+            for dec in pending_decorators:
+                if dec.strip():
+                    current_ref = self._insert_or_append(cf, current_ref, dec, anchor_rule)
+                anchor_rule = 'after'  # switch back to after so that subsequent commands appear in expected order
+            pending_decorators.clear()
+
+            current_ref = self._insert_or_append(cf, current_ref, cmd, anchor_rule)
+
+        return current_ref
+
+    def _find_block_anchor(self, cf, block: dict) -> tuple['Input | None', str]:
+        """Return the input after which to start inserting, or ``None`` (append).
+
+        Priority:
+        1. Placement rule (last matching command in the rule's command list).
+        2. ``insert_after_lhs`` fallback.
+        3. ``None`` — commands are appended to the end of the file.
+        """
+        rule_type = ''
+        placement_rule = block.get('placement_rule')
+        if placement_rule:
+            rules = self._get_rules()
+            rule = rules.get(placement_rule, {})
+            rule_type = rule.get('rule', 'after')
+            if rule_type not in ['before', 'after']:
+                raise NotImplementedError(
+                    f"Placement rule strategy '{rule_type}' (from rule '{placement_rule}') "
+                    f"is not implemented."
+                )
+            last_ref = None
+            for cmd_entry in rule.get('commands', []):
+                pattern, is_regex, flags = _parse_filter(cmd_entry)
+                if not pattern.strip('\n\t ^$') or pattern.lstrip('\n\t ^$')[0] == '!' or pattern.lstrip('\n\t ^$')[0] == '#':
+                    matches = cf.find_input(
+                        filter_by=pattern, recursive='similar', regex=is_regex, regex_flags=flags, comments=True
+                    )
+                elif '==' in pattern:
+                    matches = cf.find_input(
+                        filter_by=pattern, recursive='similar', regex=is_regex, regex_flags=flags
+                    )
+                else:
+                    matches = cf.find_input(
+                        lhs=pattern, recursive='similar', regex=is_regex, regex_flags=flags
+                    )
+                if matches:
+                    last_ref = matches[0] if rule.get('match_first', False) else matches[-1]
+            if last_ref is not None:
+                return last_ref, rule_type
+
+        insert_after_lhs = block.get('insert_after_lhs')
+        if insert_after_lhs:
+            refs = cf.find_input(lhs=insert_after_lhs, recursive='similar')
+            if refs:
+                return refs[-1], rule_type
+
+        return None, rule_type  # append mode
+
+    @classmethod
+    def _insert_or_append(cls, cf, ref_inp, cmd: str, anchor_rule: str):
+        """Insert *cmd* after *ref_inp*, or append when *ref_inp* is ``None``."""
+        if ref_inp is None:
+            inp = cf.append_input(cmd)
+        else:
+            inp = cf.insert_input(ref_inp, cmd, after=False if anchor_rule == 'before' else True, gap=1 if anchor_rule == 'before' else 0)
+        inp.rhs = cls._make_relative(cf, inp.rhs)
+        return inp
+
+    @classmethod
+    def _make_relative(cls, cf, rhs: str | None) -> str | None:
+        """If the rhs is a filepath, make relative if it is absolute"""
+        if cf.fpath and rhs and (rhs.startswith('/') or rhs.startswith(r'\\') or re.findall(r'^[A-Za-z]:(?:\\|/)', rhs)):
+            return os.path.relpath(rhs, str(cf.fpath.parent))
+        return rhs

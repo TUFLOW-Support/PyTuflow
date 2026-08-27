@@ -1,0 +1,39 @@
+{
+  "name": "estry",
+  "display_name": "Estry (1D Drainage)",
+  "sort_order": 20,
+  "template_files": [
+    {
+      "template_key": "model/${model_name}_${iter}.ecf",
+      "output_subdir": "model"
+    }
+  ],
+  "command_blocks": [
+    {
+      "id": "estry_tcf",
+      "target_cf": "tcf",
+      "placement_rule": "hpc_control_files",
+      "commands": [
+        "Estry Control File == ..\\model\\${model_name}_${iter}.ecf"
+      ]
+    },
+    {
+      "id": "estry_tbc",
+      "target_cf": "tbc",
+      "existence_check": "! 1D/2D LINKING",
+      "commands": [
+        "\n!_______________________________________________________",
+        "! 1D/2D LINKING",
+        "Read GIS BC == ${bc_gis_path_1d}"
+      ]
+    },
+    {
+      "id": "tcf_time_series_output_interval_estry",
+      "target_cf": "tcf",
+      "placement_rule": "after_po_commands",
+      "commands": [
+        "##COMMANDS tcf_time_series_output_interval##"
+      ]
+    }
+  ]
+}

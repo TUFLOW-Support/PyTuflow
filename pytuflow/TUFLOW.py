@@ -476,13 +476,12 @@ class ResData():
         
         if self._res is not None:
             if asDates:
-                assert self._format == '2016', "Date format only available in TUFLOW 2016 or later"
-                assert self._res.has_reference_time, "Results do not have reference time. Reference time can be set" \
-                                                     "using setReferenceTime(DateTime)"
-                return self._res.dates(domain=domain)
+                assert self._format == '2016', "Date format only available in TUFLOW 2016 or later"  # nosec B101
+                assert self._res.has_reference_time, "Results do not have reference time. Reference time can be set using setReferenceTime(DateTime)"   # nosec B101
+                return self._res.dates(domain=domain) 
             else:
                 if zeroTime is not None:
-                    assert self._format == '2016', "Date format only available in TUFLOW 2016 or later"
+                    assert self._format == '2016', "Date format only available in TUFLOW 2016 or later"  # nosec B101
                     return self._res.timeSteps(zeroTime)
                 else:
                     return self._res.timeSteps(domain=domain)
@@ -498,7 +497,7 @@ class ResData():
         """
 
         if self._res is not None:
-            assert self._format == '2016', "Date format only available in TUFLOW 2016 or later"
+            assert self._format == '2016', "Date format only available in TUFLOW 2016 or later"    # nosec B101
             self._res.set_reference_time(referenceTime)
     
     def getTimeSeriesData(self, element, resultType, domain=None):
@@ -968,7 +967,7 @@ class ResData():
 
 if __name__ == "__main__":
     # debugging
-    tpc = r"D:\plot\TUT_5m_002_HPC+QuadTree+SGS.tpc"
+    #tpc = r"D:\plot\TUT_5m_002_HPC+QuadTree+SGS.tpc"
     res = ResData()
     err, mess = res.load(tpc)
     if err:

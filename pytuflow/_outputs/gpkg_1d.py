@@ -525,6 +525,7 @@ class GPKG1D(GPKGBase, INFO):
             (self._gis_layer_p_name,)
         )
         data_types = [x[0] for x in cur.fetchall()]
+        self._read_gpkg_table_to_memory(cur, data_types, self._gis_layer_p_name)
         for dtype in data_types:
             dtype1 = 'node flow regime' if dtype == 'Flow Regime' else self._get_standard_data_type_name(dtype)
             self._nd_res_types.append(dtype1)
@@ -536,6 +537,7 @@ class GPKG1D(GPKGBase, INFO):
             (self._gis_layer_l_name,)
         )
         data_types = [x[0] for x in cur.fetchall()]
+        self._read_gpkg_table_to_memory(cur, data_types, self._gis_layer_l_name)
         for dtype in data_types:
             dtype1 = 'channel flow regime' if dtype == 'Flow Regime' else self._get_standard_data_type_name(dtype)
             self._time_series_data[dtype1] = self._gpkg_time_series_extractor(cur, dtype, self._gis_layer_l_name)

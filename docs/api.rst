@@ -29,6 +29,11 @@ This page gives an overview of the public modules, classes, and functions within
    TESF
    TSCF
    ADCF
+   FVC
+   FVWQ
+   FVSed
+   FVPTM
+   BlockControl
 
 .. rubric:: Database Classes
 
@@ -60,6 +65,8 @@ This page gives an overview of the public modules, classes, and functions within
    ControlFileInput
    DatabaseInput
    CommentInput
+   BlockControlInput
+   BCBlockControlInput
 
 .. rubric:: Run State Classes
 
@@ -69,6 +76,7 @@ This page gives an overview of the public modules, classes, and functions within
    :nosignatures:
 
    TCFRunState
+   FVCRunState
    TEFRunState
    ControlFileRunState
    DatabaseRunState
@@ -78,6 +86,8 @@ This page gives an overview of the public modules, classes, and functions within
    CrossSectionRunState
    InputRunState
    GisInputRunState
+   BlockControlRunState
+   BCBlockControlRunState
 
 .. rubric:: Output Classes
 
@@ -100,10 +110,21 @@ This page gives an overview of the public modules, classes, and functions within
    GPKGRL
    FMTS
    FVBCTide
+   LP2D
    HydTablesCheck
    BCTablesCheck
    CrossSections
    DATCrossSections
+
+.. rubric:: Project
+
+.. autosummary::
+   :toctree: ./api
+   :nosignatures:
+   :template: custom-class-template.rst
+
+   HPCProject
+   FVProject
 
 .. rubric:: Utilities
 

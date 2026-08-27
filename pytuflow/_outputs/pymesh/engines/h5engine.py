@@ -103,7 +103,11 @@ class H5Engine(DatasetEngine):
             if idx is None:
                 return self.hnd[path][:]
             else:
-                return self.hnd[path][idx]
+                contiguous, post_idx = self._to_contiguous(idx)
+                a = self.hnd[path][contiguous]
+                if post_idx is not None:
+                    return np.asarray(a)[post_idx]
+                return a
 
     def _case_correct_path(self, data_path: str) -> str:
         # assume file is already open

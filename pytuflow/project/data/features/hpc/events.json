@@ -1,0 +1,24 @@
+{
+  "name": "events",
+  "display_name": "Events (Event File)",
+  "sort_order": 10,
+  "template_files": [
+    {
+      "template_key": "runs/${model_name}_events.tef",
+      "output_subdir": "runs"
+    }
+  ],
+  "command_blocks": [
+    {
+      "id": "events_tcf",
+      "target_cf": "tcf",
+      "commands": [
+        "\n!_______________________________________________________",
+        "! SCENARIOS / EVENTS",
+        "! Model event == <event_name>",
+        "! Model scenario == <scenario_name>",
+        "Event File == ${model_name}_events.tef"
+      ]
+    }
+  ]
+}

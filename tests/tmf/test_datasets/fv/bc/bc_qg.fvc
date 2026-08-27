@@ -1,0 +1,3 @@
+bc == QG, bc_dbase\steady_inflows.csv
+  bc header == Date,Main_Inflow
+end bc

@@ -1,0 +1,106 @@
+GIS FORMAT == SHP
+SHP Projection == ..\model\gis\projection.prj
+Tutorial Model == ON
+!Write Empty GIS Files == ..\model\gis\empty
+                                                                                                                                                                                                                                                                    
+! Floodplain Model - Hydro
+
+!_________________________________________________________________ 
+! GENERAL PARAMETERS 
+Bottom Drag Model == Manning										!Drag model
+Include Sediment == 1,0 !(Enabled, Density coupling)				!Courant-Frederic-Lewy stability criterion				  
+																				  
+!_________________________________________________________________ 
+! TIME COMMANDS
+Time Format == Isodate                              				!Model time units = isodate [dd/mm/yyyy HH:MM:SS]
+Start Time == 01/01/2010 00:00                      				!Midnight on the 1st of Jan
+End Time == 01/01/2010 01:00	                      				!Midnight on the 2th of Jan
+CFL == 0.9
+Timestep Limits == 0.01,100											!Minimum and maximum timestep [s]
+	
+!_________________________________________________________________ 
+! MODEL PARAMETERS
+Momentum mixing model == Smagorinsky							  	!Eddy viscosity
+Global horizontal eddy viscosity == 0.5             				![m2/s]
+Global horizontal eddy viscosity limits == 1.0,99999.             	![m2/s]
+Scalar mixing model == Smagorinsky 									!Mixing model for the scalar variables
+Global horizontal scalar diffusivity == 0.5 						!Smagorinksy Coefficient
+Global horizontal scalar diffusivity limits == 1.0,99999. 			!min, max [m2/s] 
+
+!_________________________________________________________________ 
+! SEDIMENT CONTROL FILE
+Sediment Control File == FMA2_SED_001.fvsed 						!Add reference to sediment control file
+
+!_________________________________________________________________ 
+! GEOMETRY COMMANDS
+Geometry 2D == ..\model\geo\FMA2_FV02.2dm	  					    !Base Topography Dataset [m]
+Set Zpts == 99
+Read Grid Zpts == ..\model\grid\DEM_5m.asc
+Read GIS Z Line == ..\model\gis\2d_zln_Gully_Breakline_001_L.shp | ..\model\gis\2d_zln_Gully_Breakline_001_P.shp 
+Read GIS Z Line == ..\model\gis\2d_zln_Road_Breakline_001_L.shp | ..\model\gis\2d_zln_Road_Breakline_001_P.shp 
+Read GIS Z Line == ..\model\gis\2d_zln_Fill_Pad_001_R.shp
+
+!_________________________________________________________________ 
+! MATERIAL DEFINITIONS
+material == 1										                !Material ID
+  bottom roughness == 0.02			                   				!River												
+end material                    
+material == 2										                !Material ID
+  bottom roughness == 0.04			                   				!Creek	
+end material                    
+material == 3,4									                   	!Material ID
+  bottom roughness == 0.05			                   				!Vegetated Dune,Pasture	
+end material                    
+material == 5,6,7								                   	!Material ID
+  bottom roughness == 0.07			                   				!Medium Veg,Rural Urban,Crops	
+end material                    
+material == 8   								                   	!Material ID
+  bottom roughness == 0.1 			                   				!Dense Veg	
+end material                    
+material == 9										                !Material ID
+  bottom roughness == 0.2				                   			!Dense Urban
+end material    
+
+!_________________________________________________________________ 
+! INITIAL CONDITIONS 
+Initial Water Level == 1.93											!Water level boundary [m]
+
+!_________________________________________________________________ 
+! BOUNDARY CONDITIONS												!Water level boundary [m]
+bc == Q, 1, ..\bc_dbase\steady_inflows.csv							!Flow boundary [m3/s]
+  bc header == Date,Main_Inflow, fineSed							!Column Headings for boundary data
+end bc
+bc == WL, 2, ..\bc_dbase\tide.csv									!Water level boundary [m]
+  bc header == Date,level									        !Header information
+end bc
+bc == Q, 3, ..\bc_dbase\steady_inflows.csv							!Flow boundary [m3/s]
+  bc header == Date,Tributary_Inflow							  	!Column Headings for boundary data
+end bc
+bc == WL, 4, ..\bc_dbase\tide.csv 									!Water level boundary [m]
+  bc header == Date,level									        !Header information
+end bc
+
+!_________________________________________________________________ 
+! OUTPUT COMMANDS
+Output Dir == ..\results\											!Output Location: relative path                                                      
+Log Dir == log
+output == netcdf													!Output type: DAT at cell vertices                                                   
+  output parameters == h,v,d,zb, Taub, SED_1, TSS, DEPOSITION_TOTAL, THICK, BED_MASS_TOTAL			!Map Output Results Parameters                                                
+  output interval == 900. 											!Output every 900 seconds (15 minutes)                                               
+end output 
+                                                                                                                              
+output == flux														!Output type: flux across nodestrings [m3/s]                                         
+  output interval == 900. 											!Output every 900 seconds (15 minutes)                                               
+end output                                                                                                                               
+                                                                                                                                         
+output == points                                 	  				!Output type: point locations                                                        
+  output points file == ..\model\csv\Output_Points.csv	  			!Point location file [x,y]                                                           
+  output parameters == h     										!Output: water level                                                                 
+  output interval == 900. 											!Output every 900 seconds (15 minutes)                                               
+end output    
+
+Write Check Files == ..\check
+
+!_________________________________________________________________ 
+! USER SPECIFIED COMMANDS
+modesplit == 0														!Internal and external timestep are similarly restrictive 

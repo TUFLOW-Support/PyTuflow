@@ -1,0 +1,33 @@
+! TUFLOW FV FVC File for Atmospheric Dataset
+
+BC == W10, bc_dbase/MET_20110401_20110701_AEST.csv			! Spatially constant wind speed timeseries
+  BC Header == local_time, uwnd10m, vwnd10m			! Time, U (m/s), V (m/s)
+  BC Update Dt == 3600.								! (s) Update the boundary condition every hour of simulation time
+  BC Default == NaN									! Default value for missing data
+End BC
+
+BC == LW_RAD, bc_dbase/MET_20110401_20110701_AEST.csv		! Spatially constant long wave radiation timeseries	
+  BC Header == local_time, downward_longwave		! Time, Downward longwave radation (W/m^2)
+  BC Update Dt == 3600.								! (s) Update the boundary condition every hour of simulation time
+  BC Default == NaN									! Default value for missing data
+End BC
+
+BC == SW_RAD, bc_dbase/MET_20110401_20110701_AEST.csv		! Spatially constant short wave radiation timeseries	
+  BC Header == local_time, downward_shortwave		! Time, Downward shortwave radation (W/m^2)
+  BC Update Dt == 3600.								! (s) Update the boundary condition every hour of simulation time
+  BC Default == NaN									! Default value for missing data
+End BC
+
+BC == AIR_TEMP, bc_dbase/MET_20110401_20110701_AEST.csv		! Spatially constant surface air temperature timeseries	
+  BC Header == local_time, air_temp_2m				! Time, Air temperature (degrees C)
+  BC Update Dt == 3600.								! (s) Update the boundary condition every hour of simulation time
+  BC Offset == -273.15								! Convert from degrees Kevlin to degrees Celsius
+  BC Default == NaN									! Default value for missing data
+End BC
+
+BC == REL_HUM, bc_dbase/MET_20110401_20110701_AEST.csv		! Spatially constant relatively humidity timeseries	
+  BC Header == local_time, relhum					! Time, Relative Humidity (%)
+  BC Update Dt == 3600.								! (s) Update the boundary condition every hour of simulation time
+  BC Default == NaN									! Default value for missing data
+End BC
+

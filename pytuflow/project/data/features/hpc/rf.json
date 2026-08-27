@@ -1,0 +1,21 @@
+{
+  "name": "rf",
+  "display_name": "RF (Gridded rainfall)",
+  "sort_order": 70,
+  "template_files": [
+    {
+      "template_key": "bc_dbase/${model_name}_${iter}.trfc",
+      "output_subdir": "bc_dbase"
+    }
+  ],
+  "command_blocks": [
+    {
+      "id": "rf_tcf",
+      "target_cf": "tcf",
+      "placement_rule": "hpc_control_files",
+      "commands": [
+        "Rainfall Control File == ..\\model\\${model_name}_${iter}.trfc"
+      ]
+    }
+  ]
+}

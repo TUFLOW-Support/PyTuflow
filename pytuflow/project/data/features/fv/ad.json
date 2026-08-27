@@ -1,0 +1,63 @@
+{
+    "name": "ad",
+    "display_name": "Advection Dispersion",
+    "sort_order": 5,
+    "template_files": [],
+    "command_blocks": [
+        {
+            "id": "fvc_ntracer",
+            "target_cf": "fvc",
+            "placement_rule": "fvc_simulation_configuration",
+            "commands": [
+                "Ntracer == ${ntracer}"
+            ]
+        },
+        {
+            "id": "fvc_tracer_block_header",
+            "target_cf": "fvc",
+            "placement_rule": "fvc_simulation_configuration",
+            "existence_check": "! TRACER DEFINITION",
+            "commands": [
+                "\n!______________________________________________________________________________________________________________________",
+                "! TRACER DEFINITION"
+            ]
+        },
+        {
+            "id": "fvc_tracer_block",
+            "target_cf": "fvc",
+            "placement_rule": "fvc_tracer_block_heading",
+            "existence_check": "/^tracer$/i",
+            "commands": [
+                "! Example tracer block - Required for the decay, settling or water age implementations or when disabling evapo-concentration",
+                "Tracer == 1"
+            ]
+        },
+        {
+            "id": "fvc_tracer_block_params",
+            "target_cf": "fvc",
+            "target_previous_block": true,
+            "commands": [
+                "Decay Rate == ${tracer_decay_rate}",
+                "Settling Velocity == ${tracer_settling_velocity}",
+                "Evapo-Concentrate == ${tracer_evapo_concentrate}",
+                "Water Age == ${tracer_water_age}"
+            ]
+        },
+        {
+            "id": "fvc_initial_tracer",
+            "target_cf": "fvc",
+            "placement_rule": "fvc_initial_conditions",
+            "commands": [
+                "Initial Tracer Concentration == ${initial_tracer}"
+            ]
+        },
+        {
+            "id": "tracer_bc_header",
+            "target_cf": "fvc",
+            "subtarget_cf": "/^BC == (?:WL|Q|QS).*/i",
+            "commands": [
+                "Tracer Header == ${tracer_bc_header}"
+            ]
+        }
+    ]
+}

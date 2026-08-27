@@ -1,0 +1,14 @@
+Spatial Order == 1,1											! {1} | 2 Horizontal, {1} | 2 Vertical
+Bottom Drag Model == ks 										! {Manning} | ks
+
+Momentum Mixing Model == Smagorinsky							! None | Constant | Smagorinsky | Wu
+Global Horizontal Eddy Viscosity == 0.5							! {0.0} Coeffecient
+Global Horizontal Eddy Viscosity Limits == 0.05, 99999.			! {0.0} Minimum eddy viscosity (m^2/s), {99999.} Maximum eddy viscosity (m^2/s)
+
+!______________________________________________________________________________________________________________________
+! MATERIAL PROPERTIES
+Set Mat == 1													! Set all materials to 1. Overwrite material definition in .2dm file
+
+Material == 1													! Default material
+  Bottom Roughness == 0.05										! Nikuradse roughness height (m)
+End Material

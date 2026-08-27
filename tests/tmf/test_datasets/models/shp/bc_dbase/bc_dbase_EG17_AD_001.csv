@@ -1,0 +1,5 @@
+Name,Source,Column 1,Column 2,Add Col 1,Mult Col 2,Add Col 2,Column 3,Column 4
+FC01__tracer1,EG17_001.csv,inflow_time_hr,Null,,,,,
+EG17_AD1__tracer1,EG17_001.csv,inflow_time_hr,Conc_AD1,,,,,
+EG17_AD2__tracer1,EG17_001.csv,inflow_time_hr,Conc_AD2,,,,,
+__tracer1,EG17_001.csv,inflow_time_hr,Null,,,,,

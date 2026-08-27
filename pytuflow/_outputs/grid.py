@@ -20,7 +20,7 @@ from .pymesh import Cache, LineStringMixin, PointMixin, Bbox2D, Transform2D
 GRIDLINE_METHOD = 'optimised'  # 'legacy' or 'optimised'
 
 
-class Grid(MapOutput, LineStringMixin, PointMixin):
+class Grid(MapOutput):
     """Generic Grid result class. Can be used to load raster files that are supported by GDAL or rasterio.
     The raster data extracted from an input file is assumed to be static (i.e. no time dimension). Alternatively,
     it is possible to initialise the Grid class with a dictionary containing already extracted grid data in the form of
@@ -227,7 +227,6 @@ class Grid(MapOutput, LineStringMixin, PointMixin):
                     self._cached_timesteps[dtype.lower()].add(i)
             return vals
 
-
         if isinstance(time_index, (int, np.int32, np.int64)):
             time_indexes = {time_index}
         elif not is_static and isinstance(time_index, slice):
@@ -255,8 +254,15 @@ class Grid(MapOutput, LineStringMixin, PointMixin):
         if len(data) == 1:
             return data[0]
         return np.array(data).reshape(len(time_indexes), *data[0].shape)
+    
+    def load_into_memory(self, data_types: str | list[str]):
+        # docstring inherited
+        for dtype in self._figure_out_data_types(data_types, None):
+            if dtype not in self._cached_data:
+                self._cached_data[dtype] = self._value(dtype, slice(None))
+                self._cached_timesteps[dtype] = list(range(len(self.times())))
 
-    def to_mesh(self, base_topology: 'str | Grid | None' = None) -> GridMesh:
+    def to_mesh(self, base_topology: 'str | Grid | None' = None, direction_convention = 'arithmetic') -> GridMesh:
         """Converts the grid to a :class:`GridMesh<pytuflow.GridMesh>` object, essentially converting the grid
         data structure into a mesh data structure. This can be useful for exporting into other formats that can
         only be done via a mesh class e.g. to a ``glTF`` file.
@@ -275,6 +281,12 @@ class Grid(MapOutput, LineStringMixin, PointMixin):
             other grid should match the grid dimensions of the current grid. For example, the ``DEM_Z`` check file
             from TUFLOW can be used as a base topology for a NetCDF grid output file to provide the static ground
             elevation data and be used as the base mesh topology.
+        direction_convention :  str, optional
+            The convention used for direction data. Only required converting direction to vector or
+            interpolating direction to vertices. Options are:
+
+            - ``"arithmetic"`` (default) - direction is measured anticlockwise from the positive x-axis (east)
+            - ``"nautical"`` - direction is measured clockwise from the positive y-axis (north)
 
         Returns
         -------
@@ -301,7 +313,7 @@ class Grid(MapOutput, LineStringMixin, PointMixin):
                  'nodatavalue': self.no_data_value, 'data_type': base_topology, 'timesteps': -1, 'dtype': 'scalar',
                  'data': self.surface(base_topology)['value'].to_numpy().reshape(self.nrow, self.ncol)}
             base_topology = Grid(d)
-        return GridMesh(self.fpath, self, base_topology)
+        return GridMesh(self.fpath, self, base_topology, direction_convention)
 
     def maximum(self, data_types: str | list[str]) -> float | pd.DataFrame:
         """Returns the maximum values for the given data types.
@@ -649,8 +661,16 @@ class Grid(MapOutput, LineStringMixin, PointMixin):
 
         Parameters
         ----------
-        locations : Point | list[Point] | dict[str, Point] | PathLike
-            The location to extract the time series data for.
+        locations : Point | list[Point] | dict[str, Point] | GeoDataFrame | str | PathLike
+            The location to extract the time series data for. The location can be:
+
+            - Point represented by a ``tuple[x, y]``
+            - Point represented by a WKT string
+            - ``shapely.Point`` object
+            - ``list[Point]``
+            - ``dict[str, Point]`` where the ``str`` will be used as the ID in the resulting ``pd.DataFrame``
+            - ``geopandas.GeoDataFrame``
+            - Path to a GIS file containing points
         data_types : str | list[str]
             The data types to extract the time series data for.
         time_fmt : str, optional
@@ -720,8 +740,16 @@ class Grid(MapOutput, LineStringMixin, PointMixin):
 
         Parameters
         ----------
-        locations : list[Point] | str | PathLike
-            The location to extract the section data for.
+        locations : LineString | list[LineString] | dict[str, LineString] | GeoDataFrame | str | PathLike
+            The line(s) to extract the flux for. The location can be:
+            
+            - LineString represented by a list of ``tuple[x, y]`` coordinates.
+            - LineString represented by a WKT string
+            - ``shapely.LineString`` object
+            - ``list[LineStrings]``
+            - ``dict[str, LineString]`` where the ``str`` will be used as the ID in the resulting ``pd.DataFrame``
+            - ``geopandas.GeoDataFrame``
+            - Path to a GIS file containing lines
         data_types : str | list[str], optional
             The data types to extract the section data for.
         time : TimeLike, optional
@@ -805,6 +833,226 @@ class Grid(MapOutput, LineStringMixin, PointMixin):
                 time: TimeLike, **kwargs) -> pd.DataFrame:
         """no-doc"""
         raise NotImplementedError(f'{__class__.__name__} does not support vertical profile plotting.')
+    
+    def flux(self, locations: LineStringLocation, data_types: str | list[str] = '',
+             time_fmt: str = 'relative', use_unit_flow: bool = True,
+             direction_convention: str = 'arithmetic') -> pd.DataFrame:
+        r"""Returns the flux across a line. Tracer data type(s) can be provided to calculate the volume flux.
+
+        Does not currently support groundwater flux calculation.
+
+        .. warning::
+
+            The result of the ``flux()`` method should be used with care. Due to result interpolation, the resulting
+            flux could be off by 10% or more. The error depends on variables such as result format, the hydraulic engine 
+            that created the results, whether SGS was used, and the line location.
+            
+            As an example, the TUFLOW HPC tutorial model was run at a 10 m cell size (the tutorial model is usually run at 5 m) 
+            with SGS on. The peak flow from a PO line gave a result of 90 m\ :sup:`3`\ /s, and 
+            the equivalent ``flux()`` call gave 81 m\ :sup:`3`\ /s using ``use_unit_flow=True``, and
+            76 m\ :sup:`3`\ /s if using ``use_unit_flow=False``. That is an underprediction of 10% or more, even when using the 
+            unit flow map output. From testing, the ``XMDF.flux()`` method will not be as peaky as equivalent PO results, most likely
+            due to some smoothing of the result surface from interpolation. **This means that any error in the XMDF.flux() prediction
+            will typically lean toward underprediction.**
+
+            The same test with a 5 m cell size and with SGS turned off, resulted in ``XMDF.flux()`` predicting a much closer peak of approximately 1%
+            difference to the PO results. The ``NCGrid.flux()`` predicted even closer with a peak less than 1% difference. Other real world tests have shown
+            that without SGS, the ``XMDF.flux()`` is typically within 5% of the PO result given sufficient cell resolution across the flowpath.
+
+            The same test was run with TUFLOW FV using the NetCDF output format. In this case, the ``NCMesh.flux()`` method returned
+            an estimate that was identical to the flux output from TUFLOW FV (the peak was within ~0.2%). This is due to the interpolation,
+            or lack thereof in this instance. TUFLOW FV calculates both water level and velocity at the cell centre, and the NetCDF output
+            writes values to the cell centre. Note, the ``NCMesh.flux()`` estimate is not guaranteed to always be identical, particularly when
+            using spherical coordinates.
+
+        Parameters
+        ----------
+        locations : LineString | list[LineString] | dict[str, LineString] | GeoDataFrame | str | PathLike
+            The line(s) to extract the flux for.
+        data_types : str | list[str], optional
+            The result type(s) to extract the flux for. If left blank, the returned flux will be the flow across the line.
+            If ``data_types`` are provided, this should typically be a tracer concentration (mg/L in SI units). In these
+            cases, the returned flux will the mass flux (g) across the line.
+        time_fmt : str, optional
+            The format for the time values. Options are 'relative' or 'absolute'.
+        use_unit_flow : bool, optional
+            Use unit flow if it is available. Otherwise the fallback is depth x velocity. The resulting data frame column name will have either ``(q)``
+            if unit flow was used, or ``(d.v)`` if depth x velocity was used.
+        direction_convention : str, optional
+            The convention used for direction data. This should match the how the data is stored in the output file. 
+            The default out of TUFLOW for the "NC" map output is ``"arithmetic"``.
+
+            - ``"arithmetic"`` (default) - direction is measured anticlockwise from the positive x-axis (east)
+            - ``"nautical"`` - direction is measured clockwise from the positive y-axis (north)
+
+        Returns
+        -------
+        pd.DataFrame
+            An array containing the extracted flux across the line.
+
+        Examples
+        --------
+        Extract the flow across a line:
+
+        >>> res = ... # assume res is a Mesh or NCGrid output
+        >>> Q = res.flux('/path/to/line.shp')
+        >>> Q
+              locA/flux (q)
+        time
+        0.0        0.000000
+        0.5        0.000000
+        1.0       81.115922
+        1.5       52.226762
+        2.0       17.359964
+        2.5        8.920063
+        3.0        4.825885
+
+        Extract the mass flux across a line:
+
+        >>> Q_mass = res.flux('/path/to/line', 'ad01_conc')
+        >>> Q_mass
+                 locA/flux ad01_conc (q)
+        time
+        0.0                     0.000000
+        0.5                     0.000000
+        1.0                    89.579868
+        1.5                   123.392674
+        2.0                   102.520215
+        2.5                   101.631599
+        3.0                   100.038073
+        """
+        available = [x.lower() for x in self.data_types()]
+
+        # Decide which magnitude/direction pair to use
+        if use_unit_flow and 'unit flow' in available and 'unit flow direction' in available:
+            mag_dt = 'unit flow'
+            dir_dt = 'unit flow direction'
+            _use_unit_flow = True
+        else:
+            if 'velocity' not in available:
+                raise ValueError('"velocity" not found in available data types.')
+            if 'velocity direction' not in available:
+                raise ValueError('"velocity direction" not found in available data types.')
+            if 'depth' not in available:
+                raise ValueError('"depth" not found in available data types.')
+            mag_dt = 'velocity'
+            dir_dt = 'velocity direction'
+            _use_unit_flow = False
+
+        if direction_convention not in ('arithmetic', 'nautical'):
+            raise ValueError(f'direction_convention must be "arithmetic" or "nautical", got "{direction_convention}".')
+
+        # Standardise requested data types
+        if data_types:
+            data_types = self._figure_out_data_types(data_types, None)
+        else:
+            data_types = ['']
+
+        # Time array (relative hours)
+        times_list = self.times(filter_by=mag_dt)
+        T = len(times_list)
+        times_arr = np.array(times_list)
+
+        if T == 0:
+            return pd.DataFrame()
+
+        # Grid info for the magnitude dataset (dx, dy, ox, oy, ncol, nrow, ndv)
+        info = self._grid_info(mag_dt)
+        ndv_mag = float(info[6])
+        ndv_dep = float(self._grid_info('depth')[6]) if not _use_unit_flow else None
+
+        df = pd.DataFrame()
+        lines = self._translate_line_string_location(locations)
+
+        for name, line in lines.items():
+            line_arr = self._coerce_into_line(line)
+
+            # Pre-compute per-segment geometry (rows, cols, widths, normal) once
+            segments = []
+            for si in range(1, line_arr.shape[0]):
+                seg = line_arr[si - 1:si + 1, :2]
+                p0, p1 = seg[0], seg[1]
+                dv = p1 - p0
+                length = np.linalg.norm(dv)
+                if length == 0:
+                    continue
+                dv = dv / length
+                # 90° CCW rotation: positive flux is to the left when walking p0→p1
+                normal = np.array([-dv[1], dv[0]])
+
+                # Use the same calling convention as section() / gridline()
+                cells_, inters_ = Grid.gridline_segment(seg, *info[:6])
+                seg_mask = cells_[:, 0] >= 0
+                if not seg_mask.any():
+                    continue
+                rows_ = cells_[seg_mask, 0].astype(int)
+                cols_ = cells_[seg_mask, 1].astype(int)
+                widths_ = np.diff(inters_[:, 0])[seg_mask]   # per-cell widths (m)
+                segments.append((rows_, cols_, widths_, normal))
+
+            if not segments:
+                continue
+
+            for dtype in data_types:
+                flux_vals = np.zeros(T)
+
+                for ti in range(T):
+                    mag_t = np.asarray(self._surface(mag_dt, ti))            # (nrow, ncol)
+                    dir_t = np.asarray(self._surface(dir_dt, ti))            # (nrow, ncol)
+                    act_t = ~np.isnan(mag_t) & (mag_t != ndv_mag)            # (nrow, ncol)
+
+                    dep_t = None
+                    if not _use_unit_flow:
+                        dep_t = np.asarray(self._surface('depth', ti))       # (nrow, ncol)
+                        act_t = act_t & (~np.isnan(dep_t) & (dep_t != ndv_dep))
+
+                    sc_t = None
+                    if dtype:
+                        sc_t = np.asarray(self._surface(dtype, ti))          # (nrow, ncol)
+                        ndv_sc = float(self._grid_info(dtype)[6])
+                        sc_t = np.where((~np.isnan(sc_t)) & (sc_t != ndv_sc), sc_t, 0.0)
+
+                    for rows_, cols_, widths_, normal in segments:
+                        mag_seg = mag_t[rows_, cols_]                        # (N,)
+                        dir_seg = dir_t[rows_, cols_]                        # (N,)
+                        act_seg = act_t[rows_, cols_]                        # (N,)
+
+                        dir_rad = np.radians(dir_seg)
+                        if direction_convention == 'arithmetic':
+                            vx = mag_seg * np.cos(dir_rad)
+                            vy = mag_seg * np.sin(dir_rad)
+                        else:  # nautical
+                            vx = mag_seg * np.sin(dir_rad)
+                            vy = mag_seg * np.cos(dir_rad)
+
+                        proj = vx * normal[0] + vy * normal[1]               # (N,)
+                        proj[~act_seg] = 0.0
+
+                        if _use_unit_flow:
+                            contrib = proj * widths_
+                        else:
+                            dep_seg = np.where(act_seg, dep_t[rows_, cols_], 0.0)
+                            contrib = proj * dep_seg * widths_
+
+                        if sc_t is not None:
+                            contrib = contrib * sc_t[rows_, cols_]
+
+                        flux_vals[ti] += contrib.sum()
+
+                label = 'flux' if not dtype else f'flux {dtype}'
+                label = f'{label} (q)' if _use_unit_flow else f'{label} (d.v)'
+                df2 = pd.DataFrame(flux_vals, index=times_arr, columns=[f'{name}/{label}'])
+                df2.index.name = 'time'
+
+                if not df.empty and not df2.empty:
+                    if np.isclose(df.index.to_numpy(), df2.index.to_numpy(), atol=0.0001, rtol=0).all():
+                        df2.index = df.index
+                df = pd.concat([df, df2], axis=1) if not df.empty else df2
+
+        if time_fmt == 'absolute' and hasattr(self, 'reference_time') and self.reference_time is not None:
+            df.index = self.reference_time + pd.to_timedelta(df.index, unit='h')
+
+        return df
 
     @staticmethod
     def _get_xy_index(pnt: Point, dx: float, dy: float, ox: float, oy: float, ncol: int, nrow: int):

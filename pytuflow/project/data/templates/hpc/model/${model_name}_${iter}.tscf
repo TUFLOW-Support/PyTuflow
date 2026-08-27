@@ -1,0 +1,3 @@
+Read SWMM == ${swmm_inp_path}
+
+! CHECK INP Save Date == ${swmm_check_inp_save_date}

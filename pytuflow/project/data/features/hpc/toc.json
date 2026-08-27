@@ -1,0 +1,23 @@
+{
+  "name": "toc",
+  "display_name": "TOC (Operational Controls)",
+  "sort_order": 60,
+  "template_files": [
+    {
+      "template_key": "model/${model_name}.toc",
+      "output_subdir": "model"
+    }
+  ],
+  "command_blocks": [
+    {
+      "id": "toc_ecf",
+      "target_cf": "tcf",
+      "placement_rule": "hpc_control_files",
+      "commands": [
+        "!________________________________________________________",
+        "! OPERATING CONTROL FILE",
+        "Read Operational Controls == ..\\model\\${model_name}.toc"
+      ]
+    }
+  ]
+}

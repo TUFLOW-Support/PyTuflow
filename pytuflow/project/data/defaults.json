@@ -1,0 +1,15 @@
+{
+  "iter": "001",
+  "gis_format": "SHP",
+  "grid_format": "TIF",
+  "hardware": "GPU",
+  "units": "Metric",
+  "iwl": 0,
+  "event_name": "<EVENT_NAME>",
+  "event_text": "<EVENT_TEXT>",
+  "start_time": 0,
+  "end_time": 1,
+  "timestep": 1,
+  "dem_path": "<path/to/dem.tif>",
+  "po_path": "<path/to/po.shp>"
+}

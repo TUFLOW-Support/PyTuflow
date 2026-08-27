@@ -1,0 +1,33 @@
+!_________________________________________________________________ 
+!TIME COMMANDS
+update dt == 300.
+
+!_________________________________________________________________
+!SIMULATION CONFIG COMMANDS
+Morphological Coupling == 0 										!Turn on/off Morphological Feedback to Hydrodynamics. 1 to enable feedback, 0 to disable.
+Bed roughness model == d50 											!ks, d50 or vanRijn .
+Bed roughness parameters == 2.5, 0.01 								!Nikuradse Roughness Height ksc (currents), ksw (waves).
+Bed roughness coupling == 0 										!Turn on/off Bed Sediment Feedback to Bed Roughness. 1 to enable feedback, 0 to disable.
+Erosion Depth Limits == 0.1, 0.2 									!Depth to scale Erosion to Zero (<0.1m no erosion, >0.2m full erosion)
+Deposition Depth Limits == 0.1, 0.2 								!Depth to scale Deposition to Zero (<0.1m no deposition, >0.2m full deposition)
+
+!_________________________________________________________________
+!SEDIMENT FRACTION COMMANDS
+Fraction == fineSed 												!Sediment Fraction 1 Name
+	d50 == 0.000005 												!Median Sediment Diameter [m]
+	particle density == 2650 										!Particle Density [kg/m3]
+	Settling model == constant 										!Settling Model
+	settling parameters == 0.00002 									!Settling Velocity [m/s]
+	deposition model == ws0 										!Deposition model
+End Fraction 														!End of Sediment Fraction Definition
+
+!_________________________________________________________________
+!MATERIAL SPECS COMMANDS 
+! Default Bed Sediment properties for materials
+material == 0 														!Default material definition
+	suspended Load Scale == 1.0 									!Calibration Factor for suspended load
+	Layer == 1 														!Begin Layer Definition
+		Dry density == 1890. 										!Dry Density of Sediment Fractions [kg/m3]
+		initial mass == 1000. 										!Initial mass of sediment fractions [kg/m2]
+	end layer 														!End layer definition
+end material 														!End material definition

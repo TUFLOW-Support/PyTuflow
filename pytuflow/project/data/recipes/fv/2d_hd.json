@@ -1,0 +1,29 @@
+{
+  "display_name": "2D Hydrodynamic Model",
+  "description": "Standard 2D flood model with NetCDF HD output.",
+  "variables": {
+    "hardware": "CPU",
+    "spherical": 0,
+    "latitude": 0.0,
+    "spatial_order": "1,1",
+    "cfl": 1.0,
+    "timestep_limits": "1.2, 12.0",
+    "time_format": "HOURS",
+    "start_time": 0,
+    "end_time": 1,
+    "bottom_drag_model": "Manning",
+    "Global Bottom Roughness": 0.018,
+    "momenutim_mixing_model": "Smagorinsky",
+    "glob_horiz_eddy_visc": 0.5,
+    "glob_horz_eddy_visc_lims": "0.05, 99999.0",
+    "geometry_2d": "<path/to/geometry.2dm>"
+  },
+  "features": [
+    {
+      "name": "outputnc",
+      "output_params": "h, v, d",
+      "output_interval": 3600,
+      "output_suffix": 0
+    }
+  ]
+}

@@ -1,0 +1,4 @@
+Name,Source,Depth_Col,Flow_Col,Area (m2),Width (m)
+AA,pit_inlet_curves.csv,Depth,Type AA,0.72,4.8
+AB,pit_inlet_curves.csv,Depth,Type AB,0.54,3.6
+AC,pit_inlet_curves.csv,Depth,Type AC,0.36,2.4

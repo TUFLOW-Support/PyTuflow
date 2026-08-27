@@ -1,0 +1,35 @@
+! Spatial and Tabular Materials Definition
+! Base case flood model - Manning bed roughness model
+
+!______________________________________________________________________________
+! MATERIAL LOCATIONS
+Set Mat == 1										! Set the default material by setting all materials to 1. This overwrites any materials in the .2dm
+Read GIS Mat == ..\model\gis\2d_mat_M01_001_R.shp	! Materials spatial converage
+
+!______________________________________________________________________________
+! MATERIAL DEFINITION
+
+! Rural Graising  
+Material == 1	
+  Bottom Roughness == 0.04							! Manning's 'n'
+End Material
+
+! Road
+Material == 2
+  Bottom Roughness == 0.02							! Manning's 'n'
+End Material
+
+! Buildings
+Material == 3
+  Bottom Roughness == 0.1							! Manning's 'n'
+End Material
+
+! Lake/Wetland
+Material == 4
+  Bottom Roughness == 0.03							! Manning's 'n'
+End Material
+
+! Riparian Vegetatation
+Material == 10
+  Bottom Roughness == 0.08							! Manning's 'n'
+End Material

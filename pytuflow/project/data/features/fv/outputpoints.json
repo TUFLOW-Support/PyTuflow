@@ -1,0 +1,29 @@
+{
+  "name": "outputpoints",
+  "display_name": "Output Points",
+  "sort_order": 5,
+  "template_files": [],
+  "command_blocks": [
+    {
+      "id": "fvc_output_points",
+      "target_cf": "fvc",
+      "placement_rule": "fvc_output",
+      "allow_multiple": true,
+      "existence_check": "/^Output == points$/i",
+      "commands": [
+        "\nOutput == points"
+      ]
+    },
+    {
+      "id": "output_points_param",
+      "target_cf": "fvc",
+      "target_previous_block": true,
+      "commands": [
+        "Read GIS PO == ${po_path}",
+        "Output Parameters == ${output_params}",
+        "Output Interval == ${output_interval}",
+        "Suffix == ${output_suffix}"
+      ]
+    }
+  ]
+}

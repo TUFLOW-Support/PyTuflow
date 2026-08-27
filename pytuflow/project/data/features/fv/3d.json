@@ -1,0 +1,60 @@
+{
+    "name": "3d",
+    "display_name": "3D",
+    "sort_order": 5,
+    "template_files": [
+        {
+            "template_key": "model/csv/2D_Z_Layers_${iter}.csv",
+            "output_subdir": "model/csv"
+        }
+    ],
+    "command_blocks": [
+        {
+            "id": "fvc_3d_mixing_header",
+            "target_cf": "fvc",
+            "placement_rule": "fvc_horizontal_mixing_parameters",
+            "existence_check": "! Vertical Mixing",
+            "commands": [
+                "\n!______________________________________________________________________________________________________________________",
+                "! VERTICAL MIXING"
+            ]
+        },
+        {
+            "id": "fvc_3d_mixing",
+            "target_cf": "fvc",
+            "placement_rule": "fvc_vertical_mixing_header",
+            "commands": [
+                "Vertical Mixing Model == ${vertical_mixing_model}                                        ! {Constant} | Parametric | K-Epsilon | K-Omega | External",
+                "Vertical Mixing Parameters == ${vertical_mixing_params}                                  ! {5/9} alpha, {3/40} beta, {9/100} cmu, {2.} sig_k, {2.} sig_o, {0.} c3oplus, {0.} c3ominus",
+                "Global Vertical Eddy Viscosity Limits == ${glob_vert_eddy_visc_lims}                     ! {0.0} Minimum eddy viscosity (m^2/s), {99999.} Maximum eddy viscosity (m^2/s)",
+                "Global Vertical Scalar Diffusivity Limits == ${glob_vert_scalar_diff_lims}               ! {0.0} Minimum scalar diffusivity (m^2/s), {99999.} Maximum scalar diffusivity (m^2/s)",
+                "Global Vertical TKE Limit == ${glob_vert_tke_lim}                                        ! {1E-10 m^2/s^2} Minimum turbulent kinetic energy",
+                "Global Vertical EPS Limit == ${glob_vert_eps_lim}                                        ! {1E-14 m^2/s^3} Minimum dissipation rate",
+                "Second Order Vertical Mixing Model == ${second_order_vert_mixing_model}                  ! {OFF} | Algebraic",
+                "Second Order Vertical Mixing Model Parameter Group == ${second_order_vert_mixing_param_group}  ! {GL78} | MY86 | KC94 | LDOR96 | CHCD01A | CHCD01B | CCH02"
+            ]
+        },
+        {
+            "id": "fvc_3d_geometry_header",
+            "target_cf": "fvc",
+            "placement_rule": "fvc_geometry_2d",
+            "existence_check": "! VERTICAL MESH GEOMETRY",
+            "commands": [
+                "\n!______________________________________________________________________________________________________________________",
+                "! VERTICAL MESH GEOMETRY"
+            ]
+        },
+        {
+            "id": "fvc_3d_geometry",
+            "target_cf": "fvc",
+            "placement_rule": "fvc_3d_geometry_header",
+            "commands": [
+                "Vertical Mesh Type == ${vertical_mesh_type}                                              ! {Sigma} | Z",
+                "Layer Faces == ..\\model\\csv\\2D_Z_Layers_${iter}.csv                                      ! {No default} filepath",
+                "Surface Sigma Layers == ${nsigma_layers}                                                 ! {1} Number of sigma layers between uppermost Z layer and water surface level",
+                "Min Bottom Layer Thickness == ${min_bottom_thickness}                                    ! {1.e-6} Sets a minimum allowable bottom layer thickness(m)",
+                "Cell 3D Depth == ${cell_3d_depth}                                                        ! {0.1} Disable 3D momentum flux below this threshold (m)"
+            ]
+        }
+    ]
+}

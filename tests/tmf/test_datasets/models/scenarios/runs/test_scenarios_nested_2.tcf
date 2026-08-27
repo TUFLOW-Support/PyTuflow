@@ -1,0 +1,20 @@
+! SOLUTION SCHEME
+Solution Scheme == HPC
+Hardware == GPU
+
+If Scenario == SGS
+	SGS == ON
+	If Scenario == 02m
+		SGS Sample Frequency == 5
+	Else If Scenario == 05m
+		SGS Sample Frequency == 7
+	Else If Scenario == 10m
+		SGS Sample Frequency == 11
+	Else If Scenario == 20m
+		SGS Sample Frequency == 21
+	Else If Scenario == 50m
+		SGS Sample Frequency == 51
+	End If
+	SGS Approach == Method C
+	! SGS Breakline Detection Delta == 1
+End if

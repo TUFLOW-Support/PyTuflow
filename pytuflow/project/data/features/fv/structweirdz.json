@@ -1,0 +1,46 @@
+{
+  "name": "structweirdz",
+  "display_name": "Structure - Weir_dz",
+  "sort_order": 5,
+  "template_files": [],
+  "command_blocks": [
+    {
+      "id": "fvc_struct_header",
+      "target_cf": "fvc",
+      "placement_rule": "before_fvc_structures",
+      "existence_check": "! HYDRAULIC STRUCTURES",
+      "commands": [
+        "\n!__________________________________________________________________________________________________________________________________________________________________________________________",
+        "! HYDRAULIC STRUCTURES"
+      ]
+    },
+    {
+      "id": "fvc_struct_weirdz",
+      "target_cf": "fvc",
+      "placement_rule": "fvc_structures",
+      "allow_multiple": true,
+      "commands": [
+        "\nStructure == Nodestring, <link1_id>"
+      ]
+    },
+    {
+      "id": "struct_weirdz_param",
+      "target_cf": "fvc",
+      "target_previous_block": true,
+      "commands": [
+        "Flux Function == Weir_dz",
+        "Properties == ${struct_weir_dz}, 1.705, 1.5, 8.55, 0.556, 0.7"
+      ]
+    },
+    {
+        "id": "fvc_struct_weirdz_nodestring",
+        "target_cf": "fvc",
+        "placement_rule": "before_fvc_structures",
+        "allow_multiple": true,
+        "commands": [
+            "Read GIS Nodestring == ${nodestring_path}"
+        ]
+
+    }
+  ]
+}

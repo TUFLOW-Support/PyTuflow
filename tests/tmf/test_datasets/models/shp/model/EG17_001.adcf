@@ -1,0 +1,4 @@
+AD Global Database == ../bc_dbase/EG17_AD_Constituents_001.csv 	! Constituent information (e.g. name and dispersion coefficients)
+AD BC Database == ../bc_dbase/bc_dbase_EG17_AD_001.csv			! Boundary database information 
+Write Mass == ON 												! Generate a mass conservation commentary output file
+Write Mass Unit == Kg

@@ -30,6 +30,7 @@ class PyNCMeshDataExtractor(PyDataExtractor):
 
     def __init__(self, fpath: str | Path, engine: str = None):
         self.long_name_to_variable = {}
+        self.variables = []
         if (H5Engine.available() and engine is None) or (engine and engine.lower() == 'h5py'):
             self.engine = H5Engine(fpath)
         elif (NCEngine.available() and engine is None) or (engine and engine.lower() == 'netcdf4'):
@@ -57,6 +58,7 @@ class PyNCMeshDataExtractor(PyDataExtractor):
     def data_types(self) -> list[str]:
         dtypes = []
         for variable in self.engine.iterate():
+            self.variables.append(variable)
             if variable.lower() not in self.NON_RESULT_VARIABLES:
                 if variable.lower() == 'zb':  # special treatment for variable bed level result type - "bed elevation" is already for the static version
                     long_name = 'dynamic bed level'
@@ -129,6 +131,12 @@ class PyNCMeshDataExtractor(PyDataExtractor):
     def on_vertex(self, data_type: str) -> bool:
         dims = set([x.lower() for x in self.dimension_names(data_type)])
         return len({'numcells2d', 'numcells3d'}.intersection(dims)) == 0
+    
+    def cell_count(self) -> int:
+        return self.engine.data_shape('cell_X')[0]
+    
+    def node_count(self) -> int:
+        return self.engine.data_shape('node_X')[0]
 
     def cell_index(self, cell_id: int | list[int] | np.ndarray, data_type: str) -> np.ndarray:
         return self.data('idx3', cell_id).flatten() - 1

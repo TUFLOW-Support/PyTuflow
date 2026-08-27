@@ -1,0 +1,29 @@
+{
+  "display_name": "Basic 2D Model (HPC)",
+  "description": "Basic 2D HPC model with SGS, events, and PO.",
+  "variables": {
+    "engine": "HPC",
+    "hardware": "GPU",
+    "gis_format": "GPKG",
+    "grid_format": "TIF",
+    "start_time": 0,
+    "end_time": 1,
+    "timestep": 1
+  },
+  "features": [
+    "events",
+    {
+      "name": "sgs",
+      "sgs_sample_frequency": 11,
+      "sgs_sample_distance": -1,
+      "sgs_map_extent_trim": "All",
+      "sgs_depth_output": "Cell Average",
+      "map_cutoff_depth": -1
+    },
+    {
+      "name": "po",
+      "time_series_interval": 60,
+      "po_path": "<path/to/2d_po>"
+    }
+  ]
+}

@@ -1,0 +1,38 @@
+!_________________________________________________________________ 
+! GENERAL PARAMETERS 
+Bottom Drag Model == Manning										!Drag model
+Include Sediment == 1,0 !(Enabled, Density coupling)				!Courant-Frederic-Lewy stability criterion
+
+!_________________________________________________________________ 
+! MODEL PARAMETERS
+Momentum mixing model == Smagorinsky							  	!Eddy viscosity
+Global horizontal eddy viscosity == 0.5             				![m2/s]
+Global horizontal eddy viscosity limits == 1.0,99999.             	![m2/s]
+Scalar mixing model == Smagorinsky 									!Mixing model for the scalar variables
+Global horizontal scalar diffusivity == 0.5 						!Smagorinksy Coefficient
+Global horizontal scalar diffusivity limits == 1.0,99999. 			!min, max [m2/s] 
+
+!_________________________________________________________________ 
+! SEDIMENT CONTROL FILE
+Sediment Control File == FMA2_SED_001.fvsed 						!Add reference to sediment control file
+
+!_________________________________________________________________ 
+! MATERIAL DEFINITIONS
+material == 1										                !Material ID
+  bottom roughness == 0.02			                   				!River												
+end material                    
+material == 2										                !Material ID
+  bottom roughness == 0.04			                   				!Creek	
+end material                    
+material == 3,4									                   	!Material ID
+  bottom roughness == 0.05			                   				!Vegetated Dune,Pasture	
+end material                    
+material == 5,6,7								                   	!Material ID
+  bottom roughness == 0.07			                   				!Medium Veg,Rural Urban,Crops	
+end material                    
+material == 8   								                   	!Material ID
+  bottom roughness == 0.1 			                   				!Dense Veg	
+end material                    
+material == 9										                !Material ID
+  bottom roughness == 0.2				                   			!Dense Urban
+end material    

@@ -42,15 +42,6 @@ class ITimeSeries2D(ABC):
         self._time_series_data_rl = AppendDict()
 
     @staticmethod
-    def _context_refine_by_geometry(context: list[str], df: pd.DataFrame) -> pd.DataFrame:
-        df1 = df.copy()
-        if context:
-            for geom in ['point', 'line', 'poly']:
-                if geom in context:
-                    df1 = pd.concat([df1, df[df['geometry'] == geom]], axis=1, ignore_index=True)
-        return df
-
-    @staticmethod
     def _replace_1d_aliases(filter_by: str) -> str:
         def replace_alias(filter_by_: list[str], alias: str, values: list[str]):
             if alias in filter_by_:
@@ -67,11 +58,13 @@ class ITimeSeries2D(ABC):
             replace_alias(filter_by, 'node', ['1d', 'point'])
         return '/'.join(filter_by)
 
+    @abstractmethod
     def _time_series_extractor(self, data_types: list[str], custom_names: list[str], time_series_data: dict,
                                ctx: pd.DataFrame, time_fmt: str, share_idx: bool,
                                reference_time: datetime) -> pd.DataFrame:
         pass
 
+    @abstractmethod
     def _maximum_extractor(self, data_types: list[str], custom_names: list[str], maximum_data: dict,
                            ctx: pd.DataFrame, time_fmt: str, reference_time: datetime) -> pd.DataFrame:
         pass

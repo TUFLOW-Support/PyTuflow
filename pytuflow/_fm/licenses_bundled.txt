@@ -1,0 +1,16 @@
+FM_to_ESTRY repository and source distributions bundle several libraries that are
+compatibly licensed. We list these here.
+
+---
+
+Name: numpy
+License: Numpy
+  For license text see license_numpy.txt
+
+Name: GDAL
+License: X/MIT
+  For license text see license_gdal.txt
+
+Name: PROJ
+License: X/MIT
+  For license text see license_proj.txt

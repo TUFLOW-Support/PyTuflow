@@ -1,0 +1,4 @@
+Model Origin and Extent == ${qdt_origin}
+Orientation Angle == ${qdt_orientatin_angle}
+Base Cell Size	== ${qdt_base_cell_size}
+Read GIS Nesting == ${qdt_gis_nesting_path}

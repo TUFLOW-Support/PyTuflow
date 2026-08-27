@@ -1,0 +1,51 @@
+{
+  "name": "structtim",
+  "display_name": "Structure - Timeseries",
+  "sort_order": 5,
+  "template_files": [],
+  "command_blocks": [
+    {
+      "id": "fvc_struct_header",
+      "target_cf": "fvc",
+      "placement_rule": "before_fvc_structures",
+      "existence_check": "! HYDRAULIC STRUCTURES",
+      "commands": [
+        "\n!__________________________________________________________________________________________________________________________________________________________________________________________",
+        "! HYDRAULIC STRUCTURES"
+      ]
+    },
+    {
+      "id": "fvc_struct_timeseries",
+      "target_cf": "fvc",
+      "placement_rule": "fvc_structures",
+      "allow_multiple": true,
+      "commands": [
+        "##IF ${struct_conn_type}==Nodestring;Zone##",
+          "\nStructure == ${struct_conn_type}, <link1_id>",
+        "##ENDIF##",
+        "##IF not:${struct_conn_type}==Nodestring;Zone##",
+          "\nStructure == ${struct_conn_type}, <link1_id>, <link2_id>",
+        "##ENDIF##"
+      ]
+    },
+    {
+      "id": "struct_timeseries_param",
+      "target_cf": "fvc",
+      "target_previous_block": true,
+      "commands": [
+        "Flux Function == Timeseries",
+        "Flux File == ${struct_flux_csv}"
+      ]
+    },
+    {
+        "id": "fvc_struct_timeseries_nodestring",
+        "target_cf": "fvc",
+        "placement_rule": "before_fvc_structures",
+        "allow_multiple": true,
+        "commands": [
+            "Read GIS Nodestring == ${nodestring_path}"
+        ]
+
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+! TUFLOW GEOMETRY CONTROL (.TGC) file controls the 2D grid dimensions, cell codes, elevations and material categories
+
+! 2D DOMAIN EXTENT AND RESOLUTION COMMANDS
+Cell Size == 5	 								! Define the model cell size
+Grid Size (X,Y) == 850, 1000  					! Define the X and Y dimensions of the 2D domain 
+
+! MODEL GRID COMMANDS
+Set Code == 0  									! Set all cells to inactive 
+Read GIS Code == gis/2d_code_EG00_001_R.shp  	! Set cell codes according to attributes specified within the GIS layer
+
+! DEFINE BASE TOPOGRAPHY
+Set Zpts == 100  								! Sets every 2D elevation zpt to 100m above datum
+Read GRID Zpts == grid/DEM_SI_Unit_01.flt | gis/raster_clip.shp		! Assigns the elevation of zpts from the ASCII grid
+Read GIS Z Shape == gis/2d_zsh_EG00_Rd_Crest_001_L.shp | gis/2d_zsh_EG00_Rd_Crest_001_P.shp  		! Breakline to enforce road topography
+
+Read GIS Zpts Modify Conveyance == gis/2d_sa_rf_EG03_005_R.shp | 1.2 | grid/DEM_SI_Unit_01.flt
+
+! Read GIS Z Shape == gis\2d_zsh_multipart_geom_test_R.gpkg
+
+! DEFINE  LANDUSE
+Set Mat == 1   									! Sets the Material ID as defined within the Materials Definition file to all cells within the model domain  
+Read File == trd/materials.trd
+! Read GIS Mat == gis\2d_mat_pasture_026d_R.gpkg

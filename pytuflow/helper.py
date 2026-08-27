@@ -105,7 +105,7 @@ def roundSeconds(dateTimeObject, prec):
     
 
 if __name__ == '__main__':
-    a = r"C:\TUFLOW\Tutorial_Data_QGIS\Tutorial_Data_QGIS\QGIS\Complete_Model\tuflow\results"
+    # a = r"C:\TUFLOW\Tutorial_Data_QGIS\Tutorial_Data_QGIS\QGIS\Complete_Model\tuflow\results"
     b = r"..\model\<<module>>_<<cell_size>>_001.tgc"
     v = {'module': ['M03'], 'cell_size': ['5m']}
     s = ['M03']

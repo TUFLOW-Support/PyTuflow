@@ -1,0 +1,8 @@
+BC == WL, 2, bc_dbase\Downstream_WL_002.csv
+	BC Header == time,tidelevel_m
+End BC
+
+BC == WL, 2, bc_dbase\Downstream_WL_002.csv
+	BC Header == time,add_tidelevel_m
+    sub-type == 5
+End BC

@@ -1,0 +1,15 @@
+!_________________________________________________________________ 
+!TIME COMMANDS
+update dt == 300.
+
+!_________________________________________________________________
+! SIMULATION CONFIG COMMANDS
+Morphological Coupling == ${stm_morph_coupling} 					! Turn on/off Morphological Feedback to Hydrodynamics. 1 to enable feedback, 0 to disable.
+Bed roughness model == ${stm_bed_roughness_model}					! ks, d50 or vanRijn .
+Bed roughness parameters == ${stm_bed_roughness_params}				! Nikuradse Roughness Height ksc (currents), ksw (waves).
+Bed roughness coupling == ${stm_roughness_coupling}					! Turn on/off Bed Sediment Feedback to Bed Roughness. 1 to enable feedback, 0 to disable.
+Erosion Depth Limits == ${stm_erosion_dep_lims}						! Depth to scale Erosion to Zero (<0.1m no erosion, >0.2m full erosion)
+Deposition Depth Limits == ${stm_deposition_dep_lims}				! Depth to scale Deposition to Zero (<0.1m no deposition, >0.2m full deposition)
+Armour layer thickness == ${stm_armour_layer_thickness}				! Specify Min and Max Armour Layer Thickness [m]
+
+Write restart dt == 12 												! Write Restart File Interval [hrs]

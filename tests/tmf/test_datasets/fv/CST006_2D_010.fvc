@@ -1,0 +1,104 @@
+! TUFLOW FV 2D Coastal Example Model
+! Single Tracer With Constant Settling Velocity
+Tutorial Model == ON											! {OFF} | ON Enable license free tutorial mode
+
+GIS Format == SHP												! {MIF} | SHP
+SHP Projection == ..\model\gis\projection.prj					! Projection string used for GIS integration
+
+!______________________________________________________________________________________________________________________
+! SIMULATION CONFIGURATION
+Hardware == CPU													! {CPU} | GPU
+Spherical == 1													! {0} Cartesian | 1 Long/Lat
+Spatial Order == 1,1											! {1} | 2 Horizontal, {1} | 2 Vertical
+Bottom Drag Model == ks 										! {Manning} | ks
+Ntracer == 1													! {0} Number of advection dispersion tracers to model
+
+!______________________________________________________________________________________________________________________
+! TRACER DEFINITION
+Tracer == 1														! Tracer 1
+   Settling Velocity == 0.001									! Constant settling velocity (m/s)
+End Tracer
+
+!______________________________________________________________________________________________________________________
+! TIME AND TIMESTEP COMMANDS
+! Time Commands
+Time Format == ISODATE											! {HOURS} | ISODATE
+Start Time ==  26/03/2010 16:30:00								! Simulation start time (dd/mm/yyyy hh:mm:ss)
+End Time ==   01/04/2010 23:00:00								! Simulation end time (dd/mm/yyyy hh:mm:ss)
+
+! Timestepping Commands
+CFL == 0.95 													! {1.0} Courant criterion
+Timestep Limits == 0.1,30.0										! {0.0} Minimum timestep (s), {0.0} Maximum time step (s)
+
+!______________________________________________________________________________________________________________________
+! MODEL PARAMETERS
+! Turbulence
+Momentum Mixing Model == Smagorinsky							! None | Constant | Smagorinsky | Wu
+Global Horizontal Eddy Viscosity == 0.5							! {0.0} Coeffecient
+Global Horizontal Eddy Viscosity Limits == 0.05, 99999.			! {0.0} Minimum eddy viscosity (m^2/s), {99999.} Maximum eddy viscosity (m^2/s)
+
+! Scalar Mixing
+Scalar Mixing Model == Elder									! {None} | Constant | Elder | Smagorinksy
+Global Horizontal Scalar Diffusivity == 100,10					! {0} Longitudinal coefficient, {0} Transverse coefficient
+Global Horizontal Scalar Diffusivity Limits == 0.05, 99999.		! {0.0} Minimum scalar diffusivity (m^2/s), {99999.} Maximum scalar diffusivity (m^2/s)
+
+! Cell Wet/Dry Depths and Stabilty
+Cell Wet/Dry Depths == 0.005, 0.05								! {0.00001} Dry depth (m), {0.01} wet depth (m)
+
+!______________________________________________________________________________________________________________________
+! GEOMETRY
+Geometry 2D == ..\model\geo\GoC_001.2dm							! Flexible mesh geometry
+Cell Elevation File == ..\model\geo\GoC_ID_001.csv, cell_ID		! Set cell centre elevations. Use of .2dm cell ID is the fastest of the bathymetry assignment command options
+
+!______________________________________________________________________________________________________________________
+! MATERIAL PROPERTIES
+Material == 1													! Default material
+  Bottom Roughness == 0.05										! Nikuradse roughness height (m)
+End Material
+
+!______________________________________________________________________________________________________________________
+! INITIAL CONDITIONS
+Initial Water Level == 0.0										! Set spatially constant initial water level (m)
+Initial Tracer Concentration == 0.0								! Set spatially constant tracer concentration (units/m^3)
+
+!______________________________________________________________________________________________________________________
+! BOUNDARY CONDITIONS
+! Location of open boundary conditions
+Read GIS Nodestring == ..\model\gis\2d_ns_Open_Boundary_001_L.shp
+
+! Location of cell inflows
+Read GIS SA == ..\model\gis\2d_sa_WWTP_Outfalls_007_P.shp
+
+! Include file with astronomical tide boundary condition definition
+Include == ..\bc_dbase\GoC_Tide_20100301_20100501_AEST_CST006_007.fvc
+
+! Mornington Island Cell Inflow
+BC == QC, MI, ../bc_dbase/inflow_007.csv						! Cell inflow
+   BC Header == Time, Q_MI_WWTP, MI_WWTP						! Time, Flow (m^3/s), Tracer concentration (units/m^3)
+   BC Default == 0.0,0.0										! Default value to assign to missing data - Flow (m^3/s), Tracer concentration (units/m^3)
+End BC
+
+!______________________________________________________________________________________________________________________
+! OUTPUT COMMANDS
+Log Dir == log
+!Write Check Files == ..\check\									! GIS check files output location
+Output Dir == ..\results\										! Result output location
+
+Output == netcdf												! TUFLOW FV NetCDF map output format
+  Output Parameters == h, v, d, trace_1							! Water level (mMSL), velocity (m/s), depth (m), tracer concentration (units/m^3)
+  Output Interval == 1800.0										! Output interval (s) 30 minutes
+End Output
+
+Output == flux													! Timeseries of net flow across each nodestring
+  Output Interval == 900. 								  		! Output every 900 seconds (15 minutes)
+End Output
+
+Output == mass													! Timeseries of total mass in model
+  Output Interval == 900. 								  		! Output every 900 seconds (15 minutes)
+End Output
+
+Output == points                                 	      		! Time series output at points
+  Read GIS PO == ..\model\gis\3d_po_Output_Points_001_P.shp	    ! Location of points
+  Output Parameters == h, v, d, trace_1							! Water level (mMSL), velocity (m/s), depth (m), tracer concentration (units/m^3)
+  Output Interval == 900. 								  		! Output every 900 seconds (15 minutes)
+End Output

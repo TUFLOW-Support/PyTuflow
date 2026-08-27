@@ -1,0 +1,90 @@
+{
+  "name": "ptmmat",
+  "display_name": "Particle Material",
+  "sort_order": 110,
+  "template_files": [],
+  "command_blocks": [
+    {
+      "id": "fvptm_material",
+      "target_cf": "fvptm",
+      "placement_rule": "fvsed_material",
+      "allow_multiple": true,
+      "commands": [
+        "Material == ${stm_mat_id}"
+      ]
+    },
+    {
+      "id": "fvptm_material_param",
+      "target_cf": "fvptm",
+      "target_previous_block": true,
+      "allow_multiple": true,
+      "commands": [
+        "##IF not:${ptm_mat_grp_id}:0;1##",
+          "Material Group == ${ptm_mat_grp_id}",
+        "##ENDIF##",
+        "##IF not:${ptm_mat_bed_roughness_params}:0##",
+          "Bed roughness parameters == ${ptm_mat_bed_roughness_params}",
+        "##ENDIF##",
+        "##IF not:${ptm_mat_suspended_load_scale}:0##",
+          "Suspended load scale == ${ptm_mat_suspended_load_scale}",
+        "##ENDIF##",
+        "##ITER:${ptm_mat_groups}##",
+          "##COMMANDS fvptm_material_group##",
+        "##ENDITER##",
+        "##ITER:${ptm_mat_layers}##",
+            "##COMMANDS fvptm_material_layer##",
+        "##ENDITER##"
+      ]
+    },
+    {
+      "id": "fvptm_material_group",
+      "target_cf": "fvptm",
+      "by_directive_only": true,
+      "allow_multiple": true,
+      "commands": [
+        "Group == ${ptm_grp_id}",
+        "##STARTBLOCK##",
+        "##IF not:${stm_settling_params}:0;none##",
+          "Settling parameters == ${stm_settling_params}",
+        "##ENDIF##",
+        "##IF not:${stm_deposition_params}:0;none##",
+          "Deposition paramaters == ${stm_deposition_params}",
+        "##ENDIF##",
+        "##IF not:${stm_erosion_params}:0;none##",
+          "Erosion parameters == ${stm_erosion_params}",
+        "##ENDIF##",
+        "##IF not:${ptm_horiz_dispersion_params}:0;none##",
+          "Horizontal dispersion parameters == ${ptm_horiz_dispersion_params}",
+        "##ENDIF##",
+        "##IF not:${ptm_vert_dispersion_params}:0;none##",
+          "Vertical dispersion parameters == ${ptm_vert_dispersion_params}",
+        "##ENDIF##",
+        "##IF not:${ptm_wind_drift_params}:0;none##",
+          "Wind drift parameters == ${ptm_wind_drift_params}",
+        "##ENDIF##",
+        "##IF not:${ptm_wind_drift_dep_lims}:0;none##",
+          "Wind drift depth limits == ${ptm_wind_drift_dep_lims}",
+        "##ENDIF##",
+        "##IF not:${ptm_wave_drift_params}:0;none##",
+          "Wave drift parameters == ${ptm_wave_drift_params}",
+        "##ENDIF##",
+        "##ENDBLOCK##"
+      ]
+    },
+    {
+      "id": "fvptm_material_layer",
+      "target_cf": "fvptm",
+      "by_directive_only": true,
+      "allow_multiple": true,
+      "commands": [
+          "Layer == 1",
+          "##STARTBLOCK##",
+            "Dry Density == ${stm_mat_layer_dry_density}",
+            "##ITER:${ptm_mat_groups}##",
+              "##COMMANDS fvptm_material_group##",
+            "##ENDITER##",
+          "##ENDBLOCK##"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,6 @@
+BC == WL_CURT, Eastern_Boundary, GoC_Tide_20100301_20100501_AEST.nc
+  BC Header == local_time, nsEastern_Boundary_chainage, dummy, nsEastern_Boundary_wl
+  BC Update dt == 60.
+  BC Time Units == days
+  Includes MSLP == 0
+End BC

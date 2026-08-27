@@ -35,13 +35,14 @@ OrderedDict([('Name', 'RL_05')])
 from contextlib import contextmanager
 
 from ..._pytuflow_types import PathLike, TuflowPath
-from ..._tmf.tmf.tuflow_model_files.gis import GPKG, ogr_basic_geom_type
-from ..._tmf.tmf.tuflow_model_files.gis import GISAttributes
+from ..._tmf import Geom, Feature
+from ..._tmf.gis import GPKG, ogr_basic_geom_type
+from ..._tmf.gis import GISAttributes
 
 try:
     from osgeo import ogr
     from osgeo.ogr import Layer
-    from fm_to_estry.helpers.gis import vector_geometry_as_array, get_driver_name_from_extension
+    from .gis import vector_geometry_as_array, get_driver_name_from_extension
     has_gdal = True
 except ImportError:
     ogr = None
@@ -110,10 +111,11 @@ def point_gis_file_to_dict(fpath: PathLike):
 def line_gis_file_to_dict(fpath: PathLike):
     d = {}
     i = 0
-    with TuflowPath(fpath).open_gis() as lyr:
+    p = TuflowPath(fpath)
+    with p.open_gis() as lyr:
         geom_types = lyr.geometry_types()
         if 'LineString' not in geom_types and 'MultiLineString' not in geom_types:
-            raise ValueError(f'Layer {lyr.GetName()} is not a line-string layer.')
+            raise ValueError(f'Layer {p.lyrname} is not a line-string layer.')
         id_fields = ['Id', 'Label', 'Name']
         for feature in lyr:
             fi = -1

@@ -1,0 +1,176 @@
+! TUFLOW FV
+##IF feature:tutorial##
+##COMMANDS tutorial_model_activate##
+##ENDIF##
+
+!__________________________________________________________________________________________________________________________________
+! COORDINATE REFERENCE FRAME
+! Cartesian (Eastings and Northings) model in metric units
+GIS FORMAT == ${gis_format}                                                              ! {MIF} | SHP
+##IF ${gis_format}:SHP##
+SHP Projection == ..\model\gis\projection.shp                                            ! Projection string used for GIS integration
+##ENDIF##
+##IF ${gis_format}:MIF##
+MI Projection == ..\model\gis\projection.mif                                             ! Projection string used for GIS integration
+##ENDIF##
+Units == ${units}                                                                        ! {Metric} | US Customary | Imperial | English        
+Spherical == ${spherical}                                                                ! {0} Cartesian | 1 Spherical
+##IF spherical:0##
+Latitude == ${latitude}                                                                  ! {0.0} Representative latitude for study area
+##ENDIF##
+##IF feature:salinity##
+##COMMANDS fvc_salinity##
+##ENDIF##
+##IF feature:temp##
+##COMMANDS fvc_temperature##
+##ENDIF##
+##IF feature:temp##
+##COMMANDS fvc_heat##
+##ENDIF##
+##IF feature:ad##
+##COMMANDS fvc_ntracer##
+##ENDIF##
+##IF feature:stm##
+##COMMANDS fvc_include_sediment##
+##COMMANDS fvc_mode_split##
+##ENDIF##
+
+!__________________________________________________________________________________________________________________________________________________________________________________________
+! HARDWARE (optional)
+Hardware == ${hardware}                                                                  ! {CPU} | GPU
+
+!__________________________________________________________________________________________________________________________________________________________________________________________
+! SPATIAL ORDER (optional)
+Spatial Order == ${spatial_order}                                                        ! {1 1st Order Horizontal} | 2 2nd Order Horizontal, {1 1st Order Vertical} | 2 2nd Order Vertical
+
+!__________________________________________________________________________________________________________________________________________________________________________________________
+! SIMULATION TIME SETTINGS
+Time Format == ${time_format}                                                            ! {HOURS} | ISODATE
+Start Time == ${start_time}                                                              ! Simulation start time (dd/mm/yyyy hh:mm:ss)
+End Time == ${end_time}                                                                  ! Simulation end time (dd/mm/yyyy hh:mm:ss)
+##IF feature:events##
+##COMMANDS events_fvc##
+##ENDIF##
+
+!__________________________________________________________________________________________________________________________________________________________________________________________
+! COMPUTATIONAL TIMESTEP
+CFL == ${cfl}                                                                            ! {1.0} Courant stability criterion
+Timestep Limits == ${timestep_limits}                                                    ! {0.0} Minimum model timestep (s), {0.0} Maximum model timestep (s)
+
+!__________________________________________________________________________________________________________________________________________________________________________________________
+! WETTING AND DRYING (optional)
+! Set to default {1.e-5} Dry depth (m), {1.e-2} Wet depth (m)
+
+!__________________________________________________________________________________________________________________________________________________________________________________________
+! BOTTOM DRAG
+Bottom Drag Model == ${bottom_drag_model}                                                ! {Manning} | ks
+Global Bottom Roughness == ${glob_bottom_rough}                                          ! {1.0E-6} Manning's 'n' 
+
+!__________________________________________________________________________________________________________________________________________________________________________________________
+! HORIZONTAL MIXING
+! Turbulence
+Momentum Mixing Model == ${momenutim_mixing_model}                                       ! None | Constant | Smagorinsky | Wu
+Global Horizontal Eddy Viscosity == ${glob_horiz_eddy_visc}                              ! {0.0} Smagorinksy coefficient
+Global Horizontal Eddy Viscosity Limits == ${glob_horz_eddy_visc_lims}                   ! {0.0} Minimum eddy viscosity (m^2/s), {99999.} Maximum eddy viscosity (m^2/s)
+##IF not:${scalar_mixing_model}:none##
+
+! Scalars
+Scalar Mixing Model == ${scalar_mixing_model}                                            ! None | Constant | Smagorinsky | Wu
+Global Horizontal Scalar Diffusivity == ${glob_horiz_scalar_diffusivity}                 ! {0.0} Smagorinksy coefficient
+Global Horizontal Scalar Diffusivity Limits == ${glob_horiz_scalar_diffusivity_lims}     ! {0.0} Minimum scalar diffusivity (m^2/s), {99999.} Maximum scalar diffusivity (m^2/s)
+##ENDIF##
+
+##IF feature:3d##
+!__________________________________________________________________________________________________________________________________________________________________________________________
+! VERTICAL MIXING
+##COMMANDS fvc_3d_mixing##
+##ENDIF##
+
+##IF feature:ad##
+!__________________________________________________________________________________________________________________________________________________________________________________________
+! TRACER DEFINITION
+##COMMANDS fvc_tracer_block##
+##COMMANDS fvc_tracer_block_params##
+End Tracer
+##ENDIF##
+##IF feature:stm##
+##COMMANDS fvc_sediment_control_file##
+##ENDIF##
+##IF feature:wqm##
+##COMMANDS fvc_wq_control_file##
+##ENDIF##
+##IF feature:ptm##
+##COMMANDS fvc_particle_tracking_control_file##
+##ENDIF##
+
+!__________________________________________________________________________________________________________________________________________________________________________________________
+! WIND STRESS (optional)
+! Default wind stress model and parameter adopted
+
+!__________________________________________________________________________________________________________________________________________________________________________________________
+! COMPUTATIONAL MESH
+! Unstructured
+Geometry 2D == ${geometry_2d}                                                            ! Flexible mesh geometry
+
+##IF feature:3d##
+!__________________________________________________________________________________________________________________________________________________________________________________________
+! VERTICAL MESH GEOMETRY
+##COMMANDS fvc_3d_geometry##
+##ENDIF##
+
+!__________________________________________________________________________________________________________________________________________________________________________________________
+! BATHYMETRY 
+! Bathymetry is assigned within mesh 2dm file
+
+!__________________________________________________________________________________________________________________________________________________________________________________________
+! INITIAL CONDITIONS
+Initial Water Level == ${iwl}
+##IF feature:salinity##
+##COMMANDS fvc_initial_salinity##
+##ENDIF##
+##IF feature:temp##
+##COMMANDS fvc_initial_temp##
+##ENDIF##
+##IF feature:ad##
+##COMMANDS fvc_initial_tracer##
+##ENDIF##
+##IF feature:st##
+##COMMANDS fvc_initial_sediment##
+##ENDIF##
+##IF feature:wq##
+##COMMANDS fvc_initial_wq##
+##ENDIF##
+##IF feature:wqm##
+##COMMANDS fvc_initial_wq##
+##ENDIF##
+
+!__________________________________________________________________________________________________________________________________________________________________________________________
+! MATERIALS
+! Example Material
+Material == 1                                                                            ! {0} Material ID
+  Bottom Roughness == 0.018                                                              ! Manning's 'n' roughness coefficient
+End Material
+
+!__________________________________________________________________________________________________________________________________________________________________________________________
+! BOUNDARY CONDITIONS
+Read GIS Nodestring == ${nodestring_path}                                                ! Polyline (Nodestring) boundary location definition
+
+! Example BC Block
+BC == WL, 2, ..\bc_dbase\<wl_boundary.csv>                                               ! Boundary_type, location_ID, data_filepath
+    BC Header == time, WL
+    ##IF module:ad##
+    ##COMMANDS tracer_bc_header##
+    ##ENDIF##
+    ##IF module:stm##
+    ##COMMANDS sediment_bc_header##
+    ##ENDIF##
+    ##IF module:wqm##
+    ##COMMANDS wq_bc_header##
+    ##ENDIF##
+End BC
+
+!__________________________________________________________________________________________________________________________________________________________________________________________
+! MODEL OUTPUTS
+Output Dir == ..\results                                                                 ! Result output directory
+Log Dir == log                                                                           ! Log and diagnostics directory
+Write Check Files == ..\check                                                            ! Directory for GIS check files

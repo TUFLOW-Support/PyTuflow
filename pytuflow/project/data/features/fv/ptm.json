@@ -1,0 +1,23 @@
+{
+    "name": "ptm",
+    "display_name": "Particle Tracking",
+    "sort_order": 5,
+    "template_files": [
+        {
+            "template_key": "ptm/${model_name}_${iter}.fvptm",
+            "output_subdir": "ptm"
+        }
+    ],
+    "command_blocks": [
+        {
+            "id": "fvc_particle_tracking_control_file",
+            "target_cf": "fvc",
+            "placement_rule": "fvc_model_parameters",
+            "commands": [
+                "\n!______________________________________________________________________________________________________________________",
+                "! PARTICLE TRACKING",
+                "Particle Tracking Control File == ..\\ptm\\${model_name}_${iter}.fvptm"
+            ]
+        }
+    ]
+}

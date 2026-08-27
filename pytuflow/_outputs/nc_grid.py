@@ -2,6 +2,7 @@ from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
 from typing import Union, Generator
+import logging
 
 import numpy as np
 try:
@@ -28,6 +29,9 @@ try:
 except ImportError:
     gdal = None
     has_gdal = False
+
+
+logger = logging.getLogger('pytuflow')
 
 
 class NCGrid(Grid):
@@ -143,8 +147,8 @@ class NCGrid(Grid):
                         return True
                     subds = None
                 ds = None
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f'Error: {e}')
         return False
 
     @staticmethod
@@ -179,6 +183,12 @@ class NCGrid(Grid):
             if "TUFLOW Build:" in head:
                 return True
         return False
+    
+    def load_into_memory(self, data_types: str | list[str]):
+        # docstring inherited
+        self._load()
+        with self._open():
+            super().load_into_memory(data_types)
 
     def times(self, filter_by: str = None, fmt: str = 'relative') -> list[TimeLike]:
         """Returns a list of times for the given filter.
@@ -275,6 +285,12 @@ class NCGrid(Grid):
         with self._open():
             return super().section(locations, data_types, time)
 
+    def flux(self, locations, data_types='', time_fmt='relative', use_unit_flow=True,
+             direction_convention='arithmetic') -> pd.DataFrame:
+        self._load()
+        with self._open():
+            return super().flux(locations, data_types, time_fmt, use_unit_flow, direction_convention)
+
     @contextmanager
     def _open(self):
         if self._nc is not None:
@@ -365,8 +381,8 @@ class NCGrid(Grid):
                 idx = (0, idx)
         val = self._nc.variables[varname][idx]
         if np.ma.isMaskedArray(val):
+            a = np.array(val)
             if np.ma.is_masked(val):
-                return val.filled(np.nan)
-            else:
-                return np.array(val)
+                a[val.mask] = np.nan
+            val = a
         return val

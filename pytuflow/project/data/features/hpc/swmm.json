@@ -1,0 +1,21 @@
+{
+  "name": "swmm",
+  "display_name": "SWMM (EPA-SWMM)",
+  "sort_order": 50,
+  "template_files": [
+    {
+      "template_key": "model/${model_name}_${iter}.tscf",
+      "output_subdir": "model"
+    }
+  ],
+  "command_blocks": [
+    {
+      "id": "swmm_tcf",
+      "target_cf": "tcf",
+      "placement_rule": "hpc_control_files",
+      "commands": [
+        "SWMM Control File == ..\\model\\${model_name}_${iter}.tscf"
+      ]
+    }
+  ]
+}

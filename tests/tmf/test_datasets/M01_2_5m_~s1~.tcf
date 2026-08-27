@@ -1,0 +1,9 @@
+If Scenario == -20pct
+    Read Materials File == ..\model\materials.csv | 0.8
+Else If Scenario == +20pct
+    Read Materials File == ..\model\materials.csv | 1.2
+Else
+    Read Materials File == ..\model\materials.csv
+End If
+
+Time Series Output Interval == 60                   ! Outputs time series data every 60 seconds

@@ -1,3 +1,4 @@
+import logging
 from abc import abstractmethod
 
 try:
@@ -7,10 +8,9 @@ except ImportError:
 
 from .output import Output
 from .._pytuflow_types import PathLike
-from ..util import pytuflow_logging
 
 
-logger = pytuflow_logging.get_logger()
+logger = logging.getLogger('pytuflow')
 
 
 class TabularOutput(Output):

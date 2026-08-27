@@ -1,0 +1,4 @@
+Set Variable SaveLoc == /home/public/models/cavan/tuflow
+
+Write Check Files == <<SaveLoc>>\Checks\
+Output Folder == <<SaveLoc>>\Results\

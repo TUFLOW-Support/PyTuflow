@@ -1,0 +1,89 @@
+! PTM to assess fate of CSO Outfall
+
+! use nodestring definition from HD model to allow particles to leave model domain. 
+Open boundary nodestring == 2  ! downstream tidal boundary
+
+!TIME COMMANDS
+!_________________________________________________________________
+lagrangian timestep == 60. ! seconds
+eulerian timestep == 60. ! seconds
+
+
+!Global COMMANDS
+Nscalar == 1,2,3
+
+! Sediment Transport COMMANDS (required if a particle group interacts with bed)
+bed roughness model == ks
+bed roughness parameters == 0.01,0.01				! ksc, ksw
+
+! Depth Limit commands
+erosion depth limits == 0.01, 0.05      			! Analagous to sediment transport
+deposition depth limits == 0.01, 0.05   			! Analagous to sediment transport
+
+!PARTICLE GROUP COMMANDS 
+!_________________________________________________________________
+
+group == microplastics
+  initial scalar mass == 10
+  settling model == none
+  horizontal dispersion model == constant
+  horizontal dispersion parameters == 1.0
+  vertical dispersion model == HD model
+  vertical dispersion parameters == 1.0
+  erosion model == none
+  deposition model == none
+end group
+
+group == sediment
+  d50 == 0.000002 					!0.2mm
+  particle density == 2650.		
+  initial scalar mass == 1
+  settling model == constant
+  settling parameters == 0.0002	! (m/s)
+  horizontal dispersion model == constant
+  horizontal dispersion parameters == 1.0
+  vertical dispersion model == HD model
+  vertical dispersion parameters == 1.0
+  erosion model == Mehta
+  erosion  parameters == 0.1, 0.2, 1.0
+  deposition model == Krone
+  deposition parameters == 0.25
+ end group
+
+!_________________________________________________________________
+
+! This is required due to adding deposition and settling.
+Material == 0					! Default material. If wanting spatial distribution require multiple blocks
+	Layer == 1
+		dry density == 1631.,1631.
+	End layer
+end material
+
+!CSO
+seed particles == point,  159.09971,  -31.39463,
+	particle groups == microplastics
+	timeseries file ==  ..\bc_dbase\CSO.csv
+	timeseries header == Date,microplastics
+end seed
+
+!Contaminated Sediment 
+seed particles == polygon
+	particle groups == sediment
+	polygon file == ..\bc_dbase\sediment_polygon.csv
+	Vertical coordinate type == depth
+	Vertical distribution file == ..\bc_dbase\sediment_vertical_distribution.csv
+	group mass == 1000
+end seed
+
+
+! OUTPUT SETTINGS
+!_________________________________________________________________
+
+output dir == ..\results\
+
+output == ptm_netcdf
+  output groups == microplastics, sediment
+  output interval == 1800.
+  output parameters == uvw, depth, water_depth, uvw_water, state_age 
+end output
+

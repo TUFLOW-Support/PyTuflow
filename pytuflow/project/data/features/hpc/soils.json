@@ -1,0 +1,31 @@
+{
+  "name": "soils",
+  "display_name": "Soils (Infiltration)",
+  "sort_order": 30,
+  "template_files": [
+    {
+      "template_key": "model/${model_name}_soils.tsoilf",
+      "output_subdir": "model"
+    }
+  ],
+  "command_blocks": [
+    {
+      "id": "soils_tcf",
+      "target_cf": "tcf",
+      "placement_rule": "hpc_control_files",
+      "commands": [
+        "Read Soils File == ..\\model\\${model_name}_soils.tsoilf"
+      ]
+    },
+    {
+      "id": "soils_tgc",
+      "target_cf": "tgc",
+      "commands": [
+        "!_______________________________________________________",
+        "! Soil - Infiltration commands",
+        "Set Soil == 1  ! defines top layer",
+        "! Read GIS Soil == ${gis_soil_path}"
+      ]
+    }
+  ]
+}

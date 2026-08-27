@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from pathlib import Path
 
 import numpy as np
 try:
@@ -35,7 +36,7 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
         self.cache = Cache()
         self.name = ''
         self.geom: PyMeshGeometry | QgisMeshGeometry = PyMeshGeometry('')
-        self.extractor: PyDataExtractor = PyDataExtractor()
+        self.extractors: list[PyDataExtractor] = [PyDataExtractor()]
         self.has_inherent_reference_time = False
         self.reference_time = datetime(1990, 1, 1, tzinfo=timezone.utc)
         self.start_end_locs = []  # used by CATCHJson to stitch sections together
@@ -44,6 +45,7 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
         self._data_types = []
         self._standardised_data_types = []
         self._cells_4_mapping = None
+        self._data_type_to_extractor = []
 
     def __repr__(self) -> str:
         return f'<{self.__class__.__name__} {self.name}>'
@@ -71,6 +73,11 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
     def external_engine_available() -> bool:
         return H5Engine.available() or NCEngine.available()
 
+    @property
+    def shared_active_flags(self) -> bool:
+        """Whether the format uses shared active flags. True = shared, False = flag exists per result type."""
+        return False
+
     def clear_cache(self):
         self.cache.clear()
         self._data_types.clear()
@@ -78,6 +85,18 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
 
     def load(self):
         self.geom.load()
+
+    def add_data(self, fpath: str | Path):
+        """Adds mesh results/data onto the mesh. The data geometry must match the existing mesh geometry.
+        This routine does not load the mesh geometry of the incoming fpath (note, not alway the case when using QGIS drivers),
+        which makes it quick if you already have a compatible mesh geometry loaded.
+        If the incoming data has a result type that has already been loaded it will be registered but never be
+        found by the class when trying to query it as it will return the first instance.
+
+        The add_data is implemented per class, so the incoming data must match the existing class data
+        e.g. cannot load DAT results onto XMDF results even though they share the same mesh geometry.
+        """
+        raise NotImplementedError
 
     def translate_data_type(self, data_type: str) -> tuple[str, ...]:
         """Translate data type for result extraction. An example is velocity, which the user would input
@@ -123,7 +142,8 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
         data_type = self.translate_data_type(data_type)[0]
         if self.cache.contains('times', data_type):
             return self.cache.get('times', data_type)
-        times = self.extractor.times(data_type)
+        extractor = self._get_extractor(data_type)
+        times = extractor.times(data_type)
         self.cache.set(times, 'times', data_type)
         return times
 
@@ -142,7 +162,8 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
         """
         if not self._data_types:
             from ..map_output import MapOutput
-            self._data_types = ([self.geom.data_type] if self.geom.data_type else []) + self.extractor.data_types()
+            self._data_types = ([self.geom.data_type] if self.geom.data_type else []) + [x.data_types() for x in self.extractors]
+            self._data_types = np.hstack(self._data_types).flatten().tolist()
             if 'bed elevation' in self._data_types:  # case is important
                 i = self._data_types.index('bed elevation')
                 self._data_types[i] = 'dynamic bed level'  # ensure correct case
@@ -169,7 +190,8 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
         """
         if self.cache.contains('reference_time', data_type):
             return self.cache.get('reference_time', data_type)
-        ref_time = self.extractor.reference_time(self.translate_data_type(data_type)[0])
+        extractor = self._get_extractor(data_type)
+        ref_time = extractor.reference_time(self.translate_data_type(data_type)[0])
         self.cache.set(ref_time, 'reference_time', data_type)
         return ref_time
 
@@ -206,7 +228,8 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
             return mx
 
         try:  # some formats store maximums/minimums in the metadata
-            mx = self.extractor.maximum(self.translate_data_type(data_type)[0], depth_averaging, split_vector_components)
+            extractor = self._get_extractor(data_type)
+            mx = extractor.maximum(self.translate_data_type(data_type)[0], depth_averaging, split_vector_components)
         except NotImplementedError:  # need to extract full data to find maximum
             if self.on_vertex(data_type):
                 data, mask = self.vertex_data(data_type, slice(None))
@@ -256,7 +279,8 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
             return mn
 
         try:  # some formats store maximums/minimums in the metadata
-            mn = self.extractor.minimum(self.translate_data_type(data_type)[0], depth_averaging, split_vector_components)
+            extractor = self._get_extractor(data_type)
+            mn = extractor.minimum(self.translate_data_type(data_type)[0], depth_averaging, split_vector_components)
         except NotImplementedError:  # need to extract full data to find maximum
             if self.on_vertex(data_type):
                 data, mask = self.vertex_data(data_type, slice(None))
@@ -288,7 +312,8 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
         """
         if self.cache.contains('is_vector', data_type):
             return self.cache.get('is_vector', data_type)
-        vector = data_type.lower() not in ['bed elevation', 'bed level'] and self.extractor.is_vector(self.translate_data_type(data_type)[0])
+        extractor = self._get_extractor(data_type)
+        vector = data_type.lower() not in ['bed elevation', 'bed level'] and extractor.is_vector(self.translate_data_type(data_type)[0])
         self.cache.set(vector, 'is_vector', data_type)
         return vector
 
@@ -307,7 +332,8 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
         """
         if self.cache.contains('is_static', data_type):
             return self.cache.get('is_static', data_type)
-        static = data_type.lower() in ['bed elevation', 'bed level'] or self.extractor.is_static(self.translate_data_type(data_type)[0])
+        extractor = self._get_extractor(data_type)
+        static = data_type.lower() in ['bed elevation', 'bed level'] or extractor.is_static(self.translate_data_type(data_type)[0])
         self.cache.set(static, 'is_static', data_type)
         return static
 
@@ -328,7 +354,8 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
             return True
         if self.cache.contains('on_vertex', data_type):
             return self.cache.get('on_vertex', data_type)
-        vertex = self.extractor.on_vertex(self.translate_data_type(data_type)[0])
+        extractor = self._get_extractor(data_type)
+        vertex = extractor.on_vertex(self.translate_data_type(data_type)[0])
         self.cache.set(vertex, 'on_vertex', data_type)
         return vertex
 
@@ -347,7 +374,8 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
         """
         if self.cache.contains('is_3d', data_type):
             return self.cache.get('is_3d', data_type)
-        is_3d = self.extractor.is_3d(self.translate_data_type(data_type)[0])
+        extractor = self._get_extractor(data_type)
+        is_3d = extractor.is_3d(self.translate_data_type(data_type)[0])
         self.cache.set(is_3d, 'is_3d', data_type)
         return is_3d
 
@@ -367,7 +395,13 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
         int
             The index of the given cell ID for the specified data type.
         """
-        return self.extractor.cell_index(cell_id, self.translate_data_type(data_type)[0])
+        if self.is_3d(data_type) and self.cache.contains('loaded_in_memory', 'cell_id_3d'):
+            cell_index = self.cache.get('loaded_in_memory', 'cell_id_3d')
+            return cell_index[cell_id]
+        elif not self.is_3d(data_type):
+            return cell_id
+        extractor = self._get_extractor()
+        return extractor.cell_index(cell_id, self.translate_data_type(data_type)[0])
 
     def zlevel_count(self, cell_idx2: int | np.ndarray | list[int] | slice) -> int | np.ndarray | list[int]:
         """Returns the number of vertical levels for the given 2D cell index.
@@ -382,7 +416,11 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
         int | np.ndarray | list[int]
             The number of vertical levels for the given 2D cell index.
         """
-        return self.extractor.zlevel_count(cell_idx2)
+        if self.cache.contains('loaded_in_memory', 'zlevel_count'):
+            zlevel_count = self.cache.get('loaded_in_memory', 'zlevel_count')
+            return zlevel_count[cell_idx2]
+        extractor = self._get_extractor()
+        return extractor.zlevel_count(cell_idx2)
 
     def zlevels(self, time_index: int, nlevels: int, cell_idx2: int | np.ndarray,
                 cell_idx3: int | np.ndarray) -> np.ndarray:
@@ -404,7 +442,17 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
         np.ndarray
             The vertical levels for the given parameters.
         """
-        return self.extractor.zlevels(time_index, nlevels, cell_idx2, cell_idx3)
+        if self.cache.contains('loaded_in_memory', 'zlevels'):
+            zlevels = self.cache.get('loaded_in_memory', 'zlevels')
+            idx = cell_idx2 + cell_idx3
+            if isinstance(cell_idx2, int):
+                a = zlevels[time_index, slice(idx, idx + nlevels + 1)]
+            else:
+                idx = [i + j for i, nlevel in np.column_stack((idx, nlevels)) for j in range(nlevel + 1)]
+                a = zlevels[time_index, idx]
+            return a
+        extractor = self._get_extractor()
+        return extractor.zlevels(time_index, nlevels, cell_idx2, cell_idx3)
 
     def surface(self,
                 data_type: str,
@@ -452,7 +500,8 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
         tuple[np.ndarray, np.ndarray]
             A tuple containing the data array and a mask array containing information on whether the vertex/cell is wet.
         """
-        with self.extractor.open():
+        extractor = self._get_extractor(data_type)
+        with extractor.open():
             if self.is_static(data_type):
                 time_index = -1
             else:
@@ -525,7 +574,8 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
             The data value at the given point. If the data type is a vector, a tuple of floats will be returned.
             If the data is 3D, a numpy array will be returned with the vertical profile.
         """
-        with self.extractor.open():
+        extractor = self._get_extractor(data_type)
+        with extractor.open():
             # coerce point
             p = self.geom.trans.transform(self._coerce_into_point(point))
             wkt = self._point_as_wkt(point)
@@ -593,7 +643,8 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
         np.ndarray
             An array containing the extracted time series data.
         """
-        with self.extractor.open():
+        extractor = self._get_extractor(data_type)
+        with extractor.open():
             if self.is_static(data_type):
                 raise ValueError('Time series not available for static data types.')
 
@@ -679,7 +730,8 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
         np.ndarray
             An array containing the extracted section data.
         """
-        with self.extractor.open():
+        extractor = self._get_extractor(data_type)
+        with extractor.open():
             # coerce line
             line = self._coerce_into_line(line)
 
@@ -751,7 +803,8 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
         np.ndarray
             An array containing the extracted profile data.
         """
-        with self.extractor.open():
+        extractor = self._get_extractor(data_type)
+        with extractor.open():
             # coerce point
             p = self.geom.trans.transform(self._coerce_into_point(point))
 
@@ -803,7 +856,8 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
         np.ndarray
             An array containing the extracted curtain data.
         """
-        with self.extractor.open():
+        extractor = self._get_extractor(data_type)
+        with extractor.open():
             # coerce line
             line = self._coerce_into_line(line)
 
@@ -849,6 +903,161 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
             self.cache.set(curtain, 'curtain', data_type, time_index, self._linestring_as_wkt(line))
             return curtain
 
+    def flux(self, line: LineStringLike, data_type: str, use_unit_flow: bool) -> np.ndarray:
+        """Returns the flux across a line. The data_type can be "q"/"unit flow" and the flux will be calculated
+        using unit flow and the flow width. It can also be any other scalar result type
+        and the flux will be calculated by multiplying data type with the depth the velocity to obtain a flux.
+        E.g. it's possible to calculate the volume of sediment or salt by passing in a sediment or salinity
+        data type. Passing in an empty string will essentially calculate the volume flux, although using 'unit flow'
+        is recommended if it is available.
+
+        Parameters
+        ----------
+        line : LineStringLike
+            The line to extract the flux for.
+        data_type : str
+            The result type to extract the flux for. If "q" is specified, then the flux will be calculated using
+            solely the "q" data type. If a scalar data type is passed in, then the flux will be calculated
+            with help from the velocity result. Other vector data types are not supported.
+        use_unit_flow : bool
+            Use unit flow.
+
+        Returns
+        -------
+        np.ndarray
+            An array containing the extracted flux across the line.
+        """
+        _ = self.data_types()
+        data_types = self._standardised_data_types
+        # Checks
+        unit_flow = ''
+        if use_unit_flow:
+            # check to see if this result type is available
+            if not 'unit flow' in data_types:
+                raise ValueError('Data type "unit flow" is not available for flux calculation.')
+            unit_flow = 'unit flow'
+            if not self.is_vector('unit flow'):
+                if 'vector unit flow' not in data_types:
+                    raise ValueError('Data type "unit flow" is not a vector and could not find a "vector unit flow".')
+                unit_flow = 'vector unit flow'
+        else:
+            if data_type:
+                if self.is_static(data_type):
+                    raise ValueError('data type for flux calculation cannot be static')
+                if self.is_vector(data_type):
+                    raise ValueError('data type for flux calculation must be unit flow or a scalar type')
+            # check for depth and velocities - if velocity is called Vector Velocity like in a TUFLOW HPC XMDF output,
+            # then searching for Velocity is still good enough since these are created together
+            if 'velocity' not in data_types:
+                raise ValueError('velocity not found in available data types')
+            elif not self.on_vertex('velocity'):
+                # don't need to check depths, the layer thickness are defined in cell centred format
+                if self.is_3d('velocity') and data_type and not self.is_3d(data_type):
+                    raise ValueError('data_type must be 3D for 3D results')
+            elif 'depth' not in data_types:
+                raise ValueError('depth not found in available data types')
+
+        # velocity and data type could be in different extractors. Open both if requried.
+        extractor1 = self._get_extractor('velocity')
+        extractor2 = self._get_extractor(data_type) if data_type else None
+        extractors = [extractor1, extractor2]
+        _ = [x.open() for x in extractors if x is not None]
+        try:
+            # coerce line
+            line = self._coerce_into_line(line)
+
+            if self.cache.contains('flux', data_type, self._linestring_as_wkt(line), use_unit_flow):
+                return self.cache.get('flux', data_type, self._linestring_as_wkt(line), use_unit_flow)
+
+            # check cache for line intersections, otherwise calculate
+            if self.cache.contains('mesh_line', self._linestring_as_wkt(line)):
+                cell_ids, acell, dir_, mid_cell_ids, amid, dir_mid = self.cache.get('mesh_line',
+                                                                                    self._linestring_as_wkt(line))
+            else:
+                cell_ids, acell, dir_, mid_cell_ids, amid, dir_mid = self.geom.mesh_line(line)
+                self.cache.set(
+                    (cell_ids, acell, dir_, mid_cell_ids, amid, dir_mid),
+                    'mesh_line',
+                    self._linestring_as_wkt(line)
+                )
+
+            # get data
+            if self.on_vertex('velocity'):
+                flux = self.flux_from_vertex_data(line, cell_ids, acell, dir_mid, data_type, unit_flow)
+            else:
+                flux = self.flux_from_cell_data(cell_ids, acell, dir_, data_type, unit_flow)
+
+            self.cache.set(flux, 'flux', data_type, self._linestring_as_wkt(line), use_unit_flow)
+            return flux
+        finally:
+            [x.close_reader() for x in extractors if x is not None]
+
+    def load_into_memory(self, data_type: str):
+        """Loads all surfaces for a given data type into memory. This can save time later as it removes the need
+        for frequent I/O calls and data unzipping.
+        """
+        extractor = self._get_extractor(data_type)
+        with extractor.open():
+            for dtype in self.translate_data_type(data_type):
+                if self.cache.contains('loaded_in_memory', dtype):
+                    continue
+                data = extractor.data(dtype, slice(None))
+                self.cache.set(data, 'loaded_in_memory', dtype)
+
+                if not self.shared_active_flags or not self.cache.contains('loaded_in_memory', 'wd_global'):
+                    wd = extractor.wd_flag(dtype, slice(None))
+                    if self.shared_active_flags:
+                        self.cache.set(wd, 'loaded_in_memory', 'wd_global')
+                    else:
+                        self.cache.set(wd, 'loaded_in_memory', data_type, 'wd')
+
+                if self.is_3d(dtype) and not self.cache.contains('loaded_in_memory', 'zlevels'):
+                    cell_id_2d = np.arange(extractor.cell_count())
+                    cell_id_3d = extractor.cell_index(cell_id_2d, dtype)
+                    zlevel_count = self.zlevel_count(slice(None))
+                    zlevels = extractor.zlevels(slice(None), zlevel_count, cell_id_2d, cell_id_3d)
+                    if extractor.NAME == 'QgisDataExtractor':
+                        cell_id_3d[1:] = zlevel_count.cumsum()[:-1]
+                    self.cache.set(cell_id_3d, 'loaded_in_memory', 'cell_id_3d')
+                    self.cache.set(zlevel_count, 'loaded_in_memory', 'zlevel_count')
+                    self.cache.set(zlevels, 'loaded_in_memory', 'zlevels')
+
+    def data(self, data_type: str, index: PyDataExtractor.SliceType | PyDataExtractor.MultiSliceType) -> np.ndarray:
+        """Wrapper around extractor.data() that checks the cache first to check if results have been loaded into memory.
+        data_type does not get translated and should already be the correct name and the extractor should already be
+        opened.
+        """
+        if self.cache.contains('loaded_in_memory', data_type):
+            data = self.cache.get('loaded_in_memory', data_type)
+            return data[index]
+        extractor = self._get_extractor(data_type)
+        return extractor.data(data_type, index)
+
+    def wd_flag(self, data_type: str, index: PyDataExtractor.SliceType | PyDataExtractor.MultiSliceType) -> np.ndarray:
+        """Wrapper around extractor.wd_flag() that checks the cache first to check if the wd flag has been loaded into memory.
+        data_type does not get translated and should already be the correect name and the extractor should already be opened.
+        """
+        args = ['loaded_in_memory', 'wd_global'] if self.shared_active_flags else ['loaded_in_memory', data_type, 'wd']
+        if self.cache.contains(*args):
+            wd_flag = self.cache.get(*args)
+            return wd_flag[index]
+        extractor = self._get_extractor(data_type)
+        return extractor.wd_flag(data_type, index)
+
+    def _preload(self, extractor: PyDataExtractor):
+        data_types = set(extractor.data_types())
+        self._data_type_to_extractor.append(data_types)
+        for dtype in data_types.copy():
+            dtype_translated = self.translate_data_type(dtype)
+            for dtype_translated_ in dtype_translated:
+                if dtype_translated_ not in data_types:
+                    data_types.add(dtype_translated_)
+            if not self.has_inherent_reference_time and dtype.lower() != 'bed elevation':
+                ref_time = self.reference_time_(dtype)
+                if ref_time is not None:
+                    self.has_inherent_reference_time = True
+                    self.reference_time = ref_time
+
     def _find_time_index(self, data_type: str, time: float | datetime) -> int:
         if data_type.lower() in ['bed elevation', 'bed level']:
             return 0
@@ -884,6 +1093,20 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
             return ind.groupby(by='value').max().to_numpy().reshape((-1,))
         elif mapping_func == 'mean':
             return ind.groupby(by='value').mean().to_numpy().reshape((-1,))
+
+    def _get_extractor(self, data_type: str = '') -> PyDataExtractor:
+        """Return the extractor for the given data_type."""
+        if not data_type or data_type.lower() in ['bed elevation', 'bed level']:  # return the first one - can be acceptable if querying a mesh property rather than result
+            return self.extractors[0]
+
+        try:
+            for i, data_types in enumerate(self._data_type_to_extractor):
+                if data_type.lower() in [x.lower() for x in data_types]:
+                    return self.extractors[i]
+        except IndexError:
+            pass
+
+        return self.extractors[0]
 
     def _2d_to_3d_data_types(self, data_type: str) -> tuple[str, str]:
         """Return the bed elevation and water level data types for the given 2d data type so that the 3D profile

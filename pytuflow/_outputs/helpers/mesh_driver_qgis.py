@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Generator
@@ -38,8 +39,7 @@ except ImportError:
 
 Point = tuple[float, float]
 
-from ...util import pytuflow_logging
-logger = pytuflow_logging.get_logger()
+logger = logging.getLogger('pytuflow')
 
 
 class QgisMeshDriver(MeshDriver):

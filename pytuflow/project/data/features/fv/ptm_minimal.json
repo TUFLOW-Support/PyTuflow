@@ -1,0 +1,24 @@
+{
+    "name": "ptm_minimal",
+    "display_name": "Particle tracking (minimal) with no groups or materials in FVPTM template.",
+    "sort_order": 5,
+    "template_files": [
+        {
+            "template_key": "ptm/${model_name}_${iter}-minimal.fvptm",
+            "output_subdir": "ptm",
+            "target_name": "${model_name}_${iter}.fvptm"
+        }
+    ],
+    "command_blocks": [
+        {
+            "id": "fvc_particle_tracking_control_file",
+            "target_cf": "fvc",
+            "placement_rule": "fvc_model_parameters",
+            "commands": [
+                "\n!______________________________________________________________________________________________________________________",
+                "! PARTICLE TRACKING",
+                "Particle Tracking Control File == ..\\ptm\\${model_name}_${iter}.fvptm"
+            ]
+        }
+    ]
+}

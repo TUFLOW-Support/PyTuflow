@@ -1,0 +1,64 @@
+!_________________________________________________________________
+! GENERAL PARAMETERS
+Bottom Drag Model == ks
+Include Salinity == 1,1
+Include Temperature == 1,1
+Include Sediment == 1,0
+Spatial Order == 1,2
+Include Heat == 1
+
+! Horizontal Turbulent Mixing
+Momentum Mixing Model == Smagorinsky
+Global Horizontal Eddy Viscosity == 0.2
+Global Horizontal Eddy Viscosity Limits == 0.05, 99999.
+
+! Horizontal Scalar Mixing
+Scalar Mixing Model == Smagorinsky
+Global Horizontal Scalar Diffusivity == 0.2
+Global Horizontal Scalar Diffusivity Limits == 0.05, 99999.
+
+! Vertical Mixing Model Commands
+Vertical Mixing Model == K-Omega	! {Constant} | Parametric | K-Epsilon | K-Omega | External 
+Vertical Mixing Parameters == 0.55555, 0.075, 0.0768, 2.0, 2.0, 0.0, -0.637117 ! {5/9} alpha, {3/40} beta, {9/100} cmu, {2.} sig_k, {2.} sig_o, {0.} c3oplus, {0.} c3ominus
+
+! Vertical Mixing Limits
+Global Vertical Eddy Viscosity Limits == 1.0e-4, 1.0	! {0.0} Minimum eddy viscosity (m^2/s), {99999.} Maximum eddy viscosity (m^2/s)
+Global Vertical Scalar Diffusivity Limits == 0., 1.0	! {0.0} Minimum scalar diffusivity (m^2/s), {99999.} Maximum scalar diffusivity (m^2/s)
+Global Vertical TKE Limit                 == 1.e-10		! {1E-10 m^2/s^2} Minimum turbulent kinetic energy
+Global Vertical EPS Limit                 == 1.e-14		! {1E-14 m^2/s^3} Minimum dissipation rate
+
+! Second Order Vertical Mixing Model
+Second Order Vertical Mixing Model == Algebraic				! {OFF} | Algebraic	
+Second Order Vertical Mixing Model Parameter Group == CHCD01A	! {GL78} | MY86 | KC94 | LDOR96 | CHCD01A | CHCD01B | CCH02
+
+!_________________________________________________________________
+! MODULES
+! Water Quality
+water quality model == tuflow
+water quality control file == .\WQ_001.fvwq
+water quality model directory == ..\mat
+
+! Sediment Transport
+sediment control file == WQ_000.fvsed
+shortwave radiation sediment extinction coefficients == 1.0, 1.0, 1.0, 1.0
+
+!_________________________________________________________________
+!3D Geometry Commands
+Vertical Mesh Type == z
+Layer Faces == ..\model\csv\3D_Z_Layers_003.csv
+Sigma Layers == 4
+Min Bottom Layer Thickness == 0.5
+Cell 3D Depth == 1.0
+
+!_________________________________________________________________
+! MATERIAL PROPERTIES
+Set Mat == 1
+material == 1
+bottom roughness == 0.04
+end material
+material == 2
+bottom roughness == 0.05
+end material
+material == 3,4
+bottom roughness == 0.02
+end material

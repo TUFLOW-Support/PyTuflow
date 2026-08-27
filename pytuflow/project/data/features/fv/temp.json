@@ -1,0 +1,42 @@
+{
+    "name": "temp",
+    "display_name": "Temperature",
+    "sort_order": 5,
+    "template_files": [],
+    "command_blocks": [
+        {
+            "id": "fvc_temperature",
+            "target_cf": "fvc",
+            "placement_rule": "fvc_simulation_configuration",
+            "commands": [
+                "Include Temperature == ${temp_active},${temp_density_active}                             ! {0} OFF | 1 ON, {0} Density coupling disabled | 1 Density coupling enabled"
+            ]
+        },
+        {
+            "id": "fvc_heat",
+            "target_cf": "fvc",
+            "placement_rule": "fvc_simulation_configuration",
+            "commands": [
+                "Include Heat == ${heat_active}                                                           ! {0} OFF | 1 ON"
+            ]
+        },
+        {
+            "id": "fvc_initial_conditions_header",
+            "target_cf": "fvc",
+            "placement_rule": "fvc_geometry_2d",
+            "existence_check": "! INITIAL CONDITIONS",
+            "commands": [
+                "\n!______________________________________________________________________________________________________________________",
+                "! INITIAL CONDITIONS"
+            ]
+        },
+        {
+            "id": "fvc_initial_temp",
+            "target_cf": "fvc",
+            "placement_rule": "fvc_initial_conditions",
+            "commands": [
+                "Initial Temperature == ${initial_temp}"
+            ]
+        }
+    ]
+}

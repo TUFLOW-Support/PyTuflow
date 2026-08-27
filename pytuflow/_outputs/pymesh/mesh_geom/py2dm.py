@@ -69,7 +69,7 @@ class Py2dm(PyMeshGeometry, GeometryLazyLoadMixin, VTKGeometryMixin):
         pd.DataFrame
             The dataframe containing the .2dm file data.
         """
-        return pd.read_csv(fpath, skiprows=2, sep=r'\s+', names=[chr(x) for x in range(ord('A'), ord('A') + 11)])
+        return pd.read_csv(fpath, skiprows=2, sep=r'\s+', names=[chr(x) for x in range(ord('A'), ord('A') + 11)], low_memory=False)
 
     @staticmethod
     def load_nodes(df: pd.DataFrame) -> np.ndarray:

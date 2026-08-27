@@ -27,6 +27,17 @@ def pyqgis():
 
 class TestXMDF(unittest.TestCase):
 
+    def test_looks_empty_netcdf4_driver(self):
+        xmdf = './tests/xmdf/EG02_010.xmdf'
+        with pyqgis():
+            try:
+                res = XMDF(xmdf, driver='qgis geometry netcdf4')
+                self.assertFalse(True, 'Expected EOFError was not raised')
+            except EOFError:
+                pass
+            except IndexError:
+                self.assertFalse(True, 'Encountered IndexError because EOFError was not raised')
+
     def test_load_2dm_only_netcdf4_driver(self):
         twodm = './tests/xmdf/run.2dm'
         with pyqgis():
@@ -617,6 +628,130 @@ class TestXMDF(unittest.TestCase):
             self.assertEqual((3, 1), mn.shape)
             self.assertTrue(np.isclose([35.9343795, 0., 0.], mn.to_numpy().flatten()).all())
 
+    def test_flux_netcdf4_driver(self):
+        p = './tests/xmdf/EG00_001.xmdf'
+        with pyqgis():
+            res = XMDF(p, driver='qgis geometry netcdf4')
+            df = res.flux('./tests/xmdf/xmdf_flux_line.shp', '')
+            self.assertEqual((7, 1), df.shape)
+            self.assertAlmostEqual(78.216, float(df.iloc[:,0].max()), places=3)
+
+    def test_flux_qgis_driver(self):
+        p = './tests/xmdf/EG00_001.xmdf'
+        with pyqgis():
+            res = XMDF(p, driver='qgis geometry data extractor')
+            df = res.flux('./tests/xmdf/xmdf_flux_line.shp', '')
+            self.assertEqual((7, 1), df.shape)
+            self.assertAlmostEqual(78.216, float(df.iloc[:,0].max()), places=3)
+
+    def test_flux_tracer_netcdf4_driver(self):
+        p = './tests/xmdf/EG17_001.xmdf'
+        with pyqgis():
+            res = XMDF(p, driver='qgis geometry netcdf4')
+            df = res.flux('./tests/xmdf/xmdf_flux_line.shp', 'conc tracer1', use_unit_flow=False)
+            self.assertAlmostEqual(115.948, float(df.iloc[:,0].max()), places=3)
+
+            df = res.flux('./tests/xmdf/xmdf_flux_line.shp', 'conc tracer1', use_unit_flow=True)
+            self.assertAlmostEqual(117.907, float(df.iloc[:,0].max()), places=3)
+
+    def test_flux_tracer_qgis_driver(self):
+        p = './tests/xmdf/EG17_001.xmdf'
+        with pyqgis():
+            res = XMDF(p, driver='qgis geometry data extractor')
+            df = res.flux('./tests/xmdf/xmdf_flux_line.shp', 'conc tracer1', use_unit_flow=False)
+            self.assertAlmostEqual(115.948, float(df.iloc[:,0].max()), places=3)
+
+            df = res.flux('./tests/xmdf/xmdf_flux_line.shp', 'conc tracer1', use_unit_flow=True)
+            self.assertAlmostEqual(117.907, float(df.iloc[:,0].max()), places=3)
+
+    def test_flux_in_memory_netcdf4_driver(self):
+        p = './tests/xmdf/EG00_001.xmdf'
+        with pyqgis():
+            res = XMDF(p, driver='qgis geometry netcdf4')
+            df = res.flux('./tests/xmdf/xmdf_flux_line.shp', use_unit_flow=False)
+
+            # clear the cache and load the results into memory and calculate again - the results should be identical
+            res._driver.clear_cache()
+            res.load_into_memory(['depth', 'vector velocity'])
+            df1 = res.flux('./tests/xmdf/xmdf_flux_line.shp', use_unit_flow=False)
+            self.assertTrue((df == df1).iloc[:,0].all())
+
+    def test_flux_in_memory_qgis_driver(self):
+        p = './tests/xmdf/EG00_001.xmdf'
+        with pyqgis():
+            res = XMDF(p, driver='qgis geometry data extractor')
+            df = res.flux('./tests/xmdf/xmdf_flux_line.shp', use_unit_flow=False)
+
+            # clear the cache and load the results into memory and calculate again - the results should be identical
+            res._driver.clear_cache()
+            res.load_into_memory(['depth', 'vector velocity'])
+            df1 = res.flux('./tests/xmdf/xmdf_flux_line.shp', use_unit_flow=False)
+            self.assertTrue((df == df1).iloc[:,0].all())
+
+    def test_add_data_netcdf4_driver(self):
+        p1 = './tests/xmdf/EG02_010_hV.xmdf'
+        with pyqgis():
+            res = XMDF(p1, driver='qgis geometry netcdf4')
+            self.assertEqual(
+                ['bed level', 'max vector velocity', 'max velocity', 'max water level', 'vector velocity', 'velocity', 'water level',  'tmax water level'],
+                res.data_types()
+            )
+
+            p2 = './tests/xmdf/EG02_010_dq.xmdf'
+            res.add_dataset(p2)
+
+            # check new result types show up
+            self.assertTrue('depth' in res.data_types())
+            self.assertTrue('max depth' in res.data_types())
+            self.assertTrue('unit flow' in res.data_types())
+            self.assertTrue('vector unit flow' in res.data_types())
+
+            # spot check old types are still there
+            self.assertTrue('water level' in res.data_types())
+
+            # check that it's possible to get results from different datasets
+            df = res.time_series('./tests/xmdf/xmdf_point.shp', 'h')
+            self.assertEqual((4, 1), df.shape)
+            df = res.time_series('./tests/xmdf/xmdf_point.shp', 'd')
+            self.assertEqual((4, 1), df.shape)
+
+            # check that the datasets work in tandem - depth and velocity exist in different datasets
+            df = res.flux('./tests/xmdf/xmdf_flux_line.shp', use_unit_flow=False)
+            self.assertEqual((4, 1), df.shape)
+            self.assertTrue('d.v' in df.columns[0])
+
+    def test_add_data_qgis_driver(self):
+        p1 = './tests/xmdf/EG02_010_hV.xmdf'
+        with pyqgis():
+            res = XMDF(p1, driver='qgis geometry data extractor')
+            self.assertEqual(
+                ['bed level', 'max vector velocity', 'max velocity', 'max water level', 'vector velocity', 'velocity', 'water level',  'tmax water level'],
+                res.data_types()
+            )
+
+            p2 = './tests/xmdf/EG02_010_dq.xmdf'
+            res.add_dataset(p2)
+
+            # check new result types show up
+            self.assertTrue('depth' in res.data_types())
+            self.assertTrue('max depth' in res.data_types())
+            self.assertTrue('unit flow' in res.data_types())
+            self.assertTrue('vector unit flow' in res.data_types())
+
+            # spot check old types are still there
+            self.assertTrue('water level' in res.data_types())
+
+            # check that it's possible to get results from different datasets
+            df = res.time_series('./tests/xmdf/xmdf_point.shp', 'h')
+            self.assertEqual((4, 1), df.shape)
+            df = res.time_series('./tests/xmdf/xmdf_point.shp', 'd')
+            self.assertEqual((4, 1), df.shape)
+
+            # check that the datasets work in tandem - depth and velocity exist in different datasets
+            df = res.flux('./tests/xmdf/xmdf_flux_line.shp', use_unit_flow=False)
+            self.assertEqual((4, 1), df.shape)
+            self.assertTrue('d.v' in df.columns[0])
+
     def test_zh_output_netcdf4_driver(self):
         xmdf = './tests/xmdf/M10_5m_001.xmdf'
         with pyqgis():
@@ -895,6 +1030,176 @@ class TestNCMesh(unittest.TestCase):
             res = NCMesh(nc, driver='qgis geometry data extractor')
             mn = res.minimum('sal', averaging_method=None)
             self.assertTrue(np.isclose(mn, 0., atol=0.0001).all())
+
+    def test_flux_2d_netcdf4_driver(self):
+        nc = './tests/nc_mesh/Trap_Steady_000.nc'
+        with pyqgis():
+            res = NCMesh(nc, driver='qgis geometry netcdf4')
+            df = res.flux('./tests/nc_mesh/fv_steady_2d_flux_line.shp', '')
+            self.assertEqual((37, 1), df.shape)
+            self.assertAlmostEqual(446.486, float(df.iloc[:,0].max()), places=3)
+
+    def test_flux_2d_qgis_driver(self):
+        nc = './tests/nc_mesh/Trap_Steady_000.nc'
+        with pyqgis():
+            res = NCMesh(nc, driver='qgis geometry data extractor')
+            df = res.flux('./tests/nc_mesh/fv_steady_2d_flux_line.shp', '')
+            self.assertEqual((37, 1), df.shape)
+            self.assertAlmostEqual(446.486, float(df.iloc[:,0].max()), places=3)
+
+    def test_flux_3d_netcdf4_driver(self):
+        nc = './tests/nc_mesh/EST000_3D_001.nc'
+        with pyqgis():
+            res = NCMesh(nc, driver='qgis geometry netcdf4')
+            df = res.flux('./tests/nc_mesh/fv_estuary_flux_line.shp', '')
+            self.assertEqual((5, 1), df.shape)
+
+            # min/max values from pymesh test. Spherical coords are handled a bit differently, so expect some difference in result.
+            self.assertAlmostEqual(85.971, float(df.iloc[:,0].max()), places=1)
+            self.assertAlmostEqual(-39.142, float(df.iloc[:,0].min()), places=1)
+            df_r = res.flux('./tests/nc_mesh/fv_estuary_flux_line_reversed.shp', '')
+
+            # there is a slight numerical difference in QGIS cell intersect routine due to long/lat which means atol is a little relaxed.
+            is_close = np.isclose(df.iloc[:,0], df_r.iloc[:,0] * -1, atol=0.01)
+            self.assertTrue(is_close.all())
+
+            df2 = res.flux('./tests/nc_mesh/fv_estuary_flux_line_2.shp', '')
+            df2_r = res.flux('./tests/nc_mesh/fv_estuary_flux_line_2_reversed.shp', '')
+            is_close = np.isclose(df.iloc[:,0], df_r.iloc[:,0] * -1, atol=0.01)
+            self.assertTrue(is_close.all())
+            self.assertAlmostEqual(85.970, float(df2.iloc[:,0].max()), places=1)
+            self.assertAlmostEqual(-39.141, float(df2.iloc[:,0].min()), places=1)
+
+    def test_flux_3d_qgis_driver(self):
+        nc = './tests/nc_mesh/EST000_3D_001.nc'
+        with pyqgis():
+            res = NCMesh(nc, driver='qgis geometry data extractor')
+            res.spherical = True
+            df = res.flux('./tests/nc_mesh/fv_estuary_flux_line.shp', '')
+            self.assertEqual((5, 1), df.shape)
+
+            # min/max values from pymesh test. Spherical coords are handled a bit differently, so expect some difference in result.
+            self.assertAlmostEqual(85.971, float(df.iloc[:,0].max()), places=1)
+            self.assertAlmostEqual(-39.142, float(df.iloc[:,0].min()), places=1)
+            df_r = res.flux('./tests/nc_mesh/fv_estuary_flux_line_reversed.shp', '')
+
+            # there is a slight numerical difference in QGIS cell intersect routine due to long/lat which means atol is a little relaxed.
+            is_close = np.isclose(df.iloc[:,0], df_r.iloc[:,0] * -1, atol=0.01)
+            self.assertTrue(is_close.all())
+
+            df2 = res.flux('./tests/nc_mesh/fv_estuary_flux_line_2.shp', '')
+            df2_r = res.flux('./tests/nc_mesh/fv_estuary_flux_line_2_reversed.shp', '')
+            is_close = np.isclose(df.iloc[:,0], df_r.iloc[:,0] * -1, atol=0.01)
+            self.assertTrue(is_close.all())
+            self.assertAlmostEqual(85.970, float(df2.iloc[:,0].max()), places=1)
+            self.assertAlmostEqual(-39.141, float(df2.iloc[:,0].min()), places=1)
+
+    def test_flux_3d_sal_netcdf4_driver(self):
+        nc = './tests/nc_mesh/EST000_3D_001.nc'
+        with pyqgis():
+            res = NCMesh(nc, driver='qgis geometry netcdf4')
+            df = res.flux('./tests/nc_mesh/fv_estuary_flux_line.shp', 'sal')
+
+            # min/max values from pymesh test. Spherical coords are handled a bit differently, so expect some difference in result.
+            self.assertAlmostEqual(875.946, float(df.iloc[:,0].max()), places=0)
+            self.assertAlmostEqual(-391.437, float(df.iloc[:,0].min()), places=0)
+
+    def test_flux_3d_sal_qgis_driver(self):
+        nc = './tests/nc_mesh/EST000_3D_001.nc'
+        with pyqgis():
+            res = NCMesh(nc, driver='qgis geometry data extractor')
+            res.spherical = True
+            df = res.flux('./tests/nc_mesh/fv_estuary_flux_line.shp', 'sal')
+
+            # min/max values from pymesh test. Spherical coords are handled a bit differently, so expect some difference in result.
+            self.assertAlmostEqual(875.946, float(df.iloc[:,0].max()), places=0)
+            self.assertAlmostEqual(-391.437, float(df.iloc[:,0].min()), places=0)
+
+    def test_flux_2d_in_memory_netcdf4_driver(self):
+        nc = './tests/nc_mesh/Trap_Steady_000.nc'
+        with pyqgis():
+            res = NCMesh(nc, driver='qgis geometry netcdf4')
+            df = res.flux('./tests/nc_mesh/fv_steady_2d_flux_line.shp', use_unit_flow=False)
+
+            res._driver.clear_cache()
+            res.load_into_memory('velocity')
+            df1 = res.flux('./tests/nc_mesh/fv_steady_2d_flux_line.shp', use_unit_flow=False)
+            self.assertTrue((df == df1).iloc[:,0].all())
+
+    def test_flux_2d_in_memory_qgis_driver(self):
+        nc = './tests/nc_mesh/Trap_Steady_000.nc'
+        with pyqgis():
+            res = NCMesh(nc, driver='qgis geometry data extractor')
+            df = res.flux('./tests/nc_mesh/fv_steady_2d_flux_line.shp', use_unit_flow=False)
+
+            res._driver.clear_cache()
+            res.load_into_memory('velocity')
+            df1 = res.flux('./tests/nc_mesh/fv_steady_2d_flux_line.shp', use_unit_flow=False)
+            self.assertTrue((df == df1).iloc[:,0].all())
+
+    def test_flux_3d_in_memory_netcdf4_driver(self):
+        nc = './tests/nc_mesh/EST000_3D_001.nc'
+        with pyqgis():
+            res = NCMesh(nc, driver='qgis geometry netcdf4')
+            df = res.flux('./tests/nc_mesh/fv_estuary_flux_line.shp', use_unit_flow=False)
+
+            res._driver.clear_cache()
+            res.load_into_memory('velocity')
+            df1 = res.flux('./tests/nc_mesh/fv_estuary_flux_line.shp', use_unit_flow=False)
+            self.assertTrue((df == df1).iloc[:,0].all())
+
+    def test_flux_3d_in_memory_qgis_driver(self):
+        nc = './tests/nc_mesh/EST000_3D_001.nc'
+        with pyqgis():
+            res = NCMesh(nc, driver='qgis geometry data extractor')
+            df = res.flux('./tests/nc_mesh/fv_estuary_flux_line.shp', use_unit_flow=False)
+
+            res._driver.clear_cache()
+            res.load_into_memory('velocity')
+            df1 = res.flux('./tests/nc_mesh/fv_estuary_flux_line.shp', use_unit_flow=False)
+            self.assertTrue((df == df1).iloc[:,0].all())
+
+    def test_add_dataset_netcdf_driver(self):
+        p1 = './tests/nc_mesh/EST000_3D_001_hvd.nc'
+        with pyqgis():
+            res = NCMesh(p1, driver='qgis geometry netcdf4')
+            self.assertEqual(['bed level', 'water level', 'velocity', 'depth', 'vertical velocity', 'water density'], res.data_types())
+
+            p2 = './tests/nc_mesh/EST000_3D_001_saltemp.nc'
+            res.add_dataset(p2)
+
+            self.assertTrue('salinity' in res.data_types())
+            self.assertTrue('temperature' in res.data_types())
+
+            self.assertTrue('water level' in res.data_types())
+
+            df = res.time_series('./tests/nc_mesh/ncmesh_point_longlat.shp', 'water level')
+            self.assertEqual((5, 1), df.shape)
+            df = res.time_series('./tests/nc_mesh/ncmesh_point_longlat.shp', 'salinity')
+            self.assertEqual((5, 1), df.shape)
+            df = res.flux('./tests/nc_mesh/fv_estuary_flux_line.shp', 'sal')
+            self.assertEqual((5, 1), df.shape)
+
+    def test_add_dataset_qgis_driver(self):
+        p1 = './tests/nc_mesh/EST000_3D_001_hvd.nc'
+        with pyqgis():
+            res = NCMesh(p1, driver='qgis geometry data extractor')
+            self.assertEqual(['bed level', 'velocity', 'vertical velocity', 'water density', 'depth', 'water level'], res.data_types())
+
+            p2 = './tests/nc_mesh/EST000_3D_001_saltemp.nc'
+            res.add_dataset(p2)
+
+            self.assertTrue('salinity' in res.data_types())
+            self.assertTrue('temperature' in res.data_types())
+
+            self.assertTrue('water level' in res.data_types())
+
+            df = res.time_series('./tests/nc_mesh/ncmesh_point_longlat.shp', 'water level')
+            self.assertEqual((5, 1), df.shape)
+            df = res.time_series('./tests/nc_mesh/ncmesh_point_longlat.shp', 'salinity')
+            self.assertEqual((5, 1), df.shape)
+            df = res.flux('./tests/nc_mesh/fv_estuary_flux_line.shp', 'sal')
+            self.assertEqual((5, 1), df.shape)
 
     def test_dynamic_bed_level_netcdf4_driver(self):
         nc = './tests/nc_mesh/FMA2_SED_001.nc'
@@ -1330,6 +1635,57 @@ class TestCATCHJson(unittest.TestCase):
             mn = res.minimum('h')
             self.assertTrue(np.isclose(mn, 0.).all())
 
+    def test_loading_ontop_netcdf4_driver(self):
+        p = './tests/catch_json/EST000_3D_001.tuflow.json'
+        with pyqgis():
+            res = CATCHJson(p, driver='qgis geometry netcdf4')
+            res1 = NCMesh('./tests/catch_json/EST000_3D_001_index.nc')
+
+            self.assertEqual(8, len(res.data_types()))
+            self.assertEqual(2, len(res._providers))
+
+            df = res.time_series('./tests/nc_mesh/ncmesh_point_longlat.shp', 'h')
+            self.assertEqual((5, 1), df.shape)
+            df1 = res1.time_series('./tests/nc_mesh/ncmesh_point_longlat.shp', 'h')
+            self.assertTrue(np.isclose(df.iloc[:,0], df1.iloc[:,0], atol=1e-3).all())
+
+            df = res.time_series('./tests/nc_mesh/ncmesh_point_longlat.shp', 'sal')
+            self.assertEqual((5, 1), df.shape)
+            df1 = res1.time_series('./tests/nc_mesh/ncmesh_point_longlat.shp', 'sal')
+            self.assertTrue(np.isclose(df.iloc[:,0], df1.iloc[:,0], atol=1e-3).all())
+
+            df = res.flux('./tests/nc_mesh/fv_estuary_flux_line.shp', 'sal')
+            self.assertEqual((5, 1), df.shape)
+            df1 = res1.flux('./tests/nc_mesh/fv_estuary_flux_line.shp', 'sal')
+            self.assertTrue(np.isclose(df.iloc[:,0], df1.iloc[:,0], atol=1).all())
+
+    def test_loading_ontop_qgis_driver(self):
+        p = './tests/catch_json/EST000_3D_001.tuflow.json'
+        with pyqgis():
+            res = CATCHJson(p, driver='qgis geometry data extractor')
+            for provider in res._providers.values():  # catch should never be spherical. This is just an easy test case to setup.
+                provider.spherical = True
+            res1 = NCMesh('./tests/catch_json/EST000_3D_001_index.nc')
+            res1.spherical = True
+
+            self.assertEqual(8, len(res.data_types()))
+            self.assertEqual(2, len(res._providers))
+
+            df = res.time_series('./tests/nc_mesh/ncmesh_point_longlat.shp', 'h')
+            self.assertEqual((5, 1), df.shape)
+            df1 = res1.time_series('./tests/nc_mesh/ncmesh_point_longlat.shp', 'h')
+            self.assertTrue(np.isclose(df.iloc[:,0], df1.iloc[:,0], atol=1e-3).all())
+
+            df = res.time_series('./tests/nc_mesh/ncmesh_point_longlat.shp', 'sal')
+            self.assertEqual((5, 1), df.shape)
+            df1 = res1.time_series('./tests/nc_mesh/ncmesh_point_longlat.shp', 'sal')
+            self.assertTrue(np.isclose(df.iloc[:,0], df1.iloc[:,0], atol=1e-3).all())
+
+            df = res.flux('./tests/nc_mesh/fv_estuary_flux_line.shp', 'sal')
+            self.assertEqual((5, 1), df.shape)
+            df1 = res1.flux('./tests/nc_mesh/fv_estuary_flux_line.shp', 'sal')
+            self.assertTrue(np.isclose(df.iloc[:,0], df1.iloc[:,0], atol=1).all())
+
 
 class TestDAT(unittest.TestCase):
 
@@ -1516,6 +1872,40 @@ class TestDAT(unittest.TestCase):
             res = DAT(p, driver='qgis geometry data extractor')
             mn = res.minimum('bed level')
             self.assertTrue(np.isclose(mn, 36.01).all())
+
+    def test_add_dataset_python_driver(self):
+        p1 = './tests/dat/EG00_001_d.dat'
+        with pyqgis():
+            res = DAT(p1, driver='qgis geometry python')
+            self.assertEqual(['bed level', 'max depth', 'depth'], res.data_types())
+
+            p2 = './tests/dat/EG00_001_V.dat'
+            res.add_dataset(p2)
+
+            self.assertTrue('velocity' in res.data_types())
+            df = res.time_series('./tests/xmdf/xmdf_point.shp', 'depth')
+            self.assertEqual((3, 1), df.shape)
+            df = res.time_series('./tests/xmdf/xmdf_point.shp', 'velocity')
+            self.assertEqual((3, 1), df.shape)
+            df = res.flux('./tests/xmdf/xmdf_flux_line.shp')
+            self.assertEqual((3, 1), df.shape)
+
+    def test_add_dataset_qgis_driver(self):
+        p1 = './tests/dat/EG00_001_d.dat'
+        with pyqgis():
+            res = DAT(p1, driver='qgis geometry data extractor')
+            self.assertEqual(['bed level', 'depth', 'max depth'], res.data_types())
+
+            p2 = './tests/dat/EG00_001_V.dat'
+            res.add_dataset(p2)
+
+            self.assertTrue('velocity' in res.data_types())
+            df = res.time_series('./tests/xmdf/xmdf_point.shp', 'depth')
+            self.assertEqual((3, 1), df.shape)
+            df = res.time_series('./tests/xmdf/xmdf_point.shp', 'velocity')
+            self.assertEqual((3, 1), df.shape)
+            df = res.flux('./tests/xmdf/xmdf_flux_line.shp')
+            self.assertEqual((3, 1), df.shape)
 
 
 class TestNCGrid(unittest.TestCase):

@@ -1,0 +1,7 @@
+Fraction == fineSed 												!Sediment Fraction 1 Name
+	d50 == 0.000005 												!Median Sediment Diameter [m]
+	particle density == 2650 										!Particle Density [kg/m3]
+	Settling model == constant 										!Settling Model
+	settling parameters == 0.00002 									!Settling Velocity [m/s]
+	deposition model == ws0 										!Deposition model
+End Fraction 

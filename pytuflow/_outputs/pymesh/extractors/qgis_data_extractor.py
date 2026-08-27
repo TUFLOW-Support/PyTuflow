@@ -13,7 +13,7 @@ except ImportError:
     from ..stubs.qgis.core import QgsMeshLayer, QgsMeshDatasetIndex, QgsMeshDatasetGroupMetadata
 
 
-MAX_BLOCK_SIZE = 1_000_000
+MAX_BLOCK_SIZE = 100_000_000
 
 
 class QgisDataExtractor(PyDataExtractor):
@@ -32,6 +32,12 @@ class QgisDataExtractor(PyDataExtractor):
         else:
             self.lyr = layer
         self.cache = Cache()
+
+    def add_data(self, fpath: str | Path):
+        success = self.lyr.dataProvider().addDataset(str(fpath))
+        if not success:
+            raise ValueError(f'Failed to load results onto mesh: {fpath}')
+        self.cache.clear('data_types')
 
     def times(self, data_type: str) -> np.ndarray:
         if self.cache.contains('times', data_type):
@@ -176,6 +182,12 @@ class QgisDataExtractor(PyDataExtractor):
         if idx == -1:
             raise ValueError(f'Data type {data_type} not found in mesh output {self.mesh.stem}')
         return self.lyr.datasetGroupMetadata(QgsMeshDatasetIndex(idx)).minimum()
+    
+    def cell_count(self) -> int:
+        return self.lyr.meshFaceCount()
+    
+    def node_count(self) -> int:
+        raise self.lyr.meshVertexCount()
 
     def data(self, data_type: str, index: PyDataExtractor.SliceType | PyDataExtractor.MultiSliceType) -> np.ndarray:
         if isinstance(index, tuple) and len(index) == 2:

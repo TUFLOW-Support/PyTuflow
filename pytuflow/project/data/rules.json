@@ -1,0 +1,274 @@
+{
+  "top": {
+    "description": "Insert at the top of the control file after all comments, at the first blank line",
+    "rule": "before",
+    "match_first": true,
+    "commands": [
+      "/^\n$/"
+    ]
+  },
+  "hpc_control_files": {
+    "description": "Insert after the last command in the control files section. Any new control file command is placed at the bottom of the existing control file commands group.",
+    "rule": "after",
+    "match_first": false,
+    "commands": [
+      "Geometry Control File",
+      "BC Control File",
+      "BC Database",
+      "Read Materials File",
+      "Estry Control File",
+      "Read Soils File",
+      "Quadtree Control File",
+      "AD Control File",
+      "Rainfall Control File"
+    ]
+  },
+  "hpc_solution_scheme": {
+    "description": "Insert after the last command in the solution scheme/hardware section.",
+    "rule": "after",
+    "match_first": false,
+    "commands": [
+      "solution scheme",
+      "hardware"
+    ]
+  },
+  "after_po_commands": {
+    "description": "Insert before any PO commands",
+    "rule": "after",
+    "match_first": false,
+    "commands": [
+      "! PLOT OUTPUT",
+      "read gis po",
+      "read gis reporting location",
+      "time series output interval"
+    ]
+  },
+  "before_po_commands": {
+    "description": "Insert before any PO commands",
+    "rule": "before",
+    "match_first": false,
+    "commands": [
+      "read gis po",
+      "read gis reporting location",
+      "time series output interval"
+    ]
+  },
+  "map_outputs": {
+    "description": "Insert after all the map output commands.",
+    "rule": "after",
+    "match_first": false,
+    "commands": [
+      "map output"
+    ]
+  },
+  "fvc_output": {
+    "description": "Insert after all the fv output blocks.",
+    "rule": "after",
+    "match_first": false,
+    "commands": [
+      "Output Dir",
+      "Log Dir",
+      "Write Check Files",
+      "/^output$/i"
+    ]
+  },
+  "before_fvc_output": {
+    "description": "Insert before all the fv output blocks.",
+    "rule": "before",
+    "match_first": false,
+    "commands": [
+      "Output Dir",
+      "Log Dir",
+      "Write Check Files",
+      "/^output$/i"
+    ]
+  },
+  "fvc_structures": {
+    "description": "Insert after all the fv structure blocks.",
+    "rule": "after",
+    "match_first": false,
+    "commands": [
+      "/^structure$/i"
+    ]
+  },
+  "before_fvc_structures": {
+    "description": "Insert before all the fv structure blocks.",
+    "rule": "before",
+    "match_first": false,
+    "commands": [
+      "/^structure$/i"
+    ]
+  },
+  "fvc_3d_geometry_header": {
+    "description": "Insert after 3D geometry header.",
+    "rule": "after",
+    "match_first": false,
+    "commands": [
+      "! VERTICAL MESH GEOMETRY"
+    ]
+  },
+  "fvc_geometry_2d": {
+    "description": "Insert after 2D geometry command(s).",
+    "rule": "after",
+    "match_first": false,
+    "commands": [
+      "/^geometry 2d$/i"
+    ]
+  },
+  "fvc_simulation_configuration": {
+    "description": "Insert after other simulation configuration commands.",
+    "rule": "after",
+    "match_first": false,
+    "commands": [
+      "/^Bottom Drag Model$/i",
+      "/^Include Salinity$/i",
+      "/^Include Temperature$/i",
+      "/^Spatial Order$/i",
+      "/^Include Heat$/i",
+      "/^Spherical$/i",
+      "/^Latitude$/i",
+      "/^Ntracer$/i",
+      "/^Include Sediment$/i",
+      "/^mode split$/i"
+    ]
+  },
+  "fvc_vertical_mixing_header": {
+    "description": "Insert after model parameter commands.",
+    "rule": "after",
+    "match_first": false,
+    "commands": [
+      "! VERTICAL MIXING"
+    ]
+  },
+  "fvc_horizontal_mixing_parameters": {
+    "description": "Insert after model parameter commands.",
+    "rule": "after",
+    "match_first": false,
+    "commands": [
+      "! MODEL PARAMETERS",
+      "/^Momentum mixing model$/i",
+      "/^Global horizontal eddy viscosity$/i",
+      "/^Global horizontal eddy viscosity limits$/i",
+      "/^Scalar mixing model$/i",
+      "/^Global horizontal scalar diffusivity$/i",
+      "/^Global horizontal scalar diffusivity limits$/i",
+      "/^Cell Wet/Dry Depths$/i",
+      "/^Scalar Mixing Model$/i",
+      "/^Global Horizontal Scalar Diffusivity$/i",
+      "/^Global Horizontal Scalar Diffusivity Limits$/i"
+    ]
+  },
+  "fvc_model_parameters": {
+    "description": "Insert after model parameter commands.",
+    "rule": "after",
+    "match_first": false,
+    "commands": [
+      "! MODEL PARAMETERS",
+      "/^Momentum mixing model$/i",
+      "/^Global horizontal eddy viscosity$/i",
+      "/^Global horizontal eddy viscosity limits$/i",
+      "/^Scalar mixing model$/i",
+      "/^Global horizontal scalar diffusivity$/i",
+      "/^Global horizontal scalar diffusivity limits$/i",
+      "/^Cell Wet/Dry Depths$/i",
+      "/^Vertical Mixing Model$/i",
+      "/^Vertical Mixing Parameters$/i",
+      "/^Global Vertical Eddy Viscosity Limits$/i",
+      "/^Global Vertical Scalar Diffusivity Limits$/i",
+      "/^Global Vertical TKE Limit$/i",
+      "/^Global Vertical EPS Limit$/i",
+      "/^Second Order Vertical Mixing Model$/i",
+      "/^Second Order Vertical Mixing Model Parameter Group$/i"
+    ]
+  },
+  "fv_control_files": {
+    "description": "Insert after other fv control files.",
+    "rule": "after",
+    "match_first": false,
+    "commands": [
+      "/^sediment control file$/i",
+      "/^water quality control file$/i",
+      "/^wq control file$/i",
+      "/^Water Quality Model Directory$/i",
+      "/^WQ Model Directory$/i",
+      "/^particle tracking control file/i"
+    ]
+  },
+  "fvc_initial_conditions": {
+    "description": "Insert after other initial conditions.",
+    "rule": "after",
+    "match_first": false,
+    "commands": [
+      "! INITIAL CONDITIONS",
+      "/^Initial Water Level$/i",
+      "/^Initial Tracer Concentration$/i",
+      "/^Initial Salinity$/i",
+      "/^Initial Temperature$/i",
+      "/^Initial WQ Concentration$/i",
+      "/^Initial Sediment Concentration$/i",
+      "/^Initial Condition 2D$/i",
+      "/^Initial Condition 3D$/i",
+      "/^Initial Condition OGCM$/i",
+      "/^Initial Condition Quiescent$/i",
+      "/^Initial Scalar Profile$/i"
+    ]
+  },
+  "fvc_tracer_block_heading": {
+    "description": "Insert after tracer block heading.",
+    "rule": "after",
+    "match_first": false,
+    "commands": [
+      "! TRACER DEFINITION"
+    ]
+  },
+  "fvsed_simulation_configuration": {
+    "description": "Insert after sediment control file configuration commands.",
+    "rule": "after",
+    "match_first": false,
+    "commands": [
+      "/^Morphological Coupling$/i",
+      "/^Bed roughness model$/i",
+      "/^Bed roughness parameters$/i",
+      "/^Bed roughness coupling$/i",
+      "/^Erosion Depth Limits$/i",
+      "/^Deposition Depth Limits$/i",
+      "/^Armour layer thickness$/i"
+    ]
+  },
+  "fvsed_fraction": {
+    "description": "Insert after sediment fraction blocks.",
+    "rule": "after",
+    "match_first": false,
+    "commands": [
+      "/!\\s*SEDIMENT FRACTION COMMANDS/i",
+      "/^fraction$/i"
+    ]
+  },
+  "fvsed_material": {
+    "description": "Insert after sediment material blocks.",
+    "rule": "after",
+    "match_first": false,
+    "commands": [
+      "/!\\s*MATERIAL(?:\\s+SPEC\\s+)?COMMANDS/i",
+      "/^material$/i"
+    ]
+  },
+  "fvptm_group": {
+    "description": "Insert after particle group blocks.",
+    "rule": "after",
+    "match_first": false,
+    "commands": [
+      "/!\\s*PARTICLE GROUP.*/i",
+      "/^group$/i"
+    ]
+  },
+  "fvptm_seed": {
+    "description": "Insert after particle seed blocks.",
+    "rule": "after",
+    "match_first": false,
+    "commands": [
+      "/!\\s*PARTICLE SEED.*/i",
+      "/^seed particles$/i"
+    ]
+  }
+}

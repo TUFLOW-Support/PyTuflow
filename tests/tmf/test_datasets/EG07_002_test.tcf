@@ -1,0 +1,8 @@
+! TUFLOW CONTROL FILE (.TCF) defines the model simulation parameters and directs input from other data sources
+
+! MODEL INITIALISATION  
+Spatial Database == ..\model\gis\EG07_002.gpkg
+
+Log Folder == log                                   ! Redirects log output files log folder
+Output Folder == ..\results\EG07\                   ! Specifies the location of the 2D result files
+Write Check Files == ..\check\EG07\                 ! Specifies the location of the 2D check files and prefixes them with the .tcf filename

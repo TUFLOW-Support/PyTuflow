@@ -56,6 +56,7 @@ class QgisMeshGeometry(PyMeshGeometry, PointMixinQgis):
     @property
     def cells_df(self) -> pd.DataFrame:
         if self._cells_df.empty:
+            self.init_spatial_index()
             cell_ids = np.arange(self.lyr.dataProvider().faceCount())
             d = OrderedDict()
             d['nnode'] = []
@@ -78,16 +79,18 @@ class QgisMeshGeometry(PyMeshGeometry, PointMixinQgis):
     def cells_df(self, value: pd.DataFrame):
         self._cells_df = value
 
+    def init_spatial_index(self):
+        if self._si is None:
+            dp = self.lyr.dataProvider()
+            dp.populateMesh(self._mesh)
+            self._si = QgsMeshSpatialIndex(self._mesh)
+
     def load(self):
         if not QgsApplication.instance():
             raise RuntimeError('QGIS application instance not found.')
         if not self._loaded:
             if self.lyr is None:
                 self.lyr = QgsMeshLayer(str(self.fpath), self.fpath.stem, 'mdal')
-            if self._si is None:
-                dp = self.lyr.dataProvider()
-                dp.populateMesh(self._mesh)
-                self._si = QgsMeshSpatialIndex(self._mesh)
             if self._ibed == -1:
                 for i in range(self.lyr.dataProvider().datasetGroupCount()):
                     if self.lyr.dataProvider().datasetGroupMetadata(i).name().lower() == 'bed elevation':
@@ -96,11 +99,14 @@ class QgisMeshGeometry(PyMeshGeometry, PointMixinQgis):
             self._loaded = True
 
     def cell_vertices(self, cell_id: int) -> list[int]:
+        self.init_spatial_index()
         return list(self._mesh.face(cell_id))
 
     def vertex_position(self, vertex_id: int | typing.Iterable[int] | slice, get_z: bool = True, *args, **kwargs) -> np.ndarray:
         if not self._loaded:
             self.load()
+
+        self.init_spatial_index()
 
         if self._vertex_positions_cache is not None:
             return self._vertex_positions_cache[vertex_id]
@@ -148,6 +154,7 @@ class QgisMeshGeometry(PyMeshGeometry, PointMixinQgis):
         raise RuntimeError(f'Triangle index not found in cache: {triangle_id}')
 
     def find_containing_cell(self, point: PointLike, *args, **kwargs) -> int:
+        self.init_spatial_index()
         p = self._coerce_into_qgs_point(point)
         p_ = self._coerce_into_point(point)  # numpy array
         cell_ids = self._si.nearestNeighbor(p, 2)
@@ -169,6 +176,7 @@ class QgisMeshGeometry(PyMeshGeometry, PointMixinQgis):
         return -1
 
     def find_containing_triangle(self, point: PointLike, *args, **kwargs) -> int:
+        self.init_spatial_index()
         p = self._coerce_into_qgs_point(point)
         p_ = self._coerce_into_point(point)  # numpy array
         cell_ids = self._si.nearestNeighbor(p, 2)
@@ -250,8 +258,17 @@ class QgisMeshGeometry(PyMeshGeometry, PointMixinQgis):
             p1 = np.repeat(p1.reshape(1, -1), n2, axis=0)
         return ellipsoid_distance(p2.reshape(n2, -1), p1.reshape(n1, -1))
 
+    def _line_direction(self, p1: np.ndarray, p2: np.ndarray) -> np.ndarray:
+        if not self.spherical:
+            return super()._line_direction(p1, p2)
+        from pyproj import Geod
+        az, _, _ = Geod(ellps='WGS84').inv(float(p1[0]), float(p1[1]), float(p2[0]), float(p2[1]))
+        az_rad = np.radians(az)
+        return np.array([np.sin(az_rad), np.cos(az_rad)], dtype=self.dtype)
+
     def _mesh_intersects(self, p1: np.ndarray, p2: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         """Returns points and cell_ids where the line segment intersects the mesh. Last point is not returned."""
+        self.init_spatial_index()
         tol = 1e-6
         interval = 1
         geom = QgsGeometry.fromPolylineXY([QgsPointXY(*p1.tolist()[:2]), QgsPointXY(*p2.tolist()[:2])])

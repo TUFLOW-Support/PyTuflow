@@ -1,0 +1,43 @@
+{
+  "name": "sgs",
+  "display_name": "Sub-grid Sampling (SGS)",
+  "sort_order": 5,
+  "template_files": [],
+  "command_blocks": [
+    {
+      "id": "sgs_on",
+      "target_cf": "tcf",
+      "placement_rule": "hpc_solution_scheme",
+      "commands": [
+        "\n!_______________________________________________________",
+        "! SGS SETTINGS",
+        "SGS == ON",
+        "##IF ${sgs_sample_distance}>0##",
+        "SGS Sample Target Distance == ${sgs_sample_distance}",
+        "##ENDIF##",
+        "##IF not:${sgs_sample_distance}>0##",
+        "##IF ${sgs_sample_frequency}>0##",
+        "SGS Sample Frequency == ${sgs_sample_frequency}",
+        "##ENDIF##",
+        "##ENDIF##"
+      ]
+    },
+    {
+      "id": "sgs_output_settings",
+      "target_cf": "tcf",
+      "placement_rule": "map_outputs",
+      "commands": [
+        "\n!_______________________________________________________",
+        "! MAP OUTPUT SETTINGS",
+        "SGS Map Extent Trim == ${sgs_map_extent_trim}",
+        "SGS Depth Output == ${sgs_depth_output}",
+        "##IF ${map_cutoff_depth}>0##",
+        "Map Cutoff Depth == ${map_cutoff_depth}",
+        "##ENDIF##",
+        "##IF not:${map_cutoff_depth}>0##",
+        "! Map Cutoff Depth == <val (m)>  ! uncomment if required",
+        "##ENDIF##"
+      ]
+    }
+  ]
+}

@@ -1,7 +1,8 @@
 import typing
 from pathlib import Path
+import numpy as np
 
-from . import PyMesh, PyNCMeshGeometry, PyNCMeshDataExtractor, QgisMeshGeometry, QgisDataExtractor
+from . import PyMesh, PyDataExtractor, PyNCMeshGeometry, PyNCMeshDataExtractor, QgisMeshGeometry, QgisDataExtractor
 from .mesh3d import Mesh3DMixin, GLTFMixin
 
 
@@ -33,30 +34,42 @@ class PyNCMesh(PyMesh, Mesh3DMixin, GLTFMixin):
                 raise ValueError("QGIS python bindings not found.")
             if not self.qgis_initialized():
                 raise ValueError('QGIS application has not been initialized.')
-            self.extractor = QgisDataExtractor(fpath, extra_datasets=[], layer=self.geom.lyr)
-            self.geom.lyr = self.extractor.lyr
+            self.extractors = [QgisDataExtractor(fpath, extra_datasets=[], layer=self.geom.lyr)]
+            self.geom.lyr = self.extractors[0].lyr
         elif self.external_engine_available():
-            self.extractor = PyNCMeshDataExtractor(fpath, engine)
+            self.extractors = [PyNCMeshDataExtractor(fpath, engine)]
         else:
             raise ValueError('No suitable engine found for data extraction.')
 
-        self.geom.spherical = self.extractor.spherical()
+        self.geom.spherical = self.extractors[0].spherical()
         self.name = self.fpath.stem
-        with self.extractor.open():
-            for dtype in self.data_types():
-                if dtype.lower() != 'bed elevation':
-                    ref_time = self.reference_time_(dtype)
-                    if ref_time is not None:
-                        self.has_inherent_reference_time = True
-                        self.reference_time = ref_time
-                    break
+        self._preload(self.extractors[0])
+        
+    @property
+    def shared_active_flags(self) -> bool:
+        return True
 
     def translate_data_type(self, data_type: str) -> tuple[str, ...]:
-        data_type = super().translate_data_type(data_type)
-        if isinstance(self.extractor, PyNCMeshDataExtractor):
-            data_type = tuple([self.extractor.long_name_to_variable.get(x, x) for x in data_type])
-        if self.extractor.NAME == 'QgisDataExtractor':
-            return data_type
-        if len(data_type) == 1 and self.extractor.is_vector(data_type[0]) and f'{data_type[0]}_x' in self.extractor.long_name_to_variable.values():
-            return f'{data_type[0]}_x', f'{data_type[0]}_y'
-        return data_type
+        data_type_ = super().translate_data_type(data_type)
+        for i, extractor in enumerate(self.extractors):
+            if isinstance(extractor, PyNCMeshDataExtractor):
+                data_type_1 = tuple([extractor.long_name_to_variable.get(x, x) for x in data_type_])
+                if data_type_1 == data_type_ and i + 1 < len(self.extractors):
+                    continue
+                data_type_ = data_type_1
+            if extractor.NAME == 'QgisDataExtractor':
+                return data_type_
+            if len(data_type_) == 1 and extractor.is_vector(data_type_[0]) and f'{data_type_[0]}_x' in extractor.long_name_to_variable.values():
+                return f'{data_type_[0]}_x', f'{data_type_[0]}_y'
+            return data_type_
+        raise ValueError(f'Could not translate data_type: {data_type}')
+    
+    def add_data(self, fpath: str | Path):
+        existing_extractor = self.extractors[0]
+        if existing_extractor.NAME == 'PyDataExtractor':
+            new_extractor = PyNCMeshDataExtractor(fpath, existing_extractor.engine.ENGINE_NAME)
+        else:
+            new_extractor = QgisDataExtractor(fpath, extra_datasets=[], layer=None)
+        self.extractors.append(new_extractor)
+        self._data_types.clear()
+        self._preload(new_extractor)

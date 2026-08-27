@@ -1,0 +1,9 @@
+If Scenario == TEST1
+    Pause == Test1 debug
+ELSEIF Scenario == TEST2
+    Pause == Test2 debug
+ELSEIF Scenario == TEST3
+    Pause == Test3 debug
+Else
+    Pause == Else debug
+End if

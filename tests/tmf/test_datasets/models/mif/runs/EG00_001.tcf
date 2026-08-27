@@ -1,0 +1,5 @@
+MI Projection == ../model/gis/projection.mif
+MI Projection == ../model/mi/projection.mif
+
+Read GIS Z Shape == ../model/mi/2d_zsh_EG03_Rd_Crest_001.mif
+

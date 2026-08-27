@@ -1,0 +1,4 @@
+BC == PRECIP, bc_dbase/EG03_005.csv
+  BC Header == inflow_time_hr, inflow_RF
+  BC Update dt == 300.
+End BC

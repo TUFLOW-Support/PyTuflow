@@ -12,7 +12,7 @@ dependencies = [
     "dbfread>=2.0.7",
     "pyproj>=3.6.1",
     "h5py>=3.14.0",
-    "pyvista>=0.46.5",
+    "pyvista>=0.48.2",
     "geopandas>=1.0.1",
     "shapely>=2.0.7",
     "netcdf4>=1.7.2",
@@ -47,6 +47,10 @@ include = [
   "pytuflow/_tmf/tmf/data/*.json",
   "pytuflow/_fm_to_estry/data/*.json",
   "pytuflow/_outputs/data/*.json",
+  "pytuflow/project/data/*.json",
+  "pytuflow/project/data/templates/**/*",
+  "pytuflow/project/data/modules/**/*.json",
+  "pytuflow/project/data/empties/**/*.json",
 ]
 
 [tool.pytest.ini_options]
@@ -62,3 +66,6 @@ Documentation = "https://docs.tuflow.com/pytuflow/"
 Repository = "https://github.com/TUFLOW-Support/PyTuflow"
 Issues = "https://github.com/TUFLOW-Support/PyTuflow/issues"
 Changelog = "https://docs.tuflow.com/pytuflow/#changelog"
+
+[project.scripts]
+pytuflow-project = "pytuflow.project.__main__:main"

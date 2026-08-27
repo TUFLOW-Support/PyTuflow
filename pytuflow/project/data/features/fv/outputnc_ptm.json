@@ -1,0 +1,27 @@
+{
+  "name": "outputnc_ptm",
+  "display_name": "Output NetCDF (ptm)",
+  "sort_order": 5,
+  "template_files": [],
+  "command_blocks": [
+    {
+      "id": "fvptm_output_nc",
+      "target_cf": "fvptm",
+      "placement_rule": "fvc_output",
+      "allow_multiple": true,
+      "commands": [
+        "\nOutput == ptm_netcdf"
+      ]
+    },
+    {
+      "id": "output_nc_param",
+      "target_cf": "fvc",
+      "target_previous_block": true,
+      "commands": [
+        "Output groups == ${ptm_output_groups}",
+        "Output Parameters == ${output_params}",
+        "Output Interval == ${output_interval}"
+      ]
+    }
+  ]
+}

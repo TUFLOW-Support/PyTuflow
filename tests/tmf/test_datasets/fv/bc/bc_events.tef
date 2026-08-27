@@ -1,0 +1,8 @@
+Define Event == TEST_WL_EVENT
+    BC Event Source == ~EVENT~ | tidelevel_m
+End Define
+
+Define Event == TEST_WIND_EVENT
+    BC Event Source == ~WIND_X~ | WIND_X
+    BC Event Source == ~WIND_Y~ | WIND_Y
+End Define

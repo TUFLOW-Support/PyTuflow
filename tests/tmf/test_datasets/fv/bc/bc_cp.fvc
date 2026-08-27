@@ -1,0 +1,32 @@
+Bottom Drag Model == ks 															! {Manning} | ks
+Include Salinity == 1,1																! {0} Salinity off | 1 Salinity on, {0} Hydrodynamic density coupling off | 1 Hydrodynamic density coupling on
+Include Temperature == 1,1															! {0} Temperature off | 1 Temperature on, {0} Hydrodynamic density coupling off | 1 Hydrodynamic density coupling on
+Spatial Order == 1,2																! {1} | 2 Horizontal, {1} | 2 Vertical
+Include Heat == 1																	! {0} Atmospheric heat exchange off | 1 Atmospheric heat exchange on
+Spherical == 1																		! {0} Cartesian | 1 Long/Lat
+NTracer == 1	
+
+! Open boundaries
+BC == Q, 1, bc_dbase\Upstream_Q_001.csv											! Nodestring flow boundary
+	BC Header == time,flow_m3s-1,sal_ppt,temp_degC									! Columns to read from Time, Flow (m^3/s), Salinity (ppt), Temperature (degrees C)
+End BC
+BC == WL, 2, bc_dbase\Downstream_WL_001.csv										! Nodestring water level boundary
+	BC Header == time,tidelevel_m,sal_ppt,temp_degC									! Columns to read from Time, Water level  (mRL), Salinity (ppt), Temperature (degrees C)
+End BC
+
+! Concentration profiles
+BC == CP, Inflow_Point_001, bc_dbase\CP01_011.csv								! Vertical variation of salinty, temperature and tracer concentration
+	BC Header == Depth, Salinity, Temperature, Tracer								! Columns to read Depth (m), Salinity (ppt), Temperature (degrees C), Tracer concentration (units/m^3)
+End BC
+
+BC == CP, Inflow_Point_002, bc_dbase\CP02_011.csv								! Vertical variation of salinty, temperature and tracer concentration
+	BC Header == Depth, Salinity, Temperature, Tracer								! Columns to read Depth (m), Salinity (ppt), Temperature (degrees C), Tracer concentration (units/m^3)
+End BC
+
+BC == CP, Inflow_Point_003, bc_dbase\CP03_011.csv								! Vertical variation of salinty, temperature and tracer concentration
+	BC Header == Depth, Salinity, Temperature, Tracer								! Columns to read Depth (m), Salinity (ppt), Temperature (degrees C), Tracer concentration (units/m^3)
+End BC
+
+BC == CP, Inflow_Point_004, bc_dbase\CP04_011.csv								! Vertical variation of salinty, temperature and tracer concentration
+	BC Header == Depth, Salinity, Temperature, Tracer								! Columns to read Depth (m), Salinity (ppt), Temperature (degrees C), Tracer concentration (units/m^3)
+End BC

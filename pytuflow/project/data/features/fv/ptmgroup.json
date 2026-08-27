@@ -1,0 +1,93 @@
+{
+  "name": "ptmgroup",
+  "display_name": "Particle Group",
+  "sort_order": 100,
+  "template_files": [],
+  "command_blocks": [
+    {
+      "id": "fvptm_group",
+      "target_cf": "fvptm",
+      "placement_rule": "fvptm_group",
+      "allow_multiple": true,
+      "commands": [
+        "Group == ${ptm_group_name}"
+      ]
+    },
+    {
+      "id": "fvptm_group_param",
+      "target_cf": "fvptm",
+      "target_previous_block": true,
+      "commands": [
+        "Initial scalar mass == ${ptm_initial_scalar_mass}",
+        "##IF not:${stm_d50}:0##",
+            "d50 == ${stm_d50}",
+            "Particle density == ${stm_particle_density}",
+        "##ENDIF##",
+        "##IF not:${stm_settling_model}:0##",
+          "Settling model == ${stm_settling_model}",
+          "##IF not:${stm_settling_model}:none##",
+            "Settling parameters == ${stm_settling_params}",
+          "##ENDIF##",
+        "##ENDIF##",
+        "##IF not:${stm_deposition_model}:0##",
+          "Deposition model == ${stm_deposition_model}",
+        "##ENDIF##",
+        "##IF not:${stm_deposition_model}:0;ws0;none##",
+          "Deposition paramaters == ${stm_deposition_params}",
+        "##ENDIF##",
+        "##IF not:${stm_erosion_model}:0##",
+          "Erosion model == ${stm_erosion_model}",
+          "##IF not:${stm_erosion_model}:none##",
+            "Erosion parameters == ${stm_erosion_params}",
+          "##ENDIF##",
+        "##ENDIF##",
+        "##IF not:${ptm_horiz_dispersion_model}:0##",
+          "Horizontal dispersion model == ${ptm_horiz_dispersion_model}",
+          "##IF not:${ptm_horiz_dispersion_model}:none##",
+            "Horizontal dispersion parameters == ${ptm_horiz_dispersion_params}",
+          "##ENDIF##",
+        "##ENDIF##",
+        "##IF not:${ptm_vert_dispersion_model}:0##",
+          "Vertical dispersion model == ${ptm_vert_dispersion_model}",
+          "##IF not:${ptm_vert_dispersion_model}:none##",
+            "Vertical dispersion parameters == ${ptm_vert_dispersion_params}",
+          "##ENDIF##",
+        "##ENDIF##",
+        "##IF not:${ptm_wind_drift_model}:0##",
+          "Wind drift model == ${ptm_wind_drift_model}",
+          "##IF not:${ptm_wind_drift_model}:none##",
+            "Wind drift parameters == ${ptm_wind_drift_params}",
+            "Wind drift depth limits == ${ptm_wind_drift_dep_lims}",
+          "##ENDIF##",
+        "##ENDIF##",
+        "##IF not:${ptm_wave_drift_model}:0##",
+          "Wave drift model == ${ptm_wave_drift_model}",
+          "##IF not:${ptm_wave_drift_model}:none##",
+            "Wave drift parameters == ${ptm_wave_drift_params}",
+          "##ENDIF##",
+        "##ENDIF##",
+        "##IF not:${ptm_vert_profile_model}:0##",
+          "Wave drift model == ${ptm_vert_profile_model}",
+        "##ENDIF##",
+        "##ITER:${ptm_mobility_models}##",
+          "##COMMANDS fvptm_mobility_model##",
+        "##ENDITER##"
+      ]
+    },
+    {
+      "id": "fvptm_mobility_model",
+      "target_cf": "fvptm",
+      "by_directive_only": true,
+      "allow_multiple": true,
+      "commands": [
+        "Mobility model == ${ptm_mobility_model}",
+        "##STARTBLOCK##",
+          "Mobility parameters == ${ptm_mobility_params}",
+          "##IF not:${ptm_mobility_start_time}:0##",
+            "Mobility start time == ${ptm_mobility_start_time}",
+          "##ENDIF##",
+        "##ENDBLOCK##"
+      ]
+    }
+  ]
+}

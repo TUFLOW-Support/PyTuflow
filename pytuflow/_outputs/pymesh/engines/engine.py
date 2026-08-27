@@ -51,3 +51,32 @@ class DatasetEngine:
 
     def data(self, data_path: str, idx: typing.Any = None) -> np.ndarray:
         pass
+
+    @staticmethod
+    def _to_contiguous(idx: typing.Any) -> tuple[typing.Any, typing.Any]:
+        """Convert fancy indexing to contiguous slices, returning (contiguous_idx, post_idx).
+
+        post_idx is None when no fancy indexing was present.
+        """
+        dims = idx if isinstance(idx, tuple) else (idx,)
+        contiguous, post_idx, has_fancy = [], [], False
+
+        for dim in dims:
+            if isinstance(dim, (list, np.ndarray)):
+                arr = np.asarray(dim)
+                if arr.dtype == bool:
+                    arr = np.where(arr)[0]
+                mn = int(arr.min())
+                contiguous.append(slice(mn, int(arr.max()) + 1))
+                post_idx.append(arr - mn)
+                has_fancy = True
+            else:
+                contiguous.append(dim)
+                # Scalar integers squeeze their dimension; don't add a post-index entry for them
+                if not isinstance(dim, (int, np.integer)):
+                    post_idx.append(slice(None))
+
+        def _unpack(seq):
+            return seq[0] if len(seq) == 1 else tuple(seq)
+
+        return _unpack(contiguous), (_unpack(post_idx) if has_fancy else None)

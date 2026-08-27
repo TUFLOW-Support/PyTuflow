@@ -1,0 +1,3 @@
+BC == WL, 2, Downstream_WL_001.csv
+	BC Header == time,tidelevel_m
+End BC

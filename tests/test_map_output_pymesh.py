@@ -4,8 +4,10 @@ from datetime import datetime
 import numpy as np
 import pandas as pd
 import rasterio
+import shapely
+import geopandas
 
-from pytuflow import XMDF, NCMesh, CATCHJson, DAT, NCGrid, Grid
+from pytuflow import XMDF, NCMesh, CATCHJson, DAT, NCGrid, Grid, TuflowPath
 
 
 def load_comparison_data(path):
@@ -35,6 +37,36 @@ class TestXMDF(unittest.TestCase):
         df = res.data_point(point, ['max h', 'max vector velocity'], 0)
         self.assertEqual((1, 2), df.shape)
 
+    def test_data_point_shapely_geom(self):
+        xmdf = './tests/xmdf/run.xmdf'
+        res = XMDF(xmdf)
+        point = shapely.Point((1.0, 1.0))
+        df = res.data_point(point, 'max h', 0)
+        self.assertTrue(isinstance(df, float))
+
+        point = shapely.MultiPoint([(1.0, 1.0)])
+        df = res.data_point(point, 'max h', 0)
+        self.assertTrue(isinstance(df, float))
+
+    def test_data_point_feature(self):
+        xmdf = './tests/xmdf/EG00_001.xmdf'
+        res = XMDF(xmdf)
+        p = TuflowPath('./tests/xmdf/xmdf_point.shp')
+        with p.open_gis() as fo:
+            for feat in fo:
+                val = res.data_point(feat.geom, 'h', 1.0)
+                self.assertTrue(isinstance(val, float))
+
+                val = res.data_point(feat, 'h', 1.)
+                self.assertTrue(isinstance(val, float))
+
+    def test_data_point_geodataframe(self):
+        xmdf = './tests/xmdf/EG00_001.xmdf'
+        res = XMDF(xmdf)
+        gdf = geopandas.read_file('./tests/xmdf/xmdf_point.shp')
+        val = res.data_point(gdf, 'h', 1.)
+        self.assertTrue(isinstance(val, float))
+
     def test_data_point_datetime(self):
         xmdf = './tests/xmdf/EG00_001.xmdf'
         res = XMDF(xmdf)
@@ -57,6 +89,44 @@ class TestXMDF(unittest.TestCase):
         df = res.section(line, 'max h', 0)
         self.assertEqual((4, 2), df.shape)
         self.assertTrue(df[np.isnan(df.iloc[:, 1])].empty)
+
+    def test_section_from_shapely_geom(self):
+        xmdf = './tests/xmdf/run.xmdf'
+        res = XMDF(xmdf)
+        line = shapely.LineString([(0.5, 0.5), (1.5, 1.5)])
+        df = res.section(line, 'max h', 0)
+        self.assertEqual((4, 2), df.shape)
+        self.assertTrue(df[np.isnan(df.iloc[:, 1])].empty)
+
+        # multi-line string
+        line = shapely.MultiLineString([[(0.5, 0.5), (1.5, 1.5)]])
+        df = res.section(line, 'max h', 0)
+        self.assertEqual((4, 2), df.shape)
+        self.assertTrue(df[np.isnan(df.iloc[:, 1])].empty)
+
+    def test_section_from_feature(self):
+        xmdf = './tests/xmdf/EG00_001.xmdf'
+        res = XMDF(xmdf)
+        p = TuflowPath('./tests/xmdf/xmdf_line.shp')
+        test = res.section('./tests/xmdf/xmdf_line.shp', 'max h', 0).to_numpy()
+        with p.open_gis() as fo:
+            for feat in fo:
+                df = res.section(feat.geom, 'max h', 0)
+                equal = (test == df.to_numpy()).all()
+                self.assertTrue(equal)
+
+                df = res.section(feat, 'max h', 0)
+                equal = (test == df.to_numpy()).all()
+                self.assertTrue(equal)
+
+    def test_section_from_geodf(self):
+        xmdf = './tests/xmdf/EG00_001.xmdf'
+        res = XMDF(xmdf)
+        gdf = geopandas.read_file('./tests/xmdf/xmdf_line.shp')
+        test = res.section('./tests/xmdf/xmdf_line.shp', 'max h', 0).to_numpy()
+        df = res.section(gdf, 'max h', 0)
+        equal = (test == df.to_numpy()).all()
+        self.assertTrue(equal)
 
     def test_maximum_level(self):
         xmdf = './tests/xmdf/EG00_001.xmdf'
@@ -107,6 +177,73 @@ class TestXMDF(unittest.TestCase):
         res = XMDF(xmdf)
         df = res.surface('max vector vel', 0.)
         self.assertEqual((25, 5), df.shape)
+
+    def test_flux(self):
+        p = './tests/xmdf/EG00_001.xmdf'
+        res = XMDF(p)
+        df = res.flux('./tests/xmdf/xmdf_flux_line.shp', '')
+        self.assertEqual((7, 1), df.shape)
+        self.assertAlmostEqual(78.216, float(df.iloc[:,0].max()), places=3)
+        df_r = res.flux('./tests/xmdf/xmdf_flux_line_reversed.shp', '')
+        is_close = np.isclose(df.iloc[:,0], df_r.iloc[:,0] * -1)
+        self.assertTrue(is_close.all())
+
+    def test_flux_tracer(self):
+        p = './tests/xmdf/EG17_001.xmdf'
+        res = XMDF(p)
+        df = res.flux('./tests/xmdf/xmdf_flux_line.shp', 'conc tracer1', use_unit_flow=False)
+        self.assertAlmostEqual(115.948, float(df.iloc[:,0].max()), places=3)
+
+        df = res.flux('./tests/xmdf/xmdf_flux_line.shp', 'conc tracer1', use_unit_flow=True)
+        self.assertAlmostEqual(117.907, float(df.iloc[:,0].max()), places=3)
+
+    def test_flux_in_memory(self):
+        p = './tests/xmdf/EG00_001.xmdf'
+        res = XMDF(p)
+        df = res.flux('./tests/xmdf/xmdf_flux_line.shp', use_unit_flow=False)
+
+        # clear the cache and load the results into memory and calculate again - the results should be identical
+        res._driver.clear_cache()
+        res.load_into_memory(['depth', 'vector velocity'])
+        df1 = res.flux('./tests/xmdf/xmdf_flux_line.shp', use_unit_flow=False)
+        self.assertTrue((df == df1).iloc[:,0].all())
+
+    def test_flux_integral(self):
+        p = './tests/xmdf/EG00_001.xmdf'
+        res = XMDF(p)
+        df = res.flux_integral('./tests/xmdf/xmdf_flux_line.shp')
+        self.assertEqual((7, 1), df.shape)
+
+    def test_add_dataset(self):
+        p1 = './tests/xmdf/EG02_010_hV.xmdf'
+        res = XMDF(p1)
+        self.assertEqual(
+            ['bed level', 'max vector velocity', 'max velocity', 'max water level', 'vector velocity', 'velocity', 'water level',  'tmax water level'],
+            res.data_types()
+        )
+
+        p2 = './tests/xmdf/EG02_010_dq.xmdf'
+        res.add_dataset(p2)
+
+        # check new result types show up
+        self.assertTrue('depth' in res.data_types())
+        self.assertTrue('max depth' in res.data_types())
+        self.assertTrue('unit flow' in res.data_types())
+        self.assertTrue('vector unit flow' in res.data_types())
+
+        # spot check old types are still there
+        self.assertTrue('water level' in res.data_types())
+
+        # check that it's possible to get results from different datasets
+        df = res.time_series('./tests/xmdf/xmdf_point.shp', 'h')
+        self.assertEqual((4, 1), df.shape)
+        df = res.time_series('./tests/xmdf/xmdf_point.shp', 'd')
+        self.assertEqual((4, 1), df.shape)
+
+        # check that the datasets work in tandem - depth and velocity exist in different datasets
+        df = res.flux('./tests/xmdf/xmdf_flux_line.shp', use_unit_flow=False)
+        self.assertEqual((4, 1), df.shape)
+        self.assertTrue('d.v' in df.columns[0])
 
     def test_zh_output(self):
         xmdf = './tests/xmdf/M10_5m_001.xmdf'
@@ -203,6 +340,22 @@ class TestDAT(unittest.TestCase):
         mn = res.minimum('bed level')
         self.assertTrue(np.isclose(mn, 36.01).all())
 
+    def test_add_dataset(self):
+        p1 = './tests/dat/EG00_001_d.dat'
+        res = DAT(p1)
+        self.assertEqual(['bed level', 'max depth', 'depth'], res.data_types())
+
+        p2 = './tests/dat/EG00_001_V.dat'
+        res.add_dataset(p2)
+
+        self.assertTrue('velocity' in res.data_types())
+        df = res.time_series('./tests/xmdf/xmdf_point.shp', 'depth')
+        self.assertEqual((3, 1), df.shape)
+        df = res.time_series('./tests/xmdf/xmdf_point.shp', 'velocity')
+        self.assertEqual((3, 1), df.shape)
+        df = res.flux('./tests/xmdf/xmdf_flux_line.shp')
+        self.assertEqual((3, 1), df.shape)
+
 
 class TestNCMesh(unittest.TestCase):
 
@@ -292,6 +445,78 @@ class TestNCMesh(unittest.TestCase):
         self.assertEqual(11, len(data_types))
 
         df = res.time_series((9753.243, 11350.008), 'zb')
+        self.assertEqual((5, 1), df.shape)
+
+    def test_flux_2d(self):
+        nc = './tests/nc_mesh/Trap_Steady_000.nc'
+        res = NCMesh(nc)
+        df = res.flux('./tests/nc_mesh/fv_steady_2d_flux_line.shp', '')
+        self.assertEqual((37, 1), df.shape)
+        self.assertAlmostEqual(446.486, float(df.iloc[:,0].max()), places=3)
+
+    def test_flux_3d(self):
+        nc = './tests/nc_mesh/EST000_3D_001.nc'
+        res = NCMesh(nc)
+        df = res.flux('./tests/nc_mesh/fv_estuary_flux_line.shp', '')
+        self.assertEqual((5, 1), df.shape)
+        self.assertAlmostEqual(85.971, float(df.iloc[:,0].max()), places=3)
+        self.assertAlmostEqual(-39.142, float(df.iloc[:,0].min()), places=3)
+        df_r = res.flux('./tests/nc_mesh/fv_estuary_flux_line_reversed.shp', '')
+        is_close = np.isclose(df.iloc[:,0], df_r.iloc[:,0] * -1)
+        self.assertTrue(is_close.all())
+
+        df2 = res.flux('./tests/nc_mesh/fv_estuary_flux_line_2.shp', '')
+        df2_r = res.flux('./tests/nc_mesh/fv_estuary_flux_line_2_reversed.shp', '')
+        is_close = np.isclose(df.iloc[:,0], df_r.iloc[:,0] * -1)
+        self.assertTrue(is_close.all())
+        self.assertAlmostEqual(85.970, float(df2.iloc[:,0].max()), places=3)
+        self.assertAlmostEqual(-39.141, float(df2.iloc[:,0].min()), places=3)
+
+    def test_flux_3d_sal(self):
+        nc = './tests/nc_mesh/EST000_3D_001.nc'
+        res = NCMesh(nc)
+        df = res.flux('./tests/nc_mesh/fv_estuary_flux_line.shp', 'sal')
+        self.assertAlmostEqual(875.946, float(df.iloc[:,0].max()), places=3)
+        self.assertAlmostEqual(-391.437, float(df.iloc[:,0].min()), places=3)
+
+    def test_flux_2d_in_memory(self):
+        nc = './tests/nc_mesh/Trap_Steady_000.nc'
+        res = NCMesh(nc)
+        df = res.flux('./tests/nc_mesh/fv_steady_2d_flux_line.shp', use_unit_flow=False)
+
+        res._driver.clear_cache()
+        res.load_into_memory('velocity')
+        df1 = res.flux('./tests/nc_mesh/fv_steady_2d_flux_line.shp', use_unit_flow=False)
+        self.assertTrue((df == df1).iloc[:,0].all())
+
+    def test_flux_3d_in_memory(self):
+        nc = './tests/nc_mesh/EST000_3D_001.nc'
+        res = NCMesh(nc)
+        df = res.flux('./tests/nc_mesh/fv_estuary_flux_line.shp', use_unit_flow=False)
+
+        res._driver.clear_cache()
+        res.load_into_memory('velocity')
+        df1 = res.flux('./tests/nc_mesh/fv_estuary_flux_line.shp', use_unit_flow=False)
+        self.assertTrue((df == df1).iloc[:,0].all())
+
+    def test_add_dataset(self):
+        p1 = './tests/nc_mesh/EST000_3D_001_hvd.nc'
+        res = NCMesh(p1)
+        self.assertEqual(['bed level', 'water level', 'velocity', 'depth', 'vertical velocity', 'water density'], res.data_types())
+
+        p2 = './tests/nc_mesh/EST000_3D_001_saltemp.nc'
+        res.add_dataset(p2)
+
+        self.assertTrue('salinity' in res.data_types())
+        self.assertTrue('temperature' in res.data_types())
+
+        self.assertTrue('water level' in res.data_types())
+
+        df = res.time_series('./tests/nc_mesh/ncmesh_point_longlat.shp', 'water level')
+        self.assertEqual((5, 1), df.shape)
+        df = res.time_series('./tests/nc_mesh/ncmesh_point_longlat.shp', 'salinity')
+        self.assertEqual((5, 1), df.shape)
+        df = res.flux('./tests/nc_mesh/fv_estuary_flux_line.shp', 'sal')
         self.assertEqual((5, 1), df.shape)
 
 
@@ -476,6 +701,29 @@ class TestCATCHJson(unittest.TestCase):
         mn = res.minimum('h')
         self.assertTrue(np.isclose(mn, 0.).all())
 
+    def test_loading_ontop(self):
+        p = './tests/catch_json/EST000_3D_001.tuflow.json'
+        res = CATCHJson(p)
+        res1 = NCMesh('./tests/catch_json/EST000_3D_001_index.nc')
+
+        self.assertEqual(8, len(res.data_types()))
+        self.assertEqual(2, len(res._providers))
+
+        df = res.time_series('./tests/nc_mesh/ncmesh_point_longlat.shp', 'h')
+        self.assertEqual((5, 1), df.shape)
+        df1 = res1.time_series('./tests/nc_mesh/ncmesh_point_longlat.shp', 'h')
+        self.assertTrue(np.isclose(df.iloc[:,0], df1.iloc[:,0], atol=1e-3).all())
+
+        df = res.time_series('./tests/nc_mesh/ncmesh_point_longlat.shp', 'sal')
+        self.assertEqual((5, 1), df.shape)
+        df1 = res1.time_series('./tests/nc_mesh/ncmesh_point_longlat.shp', 'sal')
+        self.assertTrue(np.isclose(df.iloc[:,0], df1.iloc[:,0], atol=1e-3).all())
+
+        df = res.flux('./tests/nc_mesh/fv_estuary_flux_line.shp', 'sal')
+        self.assertEqual((5, 1), df.shape)
+        df1 = res1.flux('./tests/nc_mesh/fv_estuary_flux_line.shp', 'sal')
+        self.assertTrue(np.isclose(df.iloc[:,0], df1.iloc[:,0], atol=1).all())
+
 
 class TestQuadtree(unittest.TestCase):
 
@@ -582,6 +830,67 @@ class TestNCGrid(unittest.TestCase):
         mesh = res.to_mesh('max water level')
         df = mesh.surface('vector velocity', 1.5, to_vertex=True)
         self.assertEqual((6871, 5), df.shape)
+
+    def test_flux_vel_depth(self):
+        p = './tests/nc_grid/EG00_001_unit_flow.nc'
+        line = './tests/xmdf/xmdf_flux_line.shp'
+        line_rev = './tests/xmdf/xmdf_flux_line_reversed.shp'
+        res = NCGrid(p)
+        df = res.flux(line, '', use_unit_flow=False)
+        self.assertEqual((7, 1), df.shape)
+        self.assertAlmostEqual(80.436, float(df.iloc[:, 0].max()), places=3)
+        # reversed line must give identical magnitude with opposite sign
+        df_r = res.flux(line_rev, '', use_unit_flow=False)
+        self.assertTrue(np.isclose(df.iloc[:, 0].values, -df_r.iloc[:, 0].values).all())
+
+    def test_flux_unit_flow(self):
+        p = './tests/nc_grid/EG00_001_unit_flow.nc'
+        line = './tests/xmdf/xmdf_flux_line.shp'
+        line_rev = './tests/xmdf/xmdf_flux_line_reversed.shp'
+        res = NCGrid(p)
+        df = res.flux(line, '', use_unit_flow=True)
+        self.assertEqual((7, 1), df.shape)
+        self.assertAlmostEqual(82.204, float(df.iloc[:, 0].max()), places=3)
+        # reversed line must give identical magnitude with opposite sign
+        df_r = res.flux(line_rev, '', use_unit_flow=True)
+        self.assertTrue(np.isclose(df.iloc[:, 0].values, -df_r.iloc[:, 0].values).all())
+
+    def test_flux_vel_depth_tracer(self):
+        p = './tests/nc_grid/EG17_001.nc'
+        line = './tests/xmdf/xmdf_flux_line.shp'
+        line_rev = './tests/xmdf/xmdf_flux_line_reversed.shp'
+        res = NCGrid(p)
+        df = res.flux(line, 'ad01_conc', use_unit_flow=False)
+        self.assertEqual((7, 1), df.shape)
+        self.assertAlmostEqual(130.778, float(df.iloc[:, 0].max()), places=3)
+        df_r = res.flux(line_rev, 'ad01_conc', use_unit_flow=False)
+        self.assertTrue(np.isclose(df.iloc[:, 0].values, -df_r.iloc[:, 0].values).all())
+
+    def test_flux_grid_mesh(self):
+        p = './tests/nc_grid/EG17_001.nc'
+        line = './tests/xmdf/xmdf_flux_line.shp'
+        res = NCGrid(p).to_mesh()
+        df = res.flux(line)
+        self.assertAlmostEqual(88, float(df.iloc[:, 0].max()), places=0)
+
+        df = res.flux(line, use_unit_flow=False)
+        self.assertAlmostEqual(86, float(df.iloc[:, 0].max()), places=0)
+
+    def test_flux_grid_mesh_tracer(self):
+        p = './tests/nc_grid/EG17_001.nc'
+        line = './tests/xmdf/xmdf_flux_line.shp'
+        line_rev = './tests/xmdf/xmdf_flux_line_reversed.shp'
+        res = NCGrid(p).to_mesh()
+        df = res.flux(line, 'ad01_conc', use_unit_flow=True)
+        self.assertEqual((7, 1), df.shape)
+        self.assertAlmostEqual(137.143, float(df.iloc[:, 0].max()), places=3)
+        df_r = res.flux(line_rev, 'ad01_conc', use_unit_flow=True)
+        self.assertTrue(np.isclose(df.iloc[:, 0].values, -df_r.iloc[:, 0].values).all())
+
+        df = res.flux(line, 'ad01_conc', use_unit_flow=False)
+        self.assertAlmostEqual(130.778, float(df.iloc[:, 0].max()), places=3)
+        df_r = res.flux(line_rev, 'ad01_conc', use_unit_flow=False)
+        self.assertTrue(np.isclose(df.iloc[:, 0].values, -df_r.iloc[:, 0].values).all())
 
 
 class TestGrid(unittest.TestCase):

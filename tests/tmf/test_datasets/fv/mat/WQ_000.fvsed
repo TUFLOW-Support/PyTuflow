@@ -1,0 +1,24 @@
+!_________________________________________________________________
+!SEDIMENT FRACTIONS
+
+Fraction == clay
+  Particle Density == 2650.
+  D50 == 0.00001
+  Settling Model == constant
+  Settling Parameters == 0.000000579
+  Deposition Model == krone
+  Deposition Parameters == 0.1
+  Erosion Model == mehta
+  Erosion Parameters == 0.001, 0.15, 1.
+End Fraction
+
+!_________________________________________________________________
+!MATERIAL SPECIFICATIONS
+
+Material == 1,2,3,4
+  Nlayer == 1
+  Layer == 1
+    Dry Density == 800., 800., 800., 800.
+    Initial Mass == 0.0, 0.0, 0.0, 0.0
+  End Layer
+End Material

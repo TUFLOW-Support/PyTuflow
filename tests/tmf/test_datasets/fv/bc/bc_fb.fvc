@@ -1,0 +1,8 @@
+Include Sediment == 1,0
+
+Sediment Control File == bc_fb.fvsed
+
+BC == FB, DredgeHead1, bc_dbase\BF_Dredge_001.csv ! boundary_type, location_ID, data_filepath
+  BC Header == time_hr, SedFlux ! {TIME}, {FLUX_SED_1} (g/s)
+  BC Update dt == 900. ! {0.0} Boundary update interval (s)
+End BC

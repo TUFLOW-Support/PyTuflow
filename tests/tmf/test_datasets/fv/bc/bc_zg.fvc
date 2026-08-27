@@ -1,0 +1,2 @@
+BC == ZG, Eastern_Boundary										! Zero gradient boundary. Water level set based on cells adjacent to boundary nodestring
+End BC

@@ -14,5 +14,11 @@ docs_copy*
 /identifier.sqlite
 profile.*
 *__pycache__*
+tmp.py
 .vscode*
+.claude*
 uv.lock
+*pytest_cache*
+tests/fm_lib/integration_tests/outputs_tmp*
+*.mdtest/
+tuflowfv.log

@@ -1,0 +1,34 @@
+{
+    "name": "salinity",
+    "display_name": "Salinity",
+    "sort_order": 5,
+    "template_files": [],
+    "command_blocks": [
+        {
+            "id": "fvc_salinity",
+            "target_cf": "fvc",
+            "placement_rule": "fvc_simulation_configuration",
+            "commands": [
+                "Include Salinity == ${sal_active},${sal_density_active}                                  ! {0} OFF | 1 ON, {0} Density coupling disabled | 1 Density coupling enabled"
+            ]
+        },
+        {
+            "id": "fvc_initial_conditions_header",
+            "target_cf": "fvc",
+            "placement_rule": "fvc_geometry_2d",
+            "existence_check": "! INITIAL CONDITIONS",
+            "commands": [
+                "\n!______________________________________________________________________________________________________________________",
+                "! INITIAL CONDITIONS"
+            ]
+        },
+        {
+            "id": "fvc_initial_salinity",
+            "target_cf": "fvc",
+            "placement_rule": "fvc_initial_conditions",
+            "commands": [
+                "Initial Salinity == ${initial_sal}"
+            ]
+        }
+    ]
+}

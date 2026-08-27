@@ -1,3 +1,4 @@
+import logging
 from pathlib import Path
 from typing import Union
 
@@ -14,11 +15,10 @@ from .helpers.fm_res_driver import FMResultDriver
 from .helpers.lp_1d_fm import LP1DFM
 from .._fm import GXY
 from .._fm import FMDAT
-from ..util import pytuflow_logging
 from ..results import ResultTypeError
 
 
-logger = pytuflow_logging.get_logger()
+logger = logging.getLogger('pytuflow')
 
 
 class FMTS(INFO):

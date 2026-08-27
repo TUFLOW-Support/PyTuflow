@@ -1,3 +1,4 @@
+import logging
 import json
 from datetime import timezone
 from pathlib import Path
@@ -15,8 +16,7 @@ from .._pytuflow_types import PathLike, TimeLike
 from .helpers.catch_providers import CATCHProvider
 from ..results import ResultTypeError
 
-from ..util import pytuflow_logging
-logger = pytuflow_logging.get_logger()
+logger = logging.getLogger('pytuflow')
 
 
 class CATCHJson(MapOutput):
@@ -169,6 +169,15 @@ class CATCHJson(MapOutput):
     @staticmethod
     def _looks_empty(fpath: Path) -> bool:
         return False
+
+    def load_into_memory(self, data_types: str | list[str]):
+        # docstring inherited
+        data_types = self._figure_out_data_types(data_types, None)
+        for provider in self._providers.values():
+            if provider != self._idx_provider:
+                intersection = np.intersect1d(data_types, provider.data_types())
+                if intersection.size:
+                    provider.load_into_memory(intersection.tolist())
 
     def times(self, filter_by: str = None, fmt: str = 'relative') -> list[TimeLike]:
         """Returns a list of times for the given filter.
@@ -562,8 +571,16 @@ class CATCHJson(MapOutput):
 
         Parameters
         ----------
-        locations : Point | list[Point] | dict[str, Point] | PathLike
-            The location to extract the time series data for.
+        locations : Point | list[Point] | dict[str, Point] | GeoDataFrame | str | PathLike
+            The location to extract the time series data for. The location can be:
+
+            - Point represented by a ``tuple[x, y]``
+            - Point represented by a WKT string
+            - ``shapely.Point`` object
+            - ``list[Point]``
+            - ``dict[str, Point]`` where the ``str`` will be used as the ID in the resulting ``pd.DataFrame``
+            - ``geopandas.GeoDataFrame``
+            - Path to a GIS file containing points
         data_types : str | list[str]
             The data types to extract the time series data for.
         time_fmt : str, optional
@@ -698,8 +715,16 @@ class CATCHJson(MapOutput):
 
         Parameters
         ----------
-        locations : list[Point] | str | PathLike
-            The location to extract the section data for.
+        locations : LineString | list[LineString] | dict[str, LineString] | GeoDataFrame | str | PathLike
+            The line(s) to extract the flux for. The location can be:
+            
+            - LineString represented by a list of ``tuple[x, y]`` coordinates.
+            - LineString represented by a WKT string
+            - ``shapely.LineString`` object
+            - ``list[LineStrings]``
+            - ``dict[str, LineString]`` where the ``str`` will be used as the ID in the resulting ``pd.DataFrame``
+            - ``geopandas.GeoDataFrame``
+            - Path to a GIS file containing lines
         data_types : str | list[str]
             The data types to extract the section data for.
         time : TimeLike
@@ -839,8 +864,16 @@ class CATCHJson(MapOutput):
 
         Parameters
         ----------
-        locations : list[Point] | str | PathLike
-            The location to extract the section data for.
+        locations : LineString | list[LineString] | dict[str, LineString] | GeoDataFrame | str | PathLike
+            The line(s) to extract the flux for. The location can be:
+            
+            - LineString represented by a list of ``tuple[x, y]`` coordinates.
+            - LineString represented by a WKT string
+            - ``shapely.LineString`` object
+            - ``list[LineStrings]``
+            - ``dict[str, LineString]`` where the ``str`` will be used as the ID in the resulting ``pd.DataFrame``
+            - ``geopandas.GeoDataFrame``
+            - Path to a GIS file containing lines
         data_types : str | list[str]
             The data types to extract the section data for.
         time : TimeLike
@@ -921,8 +954,16 @@ class CATCHJson(MapOutput):
 
         Parameters
         ----------
-        locations : Point | list[Point] | dict[str, Point] | PathLike
-            The location to extract the time series data for.
+        locations : Point | list[Point] | dict[str, Point] | GeoDataFrame | str | PathLike
+            The location to extract the time series data for. The location can be:
+
+            - Point represented by a ``tuple[x, y]``
+            - Point represented by a WKT string
+            - ``shapely.Point`` object
+            - ``list[Point]``
+            - ``dict[str, Point]`` where the ``str`` will be used as the ID in the resulting ``pd.DataFrame``
+            - ``geopandas.GeoDataFrame``
+            - Path to a GIS file containing points
         data_types : str | list[str]
             The data types to extract the time series data for.
         time : TimeLike
@@ -969,6 +1010,27 @@ class CATCHJson(MapOutput):
                         df_ = df_.drop(columns=np.intersect1d(df_.columns, df.columns))
                     df = pd.concat([df, df_], axis=1)
         return df
+    
+    def flux(self, locations: LineStringLocation, data_types: str | list[str] = 'unit flow',
+             time_fmt: str = 'relative', use_unit_flow: bool = True) -> pd.DataFrame:
+        # doscstring inherited
+        locations = self._translate_line_string_location(locations)
+        data_types = self._figure_out_data_types(data_types, None)
+        df = pd.DataFrame()
+        for locname, line in locations.items():
+            df1 = pd.DataFrame()
+            for provider in self._providers.values():
+                if provider == self._idx_provider:
+                    continue
+                intersection = np.intersect1d(data_types, provider.data_types()) if data_types else np.empty(0)
+                if data_types and intersection.size == 0:
+                    continue
+                if provider.PROVIDER_NAME == 'NCMesh' and 'velocity' not in provider.data_types():
+                    continue
+                df2 = provider.flux({locname: line}, data_types, time_fmt, use_unit_flow)
+                df1 = df1 + df2 if not df1.empty else df2
+            df = df1 if df.empty else pd.concat([df, df1])
+        return df
 
     def _load_json(self, fpath: PathLike | str):
         if Path(fpath).is_file():
@@ -993,8 +1055,20 @@ class CATCHJson(MapOutput):
         self._result_types = [self._get_standard_data_type_name(x) for x in self._data.get('result types')]
 
         index_result_name = self._data.get('index')
+        base_nc_mesh_provider = None  # NetCDF mesh results can be loaded ontop of each other
         for res_name in self._data.get('outputs', []):
             output = self._data.get('output data', {}).get(res_name, {})
+            if not output:
+                logger.warning(f'Output data not found for {res_name} in json file.')
+                continue
+            
+            # check if we can load output ontop of another one
+            if base_nc_mesh_provider and output['format'].lower() == 'netcdf mesh' and res_name != index_result_name:
+                logger.debug(f'{res_name} is being added to exsting result provider {base_nc_mesh_provider.name}')
+                path = self.fpath.parent / output['path']
+                base_nc_mesh_provider.add_dataset(path)
+                continue
+
             provider = CATCHProvider.from_catch_json_output(self.fpath.parent, output, self.driver)
             if res_name == index_result_name:
                 self._idx_provider = provider
@@ -1002,6 +1076,12 @@ class CATCHJson(MapOutput):
                 provider.time_offset = (provider.reference_time - self.reference_time).total_seconds()
             else:
                 provider.reference_time = self.reference_time
+
+            # check if provider should be saved as the base_nc_mesh_provider
+            if not base_nc_mesh_provider and output['format'].lower() == 'netcdf mesh' and res_name != index_result_name:
+                logger.debug(f'{res_name} has been saved as the base NetCDF mesh to load further NetCDF meshes onto')
+                base_nc_mesh_provider = provider
+
             self._providers[res_name] = provider
 
         self._load_info()

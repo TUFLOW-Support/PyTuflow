@@ -1,0 +1,13 @@
+! Grid Location Definition
+Grid Definition File == example_diffuser.nc
+  Grid Definition Variables == longitude, latitude
+  Grid Definition Label == diffuser_grid
+  Gridmap Compression == 1
+End Grid
+
+! Model Inflow From Outfall/Diffuser
+BC == QC_GRID, diffuser_grid, example_diffuser.nc
+  BC Header == time, weight, flow
+  BC Time Units == hours
+  BC Update dt == 300.0
+End BC

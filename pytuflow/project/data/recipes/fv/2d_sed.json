@@ -1,0 +1,81 @@
+{
+  "display_name": "2D Sediment Transport Model",
+  "description": "2D sediment transport model",
+  "variables": {
+    "time_format": "ISODATE",
+    "start_time": "<dd/mm/yyyy hh:mm:ss>",
+    "end_time": "<dd/mm/yyyy hh:mm:ss>",
+    "bottom_drag_model": "Manning",
+    "Global Bottom Roughness": 0.04,
+    "momenutim_mixing_model": "Smagorinsky",
+    "glob_horiz_eddy_visc": 0.5,
+    "glob_horz_eddy_visc_lims": "1, 99999.0"
+  },
+  "features": [
+    "stm_minimal",
+    {
+        "name": "sedfrac",
+        "stm_sed_frac_name": "fineSed",
+        "stm_d50": 0.0002,
+        "stm_particle_density": 2650,
+        "stm_settling_model": "constant",
+        "stm_settling_params": 0.026,
+        "stm_deposition_model": "ws0",
+        "stm_erosion_model": "Mehta",
+        "stm_erosion_params": "1.7, 0.2, 1.5"
+    },
+    {
+        "name": "sedfrac",
+        "stm_sed_frac_name": "Gravel",
+        "stm_d50": 0.032,
+        "stm_particle_density": 2650,
+        "stm_settling_model": "constant",
+        "stm_settling_params": 0.6,
+        "stm_critical_stress_model": "Soulsby",
+        "stm_bed_load_model": "MPM_Shimizu",
+        "stm_bed_load_params": "8.0, -1, 1.5"
+    },
+    {
+        "name": "sedmat",
+        "stm_mat_id": 0,
+        "stm_suspended_load_scale": 1.0,
+        "stm_mat_nlayers": 2,
+        "stm_mat_layers": [
+          {
+            "stm_mat_layer_id": 1,
+            "stm_mat_layer_dry_density": "1890, 1890", 
+            "stm_mat_layer_initial_mass": 0,
+            "stm_mat_layer_fractions": [
+              {
+                "stm_sed_frac_name": "fineSed",
+                "stm_settling_model": 0,
+                "stm_deposition_model": 0,
+                "stm_bed_load_model": 0,
+                "stm_erosion_model": "Mehta",
+                "stm_erosion_params": "0.1, 99999., 0.5"
+              },
+              {
+                "stm_sed_frac_name": "Gravel",
+                "stm_settling_model": 0,
+                "stm_deposition_model": 0,
+                "stm_erosion_model": 0,
+                "stm_bed_load_model": "MPM_Shimizu",
+                "stm_bed_params": "8, 99999., 1.5"
+              }
+            ]
+          },
+          {
+            "stm_mat_layer_id": 2,
+            "stm_mat_layer_dry_density": "1890, 1890",
+            "stm_mat_layer_initial_mass": "1000, 1000"
+          }
+        ]
+    },
+    {
+      "name": "outputnc",
+      "output_params": "h, v, d, zb, Taub, SED_1, TSS, DEPOSITION_TOTAL, THICK, BED_MASS_TOTAL, PICKUP_TOTAL, NETSEDRATE_TOTAL, BEDLOAD_SED_2, BEDLOAD_TOTAL, SUSPLOAD_TOTAL, D50_Layer_1, D50_Layer_2, BED_MASS_LAYER_1_SED_1, BED_MASS_LAYER_1_SED_2, BED_MASS_LAYER_2_SED_1, BED_MASS_LAYER_2_SED_2",
+      "output_interval": 3600,
+      "output_suffix": 0
+    }
+  ]
+}

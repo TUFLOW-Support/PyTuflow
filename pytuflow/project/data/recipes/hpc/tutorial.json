@@ -1,0 +1,24 @@
+{
+  "display_name": "Tutorial model",
+  "description": "Minimal 2D HPC model with SGS.",
+  "variables": {
+    "engine": "HPC",
+    "hardware": "GPU",
+    "gis_format": "GPKG",
+    "grid_format": "TIF",
+    "start_time": 0,
+    "end_time": 1,
+    "timestep": 1
+  },
+  "features": [
+    "tutorial",
+    {
+      "name": "sgs",
+      "sgs_sample_frequency": 11,
+      "sgs_sample_distance": -1,
+      "sgs_map_extent_trim": "All",
+      "sgs_depth_output": "Cell Average",
+      "map_cutoff_depth": -1
+    }
+  ]
+}

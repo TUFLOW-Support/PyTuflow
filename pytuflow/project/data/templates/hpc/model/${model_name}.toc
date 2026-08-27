@@ -1,0 +1,4 @@
+! OPERATIONS CONTROL FILE (.TOC) contains sets of rules to control operational structures
+
+! OPERATING CONTROL COMMANDS
+

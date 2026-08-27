@@ -1,0 +1,5 @@
+Read GIS Network == 1d_nwk_RIVER_River_Sections_w_Arch_Bridge
+Read GIS Table Links == 1d_xs_RIVER_River_Sections_w_Arch_Bridge
+
+Read GIS Network == 1d_nwk_BRIDGE_River_Sections_w_Arch_Bridge
+Read GIS Table Links == 1d_xs_BRIDGE_River_Sections_w_Arch_Bridge

@@ -1,0 +1,4 @@
+Set Variable SaveLoc == C:\Users\Public\Public Models\Cavan\TUFLOW
+
+Write Check Files == <<SaveLoc>>\Checks\
+Output Folder == <<SaveLoc>>\Results\

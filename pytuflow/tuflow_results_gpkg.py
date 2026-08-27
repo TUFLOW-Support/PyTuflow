@@ -805,7 +805,7 @@ class ResData_GPKG(ResData):
             reference_time = self.parse_reference_time(row)
             self.has_reference_time = True
         except Exception as e:
-            pass
+            print(f'Error: {e}')
 
         return reference_time
 

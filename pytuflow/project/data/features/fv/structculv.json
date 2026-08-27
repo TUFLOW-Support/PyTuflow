@@ -1,0 +1,51 @@
+{
+  "name": "structculv",
+  "display_name": "Structure - Culvert",
+  "sort_order": 5,
+  "template_files": [],
+  "command_blocks": [
+    {
+      "id": "fvc_struct_header",
+      "target_cf": "fvc",
+      "placement_rule": "before_fvc_structures",
+      "existence_check": "! HYDRAULIC STRUCTURES",
+      "commands": [
+        "\n!__________________________________________________________________________________________________________________________________________________________________________________________",
+        "! HYDRAULIC STRUCTURES"
+      ]
+    },
+    {
+      "id": "fvc_struct_culvert",
+      "target_cf": "fvc",
+      "placement_rule": "fvc_structures",
+      "allow_multiple": true,
+      "commands": [
+        "##IF ${struct_conn_type}==Nodestring;Zone##",
+          "\nStructure == ${struct_conn_type}, <link1_id>",
+        "##ENDIF##",
+        "##IF not:${struct_conn_type}==Nodestring;Zone##",
+          "\nStructure == ${struct_conn_type}, <link1_id>, <link2_id>",
+        "##ENDIF##"
+      ]
+    },
+    {
+      "id": "struct_culvert_param",
+      "target_cf": "fvc",
+      "target_previous_block": true,
+      "commands": [
+        "Flux Function == Culvert",
+        "Culvert File == ${struct_culvert_csv}"
+      ]
+    },
+    {
+        "id": "fvc_struct_culvert_nodestring",
+        "target_cf": "fvc",
+        "placement_rule": "before_fvc_structures",
+        "allow_multiple": true,
+        "commands": [
+            "Read GIS Nodestring == ${nodestring_path}"
+        ]
+
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+!______________________________________________________________________________________________________________________
+! SIMULATION CONFIGURATION
+Bottom Drag Model == ks 															! {Manning} | ks
+Include Salinity == 1,1																! {0} Salinity off | 1 Salinity on, {0} Hydrodynamic density coupling off | 1 Hydrodynamic density coupling on
+Include Temperature == 1,1															! {0} Temperature off | 1 Temperature on, {0} Hydrodynamic density coupling off | 1 Hydrodynamic density coupling on
+Spatial Order == 1,2																! {1} | 2 Horizontal, {1} | 2 Vertical
+Include Heat == 1																	! {0} Atmospheric heat exchange off | 1 Atmospheric heat exchange on
+Spherical == 1																		! {0} Cartesian | 1 Long/Lat
+NTracer == 1
+
+BC == FC_POLY, Inflow_Region_001, bc_dbase\FC_Outfall_005.csv					! Mass timeseries distributed across cells in polygon - Add 100 g/s of salt and 100 units/s of tracer			
+	BC Header == Time, Salt, Temp_Flux, Tracer										! Columns to read from Time, Salt mass (kg/s), Temperature flux (C m^3/s), Tracer mass (units/s)
+	Vertical Coordinate Type == Sigma												! Sigma coordinates to define the vertical location of the applied mass
+	Vertical Distribution File == ..\bc_dbase\MovingBC_Distribution_004.csv			! Sigma (0 bed -1 water surface), Weight (0 no weighting - 1 full weighting) - 	Assign mass to the top 10% of the water depth (closest to the surface)
+End BC
