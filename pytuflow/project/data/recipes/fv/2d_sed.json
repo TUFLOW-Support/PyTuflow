@@ -2,7 +2,6 @@
   "display_name": "2D Sediment Transport Model",
   "description": "2D sediment transport model",
   "variables": {
-    "modesplit": 0,
     "time_format": "ISODATE",
     "start_time": "<dd/mm/yyyy hh:mm:ss>",
     "end_time": "<dd/mm/yyyy hh:mm:ss>",
