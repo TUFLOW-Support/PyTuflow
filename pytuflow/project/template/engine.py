@@ -3,6 +3,8 @@ from string import Template
 from pathlib import Path
 import os
 
+from .._common.utils import safe_substitute as _safe_substitute
+
 
 class TemplateEngine:
     def render(
@@ -41,7 +43,7 @@ class TemplateEngine:
 
         processed = self._process_directives(lines, variables, active_features, block_lookup)
         result = ''.join(processed)
-        return Template(result).safe_substitute(_to_str_vars(variables))
+        return _safe_substitute(result, _to_str_vars(variables))
 
     @staticmethod
     def make_relative(text: str, out_path: Path, variables: dict) -> dict:
@@ -128,7 +130,7 @@ class TemplateEngine:
                     # render() safe_substitute pass only has the top-level vars.
                     str_iter_vars = _to_str_vars(iter_vars)
                     result.extend(
-                        Template(ln).safe_substitute(str_iter_vars) for ln in expanded
+                        _safe_substitute(ln, str_iter_vars) for ln in expanded
                     )
                 i += 1
                 continue
@@ -157,7 +159,7 @@ class TemplateEngine:
                         k: (', '.join(str(x) for x in v) if isinstance(v, list) else str(v))
                         for k, v in loop_vars.items()
                     }
-                    result.extend(Template(ln).safe_substitute(str_loop_vars) for ln in expanded)
+                    result.extend(_safe_substitute(ln, str_loop_vars) for ln in expanded)
                 i += 1
                 continue
 
@@ -187,7 +189,7 @@ class TemplateEngine:
                         for k, v in variables.items()
                     }
                     for cmd in commands:
-                        rendered_cmd = Template(cmd).safe_substitute(str_vars)
+                        rendered_cmd = _safe_substitute(cmd, str_vars)
                         if rendered_cmd and rendered_cmd[-1] != '\n':
                             rendered_cmd = f'{rendered_cmd}\n'
                         result.append(rendered_cmd)

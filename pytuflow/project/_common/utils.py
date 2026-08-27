@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import re
 from pathlib import Path
+from string import Template
 import json
 
 
@@ -42,6 +43,79 @@ def _normalize_slashes(cmd: str) -> str:
         temp = temp.replace(f"__PROTECTED_{i}__", original)
 
     return temp
+
+
+def safe_substitute(text: str, variables: dict) -> str:
+    """Perform Template.safe_substitute while preserving inline comment positions.
+
+    Tabs in *text* are expanded to 4 spaces before substitution.  After
+    substitution the comment (anything from the first ``!`` or ``#`` that is
+    not part of a ``${...}`` placeholder) is re-attached at its original
+    column.  If the substituted content is longer than that column, the
+    comment is placed 2 spaces after the end of the content instead.
+
+    Lines without a comment are passed straight through to
+    ``Template.safe_substitute``.
+    """
+    lines = text.splitlines(keepends=True)
+    result = []
+    for line in lines:
+        trailing_newline = ''
+        if line.endswith('\n'):
+            trailing_newline = '\n'
+            line = line[:-1]
+
+        # Expand tabs before processing
+        line = line.expandtabs(4)
+
+        # Find the first comment character ('!' or '#') that is not inside a
+        # ${...} placeholder.  We walk character-by-character so we can skip
+        # over placeholder tokens.
+        comment_start = None
+        i = 0
+        while i < len(line):
+            ch = line[i]
+            if ch == '$' and i + 1 < len(line):
+                if line[i + 1] == '{':
+                    # Skip ${...}
+                    end = line.find('}', i + 2)
+                    if end != -1:
+                        i = end + 1
+                        continue
+                elif line[i + 1].isalnum() or line[i + 1] == '_':
+                    # Skip $identifier
+                    j = i + 1
+                    while j < len(line) and (line[j].isalnum() or line[j] == '_'):
+                        j += 1
+                    i = j
+                    continue
+            if ch in ('!', '#'):
+                comment_start = i
+                break
+            i += 1
+
+        if comment_start is None:
+            # No comment — plain substitution
+            result.append(Template(line).safe_substitute(variables) + trailing_newline)
+            continue
+
+        content_part = line[:comment_start]
+        comment_part = line[comment_start:]
+
+        substituted = Template(content_part).safe_substitute(variables)
+
+        # Determine where the comment should go
+        substituted_len = len(substituted.rstrip())
+        if substituted_len >= comment_start:
+            # Content grew past the original comment column — pad 2 spaces after content
+            comment_line = substituted.rstrip() + '  ' + comment_part
+        else:
+            # Pad to original column
+            comment_line = substituted.ljust(comment_start) + comment_part
+
+        result.append(comment_line + trailing_newline)
+
+    return ''.join(result)
 
 
 def _parse_filter(value: str) -> tuple[str, bool, int]:
