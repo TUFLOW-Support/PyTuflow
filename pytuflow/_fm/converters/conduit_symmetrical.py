@@ -131,7 +131,8 @@ class ConduitSymmetrical(Conduit):
         # upstream section is 50% + 50% of it's influence on the INTERPOLATE section
         w1 = 0.5 + 0.5 * w1_
         w2 = 1. - w1  # should equal 0.5 * w2_
-        assert np.isclose(w2, 0.5 * w2_)
+        if not np.isclose(w2, 0.5 * w2_):
+            raise AssertionError
         return w1, w2
 
     def generate_hw_table(self, unit1: 'Handler', unit2: 'Handler', hw1: pd.DataFrame, hw2: pd.DataFrame) -> str:

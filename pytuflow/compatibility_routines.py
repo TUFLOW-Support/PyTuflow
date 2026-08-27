@@ -1,4 +1,4 @@
-"""
+r"""
 Module to fill the gap for QGIS versions that don't yet have Python 3.9+
 
 Copies routines largely from the convert_tuflow_model_gis_format suite and modifies where required to

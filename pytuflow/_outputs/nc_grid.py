@@ -2,6 +2,7 @@ from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
 from typing import Union, Generator
+import logging
 
 import numpy as np
 try:
@@ -28,6 +29,9 @@ try:
 except ImportError:
     gdal = None
     has_gdal = False
+
+
+logger = logging.getLogger('pytuflow')
 
 
 class NCGrid(Grid):
@@ -143,8 +147,8 @@ class NCGrid(Grid):
                         return True
                     subds = None
                 ds = None
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f'Error: {e}')
         return False
 
     @staticmethod

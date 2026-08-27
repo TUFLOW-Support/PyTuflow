@@ -56,8 +56,8 @@ class GPKGBase:
     def _read_gpkg_table_to_memory(self, cur: 'Cursor', data_types: list[str], table_name):
         """Read a table from a GPKG/sqlite3 database into memory in one I/O operation."""
         cols = ['ID', 'Time_relative'] + [f'"{x}"' for x in data_types]
-        query = 'SELECT {0} FROM "{1}"'.format(','.join(cols), table_name)
-        df = pd.read_sql_query(query, cur.connection)
+        query = 'SELECT {0} FROM "{1}"'.format(','.join(cols), table_name)  # nosec B608
+        df = pd.read_sql_query(query, cur.connection)  # nosec B608
         df = df.rename(columns={'Time_relative': 'time'})
 
         # do some post-processing to make the data easier to work with

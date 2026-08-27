@@ -1,6 +1,7 @@
 import os
 import re
 import sys
+import logging
 from contextlib import contextmanager
 from pathlib import Path, PosixPath, WindowsPath
 
@@ -11,6 +12,9 @@ from .raster_open_file import RasterIOOpen, GDALRasterOpen
 SPLIT_DATABASE_REGEX = re.compile(r'>>(?![^<]*>>)')
 
 _prefer_gdal = False
+
+
+logger = logging.getLogger('pytuflow')
 
 
 def set_prefer_gdal(prefer: bool):
@@ -109,8 +113,8 @@ class TuflowPath(Path):
                 cur = conn.cursor()
                 cur.execute("SELECT table_name FROM gpkg_contents;")
                 layers = [x[0] for x in cur.fetchall()]
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f'Error occurred: {e}')
         return layers
 
     def _nc_layers(self) -> list[str]:

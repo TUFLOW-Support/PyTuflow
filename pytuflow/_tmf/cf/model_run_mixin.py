@@ -20,7 +20,7 @@ class ModelRunMixin:
         args_.extend(ctx_args)
         args_.extend(add_tf_flags)
         args_.append(str(model_fpath))
-        self.proc = subprocess.Popen(args_, *args, **kwargs)
+        self.proc = subprocess.Popen(args_, *args, **kwargs)  # nosec B603
         return self.proc
 
     @staticmethod

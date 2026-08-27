@@ -213,8 +213,8 @@ class DAT(Mesh):
             ]
             if tuple(vals[:11]) in possible_combos and vals[12] == 180 and vals[14] == 190:
                 return True
-        except Exception:
-            pass
+        except Exception as e:
+            print(f'Error: {e}')
         return False
 
     @staticmethod
@@ -244,8 +244,8 @@ class DAT(Mesh):
                     buf = f.read(4)
                     if struct.unpack('i', buf[:4])[0] == 200:
                         return False  # looks like at least one timestep has been written
-        except Exception:
-            pass
+        except Exception as e:
+            print(f'Error: {e}')
         return True
 
     def _initial_load(self):

@@ -957,8 +957,8 @@ class TPC(INFO, ITimeSeries2D):
                                 geom = geom_from_tpc_line(dtype.replace('max ', '').replace('min ', ''))
                                 if geom is None:
                                     geom = 'R'
-                            except Exception:
-                                pass
+                            except Exception as e:
+                                logger.debug(f'Error occurred: {e}')
                         if geom in used_geoms:
                             continue
                         used_geoms.append(geom)

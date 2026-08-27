@@ -155,8 +155,8 @@ class _BC:
             try:
                 source_file = self.parent_input.parent.fpath.parent / source_ref
                 source = os.path.relpath(source_file, self.parent.fpath.parent)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f'Error occurred: {e}')
         return source
 
     def bc_dbase_entry(self) -> dict:
