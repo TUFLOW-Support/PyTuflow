@@ -9,7 +9,7 @@
             "target_cf": "fvc",
             "placement_rule": "fvc_simulation_configuration",
             "commands": [
-                "Include Salinity == ${sal_active},${sal_density_active}"
+                "Include Salinity == ${sal_active},${sal_density_active}                                  ! {0} OFF | 1 ON, {0} Density coupling disabled | 1 Density coupling enabled"
             ]
         },
         {

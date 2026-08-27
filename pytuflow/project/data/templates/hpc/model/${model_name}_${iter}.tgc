@@ -19,7 +19,7 @@ Read GRID Zpts == ${dem_path}
 !_______________________________________________________
 ! MODEL MATERIAL (LANDUSE)
 Set Mat == 1
-! Read GIS Mat == <path/to/2d_mat>  ! e.g. of reading vector layer
+! Read GIS Mat == <path/to/2d_mat>        ! e.g. of reading vector layer
 ! Read GRID Mat == <path/to/landuse.tif>  ! e.g. of reading raster layer
 
 ##IF feature:soils##

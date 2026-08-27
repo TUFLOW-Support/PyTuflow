@@ -9,7 +9,7 @@
       "target_cf": "fvc",
       "placement_rule": "top",
       "commands": [
-        "Tutorial Model == On"
+        "Tutorial Model == On                                                                     ! {OFF} | ON Enable license free tutorial mode"
     ]
     }
   ]

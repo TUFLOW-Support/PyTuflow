@@ -37,11 +37,11 @@ Latitude == ${latitude}                                                         
 
 !__________________________________________________________________________________________________________________________________________________________________________________________
 ! HARDWARE (optional)
-Hardware == ${hardware}
+Hardware == ${hardware}                                                                  ! {CPU} | GPU
 
 !__________________________________________________________________________________________________________________________________________________________________________________________
 ! SPATIAL ORDER (optional)
-Spatial Order == ${spatial_order}
+Spatial Order == ${spatial_order}                                                        ! {1 1st Order Horizontal} | 2 2nd Order Horizontal, {1 1st Order Vertical} | 2 2nd Order Vertical
 
 !__________________________________________________________________________________________________________________________________________________________________________________________
 ! SIMULATION TIME SETTINGS
@@ -75,9 +75,9 @@ Global Horizontal Eddy Viscosity Limits == ${glob_horz_eddy_visc_lims}          
 ##IF not:${scalar_mixing_model}:none##
 
 ! Scalars
-Scalar Mixing Model == ${scalar_mixing_model}
-Global Horizontal Scalar Diffusivity == ${glob_horiz_scalar_diffusivity}
-Global Horizontal Scalar Diffusivity Limits == ${glob_horiz_scalar_diffusivity_lims}
+Scalar Mixing Model == ${scalar_mixing_model}                                            ! None | Constant | Smagorinsky | Wu
+Global Horizontal Scalar Diffusivity == ${glob_horiz_scalar_diffusivity}                 ! {0.0} Smagorinksy coefficient
+Global Horizontal Scalar Diffusivity Limits == ${glob_horiz_scalar_diffusivity_lims}     ! {0.0} Minimum scalar diffusivity (m^2/s), {99999.} Maximum scalar diffusivity (m^2/s)
 ##ENDIF##
 
 ##IF feature:3d##
@@ -110,7 +110,7 @@ End Tracer
 !__________________________________________________________________________________________________________________________________________________________________________________________
 ! COMPUTATIONAL MESH
 ! Unstructured
-Geometry 2D == ${geometry_2d}
+Geometry 2D == ${geometry_2d}                                                            ! Flexible mesh geometry
 
 ##IF feature:3d##
 !__________________________________________________________________________________________________________________________________________________________________________________________
@@ -153,10 +153,10 @@ End Material
 
 !__________________________________________________________________________________________________________________________________________________________________________________________
 ! BOUNDARY CONDITIONS
-Read GIS Nodestring == ${nodestring_path}
+Read GIS Nodestring == ${nodestring_path}                                                ! Polyline (Nodestring) boundary location definition
 
 ! Example BC Block
-BC == WL, 2, ..\bc_dbase\<wl_boundary.csv>
+BC == WL, 2, ..\bc_dbase\<wl_boundary.csv>                                               ! Boundary_type, location_ID, data_filepath
     BC Header == time, WL
     ##IF module:ad##
     ##COMMANDS tracer_bc_header##
