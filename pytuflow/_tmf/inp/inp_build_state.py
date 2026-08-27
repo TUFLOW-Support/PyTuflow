@@ -185,6 +185,11 @@ class InputBuildState(BuildState, Input):
         if text and text[-1] != '\n':
             text = f'{text}\n'
         text = scope_writer.write(text)
+        if self._command.command and self._command.comment_index > 0 and (text.find('!') > -1 or text.find('#') > -1):
+            i = text.index('!') if text.find('!') > -1 else text.find('#')
+            if i != self._command.comment_index:
+                text = text[:i].rstrip()
+                text = self._command.re_add_comments(text)
         fo.write(text)
         return text
 
