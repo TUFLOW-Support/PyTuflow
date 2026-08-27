@@ -111,7 +111,7 @@ def safe_substitute(text: str, variables: dict) -> str:
             comment_line = substituted.rstrip() + '  ' + comment_part
         else:
             # Pad to original column
-            comment_line = substituted.ljust(comment_start) + comment_part
+            comment_line = substituted.rstrip().ljust(comment_start) + comment_part
 
         result.append(comment_line + trailing_newline)
 

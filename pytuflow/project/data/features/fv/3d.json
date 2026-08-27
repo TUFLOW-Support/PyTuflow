@@ -50,7 +50,7 @@
             "placement_rule": "fvc_3d_geometry_header",
             "commands": [
                 "Vertical Mesh Type == ${vertical_mesh_type}                                              ! {Sigma} | Z",
-                "Layer Faces == ..\\model\\csv\\2D_Z_Layers_${iter}.csv                                   ! {No default} filepath",
+                "Layer Faces == ..\\model\\csv\\2D_Z_Layers_${iter}.csv                                      ! {No default} filepath",
                 "Surface Sigma Layers == ${nsigma_layers}                                                 ! {1} Number of sigma layers between uppermost Z layer and water surface level",
                 "Min Bottom Layer Thickness == ${min_bottom_thickness}                                    ! {1.e-6} Sets a minimum allowable bottom layer thickness(m)",
                 "Cell 3D Depth == ${cell_3d_depth}                                                        ! {0.1} Disable 3D momentum flux below this threshold (m)"
