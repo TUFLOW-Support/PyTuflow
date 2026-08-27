@@ -6,17 +6,17 @@
 !__________________________________________________________________________________________________________________________________
 ! COORDINATE REFERENCE FRAME
 ! Cartesian (Eastings and Northings) model in metric units
-GIS FORMAT == ${gis_format}											! {MIF} | SHP
+GIS FORMAT == ${gis_format}                                                              ! {MIF} | SHP
 ##IF ${gis_format}:SHP##
-SHP Projection == ..\model\gis\projection.shp						! Projection string used for GIS integration
+SHP Projection == ..\model\gis\projection.shp                                            ! Projection string used for GIS integration
 ##ENDIF##
 ##IF ${gis_format}:MIF##
-MI Projection == ..\model\gis\projection.mif						! Projection string used for GIS integration
+MI Projection == ..\model\gis\projection.mif                                             ! Projection string used for GIS integration
 ##ENDIF##
-Units == ${units}															! {Metric} | US Customary | Imperial | English        
-Spherical == ${spherical}											! {0} Cartesian | 1 Spherical
+Units == ${units}                                                                        ! {Metric} | US Customary | Imperial | English        
+Spherical == ${spherical}                                                                ! {0} Cartesian | 1 Spherical
 ##IF spherical:0##
-Latitude == ${latitude}												! {0.0} Representative latitude for study area
+Latitude == ${latitude}                                                                  ! {0.0} Representative latitude for study area
 ##ENDIF##
 ##IF feature:salinity##
 ##COMMANDS fvc_salinity##
@@ -45,17 +45,17 @@ Spatial Order == ${spatial_order}
 
 !__________________________________________________________________________________________________________________________________________________________________________________________
 ! SIMULATION TIME SETTINGS
-Time Format == ${time_format}								! {HOURS} | ISODATE
-Start Time == ${start_time}														! Simulation start time (dd/mm/yyyy hh:mm:ss)
-End Time == ${end_time}															! Simulation end time (dd/mm/yyyy hh:mm:ss)
+Time Format == ${time_format}                                                            ! {HOURS} | ISODATE
+Start Time == ${start_time}                                                              ! Simulation start time (dd/mm/yyyy hh:mm:ss)
+End Time == ${end_time}                                                                  ! Simulation end time (dd/mm/yyyy hh:mm:ss)
 ##IF feature:events##
 ##COMMANDS events_fvc##
 ##ENDIF##
 
 !__________________________________________________________________________________________________________________________________________________________________________________________
 ! COMPUTATIONAL TIMESTEP
-CFL == ${cfl}																! {1.0} Courant stability criterion
-Timestep Limits == ${timestep_limits}											! {0.0} Minimum model timestep (s), {0.0} Maximum model timestep (s)
+CFL == ${cfl}                                                                            ! {1.0} Courant stability criterion
+Timestep Limits == ${timestep_limits}                                                    ! {0.0} Minimum model timestep (s), {0.0} Maximum model timestep (s)
 
 !__________________________________________________________________________________________________________________________________________________________________________________________
 ! WETTING AND DRYING (optional)
@@ -63,15 +63,15 @@ Timestep Limits == ${timestep_limits}											! {0.0} Minimum model timestep (
 
 !__________________________________________________________________________________________________________________________________________________________________________________________
 ! BOTTOM DRAG
-Bottom Drag Model == ${bottom_drag_model}											! {Manning} | ks
-Global Bottom Roughness == ${glob_bottom_rough}										! {1.0E-6} Manning's 'n' 
+Bottom Drag Model == ${bottom_drag_model}                                                ! {Manning} | ks
+Global Bottom Roughness == ${glob_bottom_rough}                                          ! {1.0E-6} Manning's 'n' 
 
 !__________________________________________________________________________________________________________________________________________________________________________________________
 ! HORIZONTAL MIXING
 ! Turbulence
-Momentum Mixing Model == ${momenutim_mixing_model}									! None | Constant | Smagorinsky | Wu
-Global Horizontal Eddy Viscosity == ${glob_horiz_eddy_visc}									! {0.0} Smagorinksy coefficient
-Global Horizontal Eddy Viscosity Limits == ${glob_horz_eddy_visc_lims}					! {0.0} Minimum eddy viscosity (m^2/s), {99999.} Maximum eddy viscosity (m^2/s)
+Momentum Mixing Model == ${momenutim_mixing_model}                                       ! None | Constant | Smagorinsky | Wu
+Global Horizontal Eddy Viscosity == ${glob_horiz_eddy_visc}                              ! {0.0} Smagorinksy coefficient
+Global Horizontal Eddy Viscosity Limits == ${glob_horz_eddy_visc_lims}                   ! {0.0} Minimum eddy viscosity (m^2/s), {99999.} Maximum eddy viscosity (m^2/s)
 ##IF not:${scalar_mixing_model}:none##
 
 ! Scalars
@@ -147,8 +147,8 @@ Initial Water Level == ${iwl}
 !__________________________________________________________________________________________________________________________________________________________________________________________
 ! MATERIALS
 ! Example Material
-Material == 1															! {0} Material ID
-  Bottom Roughness == 0.018								! Manning's 'n' roughness coefficient
+Material == 1                                                                            ! {0} Material ID
+  Bottom Roughness == 0.018                                                              ! Manning's 'n' roughness coefficient
 End Material
 
 !__________________________________________________________________________________________________________________________________________________________________________________________
@@ -171,6 +171,6 @@ End BC
 
 !__________________________________________________________________________________________________________________________________________________________________________________________
 ! MODEL OUTPUTS
-Output Dir == ..\results												! Result output directory
-Log Dir == log															! Log and diagnostics directory
-Write Check Files == ..\check											! Directory for GIS check files
+Output Dir == ..\results                                                                 ! Result output directory
+Log Dir == log                                                                           ! Log and diagnostics directory
+Write Check Files == ..\check                                                            ! Directory for GIS check files
