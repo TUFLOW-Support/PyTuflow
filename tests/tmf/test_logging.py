@@ -4,7 +4,7 @@ import logging
 
 import pytest
 
-from ...pytuflow._tmf import TCF, TGC, TBC
+from pytuflow._tmf import TCF, TGC, TBC
 
 
 def test_logging_setup(caplog):

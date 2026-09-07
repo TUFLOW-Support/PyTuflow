@@ -2,15 +2,15 @@ from pathlib import Path
 
 import pytest
 
-from ...pytuflow._tmf.inp.altered_input import (AlteredInput, AlteredInputUpdatedValue,
+from pytuflow._tmf.inp.altered_input import (AlteredInput, AlteredInputUpdatedValue,
                                     AlteredInputUpdatedCommand, AlteredInputAddedInput,
                                     AlteredInputRemovedInput, AlteredInputSetScope,
                                     AlteredInputs, get_altered_input_class)
-from ...pytuflow._tmf.inp.get_input_class import get_input_class
-from ...pytuflow._tmf.cf.tcf import TCF
-from ...pytuflow._tmf.utils.commands import Command
-from ...pytuflow._tmf.settings import TCFConfig
-from ...pytuflow._tmf.scope import Scope, ScopeList
+from pytuflow._tmf.inp.get_input_class import get_input_class
+from pytuflow._tmf.cf.tcf import TCF
+from pytuflow._tmf.utils.commands import Command
+from pytuflow._tmf.settings import TCFConfig
+from pytuflow._tmf.scope import Scope, ScopeList
 
 
 def test_updated_value_undo():

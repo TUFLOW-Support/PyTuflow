@@ -4,22 +4,22 @@ import os
 
 import pytest
 
-from ...pytuflow._tmf import set_prefer_gdal
-from ...pytuflow._tmf.inp.db import DatabaseInput
-from ...pytuflow._tmf.inp.mat import MatDatabaseInput
-from ...pytuflow._tmf.inp.file import FileInput
-from ...pytuflow._tmf.inp.gis import GisInput
-from ...pytuflow._tmf.inp.grid import GridInput
-from ...pytuflow._tmf.inp.setting import SettingInput
-from ...pytuflow._tmf.inp.tin import TinInput
-from ...pytuflow._tmf.tfpathlib import TuflowPath
-from ...pytuflow._tmf import const
-from ...pytuflow._tmf.settings import TCFConfig
-from ...pytuflow._tmf.parsers.command import Command
-from ...pytuflow._tmf.parsers.block import DefineBlock
-from ...pytuflow._tmf.inp.get_input_class import get_input_class
-from ...pytuflow._tmf.scope import Scope, ScopeList
-from ...pytuflow._tmf.cf.tcf import TCF
+from pytuflow._tmf import set_prefer_gdal
+from pytuflow._tmf.inp.db import DatabaseInput
+from pytuflow._tmf.inp.mat import MatDatabaseInput
+from pytuflow._tmf.inp.file import FileInput
+from pytuflow._tmf.inp.gis import GisInput
+from pytuflow._tmf.inp.grid import GridInput
+from pytuflow._tmf.inp.setting import SettingInput
+from pytuflow._tmf.inp.tin import TinInput
+from pytuflow._tmf.tfpathlib import TuflowPath
+from pytuflow._tmf import const
+from pytuflow._tmf.settings import TCFConfig
+from pytuflow._tmf.parsers.command import Command
+from pytuflow._tmf.parsers.block import DefineBlock
+from pytuflow._tmf.inp.get_input_class import get_input_class
+from pytuflow._tmf.scope import Scope, ScopeList
+from pytuflow._tmf.cf.tcf import TCF
 
 
 def test_input_init_blank():

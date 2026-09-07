@@ -1,9 +1,9 @@
 import pytest
 
-from ...pytuflow._tmf.context import Context
-from ...pytuflow._tmf.scope import Scope, ScopeList
-from ...pytuflow._tmf.tfpathlib import TuflowPath
-from ...pytuflow._tmf.event import EventDatabase
+from pytuflow._tmf.context import Context
+from pytuflow._tmf.scope import Scope, ScopeList
+from pytuflow._tmf.tfpathlib import TuflowPath
+from pytuflow._tmf.event import EventDatabase
 
 
 def test_context_init_ordered_args():

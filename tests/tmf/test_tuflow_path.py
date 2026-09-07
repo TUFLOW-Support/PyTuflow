@@ -3,7 +3,7 @@ import sys
 
 # so can be run from tmf repo or from pytuflow repo
 # sys.path.append(str(Path(__file__).parents[1]))
-from ...pytuflow._tmf import TuflowPath
+from pytuflow._tmf import TuflowPath
 
 
 def test_tuflow_path():

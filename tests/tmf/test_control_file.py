@@ -4,28 +4,28 @@ from pathlib import Path
 import pytest
 import sys
 
-from ...pytuflow._tmf.cf.tcf import TCF
-from ...pytuflow._tmf.cf.fvc import FVC
-from ...pytuflow._tmf.cf.ecf import ECF
-from ...pytuflow._tmf.cf.tef import TEF
-from ...pytuflow._tmf.cf.adcf import ADCF
-from ...pytuflow._tmf.cf.qcf import QCF
-from ...pytuflow._tmf.cf.trd import TRD
-from ...pytuflow._tmf.cf.trfc import TRFC
-from ...pytuflow._tmf.cf.tgc import TGC
-from ...pytuflow._tmf.cf.tbc import TBC
-from ...pytuflow._tmf.cf.toc import TOC
-from ...pytuflow._tmf.cf.tesf import TESF
-from ...pytuflow._tmf.scope import Scope, ScopeList
-from ...pytuflow._tmf.db.pit_inlet import PitInletDatabase
-from ...pytuflow._tmf.db.rf import RainfallDatabase
-from ...pytuflow._tmf.db.soil import SoilDatabase
-from ...pytuflow._tmf.utils.commands import Command
-from ...pytuflow._tmf.context import Context
-from ...pytuflow._tmf.settings import TCFConfig
-from ...pytuflow._tmf.tfpathlib import TuflowPath
-from ...pytuflow._tmf import const
-from ...pytuflow._tmf.inp.get_input_class import get_input_class
+from pytuflow._tmf.cf.tcf import TCF
+from pytuflow._tmf.cf.fvc import FVC
+from pytuflow._tmf.cf.ecf import ECF
+from pytuflow._tmf.cf.tef import TEF
+from pytuflow._tmf.cf.adcf import ADCF
+from pytuflow._tmf.cf.qcf import QCF
+from pytuflow._tmf.cf.trd import TRD
+from pytuflow._tmf.cf.trfc import TRFC
+from pytuflow._tmf.cf.tgc import TGC
+from pytuflow._tmf.cf.tbc import TBC
+from pytuflow._tmf.cf.toc import TOC
+from pytuflow._tmf.cf.tesf import TESF
+from pytuflow._tmf.scope import Scope, ScopeList
+from pytuflow._tmf.db.pit_inlet import PitInletDatabase
+from pytuflow._tmf.db.rf import RainfallDatabase
+from pytuflow._tmf.db.soil import SoilDatabase
+from pytuflow._tmf.utils.commands import Command
+from pytuflow._tmf.context import Context
+from pytuflow._tmf.settings import TCFConfig
+from pytuflow._tmf.tfpathlib import TuflowPath
+from pytuflow._tmf import const
+from pytuflow._tmf.inp.get_input_class import get_input_class
 from ..test_time_series import custom_log_handler
 
 

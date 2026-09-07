@@ -1,5 +1,5 @@
-from ...pytuflow._tmf.cf.get_control_file_class import get_control_file_class
-from ...pytuflow._tmf.settings import TCFConfig
+from pytuflow._tmf.cf.get_control_file_class import get_control_file_class
+from pytuflow._tmf.settings import TCFConfig
 
 
 def test_xs_db_from_cf():

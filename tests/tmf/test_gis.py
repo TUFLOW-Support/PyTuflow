@@ -3,9 +3,9 @@ import os
 
 import pytest
 
-from ...pytuflow._tmf.gis import tuflow_type_requires_feature_iter, gdal_projection
-from ...pytuflow._tmf.tfpathlib import TuflowPath, set_prefer_gdal
-from ...pytuflow._tmf.tfpathlib.vector_file_open import OGROpen, PyOGRIOOpen
+from pytuflow._tmf.gis import tuflow_type_requires_feature_iter, gdal_projection
+from pytuflow._tmf.tfpathlib import TuflowPath, set_prefer_gdal
+from pytuflow._tmf.tfpathlib.vector_file_open import OGROpen, PyOGRIOOpen
 
 try:
     from shapely.geometry import Point, LineString, Polygon

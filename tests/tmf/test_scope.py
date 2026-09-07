@@ -1,6 +1,6 @@
 import pytest
 
-from ...pytuflow._tmf.scope import *
+from pytuflow._tmf.scope import *
 
 
 def test_scope_arg_error():

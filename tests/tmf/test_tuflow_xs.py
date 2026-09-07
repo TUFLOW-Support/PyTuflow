@@ -2,7 +2,7 @@ import os
 
 import numpy as np
 
-from ...pytuflow._tmf.db.drivers.xstf import TuflowCrossSection
+from pytuflow._tmf.db.drivers.xstf import TuflowCrossSection
 
 
 def test_xs_csv_driver_load():

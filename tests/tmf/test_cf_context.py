@@ -3,9 +3,9 @@ import sys
 
 import pytest
 
-from ...pytuflow._tmf.cf.cf_run_state import ControlFileRunState
-from ...pytuflow._tmf.tfpathlib import TuflowPath
-from ...pytuflow._tmf.cf.tcf import TCF
+from pytuflow._tmf.cf.cf_run_state import ControlFileRunState
+from pytuflow._tmf.tfpathlib import TuflowPath
+from pytuflow._tmf.cf.tcf import TCF
 
 
 def test_cf_context_init_no_context():

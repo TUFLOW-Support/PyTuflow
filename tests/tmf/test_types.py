@@ -1,4 +1,4 @@
-from ...pytuflow._tmf.tfstrings.number import is_a_number_or_var
+from pytuflow._tmf.tfstrings.number import is_a_number_or_var
 
 
 def test_is_a_number_or_var():

@@ -1,4 +1,4 @@
-from ...pytuflow._tmf.gis import GISAttributes
+from pytuflow._tmf.gis import GISAttributes
 
 
 def test_dbf_attr_driver():

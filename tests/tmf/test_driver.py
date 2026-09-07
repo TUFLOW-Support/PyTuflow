@@ -2,10 +2,10 @@ from pathlib import Path
 
 import pytest
 
-from ...pytuflow._tmf.db.drivers.driver import DatabaseDriver
-from ...pytuflow._tmf.db.drivers.csv import CsvDatabaseDriver
-from ...pytuflow._tmf.db.drivers.ts1 import TS1DatabaseDriver
-from ...pytuflow._tmf.db.drivers.get_database_driver_class import get_database_driver_class
+from pytuflow._tmf.db.drivers.driver import DatabaseDriver
+from pytuflow._tmf.db.drivers.csv import CsvDatabaseDriver
+from pytuflow._tmf.db.drivers.ts1 import TS1DatabaseDriver
+from pytuflow._tmf.db.drivers.get_database_driver_class import get_database_driver_class
 
 
 def test_driver_init_csv():
