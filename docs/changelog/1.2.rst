@@ -6,7 +6,7 @@ Changelog for 1.2
 
 Release date: 07 September 2026
 
-- Ignore encoding errors when querying TUFLOW versions.
+- Encoding errors are now ignored when querying TUFLOW versions.
 
 1.2.0
 -----
