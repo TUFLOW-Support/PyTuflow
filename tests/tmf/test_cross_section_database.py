@@ -1,4 +1,4 @@
-from ...pytuflow._tmf.db.xs import CrossSectionDatabase
+from pytuflow._tmf.db.xs import CrossSectionDatabase
 
 
 def test_cross_section_database_tuflow():

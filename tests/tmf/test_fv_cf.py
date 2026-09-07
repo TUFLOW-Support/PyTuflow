@@ -5,12 +5,12 @@ import re
 from datetime import datetime
 import pytest
 
-from ...pytuflow import FVC, FVSed, FVWQ, RunState, GridDefinitionFileBlockInput, Scope
-from ...pytuflow._tmf.parsers.fvcommand import FVCommand, FVWaterQualityCommand
-from ...pytuflow._tmf.settings import TCFConfig, FVCConfig
-from ...pytuflow._tmf.parsers.non_recursive_basic_parser import get_fv_commands
-from ...pytuflow._tmf import const
-from ...pytuflow._tmf.inp.get_input_class import get_input_class
+from pytuflow import FVC, FVSed, FVWQ, RunState, GridDefinitionFileBlockInput, Scope
+from pytuflow._tmf.parsers.fvcommand import FVCommand, FVWaterQualityCommand
+from pytuflow._tmf.settings import TCFConfig, FVCConfig
+from pytuflow._tmf.parsers.non_recursive_basic_parser import get_fv_commands
+from pytuflow._tmf import const
+from pytuflow._tmf.inp.get_input_class import get_input_class
 
 
 def _strip_command(text):

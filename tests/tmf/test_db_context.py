@@ -2,12 +2,12 @@ from pathlib import Path
 
 import pytest
 
-from ...pytuflow._tmf.context import Context
-from ...pytuflow._tmf.db.db_run_state import DatabaseRunState
-from ...pytuflow._tmf.db.bc_dbase import BCDatabase
-from ...pytuflow._tmf.db.db_build_state import DatabaseBuildState
-from ...pytuflow._tmf.settings import TCFConfig
-from ...pytuflow._tmf.event import EventDatabase
+from pytuflow._tmf.context import Context
+from pytuflow._tmf.db.db_run_state import DatabaseRunState
+from pytuflow._tmf.db.bc_dbase import BCDatabase
+from pytuflow._tmf.db.db_build_state import DatabaseBuildState
+from pytuflow._tmf.settings import TCFConfig
+from pytuflow._tmf.event import EventDatabase
 
 
 def test_bc_dbase_ctx_init():

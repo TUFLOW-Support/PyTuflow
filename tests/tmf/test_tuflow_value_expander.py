@@ -1,6 +1,6 @@
 import pytest
 
-from ...pytuflow._tmf.parsers.expand_tuflow_value import TuflowValueExpander
+from pytuflow._tmf.parsers.expand_tuflow_value import TuflowValueExpander
 
 
 def test_tuflow_value_expander_gpkg():

@@ -1,6 +1,6 @@
-from ...pytuflow._tmf.parsers.command import EventCommand, Command
-from ...pytuflow._tmf.parsers.non_recursive_basic_parser import get_commands
-from ...pytuflow._tmf.settings import TCFConfig
+from pytuflow._tmf.parsers.command import EventCommand, Command
+from pytuflow._tmf.parsers.non_recursive_basic_parser import get_commands
+from pytuflow._tmf.settings import TCFConfig
 
 
 def test_import():

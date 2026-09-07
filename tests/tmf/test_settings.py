@@ -1,7 +1,7 @@
 from pathlib import Path
 
-from ...pytuflow._tmf.settings import TCFConfig
-from ...pytuflow._tmf.cf.tef import TEF
+from pytuflow._tmf.settings import TCFConfig
+from pytuflow._tmf.cf.tef import TEF
 
 
 def test_empty_settings():

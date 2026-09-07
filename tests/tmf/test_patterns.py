@@ -1,4 +1,4 @@
-from ...pytuflow._tmf.tfstrings.patterns import identify_expanded_name, extract_names_from_pattern, replace_exact_names
+from pytuflow._tmf.tfstrings.patterns import identify_expanded_name, extract_names_from_pattern, replace_exact_names
 
 
 def test_name_from_pattern_simple():

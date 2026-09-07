@@ -1,8 +1,8 @@
 import io
 
-from ...pytuflow._tmf.scope_writer import ScopeWriter
-from ...pytuflow._tmf.scope import Scope, ScopeList
-from ...pytuflow._tmf.cf.tcf import TCF
+from pytuflow._tmf.scope_writer import ScopeWriter
+from pytuflow._tmf.scope import Scope, ScopeList
+from pytuflow._tmf.cf.tcf import TCF
 
 
 def test_write_else_if():

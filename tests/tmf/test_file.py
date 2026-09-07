@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from ...pytuflow._tmf.tfpathlib import TuflowPath
+from pytuflow._tmf.tfpathlib import TuflowPath
 
 
 def test_is_file_binary():

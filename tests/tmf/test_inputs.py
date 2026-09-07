@@ -1,10 +1,10 @@
 import pytest
 
-from ...pytuflow._tmf.inp.get_input_class import get_input_class
-from ...pytuflow._tmf.inp.inputs import Inputs
-from ...pytuflow._tmf.scope import Scope
-from ...pytuflow._tmf.parsers.command import Command
-from ...pytuflow._tmf.settings import TCFConfig
+from pytuflow._tmf.inp.get_input_class import get_input_class
+from pytuflow._tmf.inp.inputs import Inputs
+from pytuflow._tmf.scope import Scope
+from pytuflow._tmf.parsers.command import Command
+from pytuflow._tmf.settings import TCFConfig
 
 
 def test_inputs_init_blank():

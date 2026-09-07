@@ -1,6 +1,6 @@
-from ...pytuflow._tmf.db.drivers.dat import Dat
-from ...pytuflow._tmf.db.drivers.river_unit_handler import RiverUnit
-from ...pytuflow._tmf.db.drivers.xsdat import FmCrossSection, FmCrossSectionDatabaseDriver
+from pytuflow._tmf.db.drivers.dat import Dat
+from pytuflow._tmf.db.drivers.river_unit_handler import RiverUnit
+from pytuflow._tmf.db.drivers.xsdat import FmCrossSection, FmCrossSectionDatabaseDriver
 
 
 def test_xs_dat_load():

@@ -197,7 +197,7 @@ class TuflowBinaries:
         """Only tested post 2026."""
         import subprocess
         try:
-            output = subprocess.check_output([bin_path, '-version'], text=True)  # nosec B603
+            output = subprocess.check_output([bin_path, '-version'], text=True, errors='ignore')  # nosec B603
             version_text = [x for x in output.splitlines() if x.startswith('TUFLOW Build:')]
             if not version_text:
                 return None
@@ -237,11 +237,11 @@ class TuflowBinaries:
         versions = {}
         search = cmd_search + [f'{cls.NAME}*']
         try:
-            output = subprocess.check_output(search, stderr=subprocess.PIPE, text=True)  # nosec B603
+            output = subprocess.check_output(search, stderr=subprocess.PIPE, text=True, errors='ignore')  # nosec B603
             bin_names = [x.split('\t')[0] for x in output.splitlines()]
             for bin_name in bin_names:
                 query = cmd_query + [bin_name]
-                output = subprocess.check_output(query, stderr=subprocess.PIPE, text=True)  # nosec B603
+                output = subprocess.check_output(query, stderr=subprocess.PIPE, text=True, errors='ignore')  # nosec B603
                 bins = cls._find_bins_from_paths(output.splitlines(), bin_name)
                 for bin in bins:
                     version = cls.tuflow_version_query(bin)

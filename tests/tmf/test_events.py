@@ -1,10 +1,10 @@
 from pathlib import Path
 
 import pytest
-from ...pytuflow._tmf.cf.tef import TEF
-from ...pytuflow._tmf.event import EventDatabase
-from ...pytuflow._tmf.settings import TCFConfig
-from ...pytuflow._tmf.context import Context
+from pytuflow._tmf.cf.tef import TEF
+from pytuflow._tmf.event import EventDatabase
+from pytuflow._tmf.settings import TCFConfig
+from pytuflow._tmf.context import Context
 
 
 def test_empty_event():

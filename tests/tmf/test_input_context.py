@@ -2,16 +2,16 @@ from pathlib import Path
 
 import pytest
 
-from ...pytuflow._tmf.cf.cf_build_state import ControlFileBuildState
-from ...pytuflow._tmf.scope import ScopeList, Scope
-from ...pytuflow._tmf.context import Context
-from ...pytuflow._tmf.inp.inp_run_state import InputRunState
-from ...pytuflow._tmf.inp.gis import GisInputRunState
-from ...pytuflow._tmf.inp.get_input_class import get_input_class
-from ...pytuflow._tmf.settings import TCFConfig
-from ...pytuflow._tmf.parsers.command import Command
-from ...pytuflow._tmf.tfpathlib import TuflowPath
-from ...pytuflow._tmf.abc.run_state import ResolveError
+from pytuflow._tmf.cf.cf_build_state import ControlFileBuildState
+from pytuflow._tmf.scope import ScopeList, Scope
+from pytuflow._tmf.context import Context
+from pytuflow._tmf.inp.inp_run_state import InputRunState
+from pytuflow._tmf.inp.gis import GisInputRunState
+from pytuflow._tmf.inp.get_input_class import get_input_class
+from pytuflow._tmf.settings import TCFConfig
+from pytuflow._tmf.parsers.command import Command
+from pytuflow._tmf.tfpathlib import TuflowPath
+from pytuflow._tmf.abc.run_state import ResolveError
 
 
 def test_input_ctx_init():
