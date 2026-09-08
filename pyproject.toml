@@ -18,6 +18,7 @@ dependencies = [
     "netcdf4>=1.7.2",
     "rasterio>=1.4.3",
     "pygltflib>=1.16.5",
+    "requests>=2.28.0",
 ]
 requires-python = ">= 3.9"
 authors = [
@@ -69,3 +70,4 @@ Changelog = "https://docs.tuflow.com/pytuflow/#changelog"
 
 [project.scripts]
 pytuflow-project = "pytuflow.project.__main__:main"
+pytuflow-arr = "pytuflow.arr.__main__:main"
