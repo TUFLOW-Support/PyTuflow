@@ -95,7 +95,8 @@ being silently ignored, to catch typos early.
     "duration_proportional": false
   },
   "losses": {
-    "method": "datahub",
+    "method": "recommended",
+    "extrapolation_method": "none",
     "mar": null,
     "static_loss": null,
     "tuflow_loss_method": "infiltration",
@@ -103,8 +104,7 @@ being silently ignored, to catch typos early.
     "user_continuing_loss": null,
     "urban_initial_loss": null,
     "urban_continuing_loss": null,
-    "use_global_continuing_loss": false,
-    "probability_neutral": true
+    "use_global_continuing_loss": false
   },
   "arf": {
     "ignore_limits_for_frequent": false,
@@ -204,15 +204,15 @@ Only used for **complete storm** events - see [Complete storm assembly](#complet
 
 | Key | Type | Default | Description |
 | --- | --- | --- | --- |
-| `method` | string | `"datahub"` | How to obtain the burst initial loss: `"datahub"` (use the Data Hub's probability-neutral burst loss table directly, no extrapolation - the default), `"interpolate"` (extrapolate short durations below the Data Hub's minimum via linear interpolation from an assumed 0 mm at 0 min), `"rahman"` (Rahman et al. short-duration loss formula; requires `mar`), `"hill"` (Hill et al. formula), or `"static"` (a fixed loss value; requires `static_loss`). |
-| `mar` | number \| null | `null` | Mean Annual Rainfall (mm), required when `method == "rahman"`. |
-| `static_loss` | number \| null | `null` | Fixed initial loss value (mm), required when `method == "static"`. |
+| `method` | string | `"recommended"` | Which Data Hub burst initial loss table to use: `"recommended"` (the newer `BurstLossesNew` table), or `"probability_neutral"` (the legacy NSW-only probability-neutral `BurstIL` table - raises an error if that layer isn't available for the queried location). |
+| `extrapolation_method` | string | `"none"` | How to extrapolate the burst initial loss for requested durations shorter than the Data Hub's shortest provided duration (independent of, and can be combined with, `method` above): `"none"` (do not extrapolate - raises an error if a shorter duration is requested), `"interpolate"` (linear interpolation of the burst initial loss from an assumed 0 mm at 0 min), `"log_interpolate"` (as `"interpolate"`, but on a `log10(duration)` axis), `"interpolate_preburst"` (linear interpolation of the *implied preburst depth* - `storm initial loss - burst initial loss` - from an assumed 0 mm at 0 min, then converted back to a burst initial loss; matches the legacy "Constant Rate"-style preburst-depth extrapolation), `"log_interpolate_preburst"` (as `"interpolate_preburst"`, but on a `log10(duration)` axis), `"rahman"` (Rahman et al. short-duration loss formula; requires `mar`), `"hill"` (Hill et al. formula; requires `mar`), or `"static"` (a fixed loss value; requires `static_loss`). |
+| `mar` | number \| null | `null` | Mean Annual Rainfall (mm), required when `extrapolation_method` is `"rahman"` or `"hill"`. |
+| `static_loss` | number \| null | `null` | Fixed initial loss value (mm), required when `extrapolation_method == "static"`. |
 | `tuflow_loss_method` | string | `"infiltration"` | `"infiltration"` writes a `soils.tsoilf` `ILCL` entry plus a companion `.trd` read file; `"excess"` writes only the `.trd` read file (rainfall excess method, no soils file). |
 | `user_initial_loss` | number \| null | `null` | Overrides the storm initial loss with a fixed user-supplied value (scales/replaces the Data Hub value depending on context). |
 | `user_continuing_loss` | number \| null | `null` | Reserved: overrides the storm continuing loss. Not yet implemented in the engine. |
 | `urban_initial_loss` / `urban_continuing_loss` | number \| null | `null` | Reserved for urban catchment loss overrides. Not yet implemented in the engine. |
 | `use_global_continuing_loss` | bool | `false` | If `true`, the continuing loss `Set Variable` line is omitted from the per-event `.trd` block (assumes a single global continuing loss value is set elsewhere in the TUFLOW model). |
-| `probability_neutral` | bool | `true` | Reserved: matches legacy's probability-neutral-losses toggle. Not yet implemented as a separate code path (the Data Hub's burst loss tables are probability-neutral by construction). |
 
 ### `arf`
 
@@ -257,11 +257,11 @@ control files:
   (if enabled).
 * `<site>_ARF[_<cc_scenario>].csv` - the Areal Reduction Factor applied for every
   requested duration x AEP.
-* `<site>_burst_initial_loss[_<cc_scenario>].csv` - the probability-neutral burst
-  initial loss (mm) table used (or extrapolated, if `losses.method` is not
-  `"datahub"`), for every duration x AEP, one file per climate change scenario (if
-  enabled) - climate change scenario files have the Data Hub's climate-change initial
-  loss adjustment factor applied.
+* `<site>_burst_initial_loss[_<cc_scenario>].csv` - the burst initial loss (mm) table
+  used (per `losses.method`; extrapolated for short durations if
+  `losses.extrapolation_method` is not `"none"`), for every duration x AEP, one file per
+  climate change scenario (if enabled) - climate change scenario files have the Data
+  Hub's climate-change initial loss adjustment factor applied.
 * `<site>_PointTP_Increments.csv` / `<site>_ArealTP_Increments.csv` - the raw temporal
   pattern increment CSVs downloaded from the Data Hub (before selection/filtering to the
   specific patterns used for each event).
@@ -386,7 +386,7 @@ the engine - they are reserved for future work and are documented above per-key:
 
 - `events.aep` / `events.duration` == `"all"`
 - `temporal_patterns.point_tp_csv` / `areal_tp_csv` / `additional_tp` / `all_point_tp` / `add_areal_tp`
-- `losses.user_continuing_loss`, `losses.urban_initial_loss` / `urban_continuing_loss`, `losses.probability_neutral`
+- `losses.user_continuing_loss`, `losses.urban_initial_loss` / `urban_continuing_loss`
 - The `"pattern"` preburst method's legacy `design_burst` option (per-design-TP preburst shaping)
 
 ## See also

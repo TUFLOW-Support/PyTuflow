@@ -13,9 +13,23 @@ from typing import Any, Optional, Union
 
 from .exceptions import ArrConfigError
 
-#: Loss extrapolation methods ported from the legacy script. ``"datahub"`` means use the
-#: design/CC-adjusted losses returned directly by the ARR Data Hub with no extrapolation.
-LOSS_METHODS = ('datahub', 'interpolate', 'rahman', 'hill', 'static')
+#: Burst initial loss lookup methods. ``"recommended"`` uses the Data Hub's newer burst
+#: initial loss table (``BurstLossesNew``); ``"probability_neutral"`` uses the legacy
+#: (NSW-only) probability-neutral burst initial loss table (``BurstIL``) - an error is
+#: raised if that layer isn't available for the queried location.
+LOSS_METHODS = ('recommended', 'probability_neutral')
+#: Short-duration (below the Data Hub's shortest provided duration) loss extrapolation
+#: methods, ported from the legacy script. ``"none"`` means do not extrapolate (an error
+#: is raised if a requested duration is shorter than the Data Hub's minimum).
+#: ``"interpolate"``/``"log_interpolate"`` extrapolate the burst initial loss directly
+#: (linear, or log-linear on a ``log10(duration)`` axis); ``"interpolate_preburst"``/
+#: ``"log_interpolate_preburst"`` instead extrapolate the implied preburst rainfall
+#: depth (requires the storm initial loss). These are independent of (not mutually
+#: exclusive with) ``losses.method`` above.
+EXTRAPOLATION_METHODS = (
+    'none', 'interpolate', 'log_interpolate', 'interpolate_preburst', 'log_interpolate_preburst',
+    'rahman', 'hill', 'static',
+)
 IFD_SOURCES = ('bom',)  # future: 'limb', 'qra'
 OUTPUT_FORMATS = ('csv', 'ts1')
 OUTPUT_NOTATIONS = ('ari', 'aep')
@@ -148,7 +162,8 @@ class PreburstConfig:
 
 @dataclass
 class LossesConfig:
-    method: str = 'datahub'
+    method: str = 'recommended'
+    extrapolation_method: str = 'none'
     mar: Optional[float] = None
     static_loss: Optional[float] = None
     tuflow_loss_method: str = 'infiltration'
@@ -157,18 +172,23 @@ class LossesConfig:
     urban_initial_loss: Optional[float] = None
     urban_continuing_loss: Optional[float] = None
     use_global_continuing_loss: bool = False
-    probability_neutral: bool = True
 
     def validate(self) -> list[str]:
         errors = []
         if self.method not in LOSS_METHODS:
             errors.append(f"losses.method must be one of {LOSS_METHODS}, got '{self.method}'")
+        if self.extrapolation_method not in EXTRAPOLATION_METHODS:
+            errors.append(
+                f"losses.extrapolation_method must be one of {EXTRAPOLATION_METHODS}, got '{self.extrapolation_method}'"
+            )
         if self.tuflow_loss_method not in ('infiltration', 'excess'):
             errors.append(f"losses.tuflow_loss_method must be one of (infiltration, excess), got '{self.tuflow_loss_method}'")
-        if self.method == 'rahman' and self.mar is None:
-            errors.append("losses.mar is required when losses.method == 'rahman'")
-        if self.method == 'static' and self.static_loss is None:
-            errors.append("losses.static_loss is required when losses.method == 'static'")
+        if self.extrapolation_method == 'rahman' and self.mar is None:
+            errors.append("losses.mar is required when losses.extrapolation_method == 'rahman'")
+        if self.extrapolation_method == 'hill' and self.mar is None:
+            errors.append("losses.mar is required when losses.extrapolation_method == 'hill'")
+        if self.extrapolation_method == 'static' and self.static_loss is None:
+            errors.append("losses.static_loss is required when losses.extrapolation_method == 'static'")
         return errors
 
 

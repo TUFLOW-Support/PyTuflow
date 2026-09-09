@@ -88,11 +88,12 @@ def test_engine_auto_triggers_complete_storm_for_use_pb_tp_placeholder(api_respo
 
 
 def test_engine_short_duration_requires_extrapolation_method(api_response_1990):
-    # duration shorter than the shortest datahub-provided duration, with method='datahub'
-    # (the default) should raise rather than silently produce a bad il.
+    # duration shorter than the shortest datahub-provided duration, with
+    # extrapolation_method='none' (the default) should raise rather than silently
+    # produce a bad il.
     config = make_config(
         events={'aep': ['50%'], 'duration': [15], 'output_notation': 'ari'},
-        losses={'method': 'datahub'},
+        losses={'extrapolation_method': 'none'},
     )
     engine = ArrEngine(config, api_response_1990)
     with pytest.raises(ArrError):
@@ -102,7 +103,7 @@ def test_engine_short_duration_requires_extrapolation_method(api_response_1990):
 def test_engine_short_duration_extrapolation_produces_smaller_loss(api_response_1990):
     config = make_config(
         events={'aep': ['50%'], 'duration': [15, 30], 'output_notation': 'ari'},
-        losses={'method': 'interpolate'},
+        losses={'extrapolation_method': 'interpolate'},
     )
     engine = ArrEngine(config, api_response_1990)
     results = {r.duration: r for r in engine.run()}
@@ -144,3 +145,26 @@ def test_engine_applies_climate_change_loss_factors(api_response_1990, monkeypat
     cc = next(r for r in results if r.cc_scenario == '2090_SSP2')
     assert cc.initial_loss == pytest.approx(base.initial_loss * 1.05)
     assert cc.continuing_loss == pytest.approx(base.continuing_loss * 1.09)
+
+
+def test_engine_probability_neutral_method_uses_burst_il_layer(api_response_1990):
+    config = make_config(
+        events={'aep': ['50%'], 'duration': [1440], 'output_notation': 'ari'},
+        losses={'method': 'probability_neutral'},
+    )
+    engine = ArrEngine(config, api_response_1990)
+    results = engine.run()
+    assert len(results) == 1
+    expected = api_response_1990.layer('BurstIL')['data'][7][0]  # duration 1440, aep '50.0'
+    assert results[0].initial_loss == pytest.approx(expected)
+
+
+def test_engine_probability_neutral_method_raises_when_unavailable(api_response_1990, monkeypatch):
+    monkeypatch.setitem(api_response_1990.layers, 'BurstIL', None)
+    config = make_config(
+        events={'aep': ['50%'], 'duration': [1440], 'output_notation': 'ari'},
+        losses={'method': 'probability_neutral'},
+    )
+    engine = ArrEngine(config, api_response_1990)
+    with pytest.raises(ArrError, match='probability_neutral'):
+        engine.run()

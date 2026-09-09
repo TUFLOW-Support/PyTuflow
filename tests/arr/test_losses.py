@@ -15,6 +15,9 @@ from pytuflow.arr.losses import (
     extrapolate_short_duration_losses,
     hill_loss,
     linear_interp_loss,
+    linear_interp_pb_depth,
+    log_interp_loss,
+    log_interp_pb_depth,
     rahman_loss,
     static_loss,
 )
@@ -45,6 +48,26 @@ def test_static_loss_is_constant():
 def test_linear_interp_loss_scales_from_reference():
     result = linear_interp_loss([15, 30], ref_duration=60, ref_value=20.0)
     np.testing.assert_allclose(result, [5.0, 10.0])
+
+
+def test_log_interp_loss_matches_log_axis_interpolation():
+    ref_duration, ref_value = 60.0, 20.0
+    xp = [0.0, np.log10(ref_duration)]
+    fp = [0.0, ref_value]
+    durations = [15, 30]
+    expected = np.interp(np.log10(durations), xp, fp)
+    result = log_interp_loss(durations, ref_duration, ref_value)
+    np.testing.assert_allclose(result, expected)
+
+
+def test_linear_interp_pb_depth_matches_linear_interp_loss():
+    result = linear_interp_pb_depth([15, 30], ref_duration=60, ref_value=20.0)
+    np.testing.assert_allclose(result, linear_interp_loss([15, 30], 60, 20.0))
+
+
+def test_log_interp_pb_depth_matches_log_interp_loss():
+    result = log_interp_pb_depth([15, 30], ref_duration=60, ref_value=20.0)
+    np.testing.assert_allclose(result, log_interp_loss([15, 30], 60, 20.0))
 
 
 @pytest.fixture
@@ -95,3 +118,46 @@ def test_extrapolate_interpolate_handles_non_numeric_reference_cell():
     table = pd.DataFrame({'1.0': ['Use PB TP', 20.0]}, index=[30.0, 60.0])
     result = extrapolate_short_duration_losses(table, [15], method='interpolate')
     assert pd.isna(result.loc[15.0, '1.0'])
+
+
+def test_extrapolate_log_interpolate(known_losses):
+    result = extrapolate_short_duration_losses(known_losses, [15], method='log_interpolate')
+    expected = log_interp_loss([15], 30.0, 10.0)[0]
+    assert result.loc[15.0, '1.0'] == pytest.approx(expected)
+
+
+def test_extrapolate_interpolate_preburst_requires_ils(known_losses):
+    with pytest.raises(ArrError, match='ils'):
+        extrapolate_short_duration_losses(known_losses, [15], method='interpolate_preburst')
+
+
+def test_extrapolate_log_interpolate_preburst_requires_ils(known_losses):
+    with pytest.raises(ArrError, match='ils'):
+        extrapolate_short_duration_losses(known_losses, [15], method='log_interpolate_preburst')
+
+
+def test_extrapolate_interpolate_preburst(known_losses):
+    # storm ils = 50mm; known burst IL at duration=30 (threshold) is 10.0 for AEP '1.0'
+    # => implied preburst depth at 30min = 50 - 10 = 40mm; extrapolated linearly to 15min
+    # => pb_depth(15) = 40 * (15/30) = 20mm; burst_il(15) = 50 - 20 = 30mm
+    result = extrapolate_short_duration_losses(known_losses, [15], method='interpolate_preburst', ils=50.0)
+    assert result.loc[15.0, '1.0'] == pytest.approx(30.0)
+
+
+def test_extrapolate_log_interpolate_preburst(known_losses):
+    ref_pb_depth = 50.0 - 10.0
+    expected_pb_depth = log_interp_pb_depth([15], 30.0, ref_pb_depth)[0]
+    expected = 50.0 - expected_pb_depth
+    result = extrapolate_short_duration_losses(known_losses, [15], method='log_interpolate_preburst', ils=50.0)
+    assert result.loc[15.0, '1.0'] == pytest.approx(expected)
+
+
+def test_extrapolate_preburst_handles_non_numeric_reference_cell():
+    table = pd.DataFrame({'1.0': ['Use PB TP', 20.0]}, index=[30.0, 60.0])
+    result = extrapolate_short_duration_losses(table, [15], method='interpolate_preburst', ils=50.0)
+    assert pd.isna(result.loc[15.0, '1.0'])
+
+
+def test_extrapolate_unknown_method_raises(known_losses):
+    with pytest.raises(ArrError, match='Unknown loss extrapolation method'):
+        extrapolate_short_duration_losses(known_losses, [15], method='bogus')

@@ -6,9 +6,12 @@ For each requested AEP x duration combination, this module:
    IFD table and interpolates it onto the requested durations/AEPs.
 2. Applies the Areal Reduction Factor (see :mod:`pytuflow.arr.arf`) to get an areal
    design burst depth.
-3. Selects the burst initial loss directly from the Data Hub's probability-neutral
-   burst loss table (``BurstIL``/``BurstLossesNew``), or, for ``losses.method`` other
-   than ``"datahub"``, extrapolates/overrides it (see :mod:`pytuflow.arr.losses`).
+3. Selects the burst initial loss from the Data Hub's burst loss table
+   (``losses.method == "recommended"`` uses ``BurstLossesNew``; ``"probability_neutral"``
+   uses the legacy NSW-only ``BurstIL`` table, raising an error if unavailable), then, if
+   ``losses.extrapolation_method`` is not ``"none"``, extrapolates any requested
+   durations shorter than the Data Hub's shortest provided duration (see
+   :mod:`pytuflow.arr.losses`) - the two settings are independent of each other.
 4. Selects the appropriate set of temporal patterns (see
    :mod:`pytuflow.arr.temporal_patterns`) and multiplies each pattern's percentage
    increments by the areal design burst depth to produce a rainfall hyetograph.
@@ -143,13 +146,28 @@ class ArrEngine:
         return _table_to_frame(table)
 
     def _burst_loss_frame(self) -> pd.DataFrame:
-        """Returns the probability-neutral burst initial loss table (duration x AEP%),
-        preferring ``BurstLossesNew`` (numeric AEP columns) and falling back to
-        ``BurstIL`` (string AEP columns) if that is what the Data Hub returned."""
-        table = self.response.layer('BurstLossesNew') or self.response.layer('BurstIL')
-        if table is None:
-            raise ArrError("ARR Data Hub response is missing burst initial loss data "
-                            "(expected 'BurstLossesNew' or 'BurstIL' layer).")
+        """Returns the burst initial loss table (duration x AEP%), according to
+        ``losses.method``:
+
+        * ``"recommended"`` - the Data Hub's newer burst initial loss table
+          (``BurstLossesNew``).
+        * ``"probability_neutral"`` - the legacy (NSW-only) probability-neutral burst
+          initial loss table (``BurstIL``). Raises :class:`ArrError` if the Data Hub
+          hasn't provided this layer for the queried location (i.e. it's not in NSW).
+        """
+        method = self.config.losses.method
+        if method == 'probability_neutral':
+            table = self.response.layer('BurstIL')
+            if table is None:
+                raise ArrError(
+                    "losses.method == 'probability_neutral' was requested, but the ARR Data Hub response "
+                    "does not contain a 'BurstIL' layer for this location (probability-neutral burst "
+                    "initial losses are only available in NSW)."
+                )
+        else:
+            table = self.response.layer('BurstLossesNew')
+            if table is None:
+                raise ArrError("ARR Data Hub response is missing burst initial loss data ('BurstLossesNew' layer).")
         return _table_to_frame(table)
 
     def _storm_continuing_loss(self, aep_name: str) -> float:
@@ -203,10 +221,14 @@ class ArrEngine:
         aep_pct = aep_name_to_pct(aep_name)
         burst_losses = self._burst_loss_frame()
         losses_cfg = self.config.losses
-        if losses_cfg.method != 'datahub':
+        if losses_cfg.extrapolation_method != 'none':
+            ils = losses_cfg.user_initial_loss
+            if ils is None and losses_cfg.extrapolation_method in ('rahman', 'hill', 'interpolate_preburst',
+                                                                     'log_interpolate_preburst'):
+                ils = self._storm_initial_loss(aep_name)
             extended = extrapolate_short_duration_losses(
-                burst_losses, durations, method=losses_cfg.method,
-                ils=losses_cfg.user_initial_loss, mar=losses_cfg.mar,
+                burst_losses, durations, method=losses_cfg.extrapolation_method,
+                ils=ils, mar=losses_cfg.mar,
                 static_loss_value=losses_cfg.static_loss,
             )
             burst_losses = extended
@@ -215,7 +237,7 @@ class ArrEngine:
         if duration not in burst_losses.index:
             raise ArrError(
                 f"No burst initial loss available for duration {duration} min - "
-                f"set losses.method to extrapolate below {burst_losses.index.min()} min."
+                f"set losses.extrapolation_method to extrapolate below {burst_losses.index.min()} min."
             )
         value = burst_losses.loc[duration, col]
         try:

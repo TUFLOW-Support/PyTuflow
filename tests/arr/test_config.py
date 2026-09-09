@@ -29,7 +29,7 @@ def test_valid_config_parses():
 
 def test_defaults_applied():
     config = ArrConfig.from_dict(VALID_CONFIG)
-    assert config.losses.method == 'datahub'
+    assert config.losses.method == 'recommended'
     assert config.arf.min_arf == 0.2
     assert config.complete_storm is False
     assert config.climate_change.enabled is False
@@ -72,8 +72,22 @@ def test_bad_ifd_year_raises():
 
 def test_rahman_requires_mar():
     bad = json.loads(json.dumps(VALID_CONFIG))
-    bad['losses'] = {'method': 'rahman'}
+    bad['losses'] = {'extrapolation_method': 'rahman'}
     with pytest.raises(ArrConfigError, match='losses.mar'):
+        ArrConfig.from_dict(bad)
+
+
+def test_probability_neutral_method_accepted():
+    data = json.loads(json.dumps(VALID_CONFIG))
+    data['losses'] = {'method': 'probability_neutral'}
+    config = ArrConfig.from_dict(data)
+    assert config.losses.method == 'probability_neutral'
+
+
+def test_bad_losses_method_raises():
+    bad = json.loads(json.dumps(VALID_CONFIG))
+    bad['losses'] = {'method': 'datahub'}
+    with pytest.raises(ArrConfigError, match='losses.method'):
         ArrConfig.from_dict(bad)
 
 

@@ -56,7 +56,7 @@ def test_write_outputs_creates_expected_files(tmp_path, api_response_1990):
     config = make_config(
         tmp_path,
         events={'aep': ['50%'], 'duration': [60, 1440], 'output_notation': 'ari'},
-        losses={'method': 'interpolate'},
+        losses={'extrapolation_method': 'interpolate'},
     )
     engine = ArrEngine(config, api_response_1990)
     results = engine.run()
@@ -74,7 +74,7 @@ def test_tef_contains_expected_event_definitions(tmp_path, api_response_1990):
     config = make_config(
         tmp_path,
         events={'aep': ['50%'], 'duration': [1440], 'output_notation': 'ari'},
-        losses={'method': 'interpolate'},
+        losses={'extrapolation_method': 'interpolate'},
     )
     engine = ArrEngine(config, api_response_1990)
     results = engine.run()
@@ -92,7 +92,7 @@ def test_rf_inflow_csv_structure(tmp_path, api_response_1990):
     config = make_config(
         tmp_path,
         events={'aep': ['50%'], 'duration': [1440], 'output_notation': 'ari'},
-        losses={'method': 'interpolate'},
+        losses={'extrapolation_method': 'interpolate'},
     )
     engine = ArrEngine(config, api_response_1990)
     results = engine.run()
@@ -137,7 +137,7 @@ def test_trd_sets_expected_variables(tmp_path, api_response_1990):
     config = make_config(
         tmp_path,
         events={'aep': ['50%'], 'duration': [1440], 'output_notation': 'ari'},
-        losses={'method': 'interpolate'},
+        losses={'extrapolation_method': 'interpolate'},
     )
     engine = ArrEngine(config, api_response_1990)
     results = engine.run()
@@ -153,11 +153,11 @@ def test_trd_sets_expected_variables(tmp_path, api_response_1990):
 def test_write_outputs_append_mode_multi_site(tmp_path, api_response_1990):
     config_a = make_config(
         tmp_path, events={'aep': ['50%'], 'duration': [1440], 'output_notation': 'ari'},
-        losses={'method': 'interpolate'})
+        losses={'extrapolation_method': 'interpolate'})
     config_a.site.name = 'A'
     config_b = make_config(
         tmp_path, events={'aep': ['50%'], 'duration': [1440], 'output_notation': 'ari'},
-        losses={'method': 'interpolate'})
+        losses={'extrapolation_method': 'interpolate'})
     config_b.site.name = 'B'
 
     write_outputs(config_a, ArrEngine(config_a, api_response_1990).run(), append=False)
@@ -177,7 +177,7 @@ def test_rf_inflow_merges_climate_change_scenarios_into_one_file(tmp_path):
         tmp_path,
         events={'aep': ['50%'], 'duration': [1440], 'output_notation': 'ari'},
         climate_change={'enabled': True, 'scenarios': [{'baseline_year': 2090, 'ssp': 'SSP2'}]},
-        losses={'method': 'interpolate'},
+        losses={'extrapolation_method': 'interpolate'},
     )
 
     def make_patterns(depth_scale=1.0):

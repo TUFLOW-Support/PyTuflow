@@ -7,13 +7,25 @@ whatever the Data Hub actually provides, one of the methods below can be used to
 extrapolate/estimate an initial loss value, exactly as the legacy ``ARR_to_TUFLOW``
 script did (ported from ``ARR_TUFLOW_func_lib.py``).
 
+Two families of extrapolation are available:
+
+* ``"interpolate"`` / ``"log_interpolate"`` extrapolate the burst initial loss value
+  itself directly (assuming 0 mm loss at 0 min duration), using either a straight
+  duration axis or a ``log10(duration)`` axis respectively.
+* ``"interpolate_preburst"`` / ``"log_interpolate_preburst"`` instead extrapolate the
+  implied *preburst depth* (``storm initial loss - burst initial loss``) down to an
+  assumed 0 mm preburst depth at 0 min duration, then convert back to a burst initial
+  loss - matching the legacy script's ``interpolate_linear_preburst`` /
+  ``interpolate_log_preburst`` methods, which extrapolate the preburst rainfall depth
+  rather than the loss value. These require the storm initial loss (``ils``).
+
 Continuing loss is not duration-dependent and is not extrapolated by these methods - the
 Data Hub's storm continuing loss value is used as-is for all durations.
 
-These methods are only relevant when ``losses.method`` in the config is set to something
-other than ``"datahub"`` - i.e. the user has explicitly opted to extrapolate/override
-rather than just using the Data Hub's own (including climate-change-adjusted) design
-losses directly.
+These methods are only relevant when ``losses.extrapolation_method`` in the config is
+set to something other than ``"none"`` - i.e. the user has explicitly opted to
+extrapolate a requested duration shorter than the Data Hub's shortest provided duration,
+independently of which burst loss table ``losses.method`` selects.
 """
 
 from __future__ import annotations
@@ -108,6 +120,49 @@ def linear_interp_loss(duration: Iterable[float], ref_duration: float, ref_value
     return ref_value * (d / float(ref_duration))
 
 
+def log_interp_loss(duration: Iterable[float], ref_duration: float, ref_value: float) -> np.ndarray:
+    """Log-linear interpolation of initial loss between an assumed 0 mm loss at 0 min
+    duration, and a known loss value at ``ref_duration``, matching the legacy
+    ``interpolate_log`` method (interpolates on a ``log10(duration)`` axis, rather than
+    ``linear_interp_loss``'s straight-line duration axis).
+
+    Parameters
+    ----------
+    duration : Iterable[float]
+        Durations (minutes) to compute the initial loss for. Must be <= ``ref_duration``.
+    ref_duration : float
+        The (shortest known) duration (minutes) with a known initial loss value.
+    ref_value : float
+        The known initial loss (mm) at ``ref_duration``.
+    """
+    d = np.asarray(list(duration), dtype=float)
+    xp = [0.0, np.log10(float(ref_duration))]
+    fp = [0.0, float(ref_value)]
+    return np.interp(np.log10(d), xp, fp)
+
+
+def linear_interp_pb_depth(duration: Iterable[float], ref_duration: float, ref_value: float) -> np.ndarray:
+    """Linear interpolation of *preburst depth* (not initial loss) between an assumed
+    0 mm depth at 0 min duration, and a known preburst depth at ``ref_duration`` -
+    matches the legacy ``interpolate_linear_preburst`` method (``linear_interp_pb_dep``
+    in ``ARR_TUFLOW_func_lib.py``). Used by the ``"interpolate_preburst"``
+    extrapolation method: the extrapolated preburst *depth* (rather than the burst
+    initial loss directly) is subtracted from the storm initial loss to derive the
+    burst initial loss for the short duration.
+    """
+    return linear_interp_loss(duration, ref_duration, ref_value)
+
+
+def log_interp_pb_depth(duration: Iterable[float], ref_duration: float, ref_value: float) -> np.ndarray:
+    """Log-linear interpolation of *preburst depth* between an assumed 0 mm depth at
+    0 min duration, and a known preburst depth at ``ref_duration`` - matches the
+    legacy ``interpolate_log_preburst`` method (``log_interp_pb_dep`` in
+    ``ARR_TUFLOW_func_lib.py``). Used by the ``"log_interpolate_preburst"``
+    extrapolation method.
+    """
+    return log_interp_loss(duration, ref_duration, ref_value)
+
+
 def extrapolate_short_duration_losses(
         known_losses: pd.DataFrame,
         target_durations: Iterable[float],
@@ -135,9 +190,11 @@ def extrapolate_short_duration_losses(
         shorter than ``known_losses.index.min()`` trigger extrapolation; other
         durations are returned unchanged (nearest known value is not invented here).
     method : str
-        One of ``'interpolate'``, ``'rahman'``, ``'hill'``, ``'static'``.
+        One of ``'interpolate'``, ``'log_interpolate'``, ``'interpolate_preburst'``,
+        ``'log_interpolate_preburst'``, ``'rahman'``, ``'hill'``, ``'static'``.
     ils : float, optional
-        Representative storm initial loss (mm). Required for ``'rahman'``/``'hill'``.
+        Representative storm initial loss (mm). Required for ``'rahman'``/``'hill'``/
+        ``'interpolate_preburst'``/``'log_interpolate_preburst'``.
     mar : float, optional
         Mean annual rainfall (mm). Required for ``'hill'``.
     static_loss_value : float, optional
@@ -177,7 +234,8 @@ def extrapolate_short_duration_losses(
         values = static_loss(short_durations, static_loss_value)
         for col in known_losses.columns:
             new_rows[col] = values
-    elif method == 'interpolate':
+    elif method in ('interpolate', 'log_interpolate'):
+        interp_fn = linear_interp_loss if method == 'interpolate' else log_interp_loss
         ref_row = known_losses.loc[threshold]
         for col in known_losses.columns:
             ref_value = ref_row[col]
@@ -188,7 +246,28 @@ def extrapolate_short_duration_losses(
                 )
                 new_rows[col] = np.nan
                 continue
-            new_rows[col] = linear_interp_loss(short_durations, threshold, float(ref_value))
+            new_rows[col] = interp_fn(short_durations, threshold, float(ref_value))
+    elif method in ('interpolate_preburst', 'log_interpolate_preburst'):
+        if ils is None:
+            raise ArrError(f"'ils' (storm initial loss) is required when using the '{method}' loss "
+                            f"extrapolation method.")
+        interp_fn = linear_interp_pb_depth if method == 'interpolate_preburst' else log_interp_pb_depth
+        ref_row = known_losses.loc[threshold]
+        for col in known_losses.columns:
+            ref_value = ref_row[col]
+            if not isinstance(ref_value, (int, float)) or pd.isna(ref_value):
+                logger.warning(
+                    "Cannot interpolate short duration preburst depths for AEP column '%s' - reference value "
+                    "at duration %s is non-numeric ('%s'). Leaving as NaN.", col, threshold, ref_value
+                )
+                new_rows[col] = np.nan
+                continue
+            # burst_loss = storm_ils - preburst_depth, so the known preburst depth at
+            # `threshold` is recovered by inverting that relationship, extrapolated down
+            # to 0 mm at 0 min duration, then converted back to a burst initial loss.
+            ref_pb_depth = float(ils) - float(ref_value)
+            extrapolated_pb_depth = interp_fn(short_durations, threshold, ref_pb_depth)
+            new_rows[col] = float(ils) - extrapolated_pb_depth
     else:
         raise ArrError(f"Unknown loss extrapolation method: '{method}'")
 
