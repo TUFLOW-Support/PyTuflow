@@ -177,6 +177,8 @@ def write_rf_inflow(folder: Path, config: ArrConfig, result) -> Path:
             t += timestep / time_divisor
             row = [t] + [p.increments[i] * result.depth_areal / 100.0 for p in patterns]
             writer.writerow(row)
+        t += timestep / time_divisor
+        writer.writerow([t] + [0] * len(patterns))
     return fpath
 
 
