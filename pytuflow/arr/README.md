@@ -194,7 +194,7 @@ Only used for **complete storm** events - see [Complete storm assembly](#complet
 
 | Key | Type | Default | Description |
 | --- | --- | --- | --- |
-| `percentile` | string | `"50%"` | Preburst depth/ratio percentile to use for the `"constant"`/`"pattern"` methods: one of `"10%"`, `"25%"`, `"50%"`, `"75%"`, `"90%"`. Not used by the `"recommended"` method (which supplies its own preburst depth). |
+| `percentile` | string | `"50%"` | Preburst depth/ratio percentile to use for the `"constant"`/`"pattern"` methods: one of `"10%"`, `"25%"`, `"50%"`, `"75%"`, `"90%"`, or `"recommended"` (the Data Hub's preferred/recommended preburst ratio, from the `RecPreburst` layer - not necessarily the same value as the exact `"50%"` percentile). Not used by the `pattern_method == "recommended"` method (which supplies its own preburst depth from `RecPreburstTP`). |
 | `pattern_method` | string \| null | `"recommended"` | Preburst pattern method: `"recommended"`, `"constant"`, or `"pattern"` (see below). |
 | `pattern_duration` | number \| null | `null` | Required for `"constant"`/`"pattern"` methods. Preburst duration in hours (or a proportion of the storm duration, if `duration_proportional` is `true`). |
 | `pattern_tp` | string \| null | `null` | Required for the `"pattern"` method: which existing point temporal pattern to shape the preburst rainfall with, e.g. `"TP03"`. |
@@ -283,12 +283,12 @@ Three preburst pattern methods are available (`preburst.pattern_method`):
   way. Only available in NSW (where the Data Hub provides this layer).
 - **`"constant"`** - a single preburst block of a fixed duration (`preburst.pattern_duration`)
   at a constant rate, matching the legacy "Constant Rate" method. The preburst depth is
-  derived from the `Preburst<percentile>` ratio table multiplied by the point design
-  burst depth.
+  derived from the `Preburst<percentile>` ratio table (or the `RecPreburst` layer, if
+  `percentile == "recommended"`) multiplied by the point design burst depth.
 - **`"pattern"`** - shapes the preburst rainfall using a specific existing point temporal
   pattern (`preburst.pattern_tp`, e.g. `"TP03"`) at the closest available duration to the
   computed preburst duration. As with `"constant"`, the preburst depth comes from the
-  `Preburst<percentile>` ratio table.
+  `Preburst<percentile>` ratio table (or `RecPreburst`).
 
 **Automatic per-cell triggering:** independently of `complete_storm`, whenever the
 requested AEP/duration's burst initial loss is the Data Hub's `"Use PB TP"` placeholder

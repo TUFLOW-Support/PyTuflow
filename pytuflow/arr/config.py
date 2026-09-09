@@ -135,8 +135,10 @@ class PreburstConfig:
 
     def validate(self) -> list[str]:
         errors = []
-        if self.percentile not in ('10%', '25%', '50%', '75%', '90%'):
-            errors.append(f"preburst.percentile must be one of (10%, 25%, 50%, 75%, 90%), got '{self.percentile}'")
+        if self.percentile not in ('10%', '25%', '50%', '75%', '90%', 'recommended'):
+            errors.append(
+                f"preburst.percentile must be one of (10%, 25%, 50%, 75%, 90%, recommended), got '{self.percentile}'"
+            )
         if self.pattern_method is not None and self.pattern_method.lower() not in ('recommended', 'constant', 'pattern'):
             errors.append(
                 f"preburst.pattern_method must be one of (recommended, constant, pattern), got '{self.pattern_method}'"

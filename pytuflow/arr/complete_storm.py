@@ -27,7 +27,10 @@ config):
 For the ``"constant"``/``"pattern"`` methods, the preburst depth is derived from the
 appropriate percentile preburst ratio table (``Preburst10``/``25``/``50``/``75``/``90``,
 selected by ``preburst.percentile``) multiplied by the point (pre-ARF) design burst
-depth - matching the legacy script's use of ``PreBurst.get_depths()``.
+depth - matching the legacy script's use of ``PreBurst.get_depths()``. If
+``preburst.percentile == "recommended"``, the Data Hub's ``RecPreburst`` layer (its
+preferred/recommended preburst ratio) is used instead - this is not necessarily the
+same value as the exact 50th percentile (``"50%"``).
 """
 
 from __future__ import annotations
@@ -94,10 +97,12 @@ def recommended_preburst(response: ArrApiResponse, duration: float, aep_pct: flo
 
 def _preburst_ratio(response: ArrApiResponse, percentile: str, duration: float, aep_pct: float) -> float:
     """Interpolates the preburst ratio (fraction of point burst depth) from the
-    ``Preburst<percentile>`` layer for the given duration/AEP, using the same log-log
-    interpolation as the IFD depth tables."""
+    ``Preburst<percentile>`` layer (or, if ``percentile == 'recommended'``, the
+    ``RecPreburst`` layer - the Data Hub's preferred/recommended preburst ratio, which
+    is not necessarily the same as the exact 50th percentile) for the given
+    duration/AEP, using the same log-log interpolation as the IFD depth tables."""
     from .engine import _interp_table, _table_to_frame  # local import - avoids a cycle
-    key = f'Preburst{percentile.strip("%")}'
+    key = 'RecPreburst' if percentile == 'recommended' else f'Preburst{percentile.strip("%")}'
     table = response.layer(key, required=True)
     df = _table_to_frame(table)
     return float(_interp_table(df, [duration], [aep_pct]).iloc[0, 0])

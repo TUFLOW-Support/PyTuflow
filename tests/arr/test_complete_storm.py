@@ -135,3 +135,16 @@ def test_build_preburst_unrecognised_method(api_response_1990):
             events={'aep': ['1%'], 'duration': [1440], 'output_notation': 'ari'},
             preburst={'pattern_method': 'bogus'},
         )
+
+
+def test_constant_preburst_recommended_percentile_uses_rec_preburst_layer(api_response_1990):
+    from pytuflow.arr.complete_storm import _preburst_ratio
+    ratio_recommended = _preburst_ratio(api_response_1990, 'recommended', 1440, 1.0)
+    assert ratio_recommended > 0
+
+    config = make_config(
+        events={'aep': ['1%'], 'duration': [1440], 'output_notation': 'ari'},
+        preburst={'percentile': 'recommended', 'pattern_method': 'constant', 'pattern_duration': 2.0},
+    )
+    pattern = constant_preburst(api_response_1990, config, 1440, '1%', 1.0, 74.5)
+    assert pattern.depth == pytest.approx(ratio_recommended * 74.5)
