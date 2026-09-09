@@ -28,7 +28,7 @@ LOSS_METHODS = ('recommended', 'probability_neutral')
 #: exclusive with) ``losses.method`` above.
 EXTRAPOLATION_METHODS = (
     'none', 'interpolate', 'log_interpolate', 'interpolate_preburst', 'log_interpolate_preburst',
-    'rahman', 'hill', 'static',
+    'rahman', 'hill', 'static', 'constant',
 )
 IFD_SOURCES = ('bom',)  # future: 'limb', 'qra'
 OUTPUT_FORMATS = ('csv', 'ts1')

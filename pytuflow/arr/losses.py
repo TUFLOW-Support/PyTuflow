@@ -113,6 +113,24 @@ def static_loss(duration: Iterable[float], loss: float) -> np.ndarray:
     return np.full(d.shape, float(loss))
 
 
+def constant_reference_loss(duration: Iterable[float], ref_value: float) -> np.ndarray:
+    """Holds the known initial loss at the shortest known duration constant for all
+    shorter durations - matches the legacy script's option to continue using the 60 min
+    loss for smaller durations (here, the Data Hub's shortest known duration, typically
+    30 min, is used instead of a hardcoded 60 min).
+
+    Parameters
+    ----------
+    duration : Iterable[float]
+        Durations (minutes) to compute the initial loss for.
+    ref_value : float
+        The known initial loss (mm) at the shortest known duration, held constant.
+    """
+    d = np.asarray(list(duration), dtype=float)
+    return np.full(d.shape, float(ref_value))
+
+
+
 def linear_interp_loss(duration: Iterable[float], ref_duration: float, ref_value: float) -> np.ndarray:
     """Linear interpolation of initial loss between an assumed 0 mm loss at 0 min
     duration, and a known loss value at ``ref_duration``.
@@ -201,7 +219,8 @@ def extrapolate_short_duration_losses(
         durations are returned unchanged (nearest known value is not invented here).
     method : str
         One of ``'interpolate'``, ``'log_interpolate'``, ``'interpolate_preburst'``,
-        ``'log_interpolate_preburst'``, ``'rahman'``, ``'hill'``, ``'static'``.
+        ``'log_interpolate_preburst'``, ``'rahman'``, ``'hill'``, ``'static'``,
+        ``'constant'``.
     ils : float, optional
         Representative storm initial loss (mm). Required for ``'rahman'``/``'hill'``/
         ``'interpolate_preburst'``/``'log_interpolate_preburst'``.
@@ -244,6 +263,18 @@ def extrapolate_short_duration_losses(
         values = static_loss(short_durations, static_loss_value)
         for col in known_losses.columns:
             new_rows[col] = values
+    elif method == 'constant':
+        ref_row = known_losses.loc[threshold]
+        for col in known_losses.columns:
+            ref_value = ref_row[col]
+            if not isinstance(ref_value, (int, float)) or pd.isna(ref_value):
+                logger.warning(
+                    "Cannot hold short duration losses constant for AEP column '%s' - reference value at "
+                    "duration %s is non-numeric ('%s'). Leaving as NaN.", col, threshold, ref_value
+                )
+                new_rows[col] = np.nan
+                continue
+            new_rows[col] = constant_reference_loss(short_durations, float(ref_value))
     elif method in ('interpolate', 'log_interpolate'):
         interp_fn = linear_interp_loss if method == 'interpolate' else log_interp_loss
         ref_row = known_losses.loc[threshold]

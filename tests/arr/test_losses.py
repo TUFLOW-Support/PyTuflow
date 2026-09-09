@@ -88,6 +88,21 @@ def test_extrapolate_static(known_losses):
     assert result.loc[30.0, '1.0'] == 10.0
 
 
+def test_extrapolate_constant(known_losses):
+    result = extrapolate_short_duration_losses(known_losses, [15, 30, 60], method='constant')
+    assert result.loc[15.0, '1.0'] == pytest.approx(10.0)
+    assert result.loc[15.0, '50.0'] == pytest.approx(30.0)
+    # existing rows untouched
+    assert result.loc[30.0, '1.0'] == 10.0
+    assert result.loc[60.0, '1.0'] == 20.0
+
+
+def test_extrapolate_constant_handles_non_numeric_reference_cell():
+    table = pd.DataFrame({'1.0': ['Use PB TP', 20.0]}, index=[30.0, 60.0])
+    result = extrapolate_short_duration_losses(table, [15], method='constant')
+    assert pd.isna(result.loc[15.0, '1.0'])
+
+
 def test_extrapolate_rahman(known_losses):
     result = extrapolate_short_duration_losses(known_losses, [15], method='rahman', ils=20.0)
     expected = rahman_loss([15], 20.0)[0]
