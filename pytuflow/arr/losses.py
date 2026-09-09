@@ -19,13 +19,23 @@ Two families of extrapolation are available:
   ``interpolate_log_preburst`` methods, which extrapolate the preburst rainfall depth
   rather than the loss value. These require the storm initial loss (``ils``).
 
+Separately, :func:`interpolate_missing_durations` linearly fills in any requested
+duration that falls *within* the Data Hub's provided duration range but isn't itself one
+of the table's rows (e.g. 270 min, between the table's 180 and 360 min rows) - matching
+the legacy script's ``interpolate_nan``, which always linearly gap-fills such "internal"
+missing durations regardless of the chosen ``lossMethod`` (the ``lossMethod``/
+``extrapolation_method`` setting only controls extrapolation *below* the table's
+shortest duration). This gap-filling is therefore always applied, independently of
+``losses.extrapolation_method``.
+
 Continuing loss is not duration-dependent and is not extrapolated by these methods - the
 Data Hub's storm continuing loss value is used as-is for all durations.
 
-These methods are only relevant when ``losses.extrapolation_method`` in the config is
-set to something other than ``"none"`` - i.e. the user has explicitly opted to
-extrapolate a requested duration shorter than the Data Hub's shortest provided duration,
-independently of which burst loss table ``losses.method`` selects.
+The ``extrapolate_short_duration_losses`` methods are only relevant when
+``losses.extrapolation_method`` in the config is set to something other than
+``"none"`` - i.e. the user has explicitly opted to extrapolate a requested duration
+shorter than the Data Hub's shortest provided duration, independently of which burst
+loss table ``losses.method`` selects.
 """
 
 from __future__ import annotations
@@ -270,6 +280,72 @@ def extrapolate_short_duration_losses(
             new_rows[col] = float(ils) - extrapolated_pb_depth
     else:
         raise ArrError(f"Unknown loss extrapolation method: '{method}'")
+
+    combined = pd.concat([known_losses, new_rows])
+    return combined.sort_index()
+
+
+def interpolate_missing_durations(known_losses: pd.DataFrame, target_durations: Iterable[float]) -> pd.DataFrame:
+    """Linearly fills in any ``target_durations`` that fall *within* the range of
+    ``known_losses`` (i.e. between its minimum and maximum duration) but aren't
+    themselves one of its rows - e.g. a requested duration of 270 min, when the table
+    only has rows at 180 and 360 min. Matches the legacy script's ``interpolate_nan``,
+    which always linearly gap-fills such durations on a straight (not log) duration
+    axis, regardless of the chosen ``lossMethod``/``extrapolation_method`` (that setting
+    only controls extrapolation *below* the table's shortest duration - see
+    :func:`extrapolate_short_duration_losses`).
+
+    Non-numeric placeholder cells (e.g. the Data Hub's ``"Use PB TP"`` cells) adjacent to
+    a gap are not used as interpolation references - the gap is left as ``NaN`` in that
+    column, with a warning logged, rather than guessing.
+
+    Parameters
+    ----------
+    known_losses : pd.DataFrame
+        Index = duration (minutes, ascending), columns = AEP magnitude.
+    target_durations : Iterable[float]
+        Durations (minutes) that must be present in the returned table. Only entries
+        strictly between ``known_losses.index.min()`` and ``known_losses.index.max()``,
+        and not already present, trigger interpolation.
+
+    Returns
+    -------
+    pd.DataFrame
+        A copy of ``known_losses`` with additional interpolated rows inserted (sorted by
+        duration).
+    """
+    if known_losses.empty:
+        raise ArrError('Cannot interpolate missing durations from an empty losses table.')
+
+    lower_bound = float(known_losses.index.min())
+    upper_bound = float(known_losses.index.max())
+    missing = sorted({
+        float(d) for d in target_durations
+        if lower_bound < float(d) < upper_bound and float(d) not in known_losses.index
+    })
+    if not missing:
+        return known_losses.copy()
+
+    known_durations = sorted(known_losses.index)
+    new_rows = pd.DataFrame(index=missing, columns=known_losses.columns, dtype=float)
+    for dur in missing:
+        lower_dur = max(d for d in known_durations if d < dur)
+        upper_dur = min(d for d in known_durations if d > dur)
+        lower_row = known_losses.loc[lower_dur]
+        upper_row = known_losses.loc[upper_dur]
+        for col in known_losses.columns:
+            lower_value, upper_value = lower_row[col], upper_row[col]
+            if (not isinstance(lower_value, (int, float)) or pd.isna(lower_value)
+                    or not isinstance(upper_value, (int, float)) or pd.isna(upper_value)):
+                logger.warning(
+                    "Cannot interpolate burst initial loss for duration %s min, AEP column '%s' - one of the "
+                    "bracketing values (duration %s: '%s', duration %s: '%s') is non-numeric. Leaving as NaN.",
+                    dur, col, lower_dur, lower_value, upper_dur, upper_value,
+                )
+                new_rows.loc[dur, col] = np.nan
+                continue
+            frac = (dur - lower_dur) / (upper_dur - lower_dur)
+            new_rows.loc[dur, col] = float(lower_value) + frac * (float(upper_value) - float(lower_value))
 
     combined = pd.concat([known_losses, new_rows])
     return combined.sort_index()

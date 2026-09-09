@@ -14,6 +14,7 @@ from pytuflow.arr.exceptions import ArrError
 from pytuflow.arr.losses import (
     extrapolate_short_duration_losses,
     hill_loss,
+    interpolate_missing_durations,
     linear_interp_loss,
     linear_interp_pb_depth,
     log_interp_loss,
@@ -161,3 +162,34 @@ def test_extrapolate_preburst_handles_non_numeric_reference_cell():
 def test_extrapolate_unknown_method_raises(known_losses):
     with pytest.raises(ArrError, match='Unknown loss extrapolation method'):
         extrapolate_short_duration_losses(known_losses, [15], method='bogus')
+
+
+def test_interpolate_missing_durations_fills_internal_gap():
+    table = pd.DataFrame({'1.0': [10.0, 40.0]}, index=[180.0, 360.0])
+    result = interpolate_missing_durations(table, [180.0, 270.0, 360.0])
+    assert list(result.index) == [180.0, 270.0, 360.0]
+    assert result.loc[270.0, '1.0'] == pytest.approx(25.0)
+
+
+def test_interpolate_missing_durations_ignores_out_of_range_and_existing():
+    table = pd.DataFrame({'1.0': [10.0, 40.0]}, index=[180.0, 360.0])
+    result = interpolate_missing_durations(table, [15.0, 180.0, 5000.0])
+    assert list(result.index) == [180.0, 360.0]
+
+
+def test_interpolate_missing_durations_multiple_gaps():
+    table = pd.DataFrame({'1.0': [10.0, 40.0, 100.0]}, index=[60.0, 180.0, 360.0])
+    result = interpolate_missing_durations(table, [90.0, 270.0])
+    assert result.loc[90.0, '1.0'] == pytest.approx(10.0 + (40.0 - 10.0) * (90.0 - 60.0) / (180.0 - 60.0))
+    assert result.loc[270.0, '1.0'] == pytest.approx(40.0 + (100.0 - 40.0) * (270.0 - 180.0) / (360.0 - 180.0))
+
+
+def test_interpolate_missing_durations_non_numeric_reference_leaves_nan():
+    table = pd.DataFrame({'1.0': ['Use PB TP', 40.0]}, index=[180.0, 360.0])
+    result = interpolate_missing_durations(table, [270.0])
+    assert pd.isna(result.loc[270.0, '1.0'])
+
+
+def test_interpolate_missing_durations_empty_table_raises():
+    with pytest.raises(ArrError, match='empty'):
+        interpolate_missing_durations(pd.DataFrame(), [270.0])

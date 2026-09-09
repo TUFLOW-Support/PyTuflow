@@ -38,7 +38,7 @@ from .api_client import ArrApiResponse
 from .arf import aep_name_to_pct, arf_factors
 from .config import ArrConfig
 from .exceptions import ArrError
-from .losses import extrapolate_short_duration_losses
+from .losses import extrapolate_short_duration_losses, interpolate_missing_durations
 from .temporal_patterns import TemporalPattern, TemporalPatternSet
 
 logger = logging.getLogger('pytuflow.arr')
@@ -240,6 +240,12 @@ class ArrEngine:
                        scenario_label: Optional[str] = None) -> float:
         aep_pct = aep_name_to_pct(aep_name)
         burst_losses = self._burst_loss_frame()
+        # always gap-fill any requested duration that falls within the table's known
+        # duration range but isn't itself one of its rows (e.g. 270 min, between rows at
+        # 180 and 360 min) - matches the legacy script's `interpolate_nan`, independent
+        # of `losses.extrapolation_method` (which only controls extrapolation *below*
+        # the table's shortest duration).
+        burst_losses = interpolate_missing_durations(burst_losses, durations)
         losses_cfg = self.config.losses
         threshold = float(burst_losses.index.min()) if not burst_losses.empty else None
         if losses_cfg.extrapolation_method != 'none':
