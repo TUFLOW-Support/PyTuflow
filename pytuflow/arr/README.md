@@ -223,6 +223,32 @@ returns its `"Use PB TP"` placeholder for that cell - see [Complete storm assemb
 | --- | --- | --- | --- |
 | `path` | string | - | Output folder for all TUFLOW files. **Required.** Created if it doesn't exist. |
 | `format` | string | `"csv"` | Rainfall hyetograph file format: `"csv"` (time in hours, with an `Event ID` header row) or `"ts1"` (TUFLOW's native ts1 format, time in minutes). |
+| `verbose` | bool | `false` | If `true`, also writes intermediate "working data" files (areal design IFD table, ARF table, burst initial loss table, and raw point/areal temporal pattern increment CSVs) to a `working_data` subfolder - see [Working data](#working-data) below. |
+
+## Working data
+
+Alongside the standard TUFLOW output files, a `working_data` subfolder of `output.path`
+is used to save data useful for reviewing/QA'ing what the tool requested and calculated:
+
+* `<site>_ARR_response.json` - the raw JSON response from the ARR Data Hub, exactly as
+  received. **Always saved**, regardless of `output.verbose`, so a run can always be
+  fully reproduced/inspected later without needing to re-query the Data Hub.
+
+The following are only saved when `output.verbose` is `true`, since they are purely for
+debugging/QA and are otherwise redundant with the always-written `rf_inflow`/loss
+control files:
+
+* `<site>_IFD_after_ARF[_<cc_scenario>].csv` - the areal (post-ARF) design rainfall
+  depth (mm) for every requested duration x AEP, one file per climate change scenario
+  (if enabled).
+* `<site>_ARF[_<cc_scenario>].csv` - the Areal Reduction Factor applied for every
+  requested duration x AEP.
+* `<site>_burst_initial_loss.csv` - the probability-neutral burst initial loss (mm)
+  table used (or extrapolated, if `losses.method` is not `"datahub"`), for every
+  duration x AEP.
+* `<site>_PointTP_Increments.csv` / `<site>_ArealTP_Increments.csv` - the raw temporal
+  pattern increment CSVs downloaded from the Data Hub (before selection/filtering to the
+  specific patterns used for each event).
 
 ## Complete storm assembly
 

@@ -102,9 +102,12 @@ def test_rf_inflow_csv_structure(tmp_path, api_response_1990):
     assert lines[1].startswith('Event ID,')
     assert lines[2].startswith('Time (hour),TP01')
     assert lines[3] == '0,0,0,0,0,0,0,0,0,0,0'
-    # last data row's time should equal duration/60 hours
-    last_row = lines[-1].split(',')
+    # second last data row's time should equal duration/60 hours
+    last_row = lines[-2].split(',')
     assert float(last_row[0]) == pytest.approx(1440 / 60)
+    # last data row's time should be one extra step
+    last_row = lines[-1].split(',')
+    assert float(last_row[0]) == pytest.approx((1440 + 60) / 60)
 
 
 def test_rf_inflow_complete_storm_prepends_preburst(tmp_path, api_response_1990):
@@ -122,7 +125,7 @@ def test_rf_inflow_complete_storm_prepends_preburst(tmp_path, api_response_1990)
     pb = results[0].preburst
     data_rows = lines[4:]  # skip header rows + the initial "time=0" row
     # total number of data rows == preburst steps + design burst steps
-    assert len(data_rows) == len(pb.increments) + len(results[0].patterns[0].increments)
+    assert len(data_rows) == len(pb.increments) + len(results[0].patterns[0].increments) + 1
     # first preburst row's rainfall matches preburst depth * first increment / 100
     first_row = data_rows[0].split(',')
     expected = pb.increments[0] * pb.depth / 100.0

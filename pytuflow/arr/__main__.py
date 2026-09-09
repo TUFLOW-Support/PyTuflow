@@ -22,6 +22,7 @@ from .api_client import ArrApiClient
 from .config import ArrConfig
 from .engine import ArrEngine
 from .exceptions import ArrError
+from .working_data import write_working_data
 from .writers import write_outputs
 
 logger = logging.getLogger('pytuflow.arr')
@@ -60,6 +61,11 @@ def run(config_paths: Sequence[str]) -> int:
             logger.error("Failed to assemble events for '%s': %s", config_path, e)
             return 1
         logger.info("Assembled %d event(s) for site '%s'", len(results), config.site.name)
+        try:
+            write_working_data(config, response, engine)
+        except ArrError as e:
+            logger.error("Failed to write working data for '%s': %s", config_path, e)
+            return 1
         try:
             write_outputs(config, results, append=append)
         except ArrError as e:

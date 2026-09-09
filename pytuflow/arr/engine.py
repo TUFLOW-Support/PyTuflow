@@ -113,6 +113,14 @@ class ArrEngine:
     response: ArrApiResponse
     _tp_set: Optional[TemporalPatternSet] = field(default=None, init=False, repr=False)
 
+    #: Working data captured during :meth:`run`, for optional verbose output (see
+    #: :mod:`pytuflow.arr.working_data`). Populated by ``run()``; empty beforehand.
+    #: ``arf_tables``/``depth_areal_tables`` are keyed by climate change scenario label
+    #: (``None`` for the base, no-CC scenario).
+    arf_tables: dict = field(default_factory=dict, init=False, repr=False)
+    depth_areal_tables: dict = field(default_factory=dict, init=False, repr=False)
+    burst_loss_table: Optional[pd.DataFrame] = field(default=None, init=False, repr=False)
+
     # -- data preparation -------------------------------------------------------------
 
     def _durations(self) -> list:
@@ -236,6 +244,13 @@ class ArrEngine:
             for s in self.config.climate_change.scenarios:
                 scenarios.append((f'{s.baseline_year}_{s.ssp}', s.baseline_year, s.ssp))
 
+        self.arf_tables = {}
+        self.depth_areal_tables = {}
+        try:
+            self.burst_loss_table = self._burst_loss_frame()
+        except ArrError:
+            self.burst_loss_table = None
+
         for scenario_label, baseline_year, ssp in scenarios:
             ifd = self._ifd_frame(baseline_year, ssp)
             depths = _interp_table(ifd, durations, aep_pcts)
@@ -244,6 +259,14 @@ class ArrEngine:
                 arf_frequent=self.config.arf.ignore_limits_for_frequent,
                 min_arf=self.config.arf.min_arf,
             )
+            depth_areal_table = pd.DataFrame(
+                {aep_name: depths[str(aep_pct)].values * arf[aep_name].values
+                 for aep_name, aep_pct in zip(aep_names, aep_pcts)},
+                index=durations,
+            )
+            self.arf_tables[scenario_label] = arf
+            self.depth_areal_tables[scenario_label] = depth_areal_table
+
             for aep_name, aep_pct in zip(aep_names, aep_pcts):
                 for duration in durations:
                     depth_point = float(depths.loc[duration, str(aep_pct)])

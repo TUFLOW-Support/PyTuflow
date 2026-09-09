@@ -186,6 +186,7 @@ class ArfConfig:
 class OutputConfig:
     path: str = ''
     format: str = 'csv'
+    verbose: bool = False
 
     def validate(self) -> list[str]:
         errors = []

@@ -226,10 +226,15 @@ class TemporalPatternSet:
     """
 
     def __init__(self, point_tp: pd.DataFrame, areal_tp: Optional[pd.DataFrame] = None,
-                 catchment_area: Optional[float] = None) -> None:
+                 catchment_area: Optional[float] = None, point_tp_csv: Optional[str] = None,
+                 areal_tp_csv: Optional[str] = None) -> None:
         self.point_tp = point_tp
         self.areal_tp = areal_tp
         self.tp_area = nearest_areal_tp_area(catchment_area) if catchment_area is not None else None
+        #: raw downloaded increments CSV text, kept only for optional verbose working-data
+        #: output (see :mod:`pytuflow.arr.working_data`) - not otherwise used.
+        self.point_tp_csv = point_tp_csv
+        self.areal_tp_csv = areal_tp_csv
 
     @classmethod
     def from_api_response(cls, point_tp_url: str, areal_tp_url: Optional[str] = None,
@@ -238,11 +243,12 @@ class TemporalPatternSet:
         from the Data Hub API's supplied download URLs."""
         point_csv = _download_increments_csv(point_tp_url)
         point_tp = parse_point_tp_csv(point_csv)
+        areal_csv = None
         areal_tp = None
         if areal_tp_url:
             areal_csv = _download_increments_csv(areal_tp_url)
             areal_tp = parse_areal_tp_csv(areal_csv)
-        return cls(point_tp, areal_tp, catchment_area)
+        return cls(point_tp, areal_tp, catchment_area, point_tp_csv=point_csv, areal_tp_csv=areal_csv)
 
     def _areal_candidates(self, duration: int) -> pd.DataFrame:
         if self.areal_tp is None or self.tp_area is None:
