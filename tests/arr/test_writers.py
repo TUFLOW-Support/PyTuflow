@@ -6,7 +6,8 @@ import pytest
 
 from pytuflow.arr import temporal_patterns as tp_module
 from pytuflow.arr.config import ArrConfig
-from pytuflow.arr.engine import ArrEngine
+from pytuflow.arr.engine import ArrEngine, EventResult
+from pytuflow.arr.temporal_patterns import TemporalPattern
 from pytuflow.arr.writers import (
     format_aep,
     format_duration,
@@ -169,3 +170,39 @@ def test_write_outputs_append_mode_multi_site(tmp_path, api_response_1990):
     tsoilf = (tmp_path / 'soils.tsoilf').read_text()
     assert '1, ILCL, <<IL_A>>' in tsoilf
     assert '2, ILCL, <<IL_B>>' in tsoilf
+
+
+def test_rf_inflow_merges_climate_change_scenarios_into_one_file(tmp_path):
+    config = make_config(
+        tmp_path,
+        events={'aep': ['50%'], 'duration': [1440], 'output_notation': 'ari'},
+        climate_change={'enabled': True, 'scenarios': [{'baseline_year': 2090, 'ssp': 'SSP2'}]},
+        losses={'method': 'interpolate'},
+    )
+
+    def make_patterns(depth_scale=1.0):
+        return [
+            TemporalPattern(event_id=1, tp_number=1, timestep=60.0, increments=[50.0, 50.0], source='point'),
+            TemporalPattern(event_id=2, tp_number=2, timestep=60.0, increments=[40.0, 60.0], source='point'),
+        ]
+
+    base = EventResult(
+        aep_name='50%', duration=1440.0, depth_point=100.0, arf=0.95, depth_areal=95.0,
+        initial_loss=10.0, continuing_loss=2.5, aep_band='intermediate', patterns=make_patterns(),
+        cc_scenario=None,
+    )
+    cc = EventResult(
+        aep_name='50%', duration=1440.0, depth_point=120.0, arf=0.95, depth_areal=114.0,
+        initial_loss=10.0, continuing_loss=2.5, aep_band='intermediate', patterns=make_patterns(),
+        cc_scenario='2090_SSP2',
+    )
+    write_outputs(config, [base, cc])
+
+    rf_files = list((tmp_path / 'rf_inflow').glob('*.csv'))
+    assert len(rf_files) == 1  # single merged file, not one per scenario
+    lines = rf_files[0].read_text().splitlines()
+    header = lines[2]  # 'Time (hour), TP01, TP02, TP01_2090_SSP2, TP02_2090_SSP2'
+    assert 'TP01,TP02,TP01_2090_SSP2,TP02_2090_SSP2' in header.replace(' ', '')
+
+    bc_dbase = (tmp_path / 'bc_dbase.csv').read_text()
+    assert '~TP~_~CC~' in bc_dbase

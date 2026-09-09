@@ -111,12 +111,20 @@ def write_tef(path: Path, config: ArrConfig, results: list, append: bool = False
 
 
 def write_bc_dbase(path: Path, config: ArrConfig, append: bool = False) -> None:
-    """Writes (or appends a row to) ``bc_dbase.csv``."""
+    """Writes (or appends a row to) ``bc_dbase.csv``.
+
+    The referenced ``rf_inflow`` file's temporal pattern column headers are named
+    ``TP01``, ``TP02``, etc for the base (no climate change) event, and
+    ``TP01_<year>_<ssp>`` etc for climate change scenarios (see :func:`write_rf_inflow`).
+    When climate change is enabled, the bc_dbase ``~TP~`` column reference is therefore
+    suffixed with ``_~CC~`` so TUFLOW selects the correct column for each scenario.
+    """
     out_form = config.output.format
     out_notation = config.events.output_notation.upper()
     site = site_name_token(config.site.name)
     time_col = 'Time (min)' if out_form == 'ts1' else 'Time (hour)'
-    line = f'{site},rf_inflow\\{site}_RF_~{out_notation}~~DUR~.{out_form},{time_col}, ~TP~\n'
+    tp_col = '~TP~_~CC~' if config.climate_change.enabled else '~TP~'
+    line = f'{site},rf_inflow\\{site}_RF_~{out_notation}~~DUR~.{out_form},{time_col}, {tp_col}\n'
 
     mode = 'a' if append and path.exists() else 'w'
     with open(path, mode, encoding='utf-8') as f:
@@ -125,60 +133,88 @@ def write_bc_dbase(path: Path, config: ArrConfig, append: bool = False) -> None:
         f.write(line)
 
 
-def write_rf_inflow(folder: Path, config: ArrConfig, result) -> Path:
-    """Writes a single rainfall hyetograph file (csv or ts1) for one
-    :class:`~pytuflow.arr.engine.EventResult`. Returns the file path written.
+def write_rf_inflow(folder: Path, config: ArrConfig, results: list) -> Path:
+    """Writes a single rainfall hyetograph file (csv or ts1) for one AEP x duration
+    combination. ``results`` is the list of :class:`~pytuflow.arr.engine.EventResult`
+    sharing that AEP/duration - one for the base (no climate change) event, plus one
+    per enabled climate change scenario. Returns the file path written.
 
-    If ``result.preburst`` is set (complete storm event), the preburst rainfall
+    All scenarios for a given AEP/duration are written into the same file: the base
+    event's temporal pattern columns are named ``TP01``, ``TP02``, etc, while each
+    climate change scenario's columns are suffixed with its scenario label, e.g.
+    ``TP01_2090_SSP2`` - rather than each scenario getting its own separate CSV file.
+
+    If a result's ``preburst`` is set (complete storm event), the preburst rainfall
     increments are prepended ahead of the design burst increments, each pattern column
     sharing the same (single) preburst prefix - matching the legacy script's complete
     storm output, where the preburst period is common to all temporal pattern
     realisations for that event."""
     folder.mkdir(parents=True, exist_ok=True)
     out_form = config.output.format
-    out_notation = config.events.output_notation.upper()
     site = site_name_token(config.site.name)
-    aep_token = format_aep(result.aep_name, config.events.output_notation)
-    dur_token = format_duration(result.duration)
-    suffix = f'_{result.cc_scenario}' if result.cc_scenario else ''
-    fname = f'{site}_RF_{aep_token}{dur_token}{suffix}.{out_form}'
+
+    # base (no-CC) result first, then CC scenarios in a stable order
+    results = sorted(results, key=lambda r: (r.cc_scenario is not None, r.cc_scenario or ''))
+    base = results[0]
+    aep_token = format_aep(base.aep_name, config.events.output_notation)
+    dur_token = format_duration(base.duration)
+    fname = f'{site}_RF_{aep_token}{dur_token}.{out_form}'
     fpath = folder / fname
 
-    patterns = result.patterns
+    patterns = base.patterns
     if not patterns:
-        raise ArrError(f"No temporal patterns available for {result.aep_name}/{result.duration}min - cannot write rf_inflow file.")
+        raise ArrError(f"No temporal patterns available for {base.aep_name}/{base.duration}min - cannot write rf_inflow file.")
     timestep = patterns[0].timestep
     n_steps = len(patterns[0].increments)
     time_col = 'Time (min)' if out_form == 'ts1' else 'Time (hour)'
     time_divisor = 1.0 if out_form == 'ts1' else 60.0
 
-    pb = result.preburst
-    pb_timestep = pb.timestep if pb else None
-    pb_n_steps = len(pb.increments) if pb else 0
+    # column labels/event ids/preburst/depth, one group per result (base + each CC scenario)
+    col_groups = []
+    for r in results:
+        label_suffix = f'_{r.cc_scenario}' if r.cc_scenario else ''
+        col_groups.append({
+            'patterns': r.patterns,
+            'event_ids': [p.event_id for p in r.patterns],
+            'tp_labels': [f'TP{p.tp_number:02d}{label_suffix}' for p in r.patterns],
+            'preburst': r.preburst,
+            'depth_areal': r.depth_areal,
+        })
+
+    pb_n_steps = max((len(g['preburst'].increments) for g in col_groups if g['preburst']), default=0)
 
     with open(fpath, 'w', encoding='utf-8', newline='') as f:
-        f.write(f'! Written by pytuflow.arr based on {result.aep_band} temporal pattern\n')
+        f.write(f'! Written by pytuflow.arr based on {base.aep_band} temporal pattern\n')
+        total_cols = sum(len(g['patterns']) for g in col_groups)
         total_steps = pb_n_steps + n_steps
         if out_form == 'ts1':
-            f.write(f'{len(patterns)}, {total_steps + 1}\n')
-            f.write('Start_Index' + ', 1' * len(patterns) + '\n')
-            f.write('End_Index' + f', {total_steps + 1}' * len(patterns) + '\n')
+            f.write(f'{total_cols}, {total_steps + 1}\n')
+            f.write('Start_Index' + ', 1' * total_cols + '\n')
+            f.write('End_Index' + f', {total_steps + 1}' * total_cols + '\n')
         writer = csv_module.writer(f)
         if out_form == 'csv':
-            writer.writerow(['Event ID'] + [p.event_id for p in patterns])
-        writer.writerow([time_col] + [f'TP{p.tp_number:02d}' for p in patterns])
-        writer.writerow([0] + [0] * len(patterns))
+            event_ids = [eid for g in col_groups for eid in g['event_ids']]
+            writer.writerow(['Event ID'] + event_ids)
+        tp_labels = [label for g in col_groups for label in g['tp_labels']]
+        writer.writerow([time_col] + tp_labels)
+        writer.writerow([0] + [0] * total_cols)
         t = 0.0
         for i in range(pb_n_steps):
-            t += pb_timestep / time_divisor
-            row = [t] + [pb.increments[i] * pb.depth / 100.0 for _ in patterns]
+            t += timestep / time_divisor
+            row = [t]
+            for g in col_groups:
+                pb = g['preburst']
+                value = pb.increments[i] * pb.depth / 100.0 if pb and i < len(pb.increments) else 0.0
+                row.extend([value] * len(g['patterns']))
             writer.writerow(row)
         for i in range(n_steps):
             t += timestep / time_divisor
-            row = [t] + [p.increments[i] * result.depth_areal / 100.0 for p in patterns]
+            row = [t]
+            for g in col_groups:
+                row.extend([p.increments[i] * g['depth_areal'] / 100.0 for p in g['patterns']])
             writer.writerow(row)
         t += timestep / time_divisor
-        writer.writerow([t] + [0] * len(patterns))
+        writer.writerow([t] + [0] * total_cols)
     return fpath
 
 
@@ -264,7 +300,10 @@ def write_outputs(config: ArrConfig, results: list, append: bool = False) -> Non
     write_tef(out_path / 'Event_File.tef', config, results, append=append)
     write_bc_dbase(out_path / 'bc_dbase.csv', config, append=append)
     rf_folder = out_path / 'rf_inflow'
+    by_aep_dur: dict = {}
     for result in results:
-        write_rf_inflow(rf_folder, config, result)
+        by_aep_dur.setdefault((result.aep_name, result.duration), []).append(result)
+    for group in by_aep_dur.values():
+        write_rf_inflow(rf_folder, config, group)
     write_losses(out_path / 'soils.tsoilf', config, results, append=append)
     logger.info("Wrote TUFLOW ARR outputs for site '%s' to '%s'", config.site.name, out_path)

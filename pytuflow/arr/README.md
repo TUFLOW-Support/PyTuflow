@@ -174,6 +174,15 @@ Climate-change-adjusted IFD depths are requested directly from the Data Hub's
 `CCAdjIFDDatasets` layer for the given baseline year/SSP - no manual climate-change
 factor calculation is performed locally (unlike the legacy script).
 
+Each climate change scenario's rainfall is written into the **same** `rf_inflow`
+CSV/ts1 file as the base (no climate-change) event for that AEP/duration, rather than a
+separate file. The base event's temporal pattern columns are named `TP01`, `TP02`, etc;
+each climate change scenario's columns are suffixed with `_<baseline_year>_<ssp>`, e.g.
+`TP01_2090_SSP2`, `TP02_2090_SSP2`. `bc_dbase.csv`'s temporal pattern column reference is
+`~TP~_~CC~` (instead of plain `~TP~`) whenever climate change is enabled, so that
+TUFLOW's `~CC~` event variable (defined in `Event_File.tef`) selects the matching
+suffixed column for each scenario.
+
 ### `preburst`
 
 Only used for **complete storm** events - see [Complete storm assembly](#complete-storm-assembly) below.
