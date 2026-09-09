@@ -118,13 +118,10 @@ def test_engine_records_extrapolated_losses(api_response_1990):
     engine = ArrEngine(config, api_response_1990)
     results = {r.duration: r for r in engine.run()}
     # only duration=15 (shorter than the shortest datahub duration) should be recorded
-    assert len(engine.extrapolated_losses) == 1
-    entry = engine.extrapolated_losses[0]
-    assert entry['duration'] == 15.0
-    assert entry['aep_name'] == '50%'
-    assert entry['extrapolation_method'] == 'interpolate'
-    assert entry['cc_scenario'] is None
-    assert entry['initial_loss'] == pytest.approx(results[15.0].initial_loss)
+    table = engine.extrapolated_loss_table[None]
+    assert list(table.index) == [15.0]
+    assert 50.0 in table.columns
+    assert table.loc[15.0, 50.0] == pytest.approx(results[15.0].initial_loss)
 
 
 def test_engine_no_extrapolated_losses_when_not_needed(api_response_1990):
@@ -134,7 +131,7 @@ def test_engine_no_extrapolated_losses_when_not_needed(api_response_1990):
     )
     engine = ArrEngine(config, api_response_1990)
     engine.run()
-    assert engine.extrapolated_losses == []
+    assert engine.extrapolated_loss_table[None].empty
 
 
 def test_engine_applies_climate_change_loss_factors(api_response_1990, monkeypatch):

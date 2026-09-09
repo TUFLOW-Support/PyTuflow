@@ -152,6 +152,12 @@ def _aep_name_to_pct(aep_name: str) -> float:
     if aep_name.lower().startswith('1 in'):
         ari = float(aep_name[4:].strip())
         return 1.0 / ari * 100.0
+    # assume % if it is just an float or integer passed
+    try:
+        ret_aep_name = float(aep_name)
+        return ret_aep_name
+    except (ValueError, TypeError):
+        pass
     raise ValueError(f"Unrecognised AEP/ARI/EY magnitude: '{aep_name}'")
 
 

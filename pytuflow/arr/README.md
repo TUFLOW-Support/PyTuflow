@@ -262,14 +262,14 @@ control files:
   `losses.extrapolation_method` is not `"none"`), for every duration x AEP, one file per
   climate change scenario (if enabled) - climate change scenario files have the Data
   Hub's climate-change initial loss adjustment factor applied.
-* `<site>_extrapolated_losses.csv` - one row per AEP/duration/climate-change-scenario
-  combination whose burst initial loss was extrapolated below the Data Hub's shortest
-  provided duration (i.e. `losses.extrapolation_method != "none"` and a shorter duration
-  was requested), for easy visual checking of the extrapolated values. Columns:
-  `cc_scenario`, `aep_name`, `duration`, `extrapolation_method`, `known_duration_used`
-  (the reference/shortest known duration the extrapolation was based off), and
-  `initial_loss` (the extrapolated value, mm, before any climate-change scaling). Only
-  written if at least one loss was actually extrapolated.
+* `<site>_extrapolated_losses[_<cc_scenario>].csv` - the extrapolated burst initial
+  loss (mm) values, in the same duration (index) x AEP% (columns) table format as
+  `<site>_burst_initial_loss...csv`, but containing **only** the rows for durations that
+  were actually extrapolated below the Data Hub's shortest provided duration (i.e.
+  `losses.extrapolation_method != "none"` and a shorter duration was requested) - for
+  easy visual comparison against the full burst initial loss table. One file per
+  climate change scenario (if enabled); a scenario's file is omitted entirely if nothing
+  was extrapolated for it.
 * `<site>_PointTP_Increments.csv` / `<site>_ArealTP_Increments.csv` - the raw temporal
   pattern increment CSVs downloaded from the Data Hub (before selection/filtering to the
   specific patterns used for each event).

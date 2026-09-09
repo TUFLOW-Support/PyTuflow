@@ -123,14 +123,18 @@ class ArrEngine:
     arf_tables: dict = field(default_factory=dict, init=False, repr=False)
     depth_areal_tables: dict = field(default_factory=dict, init=False, repr=False)
     burst_loss_table: dict = field(default_factory=dict, init=False, repr=False)
-    #: One row per AEP/duration cell whose burst initial loss was extrapolated (i.e.
-    #: ``losses.extrapolation_method != 'none'`` and the requested duration was shorter
-    #: than the Data Hub's shortest provided duration), for QA (see
-    #: :mod:`pytuflow.arr.working_data`). Each entry is a dict with keys ``cc_scenario``,
-    #: ``aep_name``, ``duration``, ``extrapolation_method``, ``known_duration_used``
-    #: (the reference/shortest known duration the extrapolation was based off), and
-    #: ``initial_loss`` (the extrapolated burst initial loss, mm, before any CC scaling).
-    extrapolated_losses: list = field(default_factory=list, init=False, repr=False)
+    #: Extrapolated burst initial loss values (mm), for QA (see
+    #: :mod:`pytuflow.arr.working_data`), in the same duration (index) x AEP% (columns)
+    #: table shape as ``burst_loss_table``, keyed by climate change scenario label
+    #: (``None`` for the base, no-CC scenario). Only contains rows for durations that
+    #: were actually extrapolated (i.e. ``losses.extrapolation_method != 'none'`` and the
+    #: requested duration was shorter than the Data Hub's shortest provided duration);
+    #: empty (no rows) if nothing was extrapolated.
+    extrapolated_loss_table: dict = field(default_factory=dict, init=False, repr=False)
+    #: Internal accumulator of extrapolated-loss records (populated in
+    #: :meth:`_initial_loss`, consumed at the end of :meth:`run` to build
+    #: ``extrapolated_loss_table``).
+    _extrapolated_loss_records: list = field(default_factory=list, init=False, repr=False)
 
     # -- data preparation -------------------------------------------------------------
 
@@ -144,7 +148,14 @@ class ArrEngine:
         aep = self.config.events.aep
         if aep == 'all':
             raise ArrError("events.aep == 'all' is not yet supported.")
-        return list(aep)
+        aep_ = []
+        for a in aep:
+            try:
+                float(a)
+                aep_.append(f'{a}%')
+            except (ValueError, TypeError):
+                aep_.append(a)
+        return aep_
 
     def _ifd_frame(self, baseline_year: int, ssp: Optional[str] = None) -> pd.DataFrame:
         if ssp is not None:
@@ -265,12 +276,10 @@ class ArrEngine:
             )
 
         if threshold is not None and duration < threshold:
-            self.extrapolated_losses.append({
+            self._extrapolated_loss_records.append({
                 'cc_scenario': scenario_label,
-                'aep_name': aep_name,
                 'duration': duration,
-                'extrapolation_method': losses_cfg.extrapolation_method,
-                'known_duration_used': threshold,
+                'aep_pct': aep_pct,
                 'initial_loss': value,
             })
         return value
@@ -295,7 +304,8 @@ class ArrEngine:
         self.arf_tables = {}
         self.depth_areal_tables = {}
         self.burst_loss_table = {}
-        self.extrapolated_losses = []
+        self.extrapolated_loss_table = {}
+        self._extrapolated_loss_records = []
         try:
             base_burst_loss = self._burst_loss_frame()
         except ArrError:
@@ -366,6 +376,17 @@ class ArrEngine:
                         continuing_loss=cl, aep_band=band, patterns=patterns,
                         cc_scenario=scenario_label, preburst=preburst,
                     ))
+
+        # build one duration (index) x AEP% (columns) table per CC scenario from the
+        # accumulated extrapolated-loss records, matching the shape of burst_loss_table.
+        for scenario_label, _, _ in scenarios:
+            rows = [r for r in self._extrapolated_loss_records if r['cc_scenario'] == scenario_label]
+            if not rows:
+                self.extrapolated_loss_table[scenario_label] = pd.DataFrame()
+                continue
+            table = pd.DataFrame(rows).pivot_table(
+                index='duration', columns='aep_pct', values='initial_loss', aggfunc='first')
+            self.extrapolated_loss_table[scenario_label] = table.sort_index()
         return results
 
 
