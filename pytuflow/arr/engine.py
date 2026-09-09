@@ -123,6 +123,14 @@ class ArrEngine:
     arf_tables: dict = field(default_factory=dict, init=False, repr=False)
     depth_areal_tables: dict = field(default_factory=dict, init=False, repr=False)
     burst_loss_table: dict = field(default_factory=dict, init=False, repr=False)
+    #: One row per AEP/duration cell whose burst initial loss was extrapolated (i.e.
+    #: ``losses.extrapolation_method != 'none'`` and the requested duration was shorter
+    #: than the Data Hub's shortest provided duration), for QA (see
+    #: :mod:`pytuflow.arr.working_data`). Each entry is a dict with keys ``cc_scenario``,
+    #: ``aep_name``, ``duration``, ``extrapolation_method``, ``known_duration_used``
+    #: (the reference/shortest known duration the extrapolation was based off), and
+    #: ``initial_loss`` (the extrapolated burst initial loss, mm, before any CC scaling).
+    extrapolated_losses: list = field(default_factory=list, init=False, repr=False)
 
     # -- data preparation -------------------------------------------------------------
 
@@ -217,10 +225,12 @@ class ArrEngine:
         raise ArrError("ARR Data Hub response is missing storm initial loss data "
                         "('NewStormLosses'/'StormLosses' layers).")
 
-    def _initial_loss(self, duration: float, aep_name: str, durations: list) -> float:
+    def _initial_loss(self, duration: float, aep_name: str, durations: list,
+                       scenario_label: Optional[str] = None) -> float:
         aep_pct = aep_name_to_pct(aep_name)
         burst_losses = self._burst_loss_frame()
         losses_cfg = self.config.losses
+        threshold = float(burst_losses.index.min()) if not burst_losses.empty else None
         if losses_cfg.extrapolation_method != 'none':
             ils = losses_cfg.user_initial_loss
             if ils is None and losses_cfg.extrapolation_method in ('rahman', 'hill', 'interpolate_preburst',
@@ -241,7 +251,7 @@ class ArrEngine:
             )
         value = burst_losses.loc[duration, col]
         try:
-            return float(value)
+            value = float(value)
         except (TypeError, ValueError):
             # The Data Hub uses this placeholder to indicate that, for this AEP/duration,
             # the burst initial loss must be derived using the preburst temporal pattern
@@ -253,6 +263,17 @@ class ArrEngine:
                 f"Burst initial loss for {aep_name}/{duration}min is a preburst-pattern "
                 f"placeholder ('{value}')."
             )
+
+        if threshold is not None and duration < threshold:
+            self.extrapolated_losses.append({
+                'cc_scenario': scenario_label,
+                'aep_name': aep_name,
+                'duration': duration,
+                'extrapolation_method': losses_cfg.extrapolation_method,
+                'known_duration_used': threshold,
+                'initial_loss': value,
+            })
+        return value
 
     # -- assembly ------------------------------------------------------------------
 
@@ -274,6 +295,7 @@ class ArrEngine:
         self.arf_tables = {}
         self.depth_areal_tables = {}
         self.burst_loss_table = {}
+        self.extrapolated_losses = []
         try:
             base_burst_loss = self._burst_loss_frame()
         except ArrError:
@@ -316,7 +338,7 @@ class ArrEngine:
                     il = None
                     if not needs_complete_storm:
                         try:
-                            il = self._initial_loss(duration, aep_name, durations)
+                            il = self._initial_loss(duration, aep_name, durations, scenario_label=scenario_label)
                         except _NeedsCompleteStorm as e:
                             logger.info(
                                 "%s/%smin requires complete storm assembly (%s) - automatically switching to "

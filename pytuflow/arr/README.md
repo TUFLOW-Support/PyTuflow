@@ -237,7 +237,7 @@ returns its `"Use PB TP"` placeholder for that cell - see [Complete storm assemb
 | --- | --- | --- | --- |
 | `path` | string | - | Output folder for all TUFLOW files. **Required.** Created if it doesn't exist. |
 | `format` | string | `"csv"` | Rainfall hyetograph file format: `"csv"` (time in hours, with an `Event ID` header row) or `"ts1"` (TUFLOW's native ts1 format, time in minutes). |
-| `verbose` | bool | `false` | If `true`, also writes intermediate "working data" files (areal design IFD table, ARF table, burst initial loss table, and raw point/areal temporal pattern increment CSVs) to a `working_data` subfolder - see [Working data](#working-data) below. |
+| `verbose` | bool | `false` | If `true`, also writes intermediate "working data" files (areal design IFD table, ARF table, burst initial loss table, extrapolated short-duration losses CSV, and raw point/areal temporal pattern increment CSVs) to a `working_data` subfolder - see [Working data](#working-data) below. |
 
 ## Working data
 
@@ -262,6 +262,14 @@ control files:
   `losses.extrapolation_method` is not `"none"`), for every duration x AEP, one file per
   climate change scenario (if enabled) - climate change scenario files have the Data
   Hub's climate-change initial loss adjustment factor applied.
+* `<site>_extrapolated_losses.csv` - one row per AEP/duration/climate-change-scenario
+  combination whose burst initial loss was extrapolated below the Data Hub's shortest
+  provided duration (i.e. `losses.extrapolation_method != "none"` and a shorter duration
+  was requested), for easy visual checking of the extrapolated values. Columns:
+  `cc_scenario`, `aep_name`, `duration`, `extrapolation_method`, `known_duration_used`
+  (the reference/shortest known duration the extrapolation was based off), and
+  `initial_loss` (the extrapolated value, mm, before any climate-change scaling). Only
+  written if at least one loss was actually extrapolated.
 * `<site>_PointTP_Increments.csv` / `<site>_ArealTP_Increments.csv` - the raw temporal
   pattern increment CSVs downloaded from the Data Hub (before selection/filtering to the
   specific patterns used for each event).

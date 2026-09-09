@@ -110,6 +110,33 @@ def test_engine_short_duration_extrapolation_produces_smaller_loss(api_response_
     assert results[15.0].initial_loss < results[30.0].initial_loss
 
 
+def test_engine_records_extrapolated_losses(api_response_1990):
+    config = make_config(
+        events={'aep': ['50%'], 'duration': [15, 30], 'output_notation': 'ari'},
+        losses={'extrapolation_method': 'interpolate'},
+    )
+    engine = ArrEngine(config, api_response_1990)
+    results = {r.duration: r for r in engine.run()}
+    # only duration=15 (shorter than the shortest datahub duration) should be recorded
+    assert len(engine.extrapolated_losses) == 1
+    entry = engine.extrapolated_losses[0]
+    assert entry['duration'] == 15.0
+    assert entry['aep_name'] == '50%'
+    assert entry['extrapolation_method'] == 'interpolate'
+    assert entry['cc_scenario'] is None
+    assert entry['initial_loss'] == pytest.approx(results[15.0].initial_loss)
+
+
+def test_engine_no_extrapolated_losses_when_not_needed(api_response_1990):
+    config = make_config(
+        events={'aep': ['50%'], 'duration': [30], 'output_notation': 'ari'},
+        losses={'extrapolation_method': 'interpolate'},
+    )
+    engine = ArrEngine(config, api_response_1990)
+    engine.run()
+    assert engine.extrapolated_losses == []
+
+
 def test_engine_applies_climate_change_loss_factors(api_response_1990, monkeypatch):
     """Climate change scenario events should have their initial/continuing loss scaled
     by the Data Hub's 'ClimateChange' loss adjustment factors, relative to the base
