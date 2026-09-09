@@ -205,4 +205,8 @@ def test_rf_inflow_merges_climate_change_scenarios_into_one_file(tmp_path):
     assert 'TP01,TP02,TP01_2090_SSP2,TP02_2090_SSP2' in header.replace(' ', '')
 
     bc_dbase = (tmp_path / 'bc_dbase.csv').read_text()
-    assert '~TP~_~CC~' in bc_dbase
+    assert '~TP~_~CC~' not in bc_dbase
+    assert ', ~TP~\n' in bc_dbase
+
+    bc_dbase_cc = (tmp_path / 'bc_dbase_CC.csv').read_text()
+    assert '~TP~_~CC~' in bc_dbase_cc

@@ -178,10 +178,12 @@ Each climate change scenario's rainfall is written into the **same** `rf_inflow`
 CSV/ts1 file as the base (no climate-change) event for that AEP/duration, rather than a
 separate file. The base event's temporal pattern columns are named `TP01`, `TP02`, etc;
 each climate change scenario's columns are suffixed with `_<baseline_year>_<ssp>`, e.g.
-`TP01_2090_SSP2`, `TP02_2090_SSP2`. `bc_dbase.csv`'s temporal pattern column reference is
-`~TP~_~CC~` (instead of plain `~TP~`) whenever climate change is enabled, so that
-TUFLOW's `~CC~` event variable (defined in `Event_File.tef`) selects the matching
-suffixed column for each scenario.
+`TP01_2090_SSP2`, `TP02_2090_SSP2`. `bc_dbase.csv` still references the plain `~TP~`
+column (used to run the standard, non-climate-change events); a companion
+`bc_dbase_CC.csv` is additionally written (only when climate change is enabled),
+referencing `~TP~_~CC~` so TUFLOW's `~CC~` event variable (defined in
+`Event_File.tef`) selects the matching suffixed column for each scenario - both files
+point at the same merged `rf_inflow` file, only the column reference differs.
 
 ### `preburst`
 

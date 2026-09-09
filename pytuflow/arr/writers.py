@@ -111,26 +111,41 @@ def write_tef(path: Path, config: ArrConfig, results: list, append: bool = False
 
 
 def write_bc_dbase(path: Path, config: ArrConfig, append: bool = False) -> None:
-    """Writes (or appends a row to) ``bc_dbase.csv``.
+    """Writes (or appends a row to) ``bc_dbase.csv``, and, if climate change is enabled,
+    a companion ``bc_dbase_CC.csv``.
 
     The referenced ``rf_inflow`` file's temporal pattern column headers are named
     ``TP01``, ``TP02``, etc for the base (no climate change) event, and
     ``TP01_<year>_<ssp>`` etc for climate change scenarios (see :func:`write_rf_inflow`).
-    When climate change is enabled, the bc_dbase ``~TP~`` column reference is therefore
-    suffixed with ``_~CC~`` so TUFLOW selects the correct column for each scenario.
+    ``bc_dbase.csv`` always references the plain ``~TP~`` column (used for standard,
+    non-climate-change runs) - it cannot also reference ``~CC~`` since that event
+    variable isn't defined/set for non-climate-change events, and TUFLOW does not accept
+    an unset/blank event variable. Climate change scenarios are instead selected via a
+    separate ``bc_dbase_CC.csv``, referencing ``~TP~_~CC~``, matching the legacy script's
+    approach (both files point at the same merged ``rf_inflow`` file - only the column
+    reference differs).
     """
     out_form = config.output.format
     out_notation = config.events.output_notation.upper()
     site = site_name_token(config.site.name)
     time_col = 'Time (min)' if out_form == 'ts1' else 'Time (hour)'
-    tp_col = '~TP~_~CC~' if config.climate_change.enabled else '~TP~'
-    line = f'{site},rf_inflow\\{site}_RF_~{out_notation}~~DUR~.{out_form},{time_col}, {tp_col}\n'
+    source = f'rf_inflow\\{site}_RF_~{out_notation}~~DUR~.{out_form}'
+    line = f'{site},{source},{time_col}, ~TP~\n'
 
     mode = 'a' if append and path.exists() else 'w'
     with open(path, mode, encoding='utf-8') as f:
         if mode == 'w':
             f.write('Name,Source,Column 1,Column 2,Add Col 1,Mult Col 2,Add Col 2,Column 3,Column 4\n')
         f.write(line)
+
+    if config.climate_change.enabled:
+        cc_path = path.parent / 'bc_dbase_CC.csv'
+        cc_line = f'{site},{source},{time_col}, ~TP~_~CC~\n'
+        cc_mode = 'a' if append and cc_path.exists() else 'w'
+        with open(cc_path, cc_mode, encoding='utf-8') as f:
+            if cc_mode == 'w':
+                f.write('Name,Source,Column 1,Column 2,Add Col 1,Mult Col 2,Add Col 2,Column 3,Column 4\n')
+            f.write(cc_line)
 
 
 def write_rf_inflow(folder: Path, config: ArrConfig, results: list) -> Path:
