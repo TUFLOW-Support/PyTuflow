@@ -70,9 +70,16 @@ def test_bad_ifd_year_raises():
         ArrConfig.from_dict(bad)
 
 
-def test_rahman_requires_mar():
+def test_rahman_does_not_require_mar():
+    data = json.loads(json.dumps(VALID_CONFIG))
+    data['losses'] = {'extrapolation_method': 'rahman'}
+    config = ArrConfig.from_dict(data)
+    assert config.losses.extrapolation_method == 'rahman'
+
+
+def test_hill_requires_mar():
     bad = json.loads(json.dumps(VALID_CONFIG))
-    bad['losses'] = {'extrapolation_method': 'rahman'}
+    bad['losses'] = {'extrapolation_method': 'hill'}
     with pytest.raises(ArrConfigError, match='losses.mar'):
         ArrConfig.from_dict(bad)
 

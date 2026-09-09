@@ -225,7 +225,8 @@ def extrapolate_short_duration_losses(
         Representative storm initial loss (mm). Required for ``'rahman'``/``'hill'``/
         ``'interpolate_preburst'``/``'log_interpolate_preburst'``.
     mar : float, optional
-        Mean annual rainfall (mm). Required for ``'hill'``.
+        Mean annual rainfall (mm). Required for ``'hill'`` only (not ``'rahman'``,
+        which does not depend on MAR).
     static_loss_value : float, optional
         Constant initial loss (mm) to adopt. Required for ``'static'``.
 

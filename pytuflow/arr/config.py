@@ -183,8 +183,6 @@ class LossesConfig:
             )
         if self.tuflow_loss_method not in ('infiltration', 'excess'):
             errors.append(f"losses.tuflow_loss_method must be one of (infiltration, excess), got '{self.tuflow_loss_method}'")
-        if self.extrapolation_method == 'rahman' and self.mar is None:
-            errors.append("losses.mar is required when losses.extrapolation_method == 'rahman'")
         if self.extrapolation_method == 'hill' and self.mar is None:
             errors.append("losses.mar is required when losses.extrapolation_method == 'hill'")
         if self.extrapolation_method == 'static' and self.static_loss is None:
