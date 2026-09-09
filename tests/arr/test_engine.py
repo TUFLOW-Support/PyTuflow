@@ -107,3 +107,40 @@ def test_engine_short_duration_extrapolation_produces_smaller_loss(api_response_
     engine = ArrEngine(config, api_response_1990)
     results = {r.duration: r for r in engine.run()}
     assert results[15.0].initial_loss < results[30.0].initial_loss
+
+
+def test_engine_applies_climate_change_loss_factors(api_response_1990, monkeypatch):
+    """Climate change scenario events should have their initial/continuing loss scaled
+    by the Data Hub's 'ClimateChange' loss adjustment factors, relative to the base
+    (no climate change) event."""
+    rec_ifd = api_response_1990.layer('RecIFD')
+    base_table = rec_ifd['Recommended Historical (1961-1990) Baseline']
+    api_response_1990.layers['CCAdjIFDDatasets'] = {
+        'BoM IFD Depths (2090 Baseline - SSP2)': base_table,
+    }
+    api_response_1990.layers['ClimateChange'] = {
+        'label': 'Climate Change Factors',
+        'loss_factors': {
+            'Initial_Loss': {
+                'columns': ['Losses SSP1-2.6', 'Losses SSP2-4.5', 'Losses SSP3-7.0', 'Losses SSP5-8.5'],
+                'index': [2090],
+                'data': [[1.03, 1.05, 1.07, 1.08]],
+            },
+            'Continuing_Loss': {
+                'columns': ['Losses SSP1-2.6', 'Losses SSP2-4.5', 'Losses SSP3-7.0', 'Losses SSP5-8.5'],
+                'index': [2090],
+                'data': [[1.06, 1.09, 1.13, 1.16]],
+            },
+        },
+    }
+    config = make_config(
+        events={'aep': ['50%'], 'duration': [1440], 'output_notation': 'ari'},
+        climate_change={'enabled': True, 'scenarios': [{'baseline_year': 2090, 'ssp': 'SSP2'}]},
+    )
+    engine = ArrEngine(config, api_response_1990)
+    results = engine.run()
+    assert len(results) == 2
+    base = next(r for r in results if r.cc_scenario is None)
+    cc = next(r for r in results if r.cc_scenario == '2090_SSP2')
+    assert cc.initial_loss == pytest.approx(base.initial_loss * 1.05)
+    assert cc.continuing_loss == pytest.approx(base.continuing_loss * 1.09)

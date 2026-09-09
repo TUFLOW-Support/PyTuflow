@@ -43,6 +43,7 @@ def test_build_params_includes_cc_layer_when_enabled():
     client = ArrApiClient()
     params = client.build_params(config)
     assert params['CCAdjIFDDatasets'] == 1
+    assert params['ClimateChange'] == 1
 
 
 def test_api_response_ifd_table(api_response_1990):
@@ -62,3 +63,34 @@ def test_api_response_missing_layer_raises(api_response_1990):
 
 def test_api_response_layer_optional_returns_none(api_response_1990):
     assert api_response_1990.layer('DoesNotExist') is None
+
+
+def test_climate_change_loss_factors():
+    data = {
+        'layers': {
+            'ClimateChange': {
+                'label': 'Climate Change Factors',
+                'loss_factors': {
+                    'Initial_Loss': {
+                        'columns': ['Losses SSP1-2.6', 'Losses SSP2-4.5', 'Losses SSP3-7.0', 'Losses SSP5-8.5'],
+                        'index': [2030, 2050, 2090],
+                        'data': [[1.02, 1.02, 1.02, 1.03], [1.03, 1.03, 1.04, 1.04], [1.03, 1.05, 1.07, 1.08]],
+                    },
+                    'Continuing_Loss': {
+                        'columns': ['Losses SSP1-2.6', 'Losses SSP2-4.5', 'Losses SSP3-7.0', 'Losses SSP5-8.5'],
+                        'index': [2030, 2050, 2090],
+                        'data': [[1.04, 1.05, 1.05, 1.05], [1.06, 1.06, 1.07, 1.08], [1.06, 1.09, 1.13, 1.16]],
+                    },
+                },
+            }
+        }
+    }
+    response = ArrApiResponse(data)
+    il_factor, cl_factor = response.climate_change_loss_factors(2090, 'SSP2')
+    assert il_factor == pytest.approx(1.05)
+    assert cl_factor == pytest.approx(1.09)
+
+
+def test_climate_change_loss_factors_missing_layer_raises(api_response_1990):
+    with pytest.raises(ArrApiError, match='ClimateChange'):
+        api_response_1990.climate_change_loss_factors(2090, 'SSP2')

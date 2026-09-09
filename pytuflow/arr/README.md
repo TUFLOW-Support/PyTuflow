@@ -171,8 +171,11 @@ Each scenario object:
 | `ssp` | string | `"SSP1"`, `"SSP2"`, `"SSP3"`, `"SSP5"` |
 
 Climate-change-adjusted IFD depths are requested directly from the Data Hub's
-`CCAdjIFDDatasets` layer for the given baseline year/SSP - no manual climate-change
-factor calculation is performed locally (unlike the legacy script).
+`CCAdjIFDDatasets` layer for the given baseline year/SSP. Climate-change loss
+adjustment factors (initial and continuing loss) are requested from the Data Hub's
+`ClimateChange` layer and applied by multiplying the base (no climate-change) storm
+initial/continuing loss values - no manual climate-change factor calculation is
+performed locally (unlike the legacy script's rate-of-change table lookups).
 
 Each climate change scenario's rainfall is written into the **same** `rf_inflow`
 CSV/ts1 file as the base (no climate-change) event for that AEP/duration, rather than a
@@ -254,9 +257,11 @@ control files:
   (if enabled).
 * `<site>_ARF[_<cc_scenario>].csv` - the Areal Reduction Factor applied for every
   requested duration x AEP.
-* `<site>_burst_initial_loss.csv` - the probability-neutral burst initial loss (mm)
-  table used (or extrapolated, if `losses.method` is not `"datahub"`), for every
-  duration x AEP.
+* `<site>_burst_initial_loss[_<cc_scenario>].csv` - the probability-neutral burst
+  initial loss (mm) table used (or extrapolated, if `losses.method` is not
+  `"datahub"`), for every duration x AEP, one file per climate change scenario (if
+  enabled) - climate change scenario files have the Data Hub's climate-change initial
+  loss adjustment factor applied.
 * `<site>_PointTP_Increments.csv` / `<site>_ArealTP_Increments.csv` - the raw temporal
   pattern increment CSVs downloaded from the Data Hub (before selection/filtering to the
   specific patterns used for each event).

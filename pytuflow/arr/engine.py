@@ -119,7 +119,7 @@ class ArrEngine:
     #: (``None`` for the base, no-CC scenario).
     arf_tables: dict = field(default_factory=dict, init=False, repr=False)
     depth_areal_tables: dict = field(default_factory=dict, init=False, repr=False)
-    burst_loss_table: Optional[pd.DataFrame] = field(default=None, init=False, repr=False)
+    burst_loss_table: dict = field(default_factory=dict, init=False, repr=False)
 
     # -- data preparation -------------------------------------------------------------
 
@@ -177,6 +177,11 @@ class ArrEngine:
             self._tp_set = TemporalPatternSet.from_api_response(
                 point_url, areal_url, catchment_area=self.config.site.catchment_area)
         return self._tp_set
+
+    def _cc_loss_factors(self, baseline_year: int, ssp: str) -> tuple:
+        """Returns ``(initial_loss_factor, continuing_loss_factor)`` for the given
+        climate change scenario, from the Data Hub's ``ClimateChange`` layer."""
+        return self.response.climate_change_loss_factors(baseline_year, ssp)
 
     def _storm_initial_loss(self, aep_name: str) -> float:
         """Looks up the (non-reduced) storm initial loss (mm) for the given AEP - used
@@ -246,12 +251,20 @@ class ArrEngine:
 
         self.arf_tables = {}
         self.depth_areal_tables = {}
+        self.burst_loss_table = {}
         try:
-            self.burst_loss_table = self._burst_loss_frame()
+            base_burst_loss = self._burst_loss_frame()
         except ArrError:
-            self.burst_loss_table = None
+            base_burst_loss = None
+        self.burst_loss_table[None] = base_burst_loss
 
         for scenario_label, baseline_year, ssp in scenarios:
+            if scenario_label is not None and base_burst_loss is not None:
+                il_factor, _ = self._cc_loss_factors(baseline_year, ssp)
+                # burst_loss table may contain non-numeric "Use PB TP" placeholder cells
+                # (complete-storm-only cells) - only scale the numeric cells.
+                self.burst_loss_table[scenario_label] = base_burst_loss.map(
+                    lambda v: v * il_factor if isinstance(v, (int, float)) else v)
             ifd = self._ifd_frame(baseline_year, ssp)
             depths = _interp_table(ifd, durations, aep_pcts)
             arf = arf_factors(
@@ -294,6 +307,14 @@ class ArrEngine:
                         preburst = build_preburst(
                             self.response, self.config, tp_set, duration, aep_name, aep_pct, depth_point)
                         il = self._storm_initial_loss(aep_name)
+
+                    if ssp is not None:
+                        # apply the Data Hub's climate-change loss adjustment factors -
+                        # both the initial and continuing loss are factored, matching the
+                        # legacy script's treatment of climate-change-adjusted losses.
+                        il_factor, cl_factor = self._cc_loss_factors(baseline_year, ssp)
+                        il = il * il_factor
+                        cl = cl * cl_factor
 
                     results.append(EventResult(
                         aep_name=aep_name, duration=duration, depth_point=depth_point,

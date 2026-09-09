@@ -85,6 +85,50 @@ class ArrApiResponse:
             )
         return cc_adj[key]
 
+    def climate_change_loss_factors(self, baseline_year: int, ssp: str) -> tuple:
+        """Returns ``(initial_loss_factor, continuing_loss_factor)`` from the
+        ``ClimateChange`` layer's ``loss_factors`` tables, for the given baseline year
+        (2030-2100, in 10-year increments) and SSP scenario (SSP1/SSP2/SSP3/SSP5). Both
+        design rainfall losses are multiplied by these factors for climate-change
+        events, matching the legacy script's treatment of climate-change-adjusted
+        losses."""
+        cc = self.layer('ClimateChange', required=True)
+        loss_factors = cc.get('loss_factors') or {}
+        il_table = loss_factors.get('Initial_Loss')
+        cl_table = loss_factors.get('Continuing_Loss')
+        if il_table is None or cl_table is None:
+            raise ArrApiError(
+                "ARR Data Hub response is missing 'ClimateChange' loss factor tables "
+                "('Initial_Loss'/'Continuing_Loss')."
+            )
+        il_factor = _lookup_loss_factor(il_table, baseline_year, ssp)
+        cl_factor = _lookup_loss_factor(cl_table, baseline_year, ssp)
+        return il_factor, cl_factor
+
+
+def _lookup_loss_factor(table: dict, baseline_year: int, ssp: str) -> float:
+    """Looks up a single climate change loss factor value from a ``{"index":
+    ..., "columns": ..., "data": ...}`` table (rows are baseline years, columns are
+    SSP-labelled, e.g. ``'Losses SSP2-4.5'``)."""
+    col_idx = None
+    for i, col in enumerate(table['columns']):
+        if str(col).upper().startswith(f'LOSSES {ssp.upper()}') or ssp.upper() in str(col).upper():
+            col_idx = i
+            break
+    if col_idx is None:
+        raise ArrApiError(
+            f"ARR Data Hub 'ClimateChange' loss factor table does not contain SSP '{ssp}' "
+            f"(available columns: {table['columns']})"
+        )
+    years = [int(y) for y in table['index']]
+    if baseline_year not in years:
+        raise ArrApiError(
+            f"ARR Data Hub 'ClimateChange' loss factor table does not contain baseline year "
+            f"'{baseline_year}' (available: {years})"
+        )
+    row_idx = years.index(baseline_year)
+    return float(table['data'][row_idx][col_idx])
+
 
 class ArrApiClient:
     """Fetches data from the ARR Data Hub API for a single site (point) config."""
@@ -104,6 +148,7 @@ class ArrApiClient:
             params[layer] = 1
         if config.climate_change.enabled:
             params['CCAdjIFDDatasets'] = 1
+            params['ClimateChange'] = 1
         return params
 
     def fetch(self, config: ArrConfig) -> ArrApiResponse:
