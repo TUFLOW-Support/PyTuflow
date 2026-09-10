@@ -154,3 +154,107 @@ def test_limb_ifd_table_missing_dataset_raises_seq_message():
     response = ArrApiResponse(data)
     with pytest.raises(ArrApiError, match='South East Queensland'):
         response.limb_ifd_table(2020)
+
+
+def test_build_params_excludes_lat_lon_when_catchment_boundary(tmp_path):
+    boundary = tmp_path / 'catchment.geojson'
+    boundary.write_text('{}')
+    data = json.loads(json.dumps(SITE_CONFIG))
+    del data['site']['latitude']
+    del data['site']['longitude']
+    data['site']['catchment_boundary'] = str(boundary)
+    config = ArrConfig.from_dict(data)
+    params = ArrApiClient().build_params(config)
+    assert 'lat_coord' not in params
+    assert 'lon_coord' not in params
+
+
+def test_build_params_includes_outlet_coords():
+    data = json.loads(json.dumps(SITE_CONFIG))
+    data['site']['outlet_latitude'] = -33.9
+    data['site']['outlet_longitude'] = 151.0
+    config = ArrConfig.from_dict(data)
+    params = ArrApiClient().build_params(config)
+    assert params['outlet_lat_coord'] == -33.9
+    assert params['outlet_lon_coord'] == 151.0
+
+
+def test_catchment_boundary_files_single_file(tmp_path):
+    boundary = tmp_path / 'catchment.geojson'
+    boundary.write_text('{"type": "FeatureCollection"}')
+    files = ArrApiClient._catchment_boundary_files(str(boundary))
+    assert len(files) == 1
+    assert files[0].field_name == 'shapeFile[]'
+    assert files[0].filename == 'catchment.geojson'
+    assert files[0].content == boundary.read_bytes()
+
+
+def test_catchment_boundary_files_shapefile_includes_siblings(tmp_path):
+    shp = tmp_path / 'catchment.shp'
+    shp.write_bytes(b'shp-bytes')
+    (tmp_path / 'catchment.shx').write_bytes(b'shx-bytes')
+    (tmp_path / 'catchment.dbf').write_bytes(b'dbf-bytes')
+    (tmp_path / 'catchment.prj').write_bytes(b'prj-bytes')
+    files = ArrApiClient._catchment_boundary_files(str(shp))
+    filenames = {f.filename for f in files}
+    assert filenames == {'catchment.shp', 'catchment.shx', 'catchment.dbf', 'catchment.prj'}
+    assert all(f.field_name == 'shapeFile[]' for f in files)
+
+
+def test_fetch_uses_post_for_catchment_boundary(tmp_path, monkeypatch):
+    boundary = tmp_path / 'catchment.geojson'
+    boundary.write_text('{}')
+    data = json.loads(json.dumps(SITE_CONFIG))
+    del data['site']['latitude']
+    del data['site']['longitude']
+    data['site']['catchment_boundary'] = str(boundary)
+    config = ArrConfig.from_dict(data)
+
+    captured = {}
+
+    class FakeResponse:
+        status_code = 200
+        ok = True
+        content = b'{"title": "catchment result", "layers": {}}'
+        headers = {'content-type': 'application/json'}
+
+    def fake_post(url, data=None, files=None, headers=None, timeout=None):
+        captured['url'] = url
+        captured['data'] = data
+        captured['files'] = files
+        return FakeResponse()
+
+    monkeypatch.setattr('pytuflow.arr.downloader.requests.post', fake_post)
+    response = ArrApiClient().fetch(config)
+    assert response.title == 'catchment result'
+    assert captured['data']['type'] == 'json'
+    assert 'lat_coord' not in captured['data']
+    field_names = {name for name, _ in captured['files']}
+    assert field_names == {'shapeFile[]'}
+
+
+def test_downloader_requests_post_passes_data_and_files(monkeypatch):
+    from pytuflow.arr.downloader import FilePart
+
+    captured = {}
+
+    class FakeResponse:
+        status_code = 200
+        ok = True
+        content = b'ok'
+        headers = {'content-type': 'text/plain'}
+
+    def fake_post(url, data=None, files=None, headers=None, timeout=None):
+        captured.update(url=url, data=data, files=files, headers=headers, timeout=timeout)
+        return FakeResponse()
+
+    monkeypatch.setattr('pytuflow.arr.downloader.requests.post', fake_post)
+    downloader = DownloaderRequests('https://example.com')
+    file_part = FilePart(field_name='shapeFile[]', filename='c.geojson', content=b'{}',
+                         content_type='application/geo+json')
+    downloader.download(method='POST', data={'type': 'json'}, files=[file_part])
+    assert downloader.ok()
+    assert downloader.data == 'ok'
+    assert captured['url'] == 'https://example.com'
+    assert captured['data'] == {'type': 'json'}
+    assert captured['files'] == [('shapeFile[]', ('c.geojson', b'{}', 'application/geo+json'))]

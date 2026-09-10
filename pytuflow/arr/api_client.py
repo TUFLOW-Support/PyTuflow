@@ -13,17 +13,20 @@ from __future__ import annotations
 
 import json
 import logging
+import mimetypes
+from pathlib import Path
 from typing import Optional
 
-from .config import ArrConfig
-from .downloader import Downloader
+from .config import ArrConfig, SHAPEFILE_OPTIONAL_SIBLINGS, SHAPEFILE_REQUIRED_SIBLINGS
+from .downloader import Downloader, FilePart
 from .exceptions import ArrApiError
 
 logger = logging.getLogger('pytuflow.arr')
 
-#: Default (dev) base URL for the ARR Data Hub API. Point queries are simple GET requests;
-#: see https://data-dev.arr-software.org/about for catchment-boundary (geojson/shapefile/kml)
-#: POST request details, which will be supported in a future update.
+#: Default (dev) base URL for the ARR Data Hub API. Point queries (``site.latitude``/
+#: ``site.longitude``) are simple GET requests; catchment-boundary queries
+#: (``site.catchment_boundary`` - GeoJSON/Shapefile/KML) are ``multipart/form-data`` POST
+#: requests instead - see https://data-dev.arr-software.org/about.
 DEFAULT_BASE_URL = 'https://data-dev.arr-software.org/'
 
 #: Data layers requested for every query, matching the "Command Line Name" column in the
@@ -154,13 +157,21 @@ class ArrApiClient:
         self.base_url = base_url
 
     def build_params(self, config: ArrConfig) -> dict:
-        """Builds the GET query parameters for the API request, based on the config's
-        site location and which optional layers are required (e.g. climate change)."""
-        params = {
-            'lat_coord': config.site.latitude,
-            'lon_coord': config.site.longitude,
-            'type': 'json',
-        }
+        """Builds the query parameters for the API request, based on the config's site
+        location (or catchment boundary) and which optional layers are required (e.g.
+        climate change). Used both for GET point queries and as the form fields of a
+        POST catchment-boundary upload (see :meth:`fetch`)."""
+        params = {'type': 'json'}
+        if config.site.catchment_boundary:
+            # the centroid is derived from the uploaded boundary itself - no
+            # lat_coord/lon_coord is sent for a catchment-boundary query.
+            pass
+        else:
+            params['lat_coord'] = config.site.latitude
+            params['lon_coord'] = config.site.longitude
+        if config.site.outlet_latitude is not None:
+            params['outlet_lat_coord'] = config.site.outlet_latitude
+            params['outlet_lon_coord'] = config.site.outlet_longitude
         for layer in _BASE_LAYERS:
             params[layer] = 1
         if config.climate_change.enabled:
@@ -170,15 +181,51 @@ class ArrApiClient:
             params['AllIFDDatasets'] = 1
         return params
 
+    @staticmethod
+    def _catchment_boundary_files(catchment_boundary: str) -> list[FilePart]:
+        """Builds the ``shapeFile[]`` multipart file attachments for a catchment
+        boundary upload. For a ``.shp`` path, also attaches its required
+        ``.shx``/``.dbf`` siblings (and ``.prj``, if present) alongside it, matching the
+        ARR Data Hub API's shapefile upload contract (see
+        https://data-dev.arr-software.org/about)."""
+        path = Path(catchment_boundary)
+        paths = [path]
+        if path.suffix.lower() == '.shp':
+            for sibling_ext in SHAPEFILE_REQUIRED_SIBLINGS:
+                paths.append(path.with_suffix(sibling_ext))
+            for sibling_ext in SHAPEFILE_OPTIONAL_SIBLINGS:
+                sibling_path = path.with_suffix(sibling_ext)
+                if sibling_path.is_file():
+                    paths.append(sibling_path)
+        files = []
+        for p in paths:
+            content_type = mimetypes.guess_type(p.name)[0] or 'application/octet-stream'
+            files.append(FilePart(
+                field_name='shapeFile[]', filename=p.name, content=p.read_bytes(), content_type=content_type,
+            ))
+        return files
+
     def fetch(self, config: ArrConfig) -> ArrApiResponse:
-        """Requests data from the ARR Data Hub API for the given config's site, and
-        returns the parsed response."""
+        """Requests data from the ARR Data Hub API for the given config's site (a
+        lat/lon point, or an uploaded catchment boundary - see
+        ``site.catchment_boundary``), and returns the parsed response."""
         params = self.build_params(config)
-        query = '&'.join(f'{k}={v}' for k, v in params.items())
-        url = f'{self.base_url}?{query}'
-        logger.info('Requesting ARR Data Hub data: %s', url)
-        downloader = Downloader(url)
-        downloader.download()
+        if config.site.catchment_boundary:
+            logger.info(
+                "Requesting ARR Data Hub data for uploaded catchment boundary '%s'",
+                config.site.catchment_boundary,
+            )
+            downloader = Downloader(self.base_url)
+            downloader.download(
+                method='POST', data=params,
+                files=self._catchment_boundary_files(config.site.catchment_boundary),
+            )
+        else:
+            query = '&'.join(f'{k}={v}' for k, v in params.items())
+            url = f'{self.base_url}?{query}'
+            logger.info('Requesting ARR Data Hub data: %s', url)
+            downloader = Downloader(url)
+            downloader.download()
         if not downloader.ok():
             raise ArrApiError(
                 f"ARR Data Hub request failed (using {downloader.type()} downloader): "
@@ -189,6 +236,7 @@ class ArrApiClient:
         except json.JSONDecodeError as e:
             raise ArrApiError(f"ARR Data Hub response is not valid JSON: {e}") from e
         return ArrApiResponse(data)
+
 
     def fetch_point_tp_for_coords(self, lat: float, lon: float) -> tuple:
         """Requests just the ``PointTP`` layer for arbitrary coordinates, used to fetch

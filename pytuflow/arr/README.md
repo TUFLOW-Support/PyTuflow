@@ -125,7 +125,9 @@ being silently ignored, to catch typos early.
 | Key | Type | Description |
 | --- | --- | --- |
 | `name` | string | Site/catchment identifier - used as a prefix for output file names (e.g. `<name>_RF_...`) and as the TUFLOW `IL_<name>`/`CL_<name>` loss variable suffix. **Required.** |
-| `latitude` / `longitude` | number | Site (catchment centroid) coordinates, decimal degrees. **Required**, unless the top-level `response_json` key is set (see below), in which case they are not used and may be omitted. |
+| `latitude` / `longitude` | number | Site (catchment centroid) coordinates, decimal degrees. **Required**, unless `catchment_boundary` is set (mutually exclusive with it), or unless the top-level `response_json` key is set (see below), in which case they are not used and may be omitted. |
+| `catchment_boundary` | string \| null | Path to a catchment boundary polygon file to upload to the ARR Data Hub instead of a single lat/lon point - GeoJSON (`.geojson`/`.json`), KML (`.kml`), or Shapefile (`.shp` - its `.shx`/`.dbf` sibling files alongside it are also uploaded automatically, and `.prj` too if present). Mutually exclusive with `latitude`/`longitude`. If the boundary's centroid falls outside the polygon, the Data Hub substitutes a representative interior point instead. See https://data-dev.arr-software.org/about. |
+| `outlet_latitude` / `outlet_longitude` | number | Optional catchment outlet coordinates, decimal degrees. Used only for jurisdiction-sensitive layers (Recommended IFD Depths, Storm Losses, Preburst, ARF Parameters) to determine which jurisdiction's rules apply; if omitted, the catchment centroid (`latitude`/`longitude`, or the uploaded boundary's centroid) is used instead. Can be used together with either `latitude`/`longitude` or `catchment_boundary`. Must be given together (both or neither). |
 | `catchment_area` | number | Catchment area in km². Used for ARF calculation and to select the areal temporal pattern area bucket. |
 
 ### `response_json` (top-level, optional)

@@ -53,6 +53,17 @@ CC_LOSS_METHODS = ('burst', 'storm')
 IFD_SOURCES = ('bom', 'limb')
 OUTPUT_FORMATS = ('csv', 'ts1')
 OUTPUT_NOTATIONS = ('ari', 'aep')
+#: File extensions accepted for ``site.catchment_boundary`` (a catchment boundary
+#: polygon upload, as an alternative to a single ``site.latitude``/``site.longitude``
+#: point - see https://data-dev.arr-software.org/about). ``.shp`` uploads require their
+#: ``.shx``/``.dbf`` sibling components (``.prj`` is optional, but recommended if the
+#: shapefile isn't already in WGS84 lat/lon).
+CATCHMENT_BOUNDARY_EXTENSIONS = ('.geojson', '.json', '.kml', '.shp')
+#: Required sibling file extensions for a ``.shp`` catchment boundary upload.
+SHAPEFILE_REQUIRED_SIBLINGS = ('.shx', '.dbf')
+#: Optional sibling file extensions for a ``.shp`` catchment boundary upload - included
+#: in the upload if present, but not required.
+SHAPEFILE_OPTIONAL_SIBLINGS = ('.prj',)
 
 
 def _from_dict(cls, data: Optional[dict]) -> Any:
@@ -72,17 +83,63 @@ class SiteConfig:
     latitude: Optional[float] = None
     longitude: Optional[float] = None
     catchment_area: Optional[float] = None
+    #: Path to a catchment boundary polygon file (GeoJSON/``.json``, KML, or Shapefile
+    #: ``.shp``) to upload to the ARR Data Hub instead of a single lat/lon point - see
+    #: https://data-dev.arr-software.org/about. Mutually exclusive with
+    #: ``latitude``/``longitude``. For a Shapefile, the ``.shx``/``.dbf`` sibling files
+    #: (and ``.prj``, if present) alongside the given ``.shp`` path are uploaded too.
+    catchment_boundary: Optional[str] = None
+    #: Optional catchment outlet location, used only for jurisdiction-sensitive layers
+    #: (Recommended IFD Depths, Storm Losses, Preburst, ARF Parameters) to determine
+    #: which jurisdiction's rules apply. If not given, the catchment centroid (i.e.
+    #: ``latitude``/``longitude``, or the uploaded boundary's centroid) is used instead.
+    #: Can be used with either ``latitude``/``longitude`` or ``catchment_boundary``.
+    outlet_latitude: Optional[float] = None
+    outlet_longitude: Optional[float] = None
 
     def validate(self, require_coordinates: bool = True) -> list[str]:
         errors = []
         if not self.name:
             errors.append("site.name is required")
         if require_coordinates:
-            if self.latitude is None:
-                errors.append("site.latitude is required")
-            if self.longitude is None:
-                errors.append("site.longitude is required")
+            if self.catchment_boundary:
+                if self.latitude is not None or self.longitude is not None:
+                    errors.append(
+                        "site.catchment_boundary cannot be used together with "
+                        "site.latitude/site.longitude - use site.outlet_latitude/"
+                        "site.outlet_longitude instead if an outlet location is needed"
+                    )
+                errors.extend(self._validate_catchment_boundary())
+            else:
+                if self.latitude is None:
+                    errors.append("site.latitude is required")
+                if self.longitude is None:
+                    errors.append("site.longitude is required")
+        if (self.outlet_latitude is None) != (self.outlet_longitude is None):
+            errors.append("site.outlet_latitude and site.outlet_longitude must be given together")
         return errors
+
+    def _validate_catchment_boundary(self) -> list[str]:
+        errors = []
+        path = Path(self.catchment_boundary)
+        if not path.is_file():
+            errors.append(f"site.catchment_boundary file not found: '{self.catchment_boundary}'")
+            return errors
+        suffix = path.suffix.lower()
+        if suffix not in CATCHMENT_BOUNDARY_EXTENSIONS:
+            errors.append(
+                f"site.catchment_boundary must be one of {CATCHMENT_BOUNDARY_EXTENSIONS}, "
+                f"got '{self.catchment_boundary}'"
+            )
+        elif suffix == '.shp':
+            for sibling_ext in SHAPEFILE_REQUIRED_SIBLINGS:
+                if not path.with_suffix(sibling_ext).is_file():
+                    errors.append(
+                        f"site.catchment_boundary shapefile is missing required "
+                        f"'{sibling_ext}' component: '{path.with_suffix(sibling_ext)}'"
+                    )
+        return errors
+
 
 
 @dataclass

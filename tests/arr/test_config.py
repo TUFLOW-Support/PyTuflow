@@ -296,3 +296,75 @@ def test_ifd_source_limb_incompatible_with_climate_change():
     bad['climate_change'] = {'enabled': True, 'scenarios': [{'baseline_year': 2090, 'ssp': 'SSP2'}]}
     with pytest.raises(ArrConfigError, match='climate_change.enabled cannot be used with'):
         ArrConfig.from_dict(bad)
+
+
+def test_catchment_boundary_geojson_valid(tmp_path):
+    boundary = tmp_path / 'catchment.geojson'
+    boundary.write_text('{}')
+    data = json.loads(json.dumps(VALID_CONFIG))
+    del data['site']['latitude']
+    del data['site']['longitude']
+    data['site']['catchment_boundary'] = str(boundary)
+    config = ArrConfig.from_dict(data)
+    assert config.site.catchment_boundary == str(boundary)
+    assert config.site.latitude is None
+
+
+def test_catchment_boundary_and_lat_lon_mutually_exclusive(tmp_path):
+    boundary = tmp_path / 'catchment.geojson'
+    boundary.write_text('{}')
+    data = json.loads(json.dumps(VALID_CONFIG))
+    data['site']['catchment_boundary'] = str(boundary)
+    with pytest.raises(ArrConfigError, match='cannot be used together'):
+        ArrConfig.from_dict(data)
+
+
+def test_catchment_boundary_missing_file_raises():
+    data = json.loads(json.dumps(VALID_CONFIG))
+    del data['site']['latitude']
+    del data['site']['longitude']
+    data['site']['catchment_boundary'] = '/nonexistent/catchment.geojson'
+    with pytest.raises(ArrConfigError, match='file not found'):
+        ArrConfig.from_dict(data)
+
+
+def test_catchment_boundary_unsupported_extension_raises(tmp_path):
+    boundary = tmp_path / 'catchment.txt'
+    boundary.write_text('x')
+    data = json.loads(json.dumps(VALID_CONFIG))
+    del data['site']['latitude']
+    del data['site']['longitude']
+    data['site']['catchment_boundary'] = str(boundary)
+    with pytest.raises(ArrConfigError, match='catchment_boundary must be one of'):
+        ArrConfig.from_dict(data)
+
+
+def test_catchment_boundary_shapefile_requires_siblings(tmp_path):
+    shp = tmp_path / 'catchment.shp'
+    shp.write_bytes(b'x')
+    data = json.loads(json.dumps(VALID_CONFIG))
+    del data['site']['latitude']
+    del data['site']['longitude']
+    data['site']['catchment_boundary'] = str(shp)
+    with pytest.raises(ArrConfigError, match=r"missing required '.shx' component"):
+        ArrConfig.from_dict(data)
+    (tmp_path / 'catchment.shx').write_bytes(b'x')
+    (tmp_path / 'catchment.dbf').write_bytes(b'x')
+    config = ArrConfig.from_dict(data)
+    assert config.site.catchment_boundary == str(shp)
+
+
+def test_outlet_coords_must_be_given_together():
+    data = json.loads(json.dumps(VALID_CONFIG))
+    data['site']['outlet_latitude'] = -33.9
+    with pytest.raises(ArrConfigError, match='outlet_latitude and site.outlet_longitude'):
+        ArrConfig.from_dict(data)
+
+
+def test_outlet_coords_valid_together():
+    data = json.loads(json.dumps(VALID_CONFIG))
+    data['site']['outlet_latitude'] = -33.9
+    data['site']['outlet_longitude'] = 151.0
+    config = ArrConfig.from_dict(data)
+    assert config.site.outlet_latitude == -33.9
+    assert config.site.outlet_longitude == 151.0
