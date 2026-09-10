@@ -1,6 +1,13 @@
 Changelog for 1.2
 =================
 
+1.2.2
+-----
+
+Release date: 10 September 2026
+
+- Older TUFLOW versions that sit within a ``w64`` subdirectory are correctly handled when checking binary versions.
+
 1.2.1
 -----
 
