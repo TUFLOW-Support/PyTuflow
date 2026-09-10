@@ -74,7 +74,12 @@ def write_tef(path: Path, config: ArrConfig, results: list, append: bool = False
     """Writes (or appends to) ``Event_File.tef``."""
     aep_names = sorted({r.aep_name for r in results}, key=lambda a: [r.aep_name for r in results].index(a))
     durations = sorted({r.duration for r in results})
-    tp_count = max((len(r.patterns) for r in results), default=0)
+    # Use the result with the most temporal patterns to derive the tp01..tpNN column
+    # labels (see `_tp_label`) - `additional_tp`/`all_point_tp`/`add_areal_tp` apply
+    # uniformly across the run, so this is representative of the full label set
+    # actually written to the rf_inflow CSVs (e.g. `TP01_MurrayBasin`).
+    richest = max(results, key=lambda r: len(r.patterns), default=None)
+    tp_labels = [_tp_label(p, richest.patterns) for p in richest.patterns] if richest is not None else []
     cc_scenarios = sorted({r.cc_scenario for r in results if r.cc_scenario is not None})
     out_notation = config.events.output_notation
 
@@ -97,9 +102,9 @@ def write_tef(path: Path, config: ArrConfig, results: list, append: bool = False
                 f.write('End Define\n\n')
 
             f.write('!EVENT TEMPORAL PATTERNS\n')
-            for i in range(1, tp_count + 1):
+            for i, label in enumerate(tp_labels, start=1):
                 f.write(f'Define Event == tp{i:02d}\n')
-                f.write(f'    BC Event Source == ~TP~ | TP{i:02d}\n')
+                f.write(f'    BC Event Source == ~TP~ | {label}\n')
                 f.write('End Define\n\n')
 
             if cc_scenarios:
@@ -158,9 +163,9 @@ def _tp_label(p, patterns: list) -> str:
       further area buckets - each additional set is suffixed with its 1-based index,
       e.g. ``TP01_add1``.
     * ``temporal_patterns.additional_tp`` adds patterns from other named TP regions -
-      each pattern's own region is appended (only for regions other than the site's
-      own, i.e. only when more than one region is actually present), e.g.
-      ``TP01_WetTropics``.
+      every pattern's own region is appended, including the site's own native region
+      (not just the additional ones), whenever more than one region is actually
+      present, e.g. ``TP01_EastCoastSouth`` / ``TP01_WetTropics``.
 
     All three are independent and can combine (e.g. ``TP01_frequent_add1``). None of
     these apply (i.e. the label is simply ``TP01`` etc, matching the default output)

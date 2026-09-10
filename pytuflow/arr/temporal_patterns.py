@@ -279,6 +279,11 @@ class TemporalPatternSet:
         self.point_tp = point_tp
         self.areal_tp = areal_tp
         self.tp_area = nearest_areal_tp_area(catchment_area) if catchment_area is not None else None
+        #: region name(s) present in the catchment's own (native) point temporal
+        #: patterns, captured before any :meth:`add_region_patterns` calls - used to
+        #: ensure native patterns are always sorted/output before any additional
+        #: ``additional_tp`` region patterns (see :meth:`patterns`).
+        self._native_point_regions = set(point_tp['region'].unique()) if point_tp is not None and not point_tp.empty else set()
         #: raw downloaded increments CSV text, kept only for optional verbose working-data
         #: output (see :mod:`pytuflow.arr.working_data`) - not otherwise used.
         self.point_tp_csv = point_tp_csv
@@ -415,11 +420,19 @@ class TemporalPatternSet:
                     "skipping.", duration, b,
                 )
                 continue
-            for r in candidates.sort_values(['region', 'tp_number']).itertuples():
-                results.append(TemporalPattern(
+            band_results = [
+                TemporalPattern(
                     int(r.event_id), int(r.tp_number), float(r.timestep), r.increments, 'point',
                     region=r.region, band=b,
-                ))
+                )
+                for r in candidates.itertuples()
+            ]
+            # ensure the catchment's own (native) region patterns are listed first within
+            # this band, ahead of any additional `additional_tp` region patterns (which
+            # would otherwise sort alphabetically by region name and could sort before
+            # the native region).
+            band_results.sort(key=lambda p: (p.region not in self._native_point_regions, p.region, p.tp_number))
+            results.extend(band_results)
         return results
 
     def available_durations(self, aep_name: str, output_notation: str = 'ari') -> list:

@@ -130,6 +130,42 @@ def test_rf_inflow_all_point_tp_includes_all_bands(tmp_path, api_response_1990):
     assert any(label.endswith('_intermediate') for label in header)
     assert any(label.endswith('_rare') for label in header)
 
+    tef = (tmp_path / 'Event_File.tef').read_text()
+    assert 'Define Event == tp01\n    BC Event Source == ~TP~ | TP01_frequent' in tef
+    assert 'Define Event == tp30\n    BC Event Source == ~TP~ | ' in tef
+
+
+def test_rf_inflow_additional_tp_native_region_sorted_first(tmp_path, api_response_1990, monkeypatch):
+    from pytuflow.arr import api_client as api_client_module
+
+    def fake_fetch_point_tp_for_coords(self, lat, lon):
+        return {'url': 'https://example.invalid/murray_basin_point_tp.zip'}
+    monkeypatch.setattr(api_client_module.ArrApiClient, 'fetch_point_tp_for_coords', fake_fetch_point_tp_for_coords)
+
+    config = make_config(
+        tmp_path,
+        events={'aep': ['50%'], 'duration': [1440], 'output_notation': 'ari'},
+        losses={'extrapolation_method': 'interpolate'},
+        temporal_patterns={'additional_tp': ['Murray Basin']},
+    )
+    engine = ArrEngine(config, api_response_1990)
+    results = engine.run()
+    assert len(results[0].patterns) == 20
+    write_outputs(config, results)
+
+    lines = (tmp_path / 'rf_inflow' / '1_RF_50p1440m.csv').read_text().splitlines()
+    header = lines[2].split(',')[1:]
+    assert len(header) == 20
+    # native (site's own region) patterns must come first, additional region after
+    assert 'MurrayBasin' not in header[0]
+    assert 'MurrayBasin' not in header[9]
+    assert header[10] == 'TP01_MurrayBasin'
+    assert header[19] == 'TP10_MurrayBasin'
+
+    tef = (tmp_path / 'Event_File.tef').read_text()
+    assert f'Define Event == tp01\n    BC Event Source == ~TP~ | {header[0]}\n' in tef
+    assert 'Define Event == tp11\n    BC Event Source == ~TP~ | TP01_MurrayBasin' in tef
+
 
 def test_rf_inflow_complete_storm_prepends_preburst(tmp_path, api_response_1990):
     # 20%/1440min is a 'Use PB TP' placeholder cell that auto-triggers complete storm.
