@@ -129,3 +129,55 @@ def test_verbose_writes_files_for_multiple_durations_and_aeps(tmp_path, api_resp
     for aep in ('50%', '20%'):
         assert aep in arf_csv
         assert aep in ifd_csv
+
+
+def test_additional_tp_region_response_and_csv_written(tmp_path, api_response_1990, monkeypatch):
+    from pytuflow.arr import api_client as api_client_module
+
+    def fake_fetch_point_tp_for_coords(self, lat, lon):
+        return {'url': 'https://example.invalid/wet_tropics_point_tp.zip'}, {'title': 'fake wet tropics response'}
+    monkeypatch.setattr(api_client_module.ArrApiClient, 'fetch_point_tp_for_coords', fake_fetch_point_tp_for_coords)
+
+    config = make_config(
+        tmp_path, verbose=False,
+        events={'aep': ['50%'], 'duration': [1440], 'output_notation': 'ari'},
+        losses={'extrapolation_method': 'interpolate'},
+        temporal_patterns={'additional_tp': ['Wet Tropics']},
+    )
+    engine = ArrEngine(config, api_response_1990)
+    engine.run()
+    write_working_data(config, api_response_1990, engine)
+
+    working = tmp_path / 'working_data'
+    # additional-region raw response is always saved, even when not verbose
+    region_json_path = working / '1_ARR_response_WetTropics.json'
+    assert region_json_path.exists()
+    with open(region_json_path, encoding='utf-8') as f:
+        data = json.load(f)
+    assert data == {'title': 'fake wet tropics response'}
+
+    # additional-region increments CSV is verbose-only, like the site's own
+    assert not (working / '1_PointTP_Increments_WetTropics.csv').exists()
+
+
+def test_verbose_writes_additional_tp_region_increments_csv(tmp_path, api_response_1990, monkeypatch, point_tp_csv):
+    from pytuflow.arr import api_client as api_client_module
+
+    def fake_fetch_point_tp_for_coords(self, lat, lon):
+        return {'url': 'https://example.invalid/wet_tropics_point_tp.zip'}, {'title': 'fake wet tropics response'}
+    monkeypatch.setattr(api_client_module.ArrApiClient, 'fetch_point_tp_for_coords', fake_fetch_point_tp_for_coords)
+
+    config = make_config(
+        tmp_path, verbose=True,
+        events={'aep': ['50%'], 'duration': [1440], 'output_notation': 'ari'},
+        losses={'extrapolation_method': 'interpolate'},
+        temporal_patterns={'additional_tp': ['Wet Tropics']},
+    )
+    engine = ArrEngine(config, api_response_1990)
+    engine.run()
+    write_working_data(config, api_response_1990, engine)
+
+    working = tmp_path / 'working_data'
+    csv_path = working / '1_PointTP_Increments_WetTropics.csv'
+    assert csv_path.exists()
+    assert csv_path.read_text(encoding='utf-8').replace('\r\n', '\n') == point_tp_csv.replace('\r\n', '\n')

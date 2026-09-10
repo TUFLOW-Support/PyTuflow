@@ -232,7 +232,19 @@ TP_REGION_COORDS = {
 }
 
 
-def fetch_additional_region_point_tp(region_name: str, base_url: Optional[str] = None) -> pd.DataFrame:
+@dataclass
+class AdditionalRegionTP:
+    """Result of :func:`fetch_additional_region_point_tp`: the parsed point temporal
+    pattern rows for the additional region, plus the raw ARR Data Hub JSON response and
+    downloaded increments CSV text, kept for optional verbose working-data output (see
+    :mod:`pytuflow.arr.working_data`)."""
+    region: str
+    dataframe: pd.DataFrame
+    raw_response: dict
+    csv_text: str
+
+
+def fetch_additional_region_point_tp(region_name: str, base_url: Optional[str] = None) -> AdditionalRegionTP:
     """Fetches and parses the point temporal patterns for a named additional TP region
     (``temporal_patterns.additional_tp``), by issuing a separate ARR Data Hub API
     request for that region's representative coordinates (see
@@ -249,12 +261,13 @@ def fetch_additional_region_point_tp(region_name: str, base_url: Optional[str] =
     from .api_client import ArrApiClient
     client = ArrApiClient(base_url) if base_url else ArrApiClient()
     logger.info("Fetching additional temporal patterns for region '%s' (%s, %s).", region_name, lat, lon)
-    point_tp_layer = client.fetch_point_tp_for_coords(lat, lon)
+    point_tp_layer, raw_response = client.fetch_point_tp_for_coords(lat, lon)
     csv_text = _download_increments_csv(point_tp_layer['url'])
     df = parse_point_tp_csv(csv_text)
     df = df.copy()
-    df['region'] = region_name.strip().title()
-    return df
+    region_title = region_name.strip().title()
+    df['region'] = region_title
+    return AdditionalRegionTP(region=region_title, dataframe=df, raw_response=raw_response, csv_text=csv_text)
 
 
 class TemporalPatternSet:

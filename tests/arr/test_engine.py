@@ -370,7 +370,7 @@ def test_engine_additional_tp_merges_other_region_patterns(api_response_1990, mo
     from pytuflow.arr import api_client as api_client_module
 
     def fake_fetch_point_tp_for_coords(self, lat, lon):
-        return {'url': 'https://example.invalid/wet_tropics_point_tp.zip'}
+        return {'url': 'https://example.invalid/wet_tropics_point_tp.zip'}, {'title': 'fake wet tropics response'}
     monkeypatch.setattr(api_client_module.ArrApiClient, 'fetch_point_tp_for_coords', fake_fetch_point_tp_for_coords)
 
     config = make_config(

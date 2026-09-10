@@ -258,6 +258,11 @@ is used to save data useful for reviewing/QA'ing what the tool requested and cal
 * `<site>_ARR_response.json` - the raw JSON response from the ARR Data Hub, exactly as
   received. **Always saved**, regardless of `output.verbose`, so a run can always be
   fully reproduced/inspected later without needing to re-query the Data Hub.
+* `<site>_ARR_response_<region>.json` - one per `temporal_patterns.additional_tp`
+  region configured (if any) - the raw JSON response from the separate ARR Data Hub
+  request made for that region's representative coordinates. **Always saved**, same as
+  the site's own response, for the same reason. `<region>` is the region name with
+  spaces removed (e.g. `WetTropics`).
 
 The following are only saved when `output.verbose` is `true`, since they are purely for
 debugging/QA and are otherwise redundant with the always-written `rf_inflow`/loss
@@ -284,6 +289,11 @@ control files:
 * `<site>_PointTP_Increments.csv` / `<site>_ArealTP_Increments.csv` - the raw temporal
   pattern increment CSVs downloaded from the Data Hub (before selection/filtering to the
   specific patterns used for each event).
+* `<site>_PointTP_Increments_<region>.csv` - one per `temporal_patterns.additional_tp`
+  region configured (if any) - that region's own raw point temporal pattern increments
+  CSV, downloaded from its own separate ARR Data Hub request. `<region>` is the region
+  name with spaces removed (e.g. `WetTropics`), matching the `_<region>` suffix used in
+  `rf_inflow` column labels (see `additional_tp` above).
 
 ## Complete storm assembly
 

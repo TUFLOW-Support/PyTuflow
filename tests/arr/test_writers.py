@@ -139,7 +139,7 @@ def test_rf_inflow_additional_tp_native_region_sorted_first(tmp_path, api_respon
     from pytuflow.arr import api_client as api_client_module
 
     def fake_fetch_point_tp_for_coords(self, lat, lon):
-        return {'url': 'https://example.invalid/murray_basin_point_tp.zip'}
+        return {'url': 'https://example.invalid/murray_basin_point_tp.zip'}, {'title': 'fake murray basin response'}
     monkeypatch.setattr(api_client_module.ArrApiClient, 'fetch_point_tp_for_coords', fake_fetch_point_tp_for_coords)
 
     config = make_config(

@@ -137,6 +137,13 @@ class ArrEngine:
     #: :meth:`_initial_loss`, consumed at the end of :meth:`run` to build
     #: ``extrapolated_loss_table``).
     _extrapolated_loss_records: list = field(default_factory=list, init=False, repr=False)
+    #: Raw ARR Data Hub JSON responses and increments CSV text for each
+    #: ``temporal_patterns.additional_tp`` region fetched, keyed by (title-cased)
+    #: region name - populated by :meth:`_tp_set_for_config`, for optional working-data
+    #: output (see :mod:`pytuflow.arr.working_data`). Each value is a dict with
+    #: ``'raw'`` (the full JSON response) and ``'csv'`` (the downloaded point temporal
+    #: pattern increments CSV text) keys.
+    additional_tp_responses: dict = field(default_factory=dict, init=False, repr=False)
 
     # -- data preparation -------------------------------------------------------------
 
@@ -217,7 +224,9 @@ class ArrEngine:
                 point_url, areal_url, catchment_area=self.config.site.catchment_area)
             for region_name in self.config.temporal_patterns.additional_tp:
                 from .temporal_patterns import fetch_additional_region_point_tp
-                tp_set.add_region_patterns(fetch_additional_region_point_tp(region_name))
+                result = fetch_additional_region_point_tp(region_name)
+                tp_set.add_region_patterns(result.dataframe)
+                self.additional_tp_responses[result.region] = {'raw': result.raw_response, 'csv': result.csv_text}
             self._tp_set = tp_set
         return self._tp_set
 

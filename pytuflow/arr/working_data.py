@@ -2,12 +2,14 @@
 transparency/QA of the ARR Data Hub request and the intermediate calculations used to
 assemble each event.
 
-The raw ARR Data Hub JSON response is always saved. Everything else (the areal design
-IFD table, the ARF table, the burst initial loss table, the extrapolated short-duration
-losses table, and the raw point/areal temporal pattern increment CSVs) is only saved
-when ``output.verbose`` is ``true``, since these are only useful for debugging/QA and
-are otherwise redundant with the ``rf_inflow``/loss control files that are always
-written.
+The raw ARR Data Hub JSON response is always saved (one per additional
+``temporal_patterns.additional_tp`` region too, if any are configured - each is a
+genuinely separate ARR Data Hub API request/response). Everything else (the areal
+design IFD table, the ARF table, the burst initial loss table, the extrapolated
+short-duration losses table, and the raw point/areal temporal pattern increment CSVs,
+including for any additional TP regions) is only saved when ``output.verbose`` is
+``true``, since these are only useful for debugging/QA and are otherwise redundant with
+the ``rf_inflow``/loss control files that are always written.
 """
 
 from __future__ import annotations
@@ -27,11 +29,12 @@ WORKING_DATA_FOLDER = 'working_data'
 
 
 def write_working_data(config: ArrConfig, response: ArrApiResponse, engine: ArrEngine) -> None:
-    """Writes the ARR Data Hub JSON response (always) and, if ``config.output.verbose``
+    """Writes the ARR Data Hub JSON response (always, plus one per additional
+    ``temporal_patterns.additional_tp`` region) and, if ``config.output.verbose``
     is set, the areal design IFD table, ARF table, burst initial loss table,
     extrapolated short-duration losses table (if any losses were extrapolated), and raw
-    point/areal temporal pattern increment CSVs, into a ``working_data`` subfolder of
-    ``config.output.path``.
+    point/areal temporal pattern increment CSVs (including for any additional TP
+    regions), into a ``working_data`` subfolder of ``config.output.path``.
     """
     site = str(config.site.name).strip()
     out_path = Path(config.output.path) / WORKING_DATA_FOLDER
@@ -41,6 +44,14 @@ def write_working_data(config: ArrConfig, response: ArrApiResponse, engine: ArrE
     with open(json_path, 'w', encoding='utf-8') as f:
         json.dump(response.raw, f, indent=2)
     logger.info("Wrote ARR Data Hub response to '%s'", json_path)
+
+    for region_name, info in engine.additional_tp_responses.items():
+        region_token = ''.join(ch for ch in region_name if ch.isalnum())
+        region_json_path = out_path / f'{site}_ARR_response_{region_token}.json'
+        with open(region_json_path, 'w', encoding='utf-8') as f:
+            json.dump(info['raw'], f, indent=2)
+        logger.info("Wrote additional temporal pattern region '%s' ARR Data Hub response to '%s'",
+                    region_name, region_json_path)
 
     if not config.output.verbose:
         return
@@ -84,3 +95,10 @@ def write_working_data(config: ArrConfig, response: ArrApiResponse, engine: ArrE
             path = out_path / f'{site}_ArealTP_Increments.csv'
             path.write_text(tp_set.areal_tp_csv, encoding='utf-8')
             logger.info("Wrote areal temporal pattern increments to '%s'", path)
+
+    for region_name, info in engine.additional_tp_responses.items():
+        region_token = ''.join(ch for ch in region_name if ch.isalnum())
+        path = out_path / f'{site}_PointTP_Increments_{region_token}.csv'
+        path.write_text(info['csv'], encoding='utf-8')
+        logger.info("Wrote additional temporal pattern region '%s' point temporal pattern increments to '%s'",
+                    region_name, path)
