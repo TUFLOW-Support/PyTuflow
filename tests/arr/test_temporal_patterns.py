@@ -106,3 +106,77 @@ def test_temporal_pattern_set_no_catchment_area_uses_point_only(point_tp_csv, ar
     tps = TemporalPatternSet(point_df, areal_df, catchment_area=None)
     patterns = tps.patterns(720, '1%')
     assert all(p.source == 'point' for p in patterns)
+
+
+def test_all_point_tp_includes_other_bands(point_tp_csv):
+    point_df = parse_point_tp_csv(point_tp_csv)
+    tps = TemporalPatternSet(point_df, areal_tp=None, catchment_area=150)
+    duration = int(point_df['duration'].min())
+    default_patterns = tps.patterns(duration, '50%')  # 'frequent' band
+    assert len(default_patterns) == 10
+    all_patterns = tps.patterns(duration, '50%', all_point_tp=True)
+    assert len(all_patterns) == 30
+    assert {p.band for p in all_patterns} == {'frequent', 'intermediate', 'rare'}
+    # own band's patterns should come first, unaffected by the feature
+    assert [p.tp_number for p in all_patterns[:10]] == [p.tp_number for p in default_patterns]
+
+
+def test_add_areal_tp_adds_next_closest_area_buckets(point_tp_csv, areal_tp_csv):
+    point_df = parse_point_tp_csv(point_tp_csv)
+    areal_df = parse_areal_tp_csv(areal_tp_csv)
+    tps = TemporalPatternSet(point_df, areal_df, catchment_area=150)
+    assert tps.tp_area == 200
+    default_patterns = tps.patterns(720, '1%')
+    assert len(default_patterns) == 10
+    patterns = tps.patterns(720, '1%', add_areal_tp=1)
+    assert len(patterns) == 20
+    assert {p.group for p in patterns} == {0, 1}
+    added = [p for p in patterns if p.group == 1]
+    assert len(added) == 10
+    # the added set should come from the next closest (500km2) area bucket, not the
+    # catchment's own (200km2) bucket
+    assert added != default_patterns
+
+
+def test_add_areal_tp_two_sets(point_tp_csv, areal_tp_csv):
+    point_df = parse_point_tp_csv(point_tp_csv)
+    areal_df = parse_areal_tp_csv(areal_tp_csv)
+    tps = TemporalPatternSet(point_df, areal_df, catchment_area=150)
+    patterns = tps.patterns(720, '1%', add_areal_tp=2)
+    assert len(patterns) == 30
+    assert sorted({p.group for p in patterns}) == [0, 1, 2]
+
+
+def test_add_areal_tp_limits_when_out_of_area_buckets(point_tp_csv, areal_tp_csv, caplog):
+    import logging
+    point_df = parse_point_tp_csv(point_tp_csv)
+    areal_df = parse_areal_tp_csv(areal_tp_csv)
+    # catchment area maps to the largest (40,000km2) bucket - there is no larger bucket
+    # to borrow additional patterns from.
+    tps = TemporalPatternSet(point_df, areal_df, catchment_area=40000)
+    with caplog.at_level(logging.WARNING):
+        patterns = tps.patterns(720, '1%', add_areal_tp=1)
+    assert len(patterns) == 10
+    assert 'Limiting number of additional areal temporal patterns' in caplog.text
+
+
+def test_fetch_additional_region_point_tp_unknown_region_raises():
+    from pytuflow.arr.exceptions import ArrError
+    from pytuflow.arr.temporal_patterns import fetch_additional_region_point_tp
+    with pytest.raises(ArrError, match='Unrecognised additional temporal pattern region'):
+        fetch_additional_region_point_tp('nowhere')
+
+
+def test_add_region_patterns_merges_into_point_tp(point_tp_csv):
+    point_df = parse_point_tp_csv(point_tp_csv)
+    tps = TemporalPatternSet(point_df, areal_tp=None, catchment_area=150)
+    duration = int(point_df['duration'].min())
+    default_patterns = tps.patterns(duration, '50%')
+    assert len(default_patterns) == 10
+    other_region_df = point_df[point_df['duration'] == duration].copy()
+    other_region_df['region'] = 'Wet Tropics'
+    tps.add_region_patterns(other_region_df)
+    combined_patterns = tps.patterns(duration, '50%')
+    assert len(combined_patterns) == 20
+    regions = {p.region for p in combined_patterns}
+    assert 'Wet Tropics' in regions

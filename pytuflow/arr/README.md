@@ -147,14 +147,20 @@ being silently ignored, to catch typos early.
 | --- | --- | --- | --- |
 | `point_tp_csv` | string \| null | `null` | Reserved for supplying a local point temporal pattern increments CSV instead of downloading from the Data Hub. Not yet used by the engine (always downloads from the Data Hub's supplied URL). |
 | `areal_tp_csv` | string \| null | `null` | As above, for areal temporal patterns. Not yet used. |
-| `additional_tp` | list | `[]` | Reserved for supplying additional/custom temporal patterns. Not yet used. |
-| `all_point_tp` | bool | `false` | Reserved: matches legacy's "all point TP" option (include frequent/intermediate/rare point patterns for every duration, not just the duration's own AEP band). Not yet implemented in the engine. |
-| `add_areal_tp` | int | `0` | Reserved: number of additional areal temporal pattern realisations to include beyond the default set. Not yet implemented in the engine. |
+| `additional_tp` | list[string] | `[]` | Names of other ARR temporal pattern regions (see list below) to fetch and merge in alongside the catchment's own point temporal patterns, for every point-sourced duration/AEP. Each region's own `TP01`-`TP10` numbering is preserved; output columns are only suffixed with the region name when more than one region is present for that event (e.g. `TP01_WetTropics`). Ignored for areal-sourced durations. |
+| `all_point_tp` | bool | `false` | When `true`, include all three AEP point-pattern bands (frequent/intermediate/rare) for every point-sourced duration, not just the duration's own band. Output columns are only suffixed with the band name (e.g. `TP01_frequent`) when more than one band is present. Ignored for areal-sourced durations. |
+| `add_areal_tp` | int | `0` | Number of additional areal temporal pattern catchment-area buckets (beyond the catchment's own bucket) to include for every areal-sourced duration, e.g. `1` adds the next-larger area bucket's 10 patterns, `2` adds the next two, etc. Additional sets are tagged `_add1`, `_add2`, ... in output column labels. If fewer buckets remain than requested, a warning is logged and the available buckets are used. Ignored for point-sourced durations. |
 
 The temporal pattern actually used for each AEP/duration is selected automatically:
 areal patterns are preferred over point patterns wherever the Data Hub provides an
 areal pattern for the catchment's area bucket and the duration is long enough; see
 [`temporal_patterns.py`](temporal_patterns.py) for full selection rules.
+
+Valid `additional_tp` region names (case-insensitive): `Rangelands West`, `Wet
+Tropics`, `Rangelands`, `Central Slopes`, `Monsoonal North`, `Murray Basin`, `East
+Coast North`, `East Coast South`, `Southern Slopes Mainland`, `Southern Slopes
+Tasmania`, `East Flatlands`, `West Flatlands`. Each is fetched from the Data Hub
+using a representative lat/lon coordinate for that region.
 
 ### `climate_change`
 
@@ -454,7 +460,7 @@ The following config options are accepted (validated, parsed) but not yet acted 
 the engine - they are reserved for future work and are documented above per-key:
 
 - `events.aep` / `events.duration` == `"all"`
-- `temporal_patterns.point_tp_csv` / `areal_tp_csv` / `additional_tp` / `all_point_tp` / `add_areal_tp`
+- `temporal_patterns.point_tp_csv` / `areal_tp_csv`
 - `losses.user_continuing_loss`, `losses.urban_initial_loss` / `urban_continuing_loss`
 
 ## See also

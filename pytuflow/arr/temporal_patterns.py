@@ -207,6 +207,54 @@ class TemporalPattern:
     timestep: float  # minutes
     increments: list  # percentages, sums to ~100
     source: str  # 'point' or 'areal'
+    region: Optional[str] = None  # TP region label - distinguishes 'additional_tp' regions
+    band: Optional[str] = None  # AEP band this pattern was selected from - set when 'all_point_tp' pulls in extra bands
+    group: int = 0  # 0 = primary areal TP area bucket, 1.. = 'add_areal_tp' additional (next closest) buckets
+
+
+#: Named additional temporal pattern regions and their representative lat/lon
+#: coordinates, ported from the legacy script's ``ARR_TUFLOW_func_lib.tpRegion_coords()``
+#: - used to fetch that region's own point temporal patterns as "additional"
+#: realisations (see ``temporal_patterns.additional_tp`` / :func:`fetch_additional_region_point_tp`).
+TP_REGION_COORDS = {
+    'rangelands west': (-23.3026, 118.1178),
+    'wet tropics': (-16.9202, 145.7727),
+    'rangelands': (-23.70173, 133.8766),
+    'central slopes': (-26.5715, 148.7845),
+    'monsoonal north': (-12.4538, 130.8412),
+    'murray basin': (-35.3086, 149.1244),
+    'east coast north': (-27.6541, 152.6674),
+    'east coast south': (-33.8701, 151.2063),
+    'southern slopes mainland': (-37.8171, 144.9552),
+    'southern slopes tasmania': (-42.8798, 147.3217),
+    'east flatlands': (-34.9237, 138.6000),
+    'west flatlands': (-31.9509, 115.8578),
+}
+
+
+def fetch_additional_region_point_tp(region_name: str, base_url: Optional[str] = None) -> pd.DataFrame:
+    """Fetches and parses the point temporal patterns for a named additional TP region
+    (``temporal_patterns.additional_tp``), by issuing a separate ARR Data Hub API
+    request for that region's representative coordinates (see
+    :data:`TP_REGION_COORDS`). The resulting rows' ``region`` column is overwritten
+    with the title-cased ``region_name`` so they can be distinguished from the site's
+    own patterns downstream (see :meth:`TemporalPatternSet.add_region_patterns`)."""
+    key = region_name.strip().lower()
+    if key not in TP_REGION_COORDS:
+        raise ArrError(
+            f"Unrecognised additional temporal pattern region: '{region_name}' - must be one of "
+            f"{sorted(k.title() for k in TP_REGION_COORDS)}."
+        )
+    lat, lon = TP_REGION_COORDS[key]
+    from .api_client import ArrApiClient
+    client = ArrApiClient(base_url) if base_url else ArrApiClient()
+    logger.info("Fetching additional temporal patterns for region '%s' (%s, %s).", region_name, lat, lon)
+    point_tp_layer = client.fetch_point_tp_for_coords(lat, lon)
+    csv_text = _download_increments_csv(point_tp_layer['url'])
+    df = parse_point_tp_csv(csv_text)
+    df = df.copy()
+    df['region'] = region_name.strip().title()
+    return df
 
 
 class TemporalPatternSet:
@@ -250,13 +298,59 @@ class TemporalPatternSet:
             areal_tp = parse_areal_tp_csv(areal_csv)
         return cls(point_tp, areal_tp, catchment_area, point_tp_csv=point_csv, areal_tp_csv=areal_csv)
 
-    def _areal_candidates(self, duration: int) -> pd.DataFrame:
-        if self.areal_tp is None or self.tp_area is None:
+    def add_region_patterns(self, region_point_tp: pd.DataFrame) -> None:
+        """Appends additional point temporal pattern rows (e.g. from
+        :func:`fetch_additional_region_point_tp`) to this set's point temporal
+        patterns - they are included alongside the site's own patterns for any
+        matching duration/AEP band (see :meth:`patterns`), each tagged with their own
+        ``region`` value so they can be told apart downstream (see
+        :mod:`pytuflow.arr.writers`)."""
+        self.point_tp = pd.concat([self.point_tp, region_point_tp], ignore_index=True)
+
+    def _areal_candidates(self, duration: int, area: Optional[int] = None) -> pd.DataFrame:
+        area = self.tp_area if area is None else area
+        if self.areal_tp is None or area is None:
             return pd.DataFrame()
-        df = self.areal_tp[(self.areal_tp['area'] == self.tp_area) & (self.areal_tp['duration'] == duration)]
+        df = self.areal_tp[(self.areal_tp['area'] == area) & (self.areal_tp['duration'] == duration)]
         return df
 
-    def patterns(self, duration: int, aep_name: str, output_notation: str = 'ari') -> list:
+    def _additional_areal_patterns(self, duration: int, n: int) -> list:
+        """Adds ``n`` additional sets of areal temporal patterns from the next ``n``
+        closest (larger) catchment area buckets beyond the one actually used for this
+        catchment (``temporal_patterns.add_areal_tp``) - e.g. ``n=1`` adds one extra set
+        (up to 10 patterns) from the next closest area bucket, ``n=2`` adds two extra
+        sets (up to 20 patterns) from the next two closest buckets, etc."""
+        results = []
+        if self.tp_area is None or self.areal_tp is None:
+            return results
+        start = _AREAL_TP_AREAS.index(self.tp_area)
+        added = 0
+        for i in range(1, n + 1):
+            idx = start + i
+            if idx >= len(_AREAL_TP_AREAS):
+                logger.warning(
+                    "Limiting number of additional areal temporal patterns to %d (ran out of larger area "
+                    "buckets beyond %s km2).", added, self.tp_area,
+                )
+                break
+            next_area = _AREAL_TP_AREAS[idx]
+            candidates = self._areal_candidates(duration, next_area)
+            if candidates.empty:
+                logger.warning(
+                    "No areal temporal pattern available for duration %s min at the next closest area bucket "
+                    "(%s km2) - skipping additional areal temporal pattern set %d.", duration, next_area, i,
+                )
+                continue
+            for r in candidates.sort_values('tp_number').itertuples():
+                results.append(TemporalPattern(
+                    int(r.event_id), int(r.tp_number), float(r.timestep), r.increments, 'areal',
+                    region=r.region, group=i,
+                ))
+            added += 1
+        return results
+
+    def patterns(self, duration: int, aep_name: str, output_notation: str = 'ari',
+                 all_point_tp: bool = False, add_areal_tp: int = 0) -> list:
         """Returns the list of :class:`TemporalPattern` to use for the given
         duration/AEP, preferring areal patterns where available for the catchment,
         otherwise falling back to point patterns for that AEP band.
@@ -270,6 +364,17 @@ class TemporalPatternSet:
         output_notation : str
             ``'ari'`` or ``'aep'`` (passed through to :func:`aep_band` for warning text
             only).
+        all_point_tp : bool
+            If ``True`` (``temporal_patterns.all_point_tp``), and this duration uses
+            point (not areal) temporal patterns, also includes the point temporal
+            patterns for the other two AEP bands (``'frequent'``/``'intermediate'``/``'rare'``)
+            alongside the requested event's own band - i.e. all point temporal patterns
+            for that duration, regardless of event rarity.
+        add_areal_tp : int
+            If > 0 (``temporal_patterns.add_areal_tp``), and this duration uses areal
+            temporal patterns, also includes this many additional sets of areal
+            temporal patterns from the next closest (larger) catchment area buckets -
+            see :meth:`_additional_areal_patterns`.
         """
         band = aep_band(aep_name, output_notation)
 
@@ -282,22 +387,40 @@ class TemporalPatternSet:
         if use_areal:
             candidates = self._areal_candidates(duration)
             if not candidates.empty:
-                return [
-                    TemporalPattern(int(r.event_id), int(r.tp_number), float(r.timestep), r.increments, 'areal')
+                results = [
+                    TemporalPattern(int(r.event_id), int(r.tp_number), float(r.timestep), r.increments, 'areal',
+                                    region=r.region)
                     for r in candidates.sort_values('tp_number').itertuples()
                 ]
+                if add_areal_tp:
+                    results.extend(self._additional_areal_patterns(duration, add_areal_tp))
+                return results
             logger.warning(
                 "No areal temporal pattern available for duration %s min (area bucket %s km2) - "
                 "falling back to point temporal pattern.", duration, self.tp_area
             )
 
-        candidates = self.point_tp[(self.point_tp['duration'] == duration) & (self.point_tp['aep_band'] == band)]
-        if candidates.empty:
-            raise ArrError(f"No point temporal pattern available for duration {duration} min, AEP band '{band}'.")
-        return [
-            TemporalPattern(int(r.event_id), int(r.tp_number), float(r.timestep), r.increments, 'point')
-            for r in candidates.sort_values('tp_number').itertuples()
-        ]
+        bands = [band]
+        if all_point_tp:
+            bands.extend(b for b in ('frequent', 'intermediate', 'rare') if b != band)
+
+        results = []
+        for b in bands:
+            candidates = self.point_tp[(self.point_tp['duration'] == duration) & (self.point_tp['aep_band'] == b)]
+            if candidates.empty:
+                if b == band:
+                    raise ArrError(f"No point temporal pattern available for duration {duration} min, AEP band '{b}'.")
+                logger.warning(
+                    "No point temporal pattern available for duration %s min, AEP band '%s' ('all_point_tp') - "
+                    "skipping.", duration, b,
+                )
+                continue
+            for r in candidates.sort_values(['region', 'tp_number']).itertuples():
+                results.append(TemporalPattern(
+                    int(r.event_id), int(r.tp_number), float(r.timestep), r.increments, 'point',
+                    region=r.region, band=b,
+                ))
+        return results
 
     def available_durations(self, aep_name: str, output_notation: str = 'ari') -> list:
         """Returns the sorted list of durations (minutes) with a point temporal pattern

@@ -170,3 +170,26 @@ class ArrApiClient:
         except json.JSONDecodeError as e:
             raise ArrApiError(f"ARR Data Hub response is not valid JSON: {e}") from e
         return ArrApiResponse(data)
+
+    def fetch_point_tp_for_coords(self, lat: float, lon: float) -> dict:
+        """Requests just the ``PointTP`` layer for arbitrary coordinates, used to fetch
+        an "additional" temporal pattern region's own point temporal patterns (see
+        ``temporal_patterns.additional_tp`` / :func:`pytuflow.arr.temporal_patterns.fetch_additional_region_point_tp`).
+        Returns the raw ``PointTP`` layer dict (with its download ``url``)."""
+        params = {'lat_coord': lat, 'lon_coord': lon, 'type': 'json', 'TemporalPatterns': 1}
+        query = '&'.join(f'{k}={v}' for k, v in params.items())
+        url = f'{self.base_url}?{query}'
+        logger.info('Requesting ARR Data Hub PointTP data for additional temporal pattern region: %s', url)
+        downloader = Downloader(url)
+        downloader.download()
+        if not downloader.ok():
+            raise ArrApiError(
+                f"ARR Data Hub request for additional temporal pattern region failed "
+                f"(using {downloader.type()} downloader): HTTP {downloader.ret_code}: {downloader.error_string}"
+            )
+        try:
+            data = json.loads(downloader.data)
+        except json.JSONDecodeError as e:
+            raise ArrApiError(f"ARR Data Hub response is not valid JSON: {e}") from e
+        response = ArrApiResponse(data)
+        return response.layer('PointTP', required=True)

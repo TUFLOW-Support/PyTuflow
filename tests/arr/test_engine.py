@@ -348,3 +348,38 @@ def test_engine_probability_neutral_method_raises_when_unavailable(api_response_
     engine = ArrEngine(config, api_response_1990)
     with pytest.raises(ArrError, match='probability_neutral'):
         engine.run()
+
+
+def test_engine_add_areal_tp_adds_extra_patterns(api_response_1990):
+    # catchment_area=150 -> areal TP area bucket 200km2 is used; duration 720min has
+    # areal temporal patterns available in both the 200km2 and 500km2 (next closest)
+    # buckets in the fixture data.
+    config = make_config(
+        site={'name': '1', 'latitude': -33.9347, 'longitude': 150.8372, 'catchment_area': 150},
+        events={'aep': ['1%'], 'duration': [720], 'output_notation': 'ari'},
+        temporal_patterns={'add_areal_tp': 1},
+    )
+    engine = ArrEngine(config, api_response_1990)
+    results = engine.run()
+    assert len(results) == 1
+    assert len(results[0].patterns) == 20
+    assert {p.group for p in results[0].patterns} == {0, 1}
+
+
+def test_engine_additional_tp_merges_other_region_patterns(api_response_1990, monkeypatch, point_tp_csv):
+    from pytuflow.arr import api_client as api_client_module
+
+    def fake_fetch_point_tp_for_coords(self, lat, lon):
+        return {'url': 'https://example.invalid/wet_tropics_point_tp.zip'}
+    monkeypatch.setattr(api_client_module.ArrApiClient, 'fetch_point_tp_for_coords', fake_fetch_point_tp_for_coords)
+
+    config = make_config(
+        events={'aep': ['50%'], 'duration': [1440], 'output_notation': 'ari'},
+        temporal_patterns={'additional_tp': ['Wet Tropics']},
+    )
+    engine = ArrEngine(config, api_response_1990)
+    results = engine.run()
+    assert len(results) == 1
+    assert len(results[0].patterns) == 20
+    regions = {p.region for p in results[0].patterns}
+    assert 'Wet Tropics' in regions

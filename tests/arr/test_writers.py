@@ -111,6 +111,26 @@ def test_rf_inflow_csv_structure(tmp_path, api_response_1990):
     assert float(last_row[0]) == pytest.approx((1440 + 60) / 60)
 
 
+def test_rf_inflow_all_point_tp_includes_all_bands(tmp_path, api_response_1990):
+    config = make_config(
+        tmp_path,
+        events={'aep': ['50%'], 'duration': [1440], 'output_notation': 'ari'},
+        losses={'extrapolation_method': 'interpolate'},
+        temporal_patterns={'all_point_tp': True},
+    )
+    engine = ArrEngine(config, api_response_1990)
+    results = engine.run()
+    assert len(results[0].patterns) == 30
+    write_outputs(config, results)
+
+    lines = (tmp_path / 'rf_inflow' / '1_RF_50p1440m.csv').read_text().splitlines()
+    header = lines[2].split(',')[1:]
+    assert len(header) == 30
+    assert header[0] == 'TP01_frequent'
+    assert any(label.endswith('_intermediate') for label in header)
+    assert any(label.endswith('_rare') for label in header)
+
+
 def test_rf_inflow_complete_storm_prepends_preburst(tmp_path, api_response_1990):
     # 20%/1440min is a 'Use PB TP' placeholder cell that auto-triggers complete storm.
     config = make_config(

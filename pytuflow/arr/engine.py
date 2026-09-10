@@ -213,8 +213,12 @@ class ArrEngine:
             areal_tp = self.response.layer('ArealTP')
             point_url = point_tp['url']
             areal_url = areal_tp['url'] if areal_tp else None
-            self._tp_set = TemporalPatternSet.from_api_response(
+            tp_set = TemporalPatternSet.from_api_response(
                 point_url, areal_url, catchment_area=self.config.site.catchment_area)
+            for region_name in self.config.temporal_patterns.additional_tp:
+                from .temporal_patterns import fetch_additional_region_point_tp
+                tp_set.add_region_patterns(fetch_additional_region_point_tp(region_name))
+            self._tp_set = tp_set
         return self._tp_set
 
     def _cc_loss_factors(self, baseline_year: int, ssp: str) -> tuple:
@@ -469,7 +473,11 @@ class ArrEngine:
                     depth_point = float(depths.loc[duration, str(aep_pct)])
                     arf_value = float(arf.loc[duration, aep_name])
                     depth_areal = depth_point * arf_value
-                    patterns = tp_set.patterns(duration, aep_name, self.config.events.output_notation)
+                    patterns = tp_set.patterns(
+                        duration, aep_name, self.config.events.output_notation,
+                        all_point_tp=self.config.temporal_patterns.all_point_tp,
+                        add_areal_tp=self.config.temporal_patterns.add_areal_tp,
+                    )
                     band = _band_of(patterns, aep_name, self.config.events.output_notation)
                     cl = self._storm_continuing_loss(aep_name)
 

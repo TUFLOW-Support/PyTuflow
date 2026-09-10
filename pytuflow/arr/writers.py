@@ -148,6 +148,36 @@ def write_bc_dbase(path: Path, config: ArrConfig, append: bool = False) -> None:
             f.write(cc_line)
 
 
+def _tp_label(p, patterns: list) -> str:
+    """Builds the ``rf_inflow`` column label for a single :class:`TemporalPattern`,
+    disambiguating it from the other patterns in the same event where necessary:
+
+    * ``temporal_patterns.all_point_tp`` selects patterns from more than one AEP band -
+      each pattern's own band is appended, e.g. ``TP01_frequent``.
+    * ``temporal_patterns.add_areal_tp`` adds extra sets of areal temporal patterns from
+      further area buckets - each additional set is suffixed with its 1-based index,
+      e.g. ``TP01_add1``.
+    * ``temporal_patterns.additional_tp`` adds patterns from other named TP regions -
+      each pattern's own region is appended (only for regions other than the site's
+      own, i.e. only when more than one region is actually present), e.g.
+      ``TP01_WetTropics``.
+
+    All three are independent and can combine (e.g. ``TP01_frequent_add1``). None of
+    these apply (i.e. the label is simply ``TP01`` etc, matching the default output)
+    unless the corresponding option is enabled and actually resulted in more than one
+    distinct value for that dimension."""
+    label = f'TP{p.tp_number:02d}'
+    if len({q.band for q in patterns if q.band is not None}) > 1 and p.band:
+        label += f'_{p.band}'
+    if p.group:
+        label += f'_add{p.group}'
+    regions = {q.region for q in patterns if q.region is not None}
+    if len(regions) > 1 and p.region:
+        token = ''.join(ch for ch in p.region if ch.isalnum())
+        label += f'_{token}'
+    return label
+
+
 def write_rf_inflow(folder: Path, config: ArrConfig, results: list) -> Path:
     """Writes a single rainfall hyetograph file (csv or ts1) for one AEP x duration
     combination. ``results`` is the list of :class:`~pytuflow.arr.engine.EventResult`
@@ -195,7 +225,7 @@ def write_rf_inflow(folder: Path, config: ArrConfig, results: list) -> Path:
         col_groups.append({
             'patterns': r.patterns,
             'event_ids': [p.event_id for p in r.patterns],
-            'tp_labels': [f'TP{p.tp_number:02d}{label_suffix}' for p in r.patterns],
+            'tp_labels': [_tp_label(p, r.patterns) + label_suffix for p in r.patterns],
             'preburst': r.preburst,
             'depth_areal': r.depth_areal,
         })

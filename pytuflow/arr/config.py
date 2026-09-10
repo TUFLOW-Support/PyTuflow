@@ -118,6 +118,15 @@ class TemporalPatternsConfig:
         errors = []
         if self.add_areal_tp < 0:
             errors.append("temporal_patterns.add_areal_tp must be >= 0")
+        if self.additional_tp:
+            from .temporal_patterns import TP_REGION_COORDS
+            valid = sorted(k.title() for k in TP_REGION_COORDS)
+            for region in self.additional_tp:
+                if str(region).strip().lower() not in TP_REGION_COORDS:
+                    errors.append(
+                        f"temporal_patterns.additional_tp region '{region}' is not recognised - must be one of "
+                        f"{valid}"
+                    )
         return errors
 
 
