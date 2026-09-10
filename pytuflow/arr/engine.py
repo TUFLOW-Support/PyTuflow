@@ -280,15 +280,96 @@ class ArrEngine:
                 table.loc[row_dur, col] = storm_il_cc - cc_preburst
         return table
 
+    def _fill_placeholder_adjacent_gaps(self, burst_losses: pd.DataFrame, durations: list) -> pd.DataFrame:
+        """Gap-fills any requested duration that falls between a ``"Use PB TP"``
+        placeholder cell and a numeric burst initial loss cell (for the same AEP
+        column) - rather than the plain linear interpolation used for gaps bracketed by
+        two numeric cells (see :func:`pytuflow.arr.losses.interpolate_missing_durations`,
+        called separately after this method), since interpolating a loss *value*
+        towards/from an undefined placeholder doesn't make sense.
+
+        Instead, for such a duration/AEP cell, the (interpolated) preburst depth -
+        ``preburst.percentile`` ratio multiplied by the point design burst depth at that
+        duration - is subtracted from the (duration-independent) storm initial loss to
+        derive an implied burst initial loss:
+
+        * If that implied burst initial loss is positive, it is used as the cell's
+          value directly.
+        * If it would be negative (i.e. the preburst rainfall alone exceeds the storm
+          initial loss), the cell is set to the ``"Use PB TP"`` placeholder too, forcing
+          complete storm assembly for that specific AEP/duration (matching the
+          Data Hub's own convention for cells where a single fixed burst initial loss
+          value isn't meaningful).
+
+        A duration/AEP gap bracketed by two placeholder cells is also set to the
+        placeholder (no numeric neighbour exists to derive anything from either way).
+        Gaps bracketed by two numeric cells are left untouched (handled separately).
+        """
+        if burst_losses.empty:
+            return burst_losses
+        lower_bound = float(burst_losses.index.min())
+        upper_bound = float(burst_losses.index.max())
+        missing = sorted({
+            float(d) for d in durations
+            if lower_bound < float(d) < upper_bound and float(d) not in burst_losses.index
+        })
+        if not missing:
+            return burst_losses
+
+        known_durations = sorted(burst_losses.index)
+        result = burst_losses.copy()
+        baseline_ifd = None
+        for dur in missing:
+            lower_dur = max(d for d in known_durations if d < dur)
+            upper_dur = min(d for d in known_durations if d > dur)
+            for col in burst_losses.columns:
+                lower_value = burst_losses.loc[lower_dur, col]
+                upper_value = burst_losses.loc[upper_dur, col]
+                lower_numeric = isinstance(lower_value, (int, float)) and not pd.isna(lower_value)
+                upper_numeric = isinstance(upper_value, (int, float)) and not pd.isna(upper_value)
+                if lower_numeric and upper_numeric:
+                    continue  # both numeric - handled by interpolate_missing_durations
+                if not lower_numeric and not upper_numeric:
+                    # bracketed by two placeholders - no numeric neighbour to derive
+                    # anything from, so the gap is a placeholder too.
+                    result.loc[dur, col] = 'Use PB TP'
+                    continue
+                # exactly one side is numeric, the other a "Use PB TP" placeholder -
+                # derive the implied burst initial loss from the preburst depth/storm
+                # initial loss instead of interpolating towards/from an undefined value.
+                aep_pct = float(col)
+                if baseline_ifd is None:
+                    baseline_ifd = self._ifd_frame(self.config.ifd.year, None)
+                from .complete_storm import _preburst_ratio
+                point_depth = float(_interp_table(baseline_ifd, [dur], [aep_pct]).iloc[0, 0])
+                preburst_ratio = _preburst_ratio(self.response, self.config.preburst.percentile, dur, aep_pct)
+                preburst_depth = preburst_ratio * point_depth
+                storm_il = self._storm_initial_loss_pct(aep_pct)
+                implied_burst_loss = storm_il - preburst_depth
+                if implied_burst_loss < 0:
+                    logger.info(
+                        "Duration %s min, AEP %s%%: implied burst initial loss (storm initial loss %.3f mm - "
+                        "preburst depth %.3f mm = %.3f mm) is negative - treating this cell as 'Use PB TP' "
+                        "(complete storm assembly required).", dur, aep_pct, storm_il, preburst_depth,
+                        implied_burst_loss,
+                    )
+                    result.loc[dur, col] = 'Use PB TP'
+                else:
+                    result.loc[dur, col] = implied_burst_loss
+        return result
+
     def _initial_loss(self, duration: float, aep_name: str, durations: list,
                        scenario_label: Optional[str] = None) -> float:
         aep_pct = aep_name_to_pct(aep_name)
         burst_losses = self._burst_loss_frame()
-        # always gap-fill any requested duration that falls within the table's known
-        # duration range but isn't itself one of its rows (e.g. 270 min, between rows at
-        # 180 and 360 min) - matches the legacy script's `interpolate_nan`, independent
-        # of `losses.extrapolation_method` (which only controls extrapolation *below*
-        # the table's shortest duration).
+        # gap-fill any requested duration bracketed by a "Use PB TP" placeholder and a
+        # numeric cell (or two placeholders) first - see _fill_placeholder_adjacent_gaps
+        # - then fall back to plain linear interpolation for any remaining gaps
+        # bracketed by two numeric cells (e.g. 270 min, between rows at 180 and 360 min)
+        # - matches the legacy script's `interpolate_nan`, independent of
+        # `losses.extrapolation_method` (which only controls extrapolation *below* the
+        # table's shortest duration).
+        burst_losses = self._fill_placeholder_adjacent_gaps(burst_losses, durations)
         burst_losses = interpolate_missing_durations(burst_losses, durations)
         losses_cfg = self.config.losses
         threshold = float(burst_losses.index.min()) if not burst_losses.empty else None

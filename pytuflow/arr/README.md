@@ -324,6 +324,20 @@ this happens. This means most configs never need to set `complete_storm` explici
 it is primarily useful for forcing complete storm assembly (with a specific
 `pattern_method`) across every event for consistency.
 
+**Requested durations between a `"Use PB TP"` cell and a fixed-value cell:** if a
+requested duration falls between two rows of the burst initial loss table where one is
+numeric and the other is the `"Use PB TP"` placeholder (for the same AEP), a straight
+linear interpolation between them wouldn't make sense (a placeholder isn't a loss
+value). Instead, `pytuflow.arr` derives an implied burst initial loss for that cell from
+the (interpolated) preburst depth and the storm initial loss: `storm initial loss -
+preburst depth`, where the preburst depth is `preburst.percentile` ratio × point design
+burst depth at that duration. If the result is positive, it's used directly (no complete
+storm needed); if it would be negative (the preburst rainfall alone exceeds the storm
+initial loss), the cell is itself treated as `"Use PB TP"`, automatically triggering
+complete storm assembly for that specific AEP/duration. A duration bracketed by two
+`"Use PB TP"` cells is likewise treated as `"Use PB TP"` (no numeric neighbour exists to
+derive anything from).
+
 ### How to configure it
 
 `complete_storm` and `preburst` are two separate top-level sections that work together:

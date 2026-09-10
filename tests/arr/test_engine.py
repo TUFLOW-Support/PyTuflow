@@ -267,6 +267,66 @@ def test_engine_climate_change_burst_is_default(api_response_1990):
     assert config.losses.climate_change_method == 'burst'
 
 
+def _patch_burst_losses_new(api_response_1990, columns, index, data):
+    api_response_1990.layers['BurstLossesNew'] = {'columns': columns, 'index': index, 'data': data}
+
+
+def test_engine_placeholder_adjacent_gap_positive_uses_derived_burst_loss(api_response_1990):
+    # duration=120 falls between a numeric cell (60min) and a 'Use PB TP' placeholder
+    # (180min) for AEP 50% - the implied burst initial loss (storm initial loss minus
+    # the interpolated preburst depth) is positive with the real fixture data, so it
+    # should be used directly rather than triggering complete storm.
+    _patch_burst_losses_new(api_response_1990, [50.0], [60, 180], [[10.0], ['Use PB TP']])
+    config = make_config(events={'aep': ['50%'], 'duration': [120], 'output_notation': 'ari'})
+    engine = ArrEngine(config, api_response_1990)
+    results = engine.run()
+    assert len(results) == 1
+    r = results[0]
+    assert r.preburst is None
+
+    from pytuflow.arr.complete_storm import _preburst_ratio
+    from pytuflow.arr.engine import _interp_table, _table_to_frame
+    rec_ifd = api_response_1990.layer('RecIFD')
+    ifd_df = _table_to_frame(rec_ifd['Recommended Historical (1961-1990) Baseline'])
+    point_depth = float(_interp_table(ifd_df, [120], [50.0]).iloc[0, 0])
+    ratio = _preburst_ratio(api_response_1990, '50%', 120, 50.0)
+    expected = 20.0 - ratio * point_depth
+    assert expected > 0
+    assert r.initial_loss == pytest.approx(expected)
+
+
+def test_engine_placeholder_adjacent_gap_negative_triggers_complete_storm(api_response_1990, monkeypatch):
+    # gap at duration=180 (bracketed by 60min numeric / 1440min placeholder), with the
+    # storm initial loss reduced so far that the implied burst initial loss (storm
+    # initial loss minus preburst depth) would be negative - the cell should be treated
+    # as 'Use PB TP' too, forcing complete storm. duration=180/AEP 50% has real
+    # 'RecPreburstTP' data available, so complete storm assembly can actually proceed.
+    _patch_burst_losses_new(api_response_1990, [50.0], [60, 1440], [[10.0], ['Use PB TP']])
+    new_losses = api_response_1990.layer('NewStormLosses')
+    for row in new_losses['losses']:
+        if row['AEP'] == '50%':
+            row['Storm Initial Loss (mm)'] = 0.05
+    config = make_config(events={'aep': ['50%'], 'duration': [180], 'output_notation': 'ari'})
+    engine = ArrEngine(config, api_response_1990)
+    results = engine.run()
+    assert len(results) == 1
+    r = results[0]
+    assert r.preburst is not None
+    assert r.initial_loss == pytest.approx(0.05)
+
+
+def test_engine_placeholder_adjacent_gap_both_placeholders_triggers_complete_storm(api_response_1990):
+    # duration=180 bracketed by two 'Use PB TP' cells (60min and 1440min) - no numeric
+    # neighbour to derive anything from, so it should also be 'Use PB TP'.
+    _patch_burst_losses_new(api_response_1990, [50.0], [60, 1440], [['Use PB TP'], ['Use PB TP']])
+    config = make_config(events={'aep': ['50%'], 'duration': [180], 'output_notation': 'ari'})
+    engine = ArrEngine(config, api_response_1990)
+    results = engine.run()
+    assert len(results) == 1
+    r = results[0]
+    assert r.preburst is not None
+
+
 def test_engine_probability_neutral_method_uses_burst_il_layer(api_response_1990):
     config = make_config(
         events={'aep': ['50%'], 'duration': [1440], 'output_notation': 'ari'},
