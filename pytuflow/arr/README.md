@@ -297,8 +297,13 @@ Three preburst pattern methods are available (`preburst.pattern_method`):
   has no exact (Duration, AEP) match in this layer, the first available preburst
   pattern with the same duration and the same event rarity (AEP band -
   `"frequent"`/`"intermediate"`/`"rare"`) as the requested event is used instead as an
-  assumed proxy (a warning is logged); an error is only raised if no pattern at all is
-  available for that duration/event rarity combination.
+  assumed proxy (a warning is logged). If the Data Hub has no `RecPreburstTP` data at
+  all for that duration (e.g. very short durations below its minimum of 30 min), the
+  first available point/design temporal pattern (lowest `TP` number) with the same
+  duration and event rarity is used as the preburst shape instead - scaled to the
+  configured `percentile` ratio depth, same as the `"pattern"` method below (a warning
+  is logged). An error is only raised if no point temporal pattern at all is available
+  for that duration/event rarity combination either.
 - **`"constant"`** - a single preburst block of a fixed duration (`preburst.pattern_duration`)
   at a constant rate, matching the legacy "Constant Rate" method. The preburst depth is
   derived from the `Preburst<percentile>` ratio table (or the `RecPreburst` layer, if

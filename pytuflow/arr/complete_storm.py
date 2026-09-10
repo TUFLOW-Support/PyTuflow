@@ -20,7 +20,11 @@ config):
   Data Hub has no exact (Duration, AEP) match for this layer, the first available
   preburst pattern with the same duration and the same event rarity (AEP band) as the
   requested event is used instead (a warning is logged) - see
-  :func:`recommended_preburst`.
+  :func:`recommended_preburst`. If the Data Hub has no ``RecPreburstTP`` data at all for
+  this duration (e.g. very short durations below its minimum of 30 min), the first
+  available point/design temporal pattern with the same duration and event rarity is
+  used as the preburst shape instead (a warning is logged) - see
+  :func:`_first_tp_preburst`.
 * ``"constant"`` - a single preburst block of a fixed duration (``preburst.pattern_duration``,
   in hours, or a proportion of the storm duration if ``preburst.duration_proportional``)
   at a constant rate, matching the legacy "Constant Rate" method.
@@ -139,6 +143,35 @@ def recommended_preburst(response: ArrApiResponse, duration: float, aep_name: st
     )
 
 
+def _first_tp_preburst(response: ArrApiResponse, config: ArrConfig, tp_set: TemporalPatternSet,
+                        duration: float, aep_name: str, aep_pct: float, point_depth: float) -> Optional[PreburstPattern]:
+    """Last-resort fallback for :func:`recommended_preburst`, used when the
+    ``RecPreburstTP`` layer has no data at all for this duration (e.g. very short
+    durations below the Data Hub's minimum ``RecPreburstTP`` duration of 30 min, which
+    means :func:`_same_duration_and_band_row` also finds nothing to fall back to).
+    Uses the first available point temporal pattern (lowest ``tp_number``) for the same
+    duration and event rarity (AEP band) as the requested event as the preburst shape,
+    scaled to the configured preburst ratio depth. Returns ``None`` if no point temporal
+    patterns are available for that duration/band either."""
+    if tp_set is None:
+        return None
+    from .temporal_patterns import aep_band
+    band = aep_band(aep_name, config.events.output_notation)
+    rows = tp_set.point_tp[(tp_set.point_tp['duration'] == duration) & (tp_set.point_tp['aep_band'] == band)]
+    if rows.empty:
+        return None
+    row = rows.sort_values('tp_number').iloc[0]
+    ratio = _preburst_ratio(response, config.preburst.percentile, duration, aep_pct)
+    depth = ratio * point_depth
+    logger.warning(
+        "No recommended preburst temporal pattern available for %s/%smin at all ('RecPreburstTP' layer has no "
+        "data for this duration) - falling back to the first design temporal pattern (TP%02d, same duration/event "
+        "rarity) as the preburst shape.",
+        aep_name, duration, int(row.tp_number),
+    )
+    return PreburstPattern(depth=depth, timestep=float(row.timestep), increments=list(row.increments), method='recommended')
+
+
 def _preburst_ratio(response: ArrApiResponse, percentile: str, duration: float, aep_pct: float) -> float:
     """Interpolates the preburst ratio (fraction of point burst depth) from the
     ``Preburst<percentile>`` layer (or, if ``percentile == 'recommended'``, the
@@ -219,6 +252,8 @@ def build_preburst(response: ArrApiResponse, config: ArrConfig, tp_set: Temporal
     method = (config.preburst.pattern_method or 'recommended').lower()
     if method == 'recommended':
         pattern = recommended_preburst(response, duration, aep_name, aep_pct, config.events.output_notation)
+        if pattern is None:
+            pattern = _first_tp_preburst(response, config, tp_set, duration, aep_name, aep_pct, point_depth)
         if pattern is None:
             raise ArrError(
                 f"No recommended preburst temporal pattern available for {aep_name}/{duration}min "

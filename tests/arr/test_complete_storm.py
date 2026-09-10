@@ -89,6 +89,28 @@ def test_build_preburst_recommended_missing_raises(api_response_1990):
         build_preburst(api_response_1990, config, None, 120, '50%', 50.0, 58.7)
 
 
+def test_recommended_preburst_returns_none_for_duration_below_min(api_response_1990):
+    # RecPreburstTP's shortest duration is 30min - there is no row (of any AEP/band) at
+    # duration=10, so neither an exact match nor the same-duration/band fallback exists.
+    assert recommended_preburst(api_response_1990, 10, '1%', 1.0) is None
+
+
+def test_build_preburst_recommended_falls_back_to_first_point_tp_below_min_duration(api_response_1990, tp_set):
+    # duration=10 has no RecPreburstTP data at all - build_preburst should fall back
+    # further to the first available point/design temporal pattern (same duration/AEP
+    # band) as the preburst shape, rather than raising.
+    config = make_config(events={'aep': ['1%'], 'duration': [10], 'output_notation': 'ari'})
+    pattern = build_preburst(api_response_1990, config, tp_set, 10, '1%', 1.0, 24.0)
+    assert pattern.method == 'recommended'
+    assert pattern.depth > 0
+    assert sum(pattern.increments) == pytest.approx(100.0)
+    expected_row = tp_set.point_tp[
+        (tp_set.point_tp['duration'] == 10) & (tp_set.point_tp['aep_band'] == 'rare')
+    ].sort_values('tp_number').iloc[0]
+    assert pattern.timestep == pytest.approx(float(expected_row.timestep))
+    assert pattern.increments == list(expected_row.increments)
+
+
 def test_constant_preburst_fixed_duration(api_response_1990):
     config = make_config(
         events={'aep': ['1%'], 'duration': [1440], 'output_notation': 'ari'},
