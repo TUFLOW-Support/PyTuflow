@@ -224,9 +224,13 @@ class ArrEngine:
         """Looks up the (non-reduced) storm initial loss (mm) for the given AEP - used
         for complete storm events, where the full storm initial loss applies (rather
         than a burst initial loss already reduced for preburst rainfall)."""
+        return self._storm_initial_loss_pct(aep_name_to_pct(aep_name))
+
+    def _storm_initial_loss_pct(self, aep_pct: float) -> float:
+        """As :meth:`_storm_initial_loss`, but keyed directly by AEP percentage rather
+        than an AEP name string."""
         new_losses = self.response.layer('NewStormLosses')
         if new_losses and 'losses' in new_losses:
-            aep_pct = aep_name_to_pct(aep_name)
             for row in new_losses['losses']:
                 if abs(_aep_str_to_pct(row['AEP']) - aep_pct) < 1e-6:
                     return float(row['Storm Initial Loss (mm)'])
@@ -235,6 +239,44 @@ class ArrEngine:
             return float(storm_losses['Storm Initial Losses (mm)'])
         raise ArrError("ARR Data Hub response is missing storm initial loss data "
                         "('NewStormLosses'/'StormLosses' layers).")
+
+    def _cc_burst_loss_table(self, base_burst_loss: pd.DataFrame, baseline_year: int, ssp: str) -> pd.DataFrame:
+        """Builds a climate-change-adjusted burst initial loss table (same duration x
+        AEP% shape as ``base_burst_loss``), dispatching on ``losses.climate_change_method``:
+
+        * ``"burst"`` (default, legacy-equivalent) - scales each numeric burst initial
+          loss cell directly by the Data Hub's climate-change initial loss adjustment
+          factor.
+        * ``"storm"`` - scales the (baseline) full storm initial loss by the same
+          factor, then subtracts a climate-change preburst depth (the climate-change-
+          adjusted point rainfall depth at that duration/AEP, multiplied by the
+          ``preburst.percentile`` preburst ratio) to derive the climate-change burst
+          initial loss.
+
+        Non-numeric placeholder cells (e.g. ``"Use PB TP"``) are left untouched either
+        way.
+        """
+        il_factor, _ = self._cc_loss_factors(baseline_year, ssp)
+        if self.config.losses.climate_change_method == 'burst':
+            return base_burst_loss.map(lambda v: v * il_factor if isinstance(v, (int, float)) else v)
+
+        from .complete_storm import _preburst_ratio
+        durations = [float(d) for d in base_burst_loss.index]
+        aep_pcts = [float(c) for c in base_burst_loss.columns]
+        cc_ifd = self._ifd_frame(baseline_year, ssp)
+        cc_depths = _interp_table(cc_ifd, durations, aep_pcts)
+        table = base_burst_loss.copy()
+        for row_dur in durations:
+            for col, aep_pct in zip(base_burst_loss.columns, aep_pcts):
+                v = base_burst_loss.loc[row_dur, col]
+                if not isinstance(v, (int, float)) or pd.isna(v):
+                    continue
+                storm_il_cc = self._storm_initial_loss_pct(aep_pct) * il_factor
+                preburst_ratio = _preburst_ratio(self.response, self.config.preburst.percentile, row_dur, aep_pct)
+                cc_point_depth = float(cc_depths.loc[row_dur, str(aep_pct)])
+                cc_preburst = cc_point_depth * preburst_ratio
+                table.loc[row_dur, col] = storm_il_cc - cc_preburst
+        return table
 
     def _initial_loss(self, duration: float, aep_name: str, durations: list,
                        scenario_label: Optional[str] = None) -> float:
@@ -320,11 +362,10 @@ class ArrEngine:
 
         for scenario_label, baseline_year, ssp in scenarios:
             if scenario_label is not None and base_burst_loss is not None:
-                il_factor, _ = self._cc_loss_factors(baseline_year, ssp)
                 # burst_loss table may contain non-numeric "Use PB TP" placeholder cells
                 # (complete-storm-only cells) - only scale the numeric cells.
-                self.burst_loss_table[scenario_label] = base_burst_loss.map(
-                    lambda v: v * il_factor if isinstance(v, (int, float)) else v)
+                self.burst_loss_table[scenario_label] = self._cc_burst_loss_table(
+                    base_burst_loss, baseline_year, ssp)
             ifd = self._ifd_frame(baseline_year, ssp)
             depths = _interp_table(ifd, durations, aep_pcts)
             arf = arf_factors(
@@ -370,11 +411,24 @@ class ArrEngine:
 
                     if ssp is not None:
                         # apply the Data Hub's climate-change loss adjustment factors -
-                        # both the initial and continuing loss are factored, matching the
-                        # legacy script's treatment of climate-change-adjusted losses.
+                        # continuing loss is always simply factored. Initial loss
+                        # follows `losses.climate_change_method`: complete storm events
+                        # (which already use the full, unreduced storm initial loss)
+                        # and the "burst" method both just factor `il` directly; the
+                        # "storm" method instead re-derives the burst initial loss from
+                        # the climate-change-scaled storm initial loss minus a
+                        # climate-change preburst depth.
                         il_factor, cl_factor = self._cc_loss_factors(baseline_year, ssp)
-                        il = il * il_factor
                         cl = cl * cl_factor
+                        if needs_complete_storm or self.config.losses.climate_change_method == 'burst':
+                            il = il * il_factor
+                        else:
+                            from .complete_storm import _preburst_ratio
+                            storm_il_cc = self._storm_initial_loss_pct(aep_pct) * il_factor
+                            preburst_ratio = _preburst_ratio(self.response, self.config.preburst.percentile,
+                                                              duration, aep_pct)
+                            cc_preburst = depth_point * preburst_ratio
+                            il = storm_il_cc - cc_preburst
 
                     results.append(EventResult(
                         aep_name=aep_name, duration=duration, depth_point=depth_point,

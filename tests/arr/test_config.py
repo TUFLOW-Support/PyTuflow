@@ -84,6 +84,26 @@ def test_hill_requires_mar():
         ArrConfig.from_dict(bad)
 
 
+def test_climate_change_method_defaults_to_burst():
+    data = json.loads(json.dumps(VALID_CONFIG))
+    config = ArrConfig.from_dict(data)
+    assert config.losses.climate_change_method == 'burst'
+
+
+def test_climate_change_method_storm_accepted():
+    data = json.loads(json.dumps(VALID_CONFIG))
+    data['losses'] = {'climate_change_method': 'storm'}
+    config = ArrConfig.from_dict(data)
+    assert config.losses.climate_change_method == 'storm'
+
+
+def test_climate_change_method_invalid_raises():
+    bad = json.loads(json.dumps(VALID_CONFIG))
+    bad['losses'] = {'climate_change_method': 'bogus'}
+    with pytest.raises(ArrConfigError, match='losses.climate_change_method'):
+        ArrConfig.from_dict(bad)
+
+
 def test_probability_neutral_method_accepted():
     data = json.loads(json.dumps(VALID_CONFIG))
     data['losses'] = {'method': 'probability_neutral'}

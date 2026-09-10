@@ -30,6 +30,17 @@ EXTRAPOLATION_METHODS = (
     'none', 'interpolate', 'log_interpolate', 'interpolate_preburst', 'log_interpolate_preburst',
     'rahman', 'hill', 'static', 'constant',
 )
+#: How the Data Hub's climate-change initial loss adjustment factor is applied to
+#: burst-loss (i.e. non complete-storm) events. ``"burst"`` (default, legacy-equivalent)
+#: scales the burst initial loss directly by the factor. ``"storm"`` instead scales the
+#: full (baseline) storm initial loss by the factor, then subtracts a climate-change
+#: preburst depth (the climate-change-adjusted point rainfall depth multiplied by the
+#: `preburst.percentile` preburst ratio) to derive the climate-change burst initial
+#: loss - i.e. the preburst reduction is computed under the climate-change rainfall
+#: rather than simply carried over from the baseline event. Only affects burst-loss
+#: events; complete storm events already scale the (unreduced) full storm initial loss
+#: directly, matching the ``"storm"`` approach.
+CC_LOSS_METHODS = ('burst', 'storm')
 IFD_SOURCES = ('bom',)  # future: 'limb', 'qra'
 OUTPUT_FORMATS = ('csv', 'ts1')
 OUTPUT_NOTATIONS = ('ari', 'aep')
@@ -172,6 +183,7 @@ class LossesConfig:
     urban_initial_loss: Optional[float] = None
     urban_continuing_loss: Optional[float] = None
     use_global_continuing_loss: bool = False
+    climate_change_method: str = 'burst'
 
     def validate(self) -> list[str]:
         errors = []
@@ -187,7 +199,12 @@ class LossesConfig:
             errors.append("losses.mar is required when losses.extrapolation_method == 'hill'")
         if self.extrapolation_method == 'static' and self.static_loss is None:
             errors.append("losses.static_loss is required when losses.extrapolation_method == 'static'")
+        if self.climate_change_method not in CC_LOSS_METHODS:
+            errors.append(
+                f"losses.climate_change_method must be one of {CC_LOSS_METHODS}, got '{self.climate_change_method}'"
+            )
         return errors
+
 
 
 @dataclass

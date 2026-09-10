@@ -173,9 +173,13 @@ Each scenario object:
 Climate-change-adjusted IFD depths are requested directly from the Data Hub's
 `CCAdjIFDDatasets` layer for the given baseline year/SSP. Climate-change loss
 adjustment factors (initial and continuing loss) are requested from the Data Hub's
-`ClimateChange` layer and applied by multiplying the base (no climate-change) storm
-initial/continuing loss values - no manual climate-change factor calculation is
-performed locally (unlike the legacy script's rate-of-change table lookups).
+`ClimateChange` layer; continuing loss is always applied by multiplying the base (no
+climate-change) storm continuing loss by the factor, while initial loss is applied
+according to `losses.climate_change_method` (`"burst"`, the default, multiplies the
+burst initial loss directly; `"storm"` re-derives it from the climate-change-scaled
+storm initial loss minus a climate-change preburst depth - see the `losses` section
+below) - no manual climate-change factor calculation is performed locally (unlike the
+legacy script's rate-of-change table lookups).
 
 Each climate change scenario's rainfall is written into the **same** `rf_inflow`
 CSV/ts1 file as the base (no climate-change) event for that AEP/duration, rather than a
@@ -213,6 +217,7 @@ Only used for **complete storm** events - see [Complete storm assembly](#complet
 | `user_continuing_loss` | number \| null | `null` | Reserved: overrides the storm continuing loss. Not yet implemented in the engine. |
 | `urban_initial_loss` / `urban_continuing_loss` | number \| null | `null` | Reserved for urban catchment loss overrides. Not yet implemented in the engine. |
 | `use_global_continuing_loss` | bool | `false` | If `true`, the continuing loss `Set Variable` line is omitted from the per-event `.trd` block (assumes a single global continuing loss value is set elsewhere in the TUFLOW model). |
+| `climate_change_method` | string | `"burst"` | How the Data Hub's climate-change initial loss adjustment factor is applied to burst-loss (i.e. non complete-storm) events: `"burst"` (default, legacy-equivalent) scales the burst initial loss directly by the factor; `"storm"` instead scales the (baseline) full storm initial loss by the factor, then subtracts a climate-change preburst depth (the climate-change-adjusted point rainfall depth at that duration/AEP, multiplied by the `preburst.percentile` preburst ratio) to derive the climate-change burst initial loss - i.e. the preburst reduction reflects the climate-change rainfall rather than being carried over unchanged from the baseline event. Complete storm events are unaffected by this setting (they already scale the unreduced full storm initial loss directly, matching the `"storm"` approach).
 
 ### `arf`
 
