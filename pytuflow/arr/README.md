@@ -293,7 +293,12 @@ Three preburst pattern methods are available (`preburst.pattern_method`):
   the requested AEP/duration. This is the only method available for AEP/duration cells
   where the burst initial loss table returns the `"Use PB TP"` placeholder, since those
   cells have no fixed burst initial loss value to derive a preburst depth from another
-  way. Only available in NSW (where the Data Hub provides this layer).
+  way. Only available in NSW (where the Data Hub provides this layer). If the Data Hub
+  has no exact (Duration, AEP) match in this layer, the first available preburst
+  pattern with the same duration and the same event rarity (AEP band -
+  `"frequent"`/`"intermediate"`/`"rare"`) as the requested event is used instead as an
+  assumed proxy (a warning is logged); an error is only raised if no pattern at all is
+  available for that duration/event rarity combination.
 - **`"constant"`** - a single preburst block of a fixed duration (`preburst.pattern_duration`)
   at a constant rate, matching the legacy "Constant Rate" method. The preburst depth is
   derived from the `Preburst<percentile>` ratio table (or the `RecPreburst` layer, if
@@ -302,6 +307,13 @@ Three preburst pattern methods are available (`preburst.pattern_method`):
   pattern (`preburst.pattern_tp`, e.g. `"TP03"`) at the closest available duration to the
   computed preburst duration. As with `"constant"`, the preburst depth comes from the
   `Preburst<percentile>` ratio table (or `RecPreburst`).
+
+**Negligible preburst assumption:** if the resulting preburst depth turns out to be less
+than 1% of the point design burst depth (implied preburst ratio < 0.01), the preburst
+period is dropped entirely and the event falls back to a standard burst-only event
+(using the ordinary burst initial loss, or - for `"Use PB TP"` placeholder cells with no
+fixed burst initial loss available - the full storm initial loss as a proxy, since the
+preburst contribution is negligible either way).
 
 **Automatic per-cell triggering:** independently of `complete_storm`, whenever the
 requested AEP/duration's burst initial loss is the Data Hub's `"Use PB TP"` placeholder

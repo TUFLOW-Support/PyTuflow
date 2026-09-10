@@ -16,7 +16,11 @@ config):
   for the requested AEP/duration - no extra interpolation/derivation required. This is
   the only method available for AEP/duration cells where the burst initial loss table
   returns the ``"Use PB TP"`` placeholder (see :mod:`pytuflow.arr.engine`), since those
-  cells have no fixed burst initial loss value to derive a preburst depth from.
+  cells have no fixed burst initial loss value to derive a preburst depth from. If the
+  Data Hub has no exact (Duration, AEP) match for this layer, the first available
+  preburst pattern with the same duration and the same event rarity (AEP band) as the
+  requested event is used instead (a warning is logged) - see
+  :func:`recommended_preburst`.
 * ``"constant"`` - a single preburst block of a fixed duration (``preburst.pattern_duration``,
   in hours, or a proportion of the storm duration if ``preburst.duration_proportional``)
   at a constant rate, matching the legacy "Constant Rate" method.
@@ -31,10 +35,16 @@ depth - matching the legacy script's use of ``PreBurst.get_depths()``. If
 ``preburst.percentile == "recommended"``, the Data Hub's ``RecPreburst`` layer (its
 preferred/recommended preburst ratio) is used instead - this is not necessarily the
 same value as the exact 50th percentile (``"50%"``).
+
+If the resulting preburst depth is negligible relative to the point design burst depth
+(implied preburst ratio < 0.01, i.e. less than 1%), the preburst period is dropped
+entirely and the event falls back to a standard (non complete storm) burst - see
+:meth:`pytuflow.arr.engine.ArrEngine.run`.
 """
 
 from __future__ import annotations
 
+import logging
 import re
 from dataclasses import dataclass
 from typing import Optional
@@ -45,6 +55,9 @@ from .api_client import ArrApiResponse
 from .config import ArrConfig
 from .exceptions import ArrError
 from .temporal_patterns import TemporalPatternSet
+
+logger = logging.getLogger('pytuflow.arr')
+
 
 
 @dataclass
@@ -67,14 +80,44 @@ def _nearest_row(df: pd.DataFrame, duration: float, aep_pct: float) -> Optional[
     return None
 
 
-def recommended_preburst(response: ArrApiResponse, duration: float, aep_pct: float) -> Optional[PreburstPattern]:
+def _same_duration_and_band_row(rows: list, duration: float, aep_name: str, output_notation: str) -> Optional[dict]:
+    """Fallback for :func:`recommended_preburst`, when no exact (Duration, AEP) match is
+    available: returns the first ``selected_patterns`` row with the same duration and
+    the same event rarity (AEP band - ``'frequent'``/``'intermediate'``/``'rare'``,
+    see :func:`pytuflow.arr.temporal_patterns.aep_band`) as the requested event, or
+    ``None`` if none match."""
+    from .temporal_patterns import aep_band
+    target_band = aep_band(aep_name, output_notation)
+    for row in rows:
+        if int(row['Duration']) != int(duration):
+            continue
+        if aep_band(f"{float(row['AEP'])}%", output_notation) == target_band:
+            return row
+    return None
+
+
+def recommended_preburst(response: ArrApiResponse, duration: float, aep_name: str, aep_pct: float,
+                          output_notation: str = 'ari') -> Optional[PreburstPattern]:
     """Looks up the Data Hub's recommended preburst temporal pattern (``RecPreburstTP``
-    layer) for the given duration/AEP. Returns ``None`` if no match is found (e.g. no
-    preburst data available for that specific AEP/duration combination)."""
+    layer) for the given duration/AEP. If no exact (Duration, AEP) match is available,
+    falls back to the first available preburst pattern with the same duration and the
+    same event rarity (AEP band) as the requested event (see
+    :func:`_same_duration_and_band_row`) - a warning is logged when this fallback is
+    used. Returns ``None`` if no match is found at all (e.g. no preburst data available
+    for that duration at all)."""
     layer = response.layer('RecPreburstTP')
     if not layer or 'selected_patterns' not in layer:
         return None
-    row = _nearest_row(layer['selected_patterns'], duration, aep_pct)
+    rows = layer['selected_patterns']
+    row = _nearest_row(rows, duration, aep_pct)
+    if row is None:
+        row = _same_duration_and_band_row(rows, duration, aep_name, output_notation)
+        if row is not None:
+            logger.warning(
+                "No recommended preburst temporal pattern available for %s/%smin - falling back to the "
+                "preburst pattern for %s%% AEP/%smin (same duration, same event rarity).",
+                aep_name, duration, row['AEP'], row['Duration'],
+            )
     if row is None:
         return None
     timestep = float(row['Increment Rate (min)'])
@@ -88,6 +131,7 @@ def recommended_preburst(response: ArrApiResponse, duration: float, aep_pct: flo
     # by `depth / 100` (the same convention used for design temporal pattern increments)
     # reproduces the authoritative 'Preburst Depth' total.
     total = sum(raw)
+
     increments = [v / total * 100.0 for v in raw] if total else raw
     return PreburstPattern(
         depth=float(row['Preburst Depth']), timestep=timestep, increments=increments,
@@ -174,7 +218,7 @@ def build_preburst(response: ArrApiResponse, config: ArrConfig, tp_set: Temporal
     ``"recommended"``)."""
     method = (config.preburst.pattern_method or 'recommended').lower()
     if method == 'recommended':
-        pattern = recommended_preburst(response, duration, aep_pct)
+        pattern = recommended_preburst(response, duration, aep_name, aep_pct, config.events.output_notation)
         if pattern is None:
             raise ArrError(
                 f"No recommended preburst temporal pattern available for {aep_name}/{duration}min "

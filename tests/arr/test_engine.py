@@ -46,6 +46,42 @@ def test_engine_complete_storm_prepends_preburst(api_response_1990):
     assert r.initial_loss > 0  # full storm initial loss, not the reduced burst il
 
 
+def test_engine_drops_negligible_preburst_and_falls_back_to_burst(api_response_1990):
+    # force the recommended preburst depth for 50%/1440min to a negligible value
+    # (implied ratio << 0.01 of the point design burst depth) - the engine should drop
+    # the preburst period and fall back to a standard burst-only event.
+    layer = api_response_1990.layer('RecPreburstTP')
+    for row in layer['selected_patterns']:
+        if row['Duration'] == 1440 and row['AEP'] == 50.0:
+            row['Preburst Depth'] = 0.001
+    config = make_config(complete_storm=True,
+                          events={'aep': ['50%'], 'duration': [1440], 'output_notation': 'ari'})
+    engine = ArrEngine(config, api_response_1990)
+    results = engine.run()
+    assert len(results) == 1
+    r = results[0]
+    assert r.preburst is None
+    burst_il = engine._initial_loss(1440, '50%', [1440])
+    assert r.initial_loss == pytest.approx(burst_il)
+
+
+def test_engine_drops_negligible_preburst_for_placeholder_cell_uses_storm_il(api_response_1990):
+    # 20%/1440min is a 'Use PB TP' placeholder cell (no fixed burst initial loss) - if
+    # its preburst depth is also negligible, the engine should fall back to the full
+    # storm initial loss (since no burst initial loss is available to fall back to).
+    layer = api_response_1990.layer('RecPreburstTP')
+    for row in layer['selected_patterns']:
+        if row['Duration'] == 1440 and row['AEP'] == 20.0:
+            row['Preburst Depth'] = 0.001
+    config = make_config(events={'aep': ['20%'], 'duration': [1440], 'output_notation': 'ari'})
+    engine = ArrEngine(config, api_response_1990)
+    results = engine.run()
+    assert len(results) == 1
+    r = results[0]
+    assert r.preburst is None
+    assert r.initial_loss == pytest.approx(engine._storm_initial_loss('20%'))
+
+
 def test_engine_assembles_single_event(api_response_1990):
     # 50%/1440min has a fixed (non-placeholder) burst initial loss in the fixture data.
     config = make_config(events={'aep': ['50%'], 'duration': [1440], 'output_notation': 'ari'})

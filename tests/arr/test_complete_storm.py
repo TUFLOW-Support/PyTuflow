@@ -43,7 +43,7 @@ def tp_set(api_response_1990) -> TemporalPatternSet:
 
 
 def test_recommended_preburst_normalises_increments_to_100(api_response_1990):
-    pattern = recommended_preburst(api_response_1990, 30, 1.0)
+    pattern = recommended_preburst(api_response_1990, 30, '1%', 1.0)
     assert pattern is not None
     assert pattern.method == 'recommended'
     assert pattern.depth == pytest.approx(69.6)
@@ -53,14 +53,27 @@ def test_recommended_preburst_normalises_increments_to_100(api_response_1990):
 
 
 def test_recommended_preburst_different_aep_same_duration(api_response_1990):
-    pattern = recommended_preburst(api_response_1990, 30, 50.0)
+    pattern = recommended_preburst(api_response_1990, 30, '50%', 50.0)
     assert pattern is not None
     assert pattern.depth == pytest.approx(29.5)
     assert sum(pattern.increments) == pytest.approx(100.0)
 
 
-def test_recommended_preburst_returns_none_for_unmatched_cell(api_response_1990):
-    assert recommended_preburst(api_response_1990, 30, 99.0) is None
+def test_recommended_preburst_falls_back_to_same_duration_and_band(api_response_1990, monkeypatch):
+    # remove the exact 1% AEP/30min row, leaving the 2% row (also 'rare' band, per
+    # aep_band) at the same duration - the fallback should pick it up.
+    layer = api_response_1990.layer('RecPreburstTP')
+    rows = [r for r in layer['selected_patterns'] if not (r['Duration'] == 30 and r['AEP'] == 1.0)]
+    monkeypatch.setitem(api_response_1990.layers['RecPreburstTP'], 'selected_patterns', rows)
+    pattern = recommended_preburst(api_response_1990, 30, '1%', 1.0)
+    assert pattern is not None
+    assert pattern.depth == pytest.approx(62.4)  # the 2% AEP/30min row's preburst depth
+
+
+def test_recommended_preburst_returns_none_when_no_fallback_available(api_response_1990):
+    # duration=120 has no 'frequent' band (50%/20%) rows at all - neither an exact
+    # match nor a same-duration/same-band fallback exists.
+    assert recommended_preburst(api_response_1990, 120, '50%', 50.0) is None
 
 
 def test_build_preburst_recommended_default(api_response_1990):
@@ -71,9 +84,9 @@ def test_build_preburst_recommended_default(api_response_1990):
 
 
 def test_build_preburst_recommended_missing_raises(api_response_1990):
-    config = make_config(events={'aep': ['1%'], 'duration': [30], 'output_notation': 'ari'})
+    config = make_config(events={'aep': ['50%'], 'duration': [120], 'output_notation': 'ari'})
     with pytest.raises(ArrError, match='No recommended preburst'):
-        build_preburst(api_response_1990, config, None, 30, '1%', 99.0, 58.7)
+        build_preburst(api_response_1990, config, None, 120, '50%', 50.0, 58.7)
 
 
 def test_constant_preburst_fixed_duration(api_response_1990):

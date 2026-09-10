@@ -22,7 +22,9 @@ returns its ``"Use PB TP"`` placeholder for a given AEP/duration cell (meaning t
 :mod:`pytuflow.arr.complete_storm`), a preburst rainfall period is additionally built
 and prepended ahead of the design burst, and the full storm initial loss (rather than
 the reduced burst initial loss) is used - see :meth:`ArrEngine._storm_initial_loss` and
-:mod:`pytuflow.arr.complete_storm`.
+:mod:`pytuflow.arr.complete_storm`. If the resulting preburst depth turns out to be
+negligible (implied preburst ratio < 0.01 of the point design burst depth), the
+preburst period is dropped and the event falls back to a standard burst-only event.
 """
 
 from __future__ import annotations
@@ -407,7 +409,28 @@ class ArrEngine:
                         from .complete_storm import build_preburst
                         preburst = build_preburst(
                             self.response, self.config, tp_set, duration, aep_name, aep_pct, depth_point)
-                        il = self._storm_initial_loss(aep_name)
+                        implied_ratio = (preburst.depth / depth_point) if depth_point else 0.0
+                        if implied_ratio < 0.01:
+                            # negligible preburst contribution - drop it and fall back
+                            # to a standard burst-only event rather than needlessly
+                            # complicating the model with an insignificant preburst
+                            # period.
+                            logger.info(
+                                "%s/%smin: implied preburst ratio (%.4f) is below the 0.01 threshold - "
+                                "dropping the preburst period and outputting a standard burst-only event.",
+                                aep_name, duration, implied_ratio,
+                            )
+                            preburst = None
+                            try:
+                                il = self._initial_loss(duration, aep_name, durations, scenario_label=scenario_label)
+                            except _NeedsCompleteStorm:
+                                # no fixed burst initial loss available either (a 'Use PB
+                                # TP' placeholder cell) - since the preburst contribution
+                                # is negligible, the full storm initial loss is an
+                                # adequate proxy for the burst initial loss here.
+                                il = self._storm_initial_loss(aep_name)
+                        else:
+                            il = self._storm_initial_loss(aep_name)
 
                     if ssp is not None:
                         # apply the Data Hub's climate-change loss adjustment factors -
