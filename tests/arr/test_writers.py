@@ -133,6 +133,35 @@ def test_rf_inflow_complete_storm_prepends_preburst(tmp_path, api_response_1990)
     assert float(first_row[1]) == pytest.approx(expected)
 
 
+def test_rf_inflow_complete_storm_design_burst_preburst_differs_per_tp(tmp_path, api_response_1990):
+    # 20%/1440min is a 'Use PB TP' placeholder cell that auto-triggers complete storm.
+    # With pattern_method 'temporal_pattern'/pattern_tp 'design_burst', each design
+    # burst TP column should get its own distinct preburst shape (same tp_number).
+    config = make_config(
+        tmp_path,
+        events={'aep': ['20%'], 'duration': [1440], 'output_notation': 'ari'},
+        complete_storm=True,
+        preburst={'percentile': '50%', 'pattern_method': 'temporal_pattern', 'pattern_duration': 1.0,
+                  'pattern_tp': 'design_burst'},
+    )
+    engine = ArrEngine(config, api_response_1990)
+    results = engine.run()
+    pb = results[0].preburst
+    assert pb.per_tp_increments is not None
+    write_outputs(config, results)
+
+    lines = (tmp_path / 'rf_inflow' / '1_RF_20p1440m.csv').read_text().splitlines()
+    data_rows = lines[4:]
+    first_row = [float(v) for v in data_rows[0].split(',')]
+    patterns = results[0].patterns
+    expected_values = [
+        pb.per_tp_increments[p.tp_number][0] * pb.depth / 100.0 for p in patterns
+    ]
+    assert first_row[1:] == pytest.approx(expected_values)
+    # sanity check the columns are not all identical (i.e. genuinely per-TP)
+    assert len(set(round(v, 6) for v in expected_values)) > 1
+
+
 def test_trd_sets_expected_variables(tmp_path, api_response_1990):
     config = make_config(
         tmp_path,

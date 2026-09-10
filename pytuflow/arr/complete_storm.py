@@ -28,17 +28,22 @@ config):
 * ``"constant"`` - a single preburst block of a fixed duration (``preburst.pattern_duration``,
   in hours, or a proportion of the storm duration if ``preburst.duration_proportional``)
   at a constant rate, matching the legacy "Constant Rate" method.
-* ``"pattern"`` - shapes the preburst rainfall using a specific existing point temporal
-  pattern (``preburst.pattern_tp``, e.g. ``"TP03"``) at the closest available duration to
-  the computed preburst duration, matching the legacy non-constant method.
+* ``"temporal_pattern"`` - shapes the preburst rainfall using an existing point temporal
+  pattern (``preburst.pattern_tp``) at the closest available duration to the computed
+  preburst duration, matching the legacy non-constant method. ``preburst.pattern_tp``
+  is either a specific pattern (e.g. ``"TP03"``, used for every design burst temporal
+  pattern in the event), or ``"design_burst"``, which matches each design burst
+  temporal pattern to a preburst pattern of the *same* ``tp_number`` (e.g. the
+  ``"TP01"`` design burst gets a ``"TP01"`` preburst) - see
+  :func:`temporal_pattern_preburst`.
 
-For the ``"constant"``/``"pattern"`` methods, the preburst depth is derived from the
-appropriate percentile preburst ratio table (``Preburst10``/``25``/``50``/``75``/``90``,
-selected by ``preburst.percentile``) multiplied by the point (pre-ARF) design burst
-depth - matching the legacy script's use of ``PreBurst.get_depths()``. If
-``preburst.percentile == "recommended"``, the Data Hub's ``RecPreburst`` layer (its
-preferred/recommended preburst ratio) is used instead - this is not necessarily the
-same value as the exact 50th percentile (``"50%"``).
+For the ``"constant"``/``"temporal_pattern"`` methods, the preburst depth is derived
+from the appropriate percentile preburst ratio table
+(``Preburst10``/``25``/``50``/``75``/``90``, selected by ``preburst.percentile``)
+multiplied by the point (pre-ARF) design burst depth - matching the legacy script's
+use of ``PreBurst.get_depths()``. If ``preburst.percentile == "recommended"``, the Data
+Hub's ``RecPreburst`` layer (its preferred/recommended preburst ratio) is used instead
+- this is not necessarily the same value as the exact 50th percentile (``"50%"``).
 
 If the resulting preburst depth is negligible relative to the point design burst depth
 (implied preburst ratio < 0.01, i.e. less than 1%), the preburst period is dropped
@@ -70,8 +75,14 @@ class PreburstPattern:
     depth: float  # mm
     timestep: float  # minutes
     increments: list  # percentages of `depth`, need not sum to exactly 100
-    method: str  # 'recommended' | 'constant' | 'pattern'
+    method: str  # 'recommended' | 'constant' | 'temporal_pattern'
     event_id: Optional[int] = None  # only set for the 'recommended' method
+    # only set for the 'temporal_pattern' method with pattern_tp == 'design_burst':
+    # maps each design burst temporal pattern's `tp_number` to its own preburst
+    # increments (all sharing the same `depth`/`timestep` above) - see
+    # `temporal_pattern_preburst()`. `increments` above is simply the first of these,
+    # for callers that don't care about the per-TP distinction.
+    per_tp_increments: Optional[dict] = None
 
 
 def _nearest_row(df: pd.DataFrame, duration: float, aep_pct: float) -> Optional[dict]:
@@ -206,18 +217,26 @@ def constant_preburst(response: ArrApiResponse, config: ArrConfig, duration: flo
     return PreburstPattern(depth=depth, timestep=pb_duration, increments=[100.0], method='constant')
 
 
-def pattern_preburst(response: ArrApiResponse, config: ArrConfig, tp_set: TemporalPatternSet,
-                      duration: float, aep_name: str, aep_pct: float, point_depth: float) -> PreburstPattern:
+def temporal_pattern_preburst(response: ArrApiResponse, config: ArrConfig, tp_set: TemporalPatternSet,
+                               duration: float, aep_name: str, aep_pct: float, point_depth: float,
+                               design_patterns: Optional[list] = None) -> PreburstPattern:
     """Shapes the preburst rainfall using a specific existing point temporal pattern
     (``preburst.pattern_tp``), matching the legacy non-constant preburst pattern method.
-    """
+
+    ``preburst.pattern_tp`` is either a specific temporal pattern (e.g. ``"TP03"``),
+    which is used for every design burst temporal pattern in this event, or
+    ``"design_burst"``, which matches each design burst temporal pattern (in
+    ``design_patterns`` - the actual point temporal patterns used for this event's
+    design burst, i.e. ``TemporalPatternSet.patterns()``'s result) to the preburst
+    pattern of the *same* ``tp_number``, so e.g. the ``"TP01"`` design burst gets a
+    ``"TP01"`` preburst (see :attr:`PreburstPattern.per_tp_increments`)."""
     cfg = config.preburst
     if cfg.pattern_duration is None:
-        raise ArrError("preburst.pattern_duration is required for the 'pattern' preburst pattern method.")
-    if not cfg.pattern_tp or cfg.pattern_tp == 'design_burst':
+        raise ArrError("preburst.pattern_duration is required for the 'temporal_pattern' preburst pattern method.")
+    if not cfg.pattern_tp:
         raise ArrError(
-            "preburst.pattern_tp must be a specific temporal pattern (e.g. 'TP03') for the 'pattern' preburst "
-            "pattern method - the legacy 'design_burst' (per-design-TP preburst) option is not yet supported."
+            "preburst.pattern_tp is required for the 'temporal_pattern' preburst pattern method - a specific "
+            "temporal pattern (e.g. 'TP03') or 'design_burst'."
         )
     target_dur = _figure_out_pb_duration(duration, cfg.pattern_duration, cfg.duration_proportional)
     from .temporal_patterns import aep_band
@@ -226,10 +245,39 @@ def pattern_preburst(response: ArrApiResponse, config: ArrConfig, tp_set: Tempor
     if not available:
         raise ArrError(f"No point temporal patterns available for AEP band '{band}' to build a preburst pattern from.")
     pb_duration = min(available, key=lambda d: abs(d - target_dur))
+    ratio = _preburst_ratio(response, cfg.percentile, duration, aep_pct)
+    depth = ratio * point_depth
+
+    if cfg.pattern_tp == 'design_burst':
+        if not design_patterns:
+            raise ArrError(
+                "No design burst temporal patterns available to match tp_number against for the "
+                "'design_burst' preburst.pattern_tp option."
+            )
+        candidates = tp_set.point_tp[
+            (tp_set.point_tp['duration'] == pb_duration) & (tp_set.point_tp['aep_band'] == band)
+        ]
+        per_tp_increments = {}
+        timestep = None
+        for p in design_patterns:
+            rows = candidates[candidates['tp_number'] == p.tp_number]
+            if rows.empty:
+                raise ArrError(
+                    f"Temporal pattern 'TP{p.tp_number:02d}' not found for duration {pb_duration} min, AEP band "
+                    f"'{band}' to shape the preburst ('design_burst' preburst.pattern_tp option)."
+                )
+            row = rows.iloc[0]
+            per_tp_increments[p.tp_number] = list(row.increments)
+            timestep = float(row.timestep)
+        first_tp = design_patterns[0].tp_number
+        return PreburstPattern(
+            depth=depth, timestep=timestep, increments=per_tp_increments[first_tp], method='temporal_pattern',
+            per_tp_increments=per_tp_increments,
+        )
 
     match = re.search(r'\d+', cfg.pattern_tp)
     if not match:
-        raise ArrError(f"Unrecognised preburst.pattern_tp: '{cfg.pattern_tp}' (expected e.g. 'TP03').")
+        raise ArrError(f"Unrecognised preburst.pattern_tp: '{cfg.pattern_tp}' (expected e.g. 'TP03', or 'design_burst').")
     tp_number = int(match.group())
     rows = tp_set.point_tp[
         (tp_set.point_tp['duration'] == pb_duration)
@@ -239,16 +287,19 @@ def pattern_preburst(response: ArrApiResponse, config: ArrConfig, tp_set: Tempor
     if rows.empty:
         raise ArrError(f"Temporal pattern '{cfg.pattern_tp}' not found for duration {pb_duration} min, AEP band '{band}'.")
     row = rows.iloc[0]
-    ratio = _preburst_ratio(response, cfg.percentile, duration, aep_pct)
-    depth = ratio * point_depth
-    return PreburstPattern(depth=depth, timestep=float(row.timestep), increments=list(row.increments), method='pattern')
+    return PreburstPattern(
+        depth=depth, timestep=float(row.timestep), increments=list(row.increments), method='temporal_pattern',
+    )
 
 
 def build_preburst(response: ArrApiResponse, config: ArrConfig, tp_set: TemporalPatternSet,
-                    duration: float, aep_name: str, aep_pct: float, point_depth: float) -> PreburstPattern:
+                    duration: float, aep_name: str, aep_pct: float, point_depth: float,
+                    design_patterns: Optional[list] = None) -> PreburstPattern:
     """Builds the preburst pattern to prepend to the design burst for a complete storm
     event, dispatching to the configured ``preburst.pattern_method`` (defaulting to
-    ``"recommended"``)."""
+    ``"recommended"``). ``design_patterns`` (the design burst's own point temporal
+    patterns for this event) is only required for the ``"temporal_pattern"`` method
+    with ``preburst.pattern_tp == "design_burst"``."""
     method = (config.preburst.pattern_method or 'recommended').lower()
     if method == 'recommended':
         pattern = recommended_preburst(response, duration, aep_name, aep_pct, config.events.output_notation)
@@ -262,6 +313,7 @@ def build_preburst(response: ArrApiResponse, config: ArrConfig, tp_set: Temporal
         return pattern
     if method == 'constant':
         return constant_preburst(response, config, duration, aep_name, aep_pct, point_depth)
-    if method == 'pattern':
-        return pattern_preburst(response, config, tp_set, duration, aep_name, aep_pct, point_depth)
+    if method == 'temporal_pattern':
+        return temporal_pattern_preburst(
+            response, config, tp_set, duration, aep_name, aep_pct, point_depth, design_patterns=design_patterns)
     raise ArrError(f"Unrecognised preburst.pattern_method: '{config.preburst.pattern_method}'.")

@@ -160,10 +160,14 @@ def write_rf_inflow(folder: Path, config: ArrConfig, results: list) -> Path:
     ``TP01_2090_SSP2`` - rather than each scenario getting its own separate CSV file.
 
     If a result's ``preburst`` is set (complete storm event), the preburst rainfall
-    increments are prepended ahead of the design burst increments, each pattern column
-    sharing the same (single) preburst prefix - matching the legacy script's complete
-    storm output, where the preburst period is common to all temporal pattern
-    realisations for that event."""
+    increments are prepended ahead of the design burst increments. Normally every
+    pattern column shares the same (single) preburst prefix - matching the legacy
+    script's complete storm output, where the preburst period is common to all
+    temporal pattern realisations for that event - except when
+    ``preburst.pattern_method == "temporal_pattern"`` with ``pattern_tp ==
+    "design_burst"``, where each design burst temporal pattern column gets its own
+    preburst shape of the same ``tp_number`` (see
+    :attr:`~pytuflow.arr.complete_storm.PreburstPattern.per_tp_increments`)."""
     folder.mkdir(parents=True, exist_ok=True)
     out_form = config.output.format
     site = site_name_token(config.site.name)
@@ -196,7 +200,14 @@ def write_rf_inflow(folder: Path, config: ArrConfig, results: list) -> Path:
             'depth_areal': r.depth_areal,
         })
 
-    pb_n_steps = max((len(g['preburst'].increments) for g in col_groups if g['preburst']), default=0)
+    def _pb_len(pb):
+        if pb is None:
+            return 0
+        if pb.per_tp_increments:
+            return max((len(v) for v in pb.per_tp_increments.values()), default=0)
+        return len(pb.increments)
+
+    pb_n_steps = max((_pb_len(g['preburst']) for g in col_groups), default=0)
 
     with open(fpath, 'w', encoding='utf-8', newline='') as f:
         f.write(f'! Written by pytuflow.arr based on {base.aep_band} temporal pattern\n')
@@ -219,8 +230,21 @@ def write_rf_inflow(folder: Path, config: ArrConfig, results: list) -> Path:
             row = [t]
             for g in col_groups:
                 pb = g['preburst']
-                value = pb.increments[i] * pb.depth / 100.0 if pb and i < len(pb.increments) else 0.0
-                row.extend([value] * len(g['patterns']))
+                if pb is None:
+                    row.extend([0.0] * len(g['patterns']))
+                    continue
+                if pb.per_tp_increments:
+                    # a different preburst shape per design burst temporal pattern
+                    # (the 'design_burst' preburst.pattern_tp option) - one value per
+                    # column, matched by `tp_number`.
+                    for p in g['patterns']:
+                        incs = pb.per_tp_increments.get(p.tp_number, pb.increments)
+                        value = incs[i] * pb.depth / 100.0 if i < len(incs) else 0.0
+                        row.append(value)
+                else:
+                    # a single shared preburst shape for every column in this group.
+                    value = pb.increments[i] * pb.depth / 100.0 if i < len(pb.increments) else 0.0
+                    row.extend([value] * len(g['patterns']))
             writer.writerow(row)
         for i in range(n_steps):
             t += timestep / time_divisor

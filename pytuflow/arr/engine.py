@@ -489,7 +489,8 @@ class ArrEngine:
                     if needs_complete_storm:
                         from .complete_storm import build_preburst
                         preburst = build_preburst(
-                            self.response, self.config, tp_set, duration, aep_name, aep_pct, depth_point)
+                            self.response, self.config, tp_set, duration, aep_name, aep_pct, depth_point,
+                            design_patterns=patterns)
                         implied_ratio = (preburst.depth / depth_point) if depth_point else 0.0
                         if implied_ratio < 0.01:
                             # negligible preburst contribution - drop it and fall back

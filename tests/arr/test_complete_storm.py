@@ -8,7 +8,7 @@ import pytest
 
 from pytuflow.arr import temporal_patterns as tp_module
 from pytuflow.arr.complete_storm import (
-    build_preburst, constant_preburst, pattern_preburst, recommended_preburst,
+    build_preburst, constant_preburst, temporal_pattern_preburst, recommended_preburst,
 )
 from pytuflow.arr.config import ArrConfig
 from pytuflow.arr.exceptions import ArrError
@@ -142,26 +142,65 @@ def test_constant_preburst_requires_pattern_duration(api_response_1990):
         constant_preburst(api_response_1990, config, 1440, '1%', 1.0, 74.5)
 
 
-def test_pattern_preburst_uses_specific_tp(api_response_1990, tp_set):
+def test_temporal_pattern_preburst_uses_specific_tp(api_response_1990, tp_set):
     config = make_config(
         events={'aep': ['1%'], 'duration': [1440], 'output_notation': 'ari'},
-        preburst={'percentile': '50%', 'pattern_method': 'pattern', 'pattern_duration': 1.0,
+        preburst={'percentile': '50%', 'pattern_method': 'temporal_pattern', 'pattern_duration': 1.0,
                   'pattern_tp': 'TP03'},
     )
-    pattern = pattern_preburst(api_response_1990, config, tp_set, 1440, '1%', 1.0, 74.5)
-    assert pattern.method == 'pattern'
+    pattern = temporal_pattern_preburst(api_response_1990, config, tp_set, 1440, '1%', 1.0, 74.5)
+    assert pattern.method == 'temporal_pattern'
     assert pattern.depth > 0
     assert sum(pattern.increments) > 0
+    assert pattern.per_tp_increments is None
 
 
-def test_pattern_preburst_rejects_design_burst(api_response_1990, tp_set):
+def test_temporal_pattern_preburst_requires_pattern_tp(api_response_1990, tp_set):
     config = make_config(
         events={'aep': ['1%'], 'duration': [1440], 'output_notation': 'ari'},
-        preburst={'percentile': '50%', 'pattern_method': 'pattern', 'pattern_duration': 1.0,
+        preburst={'percentile': '50%', 'pattern_method': 'temporal_pattern', 'pattern_duration': 1.0},
+    )
+    with pytest.raises(ArrError, match='pattern_tp'):
+        temporal_pattern_preburst(api_response_1990, config, tp_set, 1440, '1%', 1.0, 74.5)
+
+
+def test_temporal_pattern_preburst_design_burst_matches_tp_number(api_response_1990, tp_set):
+    config = make_config(
+        events={'aep': ['1%'], 'duration': [1440], 'output_notation': 'ari'},
+        preburst={'percentile': '50%', 'pattern_method': 'temporal_pattern', 'pattern_duration': 1.0,
                   'pattern_tp': 'design_burst'},
     )
-    with pytest.raises(ArrError, match='specific temporal pattern'):
-        pattern_preburst(api_response_1990, config, tp_set, 1440, '1%', 1.0, 74.5)
+    design_patterns = tp_set.patterns(1440, '1%', 'ari')
+    assert design_patterns  # sanity check the fixture actually has design patterns here
+    pattern = temporal_pattern_preburst(
+        api_response_1990, config, tp_set, 1440, '1%', 1.0, 74.5, design_patterns=design_patterns)
+    assert pattern.method == 'temporal_pattern'
+    assert pattern.depth > 0
+    assert pattern.per_tp_increments is not None
+    assert set(pattern.per_tp_increments) == {p.tp_number for p in design_patterns}
+    # each design pattern's own tp_number should have a distinct preburst shape sourced
+    # from the same tp_number in the point TP table, at the closest available duration
+    # to the (proportional/absolute) requested preburst duration.
+    band = 'rare'
+    available = sorted(tp_set.point_tp.loc[tp_set.point_tp['aep_band'] == band, 'duration'].unique())
+    pb_duration = min(available, key=lambda d: abs(d - 60.0))  # 1.0 hour -> 60 min target
+    for p in design_patterns:
+        expected_row = tp_set.point_tp[
+            (tp_set.point_tp['duration'] == pb_duration)
+            & (tp_set.point_tp['aep_band'] == band)
+            & (tp_set.point_tp['tp_number'] == p.tp_number)
+        ].iloc[0]
+        assert pattern.per_tp_increments[p.tp_number] == list(expected_row.increments)
+
+
+def test_temporal_pattern_preburst_design_burst_requires_design_patterns(api_response_1990, tp_set):
+    config = make_config(
+        events={'aep': ['1%'], 'duration': [1440], 'output_notation': 'ari'},
+        preburst={'percentile': '50%', 'pattern_method': 'temporal_pattern', 'pattern_duration': 1.0,
+                  'pattern_tp': 'design_burst'},
+    )
+    with pytest.raises(ArrError, match='design burst temporal patterns'):
+        temporal_pattern_preburst(api_response_1990, config, tp_set, 1440, '1%', 1.0, 74.5)
 
 
 def test_build_preburst_unrecognised_method(api_response_1990):

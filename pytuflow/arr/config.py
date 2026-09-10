@@ -164,9 +164,10 @@ class PreburstConfig:
             errors.append(
                 f"preburst.percentile must be one of (10%, 25%, 50%, 75%, 90%, recommended), got '{self.percentile}'"
             )
-        if self.pattern_method is not None and self.pattern_method.lower() not in ('recommended', 'constant', 'pattern'):
+        if self.pattern_method is not None and self.pattern_method.lower() not in ('recommended', 'constant', 'temporal_pattern'):
             errors.append(
-                f"preburst.pattern_method must be one of (recommended, constant, pattern), got '{self.pattern_method}'"
+                f"preburst.pattern_method must be one of (recommended, constant, temporal_pattern), "
+                f"got '{self.pattern_method}'"
             )
         return errors
 
