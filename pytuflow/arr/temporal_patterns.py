@@ -15,6 +15,7 @@ import io
 import logging
 import zipfile
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Optional
 from urllib.parse import urlsplit, urlunsplit
 
@@ -234,14 +235,15 @@ TP_REGION_COORDS = {
 
 @dataclass
 class AdditionalRegionTP:
-    """Result of :func:`fetch_additional_region_point_tp`: the parsed point temporal
-    pattern rows for the additional region, plus the raw ARR Data Hub JSON response and
-    downloaded increments CSV text, kept for optional verbose working-data output (see
-    :mod:`pytuflow.arr.working_data`)."""
+    """Result of :func:`fetch_additional_region_point_tp`/:func:`load_additional_region_point_tp_csv`:
+    the parsed point temporal pattern rows for the additional region, plus the raw ARR
+    Data Hub JSON response (``None`` if loaded from a local CSV file rather than
+    fetched from the Data Hub) and increments CSV text, kept for optional verbose
+    working-data output (see :mod:`pytuflow.arr.working_data`)."""
     region: str
     dataframe: pd.DataFrame
-    raw_response: dict
     csv_text: str
+    raw_response: Optional[dict] = None
 
 
 def fetch_additional_region_point_tp(region_name: str, base_url: Optional[str] = None) -> AdditionalRegionTP:
@@ -268,6 +270,27 @@ def fetch_additional_region_point_tp(region_name: str, base_url: Optional[str] =
     region_title = region_name.strip().title()
     df['region'] = region_title
     return AdditionalRegionTP(region=region_title, dataframe=df, raw_response=raw_response, csv_text=csv_text)
+
+
+def load_additional_region_point_tp_csv(csv_path: str) -> AdditionalRegionTP:
+    """Loads point temporal pattern increments from a local CSV file
+    (``temporal_patterns.additional_tp`` entries that are file paths rather than named
+    regions) instead of fetching them from the Data Hub - e.g. a previous run's
+    ``<site>_PointTP_Increments.csv``/``<site>_PointTP_Increments_<region>.csv``
+    working-data output, or any other file in the same ARR Data Hub increments CSV
+    format. Unlike :func:`fetch_additional_region_point_tp`, the region label is taken
+    directly from the CSV's own ``Region`` column rather than overwritten, since the
+    file may already contain a meaningful region name (or several, if hand-assembled)."""
+    path = Path(csv_path)
+    if not path.is_file():
+        raise ArrError(f"Additional temporal pattern CSV file not found: '{csv_path}'")
+    csv_text = path.read_text(encoding='utf-8')
+    df = parse_point_tp_csv(csv_text)
+    if df.empty:
+        raise ArrError(f"Additional temporal pattern CSV file '{csv_path}' contains no data rows.")
+    region = str(df['region'].iloc[0]).strip()
+    logger.info("Loaded additional temporal patterns for region '%s' from local file '%s'.", region, csv_path)
+    return AdditionalRegionTP(region=region, dataframe=df, csv_text=csv_text)
 
 
 class TemporalPatternSet:
@@ -314,6 +337,30 @@ class TemporalPatternSet:
         if areal_tp_url:
             areal_csv = _download_increments_csv(areal_tp_url)
             areal_tp = parse_areal_tp_csv(areal_csv)
+        return cls(point_tp, areal_tp, catchment_area, point_tp_csv=point_csv, areal_tp_csv=areal_csv)
+
+    @classmethod
+    def from_files(cls, point_tp_path: str, areal_tp_path: Optional[str] = None,
+                   catchment_area: Optional[float] = None) -> 'TemporalPatternSet':
+        """Loads point (and optionally areal) temporal patterns from local increments
+        CSV files (``temporal_patterns.point_tp_csv``/``areal_tp_csv``) - in the same
+        format as the Data Hub's own ``*_Increments.csv`` files (e.g. a previous run's
+        ``working_data`` output) - instead of downloading them from the Data Hub API."""
+        point_path = Path(point_tp_path)
+        if not point_path.is_file():
+            raise ArrError(f"temporal_patterns.point_tp_csv file not found: '{point_tp_path}'")
+        point_csv = point_path.read_text(encoding='utf-8')
+        point_tp = parse_point_tp_csv(point_csv)
+        areal_csv = None
+        areal_tp = None
+        if areal_tp_path:
+            areal_path = Path(areal_tp_path)
+            if not areal_path.is_file():
+                raise ArrError(f"temporal_patterns.areal_tp_csv file not found: '{areal_tp_path}'")
+            areal_csv = areal_path.read_text(encoding='utf-8')
+            areal_tp = parse_areal_tp_csv(areal_csv)
+        logger.info("Loaded point temporal patterns from local file '%s'%s.", point_tp_path,
+                    f" and areal temporal patterns from '{areal_tp_path}'" if areal_tp_path else "")
         return cls(point_tp, areal_tp, catchment_area, point_tp_csv=point_csv, areal_tp_csv=areal_csv)
 
     def add_region_patterns(self, region_point_tp: pd.DataFrame) -> None:

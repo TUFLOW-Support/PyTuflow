@@ -180,3 +180,48 @@ def test_add_region_patterns_merges_into_point_tp(point_tp_csv):
     assert len(combined_patterns) == 20
     regions = {p.region for p in combined_patterns}
     assert 'Wet Tropics' in regions
+
+
+def test_temporal_pattern_set_from_files(tmp_path, point_tp_csv, areal_tp_csv):
+    point_path = tmp_path / 'point.csv'
+    point_path.write_text(point_tp_csv, encoding='utf-8')
+    areal_path = tmp_path / 'areal.csv'
+    areal_path.write_text(areal_tp_csv, encoding='utf-8')
+
+    tps = TemporalPatternSet.from_files(str(point_path), str(areal_path), catchment_area=150)
+    assert not tps.point_tp.empty
+    assert tps.areal_tp is not None and not tps.areal_tp.empty
+    assert tps.point_tp_csv == point_tp_csv.replace('\r\n', '\n')
+    assert tps.areal_tp_csv == areal_tp_csv.replace('\r\n', '\n')
+
+
+def test_temporal_pattern_set_from_files_point_only(tmp_path, point_tp_csv):
+    point_path = tmp_path / 'point.csv'
+    point_path.write_text(point_tp_csv, encoding='utf-8')
+    tps = TemporalPatternSet.from_files(str(point_path), catchment_area=150)
+    assert not tps.point_tp.empty
+    assert tps.areal_tp is None
+
+
+def test_temporal_pattern_set_from_files_missing_point_raises():
+    from pytuflow.arr.exceptions import ArrError
+    with pytest.raises(ArrError, match='point_tp_csv file not found'):
+        TemporalPatternSet.from_files('/no/such/file.csv')
+
+
+def test_load_additional_region_point_tp_csv(tmp_path, point_tp_csv):
+    from pytuflow.arr.temporal_patterns import load_additional_region_point_tp_csv
+    path = tmp_path / 'previous_PointTP_Increments.csv'
+    path.write_text(point_tp_csv, encoding='utf-8')
+    result = load_additional_region_point_tp_csv(str(path))
+    assert result.raw_response is None
+    assert result.csv_text == point_tp_csv.replace('\r\n', '\n')
+    assert not result.dataframe.empty
+    assert result.region == result.dataframe['region'].iloc[0]
+
+
+def test_load_additional_region_point_tp_csv_missing_file_raises():
+    from pytuflow.arr.exceptions import ArrError
+    from pytuflow.arr.temporal_patterns import load_additional_region_point_tp_csv
+    with pytest.raises(ArrError, match='not found'):
+        load_additional_region_point_tp_csv('/no/such/file.csv')

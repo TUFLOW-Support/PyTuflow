@@ -422,3 +422,53 @@ def test_engine_user_continuing_loss_overrides_storm_continuing_loss(api_respons
     results = engine.run()
     assert len(results) == 1
     assert results[0].continuing_loss == pytest.approx(5.0)
+
+
+def test_engine_uses_local_point_tp_csv(tmp_path, api_response_1990, point_tp_csv):
+    point_path = tmp_path / 'point.csv'
+    point_path.write_text(point_tp_csv, encoding='utf-8')
+    config = make_config(
+        events={'aep': ['50%'], 'duration': [1440], 'output_notation': 'ari'},
+        temporal_patterns={'point_tp_csv': str(point_path)},
+    )
+    engine = ArrEngine(config, api_response_1990)
+    results = engine.run()
+    assert len(results) == 1
+    assert results[0].patterns
+    tp_set = engine._tp_set_for_config()
+    assert tp_set.point_tp_csv == point_tp_csv.replace('\r\n', '\n')
+
+
+def test_engine_uses_local_point_and_areal_tp_csv(tmp_path, api_response_1990, point_tp_csv, areal_tp_csv):
+    point_path = tmp_path / 'point.csv'
+    point_path.write_text(point_tp_csv, encoding='utf-8')
+    areal_path = tmp_path / 'areal.csv'
+    areal_path.write_text(areal_tp_csv, encoding='utf-8')
+    config = make_config(
+        events={'aep': ['50%'], 'duration': [1440], 'output_notation': 'ari'},
+        temporal_patterns={'point_tp_csv': str(point_path), 'areal_tp_csv': str(areal_path)},
+    )
+    engine = ArrEngine(config, api_response_1990)
+    results = engine.run()
+    assert len(results) == 1
+    tp_set = engine._tp_set_for_config()
+    assert tp_set.areal_tp_csv == areal_tp_csv.replace('\r\n', '\n')
+
+
+def test_engine_additional_tp_accepts_local_csv_file(tmp_path, api_response_1990, point_tp_csv):
+    prior_output = tmp_path / 'previous_PointTP_Increments.csv'
+    prior_output.write_text(point_tp_csv, encoding='utf-8')
+    config = make_config(
+        events={'aep': ['50%'], 'duration': [1440], 'output_notation': 'ari'},
+        temporal_patterns={'additional_tp': [str(prior_output)]},
+    )
+    engine = ArrEngine(config, api_response_1990)
+    results = engine.run()
+    assert len(results) == 1
+    # both the native region and the file-loaded 'additional' region's patterns should
+    # be present (10 native + 10 from the additional file = 20).
+    assert len(results[0].patterns) == 20
+    assert engine.additional_tp_responses
+    region_name, info = next(iter(engine.additional_tp_responses.items()))
+    assert info['raw'] is None
+    assert info['csv'] == point_tp_csv.replace('\r\n', '\n')

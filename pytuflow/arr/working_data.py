@@ -46,6 +46,8 @@ def write_working_data(config: ArrConfig, response: ArrApiResponse, engine: ArrE
     logger.info("Wrote ARR Data Hub response to '%s'", json_path)
 
     for region_name, info in engine.additional_tp_responses.items():
+        if info.get('raw') is None:
+            continue
         region_token = ''.join(ch for ch in region_name if ch.isalnum())
         region_json_path = out_path / f'{site}_ARR_response_{region_token}.json'
         with open(region_json_path, 'w', encoding='utf-8') as f:

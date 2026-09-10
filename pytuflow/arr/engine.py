@@ -221,15 +221,25 @@ class ArrEngine:
 
     def _tp_set_for_config(self) -> TemporalPatternSet:
         if self._tp_set is None:
-            point_tp = self.response.layer('PointTP', required=True)
-            areal_tp = self.response.layer('ArealTP')
-            point_url = point_tp['url']
-            areal_url = areal_tp['url'] if areal_tp else None
-            tp_set = TemporalPatternSet.from_api_response(
-                point_url, areal_url, catchment_area=self.config.site.catchment_area)
-            for region_name in self.config.temporal_patterns.additional_tp:
-                from .temporal_patterns import fetch_additional_region_point_tp
-                result = fetch_additional_region_point_tp(region_name)
+            tp_cfg = self.config.temporal_patterns
+            if tp_cfg.point_tp_csv:
+                tp_set = TemporalPatternSet.from_files(
+                    tp_cfg.point_tp_csv, tp_cfg.areal_tp_csv, catchment_area=self.config.site.catchment_area)
+            else:
+                point_tp = self.response.layer('PointTP', required=True)
+                areal_tp = self.response.layer('ArealTP')
+                point_url = point_tp['url']
+                areal_url = areal_tp['url'] if areal_tp else None
+                tp_set = TemporalPatternSet.from_api_response(
+                    point_url, areal_url, catchment_area=self.config.site.catchment_area)
+            from .temporal_patterns import (
+                TP_REGION_COORDS, fetch_additional_region_point_tp, load_additional_region_point_tp_csv,
+            )
+            for entry in tp_cfg.additional_tp:
+                if str(entry).strip().lower() in TP_REGION_COORDS:
+                    result = fetch_additional_region_point_tp(entry)
+                else:
+                    result = load_additional_region_point_tp_csv(entry)
                 tp_set.add_region_patterns(result.dataframe)
                 self.additional_tp_responses[result.region] = {'raw': result.raw_response, 'csv': result.csv_text}
             self._tp_set = tp_set

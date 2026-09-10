@@ -118,15 +118,28 @@ class TemporalPatternsConfig:
         errors = []
         if self.add_areal_tp < 0:
             errors.append("temporal_patterns.add_areal_tp must be >= 0")
+        if self.point_tp_csv and not Path(self.point_tp_csv).is_file():
+            errors.append(f"temporal_patterns.point_tp_csv file not found: '{self.point_tp_csv}'")
+        if self.areal_tp_csv:
+            if not self.point_tp_csv:
+                errors.append("temporal_patterns.areal_tp_csv requires temporal_patterns.point_tp_csv to also be set")
+            if not Path(self.areal_tp_csv).is_file():
+                errors.append(f"temporal_patterns.areal_tp_csv file not found: '{self.areal_tp_csv}'")
         if self.additional_tp:
             from .temporal_patterns import TP_REGION_COORDS
             valid = sorted(k.title() for k in TP_REGION_COORDS)
             for region in self.additional_tp:
-                if str(region).strip().lower() not in TP_REGION_COORDS:
-                    errors.append(
-                        f"temporal_patterns.additional_tp region '{region}' is not recognised - must be one of "
-                        f"{valid}"
-                    )
+                entry = str(region).strip()
+                if entry.lower() in TP_REGION_COORDS:
+                    continue
+                if entry.lower().endswith('.csv'):
+                    if not Path(entry).is_file():
+                        errors.append(f"temporal_patterns.additional_tp CSV file not found: '{entry}'")
+                    continue
+                errors.append(
+                    f"temporal_patterns.additional_tp entry '{region}' is not a recognised region name or an "
+                    f"existing .csv file path - regions must be one of {valid}"
+                )
         return errors
 
 

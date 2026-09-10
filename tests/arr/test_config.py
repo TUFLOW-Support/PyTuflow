@@ -182,3 +182,51 @@ def test_urban_losses_valid_when_set_together_with_infiltration():
 def test_use_global_continuing_loss_no_longer_a_field():
     config = ArrConfig.from_dict(VALID_CONFIG)
     assert not hasattr(config.losses, 'use_global_continuing_loss')
+
+
+def test_point_tp_csv_missing_file_raises():
+    bad = json.loads(json.dumps(VALID_CONFIG))
+    bad['temporal_patterns'] = {'point_tp_csv': '/no/such/point.csv'}
+    with pytest.raises(ArrConfigError, match='point_tp_csv'):
+        ArrConfig.from_dict(bad)
+
+
+def test_areal_tp_csv_requires_point_tp_csv(tmp_path):
+    areal = tmp_path / 'areal.csv'
+    areal.write_text('data', encoding='utf-8')
+    bad = json.loads(json.dumps(VALID_CONFIG))
+    bad['temporal_patterns'] = {'areal_tp_csv': str(areal)}
+    with pytest.raises(ArrConfigError, match='areal_tp_csv requires'):
+        ArrConfig.from_dict(bad)
+
+
+def test_point_tp_csv_valid_file_accepted(tmp_path):
+    point = tmp_path / 'point.csv'
+    point.write_text('data', encoding='utf-8')
+    data = json.loads(json.dumps(VALID_CONFIG))
+    data['temporal_patterns'] = {'point_tp_csv': str(point)}
+    config = ArrConfig.from_dict(data)
+    assert config.temporal_patterns.point_tp_csv == str(point)
+
+
+def test_additional_tp_accepts_csv_file_path(tmp_path):
+    csv_path = tmp_path / 'previous_PointTP_Increments.csv'
+    csv_path.write_text('data', encoding='utf-8')
+    data = json.loads(json.dumps(VALID_CONFIG))
+    data['temporal_patterns'] = {'additional_tp': [str(csv_path)]}
+    config = ArrConfig.from_dict(data)
+    assert config.temporal_patterns.additional_tp == [str(csv_path)]
+
+
+def test_additional_tp_missing_csv_file_raises():
+    bad = json.loads(json.dumps(VALID_CONFIG))
+    bad['temporal_patterns'] = {'additional_tp': ['/no/such/file.csv']}
+    with pytest.raises(ArrConfigError, match='additional_tp CSV file not found'):
+        ArrConfig.from_dict(bad)
+
+
+def test_additional_tp_bad_entry_raises():
+    bad = json.loads(json.dumps(VALID_CONFIG))
+    bad['temporal_patterns'] = {'additional_tp': ['nowhere']}
+    with pytest.raises(ArrConfigError, match='not a recognised region name'):
+        ArrConfig.from_dict(bad)
