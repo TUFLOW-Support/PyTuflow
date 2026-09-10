@@ -295,3 +295,37 @@ def test_rf_inflow_merges_climate_change_scenarios_into_one_file(tmp_path):
 
     bc_dbase_cc = (tmp_path / 'bc_dbase_CC.csv').read_text()
     assert '~TP~_~CC~' in bc_dbase_cc
+
+
+def test_urban_losses_written_once_ahead_of_design_losses(tmp_path, api_response_1990):
+    config = make_config(
+        tmp_path,
+        events={'aep': ['50%'], 'duration': [1440], 'output_notation': 'ari'},
+        losses={'extrapolation_method': 'interpolate', 'urban_initial_loss': 1.5, 'urban_continuing_loss': 0.0},
+    )
+    engine = ArrEngine(config, api_response_1990)
+    results = engine.run()
+    write_outputs(config, results)
+
+    tsoilf = (tmp_path / 'soils.tsoilf').read_text()
+    assert '1, ILCL, 1.5, 0.0' in tsoilf
+    assert '2, ILCL, <<IL_1>>, <<CL_1>>' in tsoilf
+
+
+def test_urban_losses_written_once_across_appended_configs(tmp_path, api_response_1990):
+    config_a = make_config(
+        tmp_path, events={'aep': ['50%'], 'duration': [1440], 'output_notation': 'ari'},
+        losses={'extrapolation_method': 'interpolate', 'urban_initial_loss': 1.5, 'urban_continuing_loss': 0.0})
+    config_a.site.name = 'A'
+    config_b = make_config(
+        tmp_path, events={'aep': ['50%'], 'duration': [1440], 'output_notation': 'ari'},
+        losses={'extrapolation_method': 'interpolate'})
+    config_b.site.name = 'B'
+
+    write_outputs(config_a, ArrEngine(config_a, api_response_1990).run(), append=False)
+    write_outputs(config_b, ArrEngine(config_b, api_response_1990).run(), append=True)
+
+    tsoilf = (tmp_path / 'soils.tsoilf').read_text()
+    assert tsoilf.count('ILCL, 1.5, 0.0') == 1
+    assert '2, ILCL, <<IL_A>>, <<CL_A>>' in tsoilf
+    assert '3, ILCL, <<IL_B>>, <<CL_B>>' in tsoilf

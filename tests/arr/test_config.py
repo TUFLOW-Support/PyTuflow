@@ -155,3 +155,30 @@ def test_from_file_bad_json_raises(tmp_path):
     config_path.write_text('{not valid json')
     with pytest.raises(ArrConfigError, match='Invalid JSON'):
         ArrConfig.from_file(config_path)
+
+
+def test_urban_losses_must_be_set_together():
+    bad = json.loads(json.dumps(VALID_CONFIG))
+    bad['losses'] = {'urban_initial_loss': 10.0}
+    with pytest.raises(ArrConfigError, match='urban_initial_loss'):
+        ArrConfig.from_dict(bad)
+
+
+def test_urban_losses_requires_infiltration_method():
+    bad = json.loads(json.dumps(VALID_CONFIG))
+    bad['losses'] = {'urban_initial_loss': 10.0, 'urban_continuing_loss': 2.5, 'tuflow_loss_method': 'excess'}
+    with pytest.raises(ArrConfigError, match='urban_initial_loss'):
+        ArrConfig.from_dict(bad)
+
+
+def test_urban_losses_valid_when_set_together_with_infiltration():
+    data = json.loads(json.dumps(VALID_CONFIG))
+    data['losses'] = {'urban_initial_loss': 10.0, 'urban_continuing_loss': 2.5}
+    config = ArrConfig.from_dict(data)
+    assert config.losses.urban_initial_loss == 10.0
+    assert config.losses.urban_continuing_loss == 2.5
+
+
+def test_use_global_continuing_loss_no_longer_a_field():
+    config = ArrConfig.from_dict(VALID_CONFIG)
+    assert not hasattr(config.losses, 'use_global_continuing_loss')

@@ -103,8 +103,7 @@ being silently ignored, to catch typos early.
     "user_initial_loss": null,
     "user_continuing_loss": null,
     "urban_initial_loss": null,
-    "urban_continuing_loss": null,
-    "use_global_continuing_loss": false
+    "urban_continuing_loss": null
   },
   "arf": {
     "ignore_limits_for_frequent": false,
@@ -219,10 +218,9 @@ Only used for **complete storm** events - see [Complete storm assembly](#complet
 | `mar` | number \| null | `null` | Mean Annual Rainfall (mm), required when `extrapolation_method` is `"hill"`. |
 | `static_loss` | number \| null | `null` | Fixed initial loss value (mm), required when `extrapolation_method == "static"`. |
 | `tuflow_loss_method` | string | `"infiltration"` | `"infiltration"` writes a `soils.tsoilf` `ILCL` entry plus a companion `.trd` read file; `"excess"` writes only the `.trd` read file (rainfall excess method, no soils file). |
-| `user_initial_loss` | number \| null | `null` | Overrides the storm initial loss with a fixed user-supplied value (scales/replaces the Data Hub value depending on context). |
-| `user_continuing_loss` | number \| null | `null` | Reserved: overrides the storm continuing loss. Not yet implemented in the engine. |
-| `urban_initial_loss` / `urban_continuing_loss` | number \| null | `null` | Reserved for urban catchment loss overrides. Not yet implemented in the engine. |
-| `use_global_continuing_loss` | bool | `false` | If `true`, the continuing loss `Set Variable` line is omitted from the per-event `.trd` block (assumes a single global continuing loss value is set elsewhere in the TUFLOW model). |
+| `user_initial_loss` | number \| null | `null` | Overrides the storm initial loss (used directly for complete storm events, and as the reference value climate-change `"storm"` scaling is anchored to) with a fixed user-supplied value. The burst initial loss table is proportionally scaled per-AEP so its (per-AEP) storm initial loss matches this value, preserving the Data Hub's relative duration/AEP reduction shape - matches the legacy script's `applyUserInitialLoss`. |
+| `user_continuing_loss` | number \| null | `null` | Overrides the storm continuing loss with a fixed user-supplied value (used directly for every AEP, in place of the Data Hub's `NewStormLosses`/`StormLosses` value) - matches the legacy script's `applyUserContinuingLoss`. |
+| `urban_initial_loss` / `urban_continuing_loss` | number \| null | `null` | Fixed impervious/urban area initial and continuing loss values (mm, mm/h). Must be set together (both or neither), and require `tuflow_loss_method == "infiltration"`. When set, an additional fixed-value `ILCL` entry (soil ID 1, labelled "Impervious/Urban Area Rainfall Losses") is written to `soils.tsoilf` ahead of the catchment's own design ARR losses entry - matches the legacy script's impervious-area loss row. Only written once per model (the first config in a multi-config/append run), matching the legacy script. |
 | `climate_change_method` | string | `"burst"` | How the Data Hub's climate-change initial loss adjustment factor is applied to burst-loss (i.e. non complete-storm) events: `"burst"` (default, legacy-equivalent) scales the burst initial loss directly by the factor; `"storm"` instead scales the (baseline) full storm initial loss by the factor, then subtracts a climate-change preburst depth (the climate-change-adjusted point rainfall depth at that duration/AEP, multiplied by the `preburst.percentile` preburst ratio) to derive the climate-change burst initial loss - i.e. the preburst reduction reflects the climate-change rainfall rather than being carried over unchanged from the baseline event. Complete storm events are unaffected by this setting (they already scale the unreduced full storm initial loss directly, matching the `"storm"` approach).
 
 ### `arf`
@@ -471,7 +469,6 @@ the engine - they are reserved for future work and are documented above per-key:
 
 - `events.aep` / `events.duration` == `"all"`
 - `temporal_patterns.point_tp_csv` / `areal_tp_csv`
-- `losses.user_continuing_loss`, `losses.urban_initial_loss` / `urban_continuing_loss`
 
 ## See also
 

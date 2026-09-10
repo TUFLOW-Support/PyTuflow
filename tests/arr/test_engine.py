@@ -383,3 +383,42 @@ def test_engine_additional_tp_merges_other_region_patterns(api_response_1990, mo
     assert len(results[0].patterns) == 20
     regions = {p.region for p in results[0].patterns}
     assert 'Wet Tropics' in regions
+
+
+def test_engine_user_initial_loss_scales_burst_losses(api_response_1990):
+    # Data Hub burst initial loss for 50%/1440min is 14.8mm; Data Hub storm initial
+    # loss for 50% is 20mm - user_initial_loss=10 halves the storm loss, so the burst
+    # loss should also be halved (7.4mm), preserving the relative reduction shape.
+    config = make_config(
+        events={'aep': ['50%'], 'duration': [1440], 'output_notation': 'ari'},
+        losses={'user_initial_loss': 10.0},
+    )
+    engine = ArrEngine(config, api_response_1990)
+    results = engine.run()
+    assert len(results) == 1
+    assert results[0].initial_loss == pytest.approx(7.4)
+
+
+def test_engine_user_initial_loss_used_directly_for_complete_storm(api_response_1990):
+    # 20%/1440min is a 'Use PB TP' placeholder cell (auto-triggers complete storm),
+    # which uses the full (unreduced) storm initial loss - with user_initial_loss set,
+    # that should be the user value directly, not a Data Hub value.
+    config = make_config(
+        events={'aep': ['20%'], 'duration': [1440], 'output_notation': 'ari'},
+        losses={'user_initial_loss': 99.0},
+    )
+    engine = ArrEngine(config, api_response_1990)
+    results = engine.run()
+    assert len(results) == 1
+    assert results[0].initial_loss == pytest.approx(99.0)
+
+
+def test_engine_user_continuing_loss_overrides_storm_continuing_loss(api_response_1990):
+    config = make_config(
+        events={'aep': ['50%'], 'duration': [1440], 'output_notation': 'ari'},
+        losses={'user_continuing_loss': 5.0},
+    )
+    engine = ArrEngine(config, api_response_1990)
+    results = engine.run()
+    assert len(results) == 1
+    assert results[0].continuing_loss == pytest.approx(5.0)

@@ -293,11 +293,13 @@ def write_rf_inflow(folder: Path, config: ArrConfig, results: list) -> Path:
 
 
 def write_losses(path: Path, config: ArrConfig, results: list, append: bool = False) -> None:
-    """Writes (or appends to) the loss control file: ``soils.tsoilf`` (a single-line
-    ``ILCL`` scalar entry referencing ``<<IL_name>>``/``<<CL_name>>``, when
-    ``losses.tuflow_loss_method == 'infiltration'``) alongside a companion
-    ``.trd`` read file (always written) that sets those ``IL_name``/``CL_name`` scalars
-    per AEP/duration(/CC scenario) event combination.
+    """Writes (or appends to) the loss control file: ``soils.tsoilf`` (an ``ILCL``
+    scalar entry referencing ``<<IL_name>>``/``<<CL_name>>``, when
+    ``losses.tuflow_loss_method == 'infiltration'``, plus an additional fixed-value
+    ``ILCL`` entry ahead of it for impervious/urban losses if
+    ``losses.urban_initial_loss``/``urban_continuing_loss`` are set) alongside a
+    companion ``.trd`` read file (always written) that sets those
+    ``IL_name``/``CL_name`` scalars per AEP/duration(/CC scenario) event combination.
     """
     site = site_name_token(config.site.name)
     losses_cfg = config.losses
@@ -312,6 +314,15 @@ def write_losses(path: Path, config: ArrConfig, results: list, append: bool = Fa
         with open(tsoilf_path, mode, encoding='utf-8') as f:
             if mode == 'w':
                 f.write('! Soil ID, Method, IL, CL\n')
+                # only written once per model (matching the legacy script) - a shared
+                # impervious/urban soil ID reserved ahead of every catchment's own
+                # design ARR losses entry, if configured for the first config in a
+                # multi-config (append) run.
+                if losses_cfg.urban_initial_loss is not None:
+                    f.write(
+                        f'{soil_id}, ILCL, {losses_cfg.urban_initial_loss:.1f}, {losses_cfg.urban_continuing_loss:.1f}  '
+                        f'! Impervious/Urban Area Rainfall Losses\n')
+                    soil_id += 1
             f.write(f'{soil_id}, ILCL, <<IL_{site}>>, <<CL_{site}>>  ! Design ARR Losses For Catchment {site}\n')
 
     out_notation = config.events.output_notation
@@ -353,8 +364,7 @@ def write_losses(path: Path, config: ArrConfig, results: list, append: bool = Fa
                 else:
                     r = scenario_map.get(None)
                     f.write(f'        Set Variable IL_{site} == {r.initial_loss:.1f}\n')
-                    if not losses_cfg.use_global_continuing_loss:
-                        f.write(f'        Set Variable CL_{site} == {r.continuing_loss:.1f}\n')
+                    f.write(f'        Set Variable CL_{site} == {r.continuing_loss:.1f}\n')
             f.write('    Else\n')
             f.write('        Pause == Event Not Recognised\n')
             f.write('    End If\n')

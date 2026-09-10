@@ -192,7 +192,6 @@ class LossesConfig:
     user_continuing_loss: Optional[float] = None
     urban_initial_loss: Optional[float] = None
     urban_continuing_loss: Optional[float] = None
-    use_global_continuing_loss: bool = False
     climate_change_method: str = 'burst'
 
     def validate(self) -> list[str]:
@@ -209,6 +208,15 @@ class LossesConfig:
             errors.append("losses.mar is required when losses.extrapolation_method == 'hill'")
         if self.extrapolation_method == 'static' and self.static_loss is None:
             errors.append("losses.static_loss is required when losses.extrapolation_method == 'static'")
+        if (self.urban_initial_loss is None) != (self.urban_continuing_loss is None):
+            errors.append(
+                "losses.urban_initial_loss and losses.urban_continuing_loss must be set together (both or neither)."
+            )
+        if self.urban_initial_loss is not None and self.tuflow_loss_method != 'infiltration':
+            errors.append(
+                "losses.urban_initial_loss/urban_continuing_loss requires losses.tuflow_loss_method == 'infiltration' "
+                "(no separate impervious-area loss entry is written for 'excess')."
+            )
         if self.climate_change_method not in CC_LOSS_METHODS:
             errors.append(
                 f"losses.climate_change_method must be one of {CC_LOSS_METHODS}, got '{self.climate_change_method}'"

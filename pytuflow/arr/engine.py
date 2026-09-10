@@ -200,7 +200,12 @@ class ArrEngine:
 
     def _storm_continuing_loss(self, aep_name: str) -> float:
         """Looks up the storm continuing loss (mm/h) for the given AEP from the
-        ``NewStormLosses`` layer (not duration-dependent)."""
+        ``NewStormLosses`` layer (not duration-dependent), unless
+        ``losses.user_continuing_loss`` is set, in which case that fixed value is used
+        instead (regardless of AEP), matching the legacy script's
+        ``applyUserContinuingLoss``."""
+        if self.config.losses.user_continuing_loss is not None:
+            return float(self.config.losses.user_continuing_loss)
         new_losses = self.response.layer('NewStormLosses')
         if new_losses and 'losses' in new_losses:
             aep_pct = aep_name_to_pct(aep_name)
@@ -243,7 +248,20 @@ class ArrEngine:
 
     def _storm_initial_loss_pct(self, aep_pct: float) -> float:
         """As :meth:`_storm_initial_loss`, but keyed directly by AEP percentage rather
-        than an AEP name string."""
+        than an AEP name string. Returns ``losses.user_initial_loss`` directly (for any
+        AEP) if set, matching the legacy script's ``applyUserInitialLoss`` (which
+        replaces the storm initial loss used for complete storm events, and is also
+        used to proportionally scale the burst initial loss table - see
+        :meth:`_initial_loss`)."""
+        if self.config.losses.user_initial_loss is not None:
+            return float(self.config.losses.user_initial_loss)
+        return self._storm_initial_loss_pct_datahub(aep_pct)
+
+    def _storm_initial_loss_pct_datahub(self, aep_pct: float) -> float:
+        """The Data Hub's own storm initial loss (mm) for the given AEP percentage,
+        ignoring ``losses.user_initial_loss`` - used as the reference value when
+        proportionally scaling the burst initial loss table for a user-supplied storm
+        initial loss (see :meth:`_initial_loss`)."""
         new_losses = self.response.layer('NewStormLosses')
         if new_losses and 'losses' in new_losses:
             for row in new_losses['losses']:
@@ -254,6 +272,30 @@ class ArrEngine:
             return float(storm_losses['Storm Initial Losses (mm)'])
         raise ArrError("ARR Data Hub response is missing storm initial loss data "
                         "('NewStormLosses'/'StormLosses' layers).")
+
+    def _scale_burst_losses_to_user_il(self, burst_losses: pd.DataFrame) -> pd.DataFrame:
+        """Proportionally scales every numeric cell of a duration x AEP% burst initial
+        loss table so that the (per-AEP) storm initial loss matches
+        ``losses.user_initial_loss``, preserving the Data Hub's relative
+        duration/AEP reduction shape - i.e. ``scaled = burst_il * (user_il /
+        storm_il_datahub(aep))`` - matching the legacy script's ``applyUserInitialLoss``
+        scaling. Non-numeric placeholder cells (e.g. ``"Use PB TP"``) are left
+        untouched. Logs a warning and leaves a column unscaled if the Data Hub's storm
+        initial loss for that AEP is zero (cannot derive a scale factor)."""
+        user_il = float(self.config.losses.user_initial_loss)
+        scaled = burst_losses.copy()
+        for col in scaled.columns:
+            aep_pct = float(col)
+            storm_il = self._storm_initial_loss_pct_datahub(aep_pct)
+            if storm_il == 0:
+                logger.warning(
+                    "Cannot scale burst initial losses to the user-supplied storm initial loss for AEP %s%% - "
+                    "the Data Hub's storm initial loss is zero.", aep_pct,
+                )
+                continue
+            ratio = user_il / storm_il
+            scaled[col] = scaled[col].map(lambda v: v * ratio if isinstance(v, (int, float)) else v)
+        return scaled
 
     def _cc_burst_loss_table(self, base_burst_loss: pd.DataFrame, baseline_year: int, ssp: str) -> pd.DataFrame:
         """Builds a climate-change-adjusted burst initial loss table (same duration x
@@ -357,7 +399,11 @@ class ArrEngine:
                 point_depth = float(_interp_table(baseline_ifd, [dur], [aep_pct]).iloc[0, 0])
                 preburst_ratio = _preburst_ratio(self.response, self.config.preburst.percentile, dur, aep_pct)
                 preburst_depth = preburst_ratio * point_depth
-                storm_il = self._storm_initial_loss_pct(aep_pct)
+                # use the Data Hub's own (unscaled) storm initial loss here, not
+                # `losses.user_initial_loss`, so this cell stays in "Data Hub space"
+                # and is scaled consistently with the rest of the table afterwards
+                # (see `_scale_burst_losses_to_user_il`, called by `_initial_loss`).
+                storm_il = self._storm_initial_loss_pct_datahub(aep_pct)
                 implied_burst_loss = storm_il - preburst_depth
                 if implied_burst_loss < 0:
                     logger.info(
@@ -387,16 +433,27 @@ class ArrEngine:
         losses_cfg = self.config.losses
         threshold = float(burst_losses.index.min()) if not burst_losses.empty else None
         if losses_cfg.extrapolation_method != 'none':
-            ils = losses_cfg.user_initial_loss
-            if ils is None and losses_cfg.extrapolation_method in ('rahman', 'hill', 'interpolate_preburst',
-                                                                     'log_interpolate_preburst'):
-                ils = self._storm_initial_loss(aep_name)
+            # always extrapolate using the Data Hub's own (unscaled) storm initial
+            # loss here, not `losses.user_initial_loss` - the whole table (including
+            # any extrapolated short-duration rows) is scaled to the user-supplied
+            # value in one consistent step below, once everything is in "Data Hub
+            # space" (avoids double-scaling the extrapolated rows).
+            ils = None
+            if losses_cfg.extrapolation_method in ('rahman', 'hill', 'interpolate_preburst',
+                                                     'log_interpolate_preburst'):
+                ils = self._storm_initial_loss_pct_datahub(aep_pct)
             extended = extrapolate_short_duration_losses(
                 burst_losses, durations, method=losses_cfg.extrapolation_method,
                 ils=ils, mar=losses_cfg.mar,
                 static_loss_value=losses_cfg.static_loss,
             )
             burst_losses = extended
+        if losses_cfg.user_initial_loss is not None:
+            # scale the whole burst initial loss table proportionally so the design
+            # storm initial loss matches the user-supplied value, preserving the Data
+            # Hub's relative duration/AEP reduction shape - matches the legacy script's
+            # `applyUserInitialLoss` scaling (`ilb_complete * (ils_user / ils)`).
+            burst_losses = self._scale_burst_losses_to_user_il(burst_losses)
         # nearest available AEP column (exact match expected in practice)
         col = min(burst_losses.columns, key=lambda c: abs(float(c) - aep_pct))
         if duration not in burst_losses.index:
@@ -452,6 +509,8 @@ class ArrEngine:
         self._extrapolated_loss_records = []
         try:
             base_burst_loss = self._burst_loss_frame()
+            if self.config.losses.user_initial_loss is not None:
+                base_burst_loss = self._scale_burst_losses_to_user_il(base_burst_loss)
         except ArrError:
             base_burst_loss = None
         self.burst_loss_table[None] = base_burst_loss
