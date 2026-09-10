@@ -472,3 +472,36 @@ def test_engine_additional_tp_accepts_local_csv_file(tmp_path, api_response_1990
     region_name, info = next(iter(engine.additional_tp_responses.items()))
     assert info['raw'] is None
     assert info['csv'] == point_tp_csv.replace('\r\n', '\n')
+
+
+def test_engine_ifd_frame_uses_limb_table_when_source_is_limb(api_response_1990):
+    from pytuflow.arr.api_client import ArrApiResponse
+    # inject a synthetic 'AllIFDDatasets' layer alongside the cached NSW response's
+    # other layers, so only the IFD source dispatch is under test.
+    limb_table = {
+        'index': [30, 60],
+        'columns': [50.0, 20.0, 10.0],
+        'data': [[10.0, 20.0, 30.0], [15.0, 25.0, 35.0]],
+    }
+    data = dict(api_response_1990.raw)
+    data['layers'] = dict(data['layers'])
+    data['layers']['AllIFDDatasets'] = {'LIMB 2020 IFD Depths - High Resolution': limb_table}
+    response = ArrApiResponse(data)
+
+    config = make_config(
+        ifd={'source': 'limb', 'year': 2020},
+        events={'aep': ['50%'], 'duration': [60], 'output_notation': 'ari'},
+    )
+    engine = ArrEngine(config, response)
+    frame = engine._ifd_frame(2020, None)
+    assert frame.loc[60.0, 50.0] == 15.0
+
+
+def test_engine_ifd_frame_limb_missing_raises(api_response_1990):
+    config = make_config(
+        ifd={'source': 'limb', 'year': 2020},
+        events={'aep': ['50%'], 'duration': [60], 'output_notation': 'ari'},
+    )
+    engine = ArrEngine(config, api_response_1990)
+    with pytest.raises(ArrError, match='AllIFDDatasets'):
+        engine._ifd_frame(2020, None)

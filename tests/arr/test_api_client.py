@@ -94,3 +94,63 @@ def test_climate_change_loss_factors():
 def test_climate_change_loss_factors_missing_layer_raises(api_response_1990):
     with pytest.raises(ArrApiError, match='ClimateChange'):
         api_response_1990.climate_change_loss_factors(2090, 'SSP2')
+
+
+def test_build_params_includes_all_ifd_datasets_when_limb_source():
+    config = ArrConfig.from_dict({
+        **SITE_CONFIG,
+        'ifd': {'source': 'limb', 'year': 2020},
+    })
+    params = ArrApiClient().build_params(config)
+    assert params.get('AllIFDDatasets') == 1
+
+
+def test_build_params_omits_all_ifd_datasets_for_bom_source():
+    config = ArrConfig.from_dict(SITE_CONFIG)
+    params = ArrApiClient().build_params(config)
+    assert 'AllIFDDatasets' not in params
+
+
+#: Real LIMB 2020 high-resolution IFD table, from a live Data Hub query at
+#: (152.93, -27.684) - within South East Queensland.
+LIMB_2020_TABLE = {
+    'index': [5, 10, 15, 20, 25, 30],
+    'columns': [63.2, 50.0, 39.35, 20.0, 18.13, 10.0, 5.0, 2.0, 1.0, 0.5, 0.2, 0.1, 0.05],
+    'data': [
+        [9.9, 11.2, 12.3, 15.3, 15.7, 18.2, 20.9, 24.4, 27.1, 30.7, 36.0, 40.2, 44.7],
+        [16.6, 18.9, 20.7, 25.4, 25.9, 28.8, 32.2, 36.3, 39.1, 44.2, 51.6, 57.5, 63.8],
+        [21.0, 23.9, 26.3, 32.0, 32.6, 36.0, 39.9, 44.4, 47.3, 53.5, 62.4, 69.7, 77.3],
+        [24.1, 27.5, 30.2, 36.7, 37.4, 41.4, 45.7, 50.7, 53.9, 61.1, 71.2, 79.5, 88.2],
+        [26.5, 30.2, 33.1, 40.3, 41.1, 45.6, 50.4, 55.9, 59.5, 67.3, 78.7, 87.8, 97.7],
+        [28.4, 32.3, 35.5, 43.2, 44.1, 49.1, 54.4, 60.4, 64.4, 73.1, 85.3, 94.9, 106.0],
+    ],
+}
+
+
+def test_limb_ifd_table_returns_expected_dataset():
+    data = {
+        'layers': {
+            'AllIFDDatasets': {
+                'LIMB 2020 IFD Depths - High Resolution': LIMB_2020_TABLE,
+                'LIMB 2020 IFD Depths - BoM Resolution': LIMB_2020_TABLE,
+                'BoM IFD Depths': LIMB_2020_TABLE,
+            }
+        }
+    }
+    response = ArrApiResponse(data)
+    table = response.limb_ifd_table(2020)
+    assert table == LIMB_2020_TABLE
+
+
+def test_limb_ifd_table_missing_layer_raises(api_response_1990):
+    with pytest.raises(ArrApiError, match='AllIFDDatasets'):
+        api_response_1990.limb_ifd_table(2020)
+
+
+def test_limb_ifd_table_missing_dataset_raises_seq_message():
+    # 'AllIFDDatasets' layer present, but no LIMB dataset key (i.e. queried location is
+    # outside South East Queensland, so only the BoM dataset is returned).
+    data = {'layers': {'AllIFDDatasets': {'BoM IFD Depths': LIMB_2020_TABLE}}}
+    response = ArrApiResponse(data)
+    with pytest.raises(ArrApiError, match='South East Queensland'):
+        response.limb_ifd_table(2020)

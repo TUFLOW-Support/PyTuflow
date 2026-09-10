@@ -41,7 +41,16 @@ EXTRAPOLATION_METHODS = (
 #: events; complete storm events already scale the (unreduced) full storm initial loss
 #: directly, matching the ``"storm"`` approach.
 CC_LOSS_METHODS = ('burst', 'storm')
-IFD_SOURCES = ('bom',)  # future: 'limb', 'qra'
+#: IFD data sources. ``"bom"`` (default) uses the Data Hub's recommended BoM IFD table
+#: (``RecIFD``/``CCAdjIFDDatasets`` layers), available for baseline years 1990/2030,
+#: with climate-change-adjusted depths available for other baseline years/SSPs.
+#: ``"limb"`` uses the Data Hub's LIMB 2020 high-resolution IFD table
+#: (``AllIFDDatasets`` layer) instead - only available for the 2020 baseline, and only
+#: within South East Queensland (an :class:`~pytuflow.arr.exceptions.ArrApiError` is
+#: raised if the Data Hub hasn't provided LIMB data for the queried location). LIMB data
+#: cannot be combined with ``climate_change.enabled`` (no climate-change-adjusted LIMB
+#: depths are available).
+IFD_SOURCES = ('bom', 'limb')
 OUTPUT_FORMATS = ('csv', 'ts1')
 OUTPUT_NOTATIONS = ('ari', 'aep')
 
@@ -85,23 +94,31 @@ class IFDConfig:
         errors = []
         if self.source not in IFD_SOURCES:
             errors.append(f"ifd.source must be one of {IFD_SOURCES}, got '{self.source}'")
-        if self.year not in (1990, 2030):
+        elif self.source == 'limb':
+            if self.year != 2020:
+                errors.append(f"ifd.year must be 2020 when ifd.source == 'limb' (LIMB IFD data is only "
+                               f"available for the 2020 baseline), got '{self.year}'")
+        elif self.year not in (1990, 2030):
             errors.append(f"ifd.year must be one of (1990, 2030), got '{self.year}'")
         return errors
 
 
 @dataclass
 class EventsConfig:
-    aep: Union[list, str] = field(default_factory=list)
-    duration: Union[list, str] = field(default_factory=list)
+    aep: list = field(default_factory=list)
+    duration: list = field(default_factory=list)
     output_notation: str = 'ari'
 
     def validate(self) -> list[str]:
         errors = []
-        if not self.aep:
-            errors.append("events.aep is required (list of AEP/ARI/EY magnitudes, or 'all')")
-        if not self.duration:
-            errors.append("events.duration is required (list of durations in minutes, or 'all')")
+        if isinstance(self.aep, str):
+            errors.append("events.aep must be a list of AEP/ARI/EY magnitudes, e.g. [\"1%\", \"1 in 200\"]")
+        elif not self.aep:
+            errors.append("events.aep is required (list of AEP/ARI/EY magnitudes)")
+        if isinstance(self.duration, str):
+            errors.append("events.duration must be a list of durations in minutes, e.g. [60, 1440]")
+        elif not self.duration:
+            errors.append("events.duration is required (list of durations in minutes)")
         if self.output_notation not in OUTPUT_NOTATIONS:
             errors.append(f"events.output_notation must be one of {OUTPUT_NOTATIONS}, got '{self.output_notation}'")
         return errors
@@ -336,4 +353,8 @@ class ArrConfig:
             errors.extend(section.validate())
         if self.response_json and not Path(self.response_json).is_file():
             errors.append(f"response_json file not found: '{self.response_json}'")
+        if self.ifd.source == 'limb' and self.climate_change.enabled:
+            errors.append(
+                "climate_change.enabled cannot be used with ifd.source == 'limb' (no climate-change-adjusted "
+                "LIMB IFD depths are available - use ifd.source == 'bom' for climate change scenarios)")
         return errors

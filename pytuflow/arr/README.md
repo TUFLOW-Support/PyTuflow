@@ -103,7 +103,8 @@ being silently ignored, to catch typos early.
     "user_initial_loss": null,
     "user_continuing_loss": null,
     "urban_initial_loss": null,
-    "urban_continuing_loss": null
+    "urban_continuing_loss": null,
+    "climate_change_method": "burst"
   },
   "arf": {
     "ignore_limits_for_frequent": false,
@@ -112,7 +113,8 @@ being silently ignored, to catch typos early.
   "complete_storm": false,
   "output": {
     "path": "C:\\path\\to\\output",
-    "format": "csv"
+    "format": "csv",
+    "verbose": false
   },
   "response_json": null
 }
@@ -136,15 +138,15 @@ being silently ignored, to catch typos early.
 
 | Key | Type | Default | Description |
 | --- | --- | --- | --- |
-| `source` | string | `"bom"` | IFD data source. Only `"bom"` is currently supported (future: `"limb"`, `"qra"`). |
-| `year` | int | `1990` | IFD baseline year: `1990` (historical) or `2030` (current baseline). Climate-change-adjusted depths for other baseline years/SSPs are configured separately, under `climate_change`. |
+| `source` | string | `"bom"` | IFD data source: `"bom"` (standard BoM IFD depths) or `"limb"` (LIMB 2020 high-resolution IFD depths). LIMB is only available in South East Queensland; an error is raised if it is not available for the queried location. |
+| `year` | int | `1990` | IFD baseline year. For `source == "bom"`: `1990` (historical) or `2030` (current baseline). For `source == "limb"`: must be `2020` (LIMB is only available for 2020). Climate-change-adjusted depths for other baseline years/SSPs are configured separately, under `climate_change`, and are only supported for `source == "bom"`. |
 
 ### `events` (required)
 
 | Key | Type | Description |
 | --- | --- | --- |
-| `aep` | list[string] | AEP/ARI/EY magnitude labels to assemble events for, e.g. `"1%"`, `"1 in 200"`, `"0.5EY"`. **Required.** (`"all"` is accepted by the schema but not yet implemented.) |
-| `duration` | list[number] | Storm durations in minutes, e.g. `60`, `1440`. **Required.** (`"all"` is accepted by the schema but not yet implemented.) |
+| `aep` | list[string] | AEP/ARI/EY magnitude labels to assemble events for, e.g. `"1%"`, `"1 in 200"`, `"0.5EY"`. **Required.** |
+| `duration` | list[number] | Storm durations in minutes, e.g. `60`, `1440`. **Required.** |
 | `output_notation` | string | `"ari"` (default) or `"aep"` - controls the `~ARI~`/`~AEP~` TUFLOW event variable used in `Event_File.tef` and `bc_dbase.csv`; does not change which events are calculated. |
 
 ### `temporal_patterns`
@@ -468,13 +470,6 @@ that requires complete storm assembly (the `"Use PB TP"` placeholder cells) will
 handled automatically using the `"recommended"` method. Only add a `preburst` section
 in this case if you specifically want those auto-triggered cells to use the
 `"constant"`/`"temporal_pattern"` method instead of `"recommended"`.
-
-## Not yet implemented
-
-The following config options are accepted (validated, parsed) but not yet acted on by
-the engine - they are reserved for future work and are documented above per-key:
-
-- `events.aep` / `events.duration` == `"all"`
 
 ## See also
 

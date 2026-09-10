@@ -259,3 +259,40 @@ def test_lat_lon_still_required_without_response_json():
     del bad['site']['latitude']
     with pytest.raises(ArrConfigError, match='site.latitude'):
         ArrConfig.from_dict(bad)
+
+
+def test_events_aep_all_string_rejected():
+    bad = json.loads(json.dumps(VALID_CONFIG))
+    bad['events']['aep'] = 'all'
+    with pytest.raises(ArrConfigError, match='events.aep must be a list'):
+        ArrConfig.from_dict(bad)
+
+
+def test_events_duration_all_string_rejected():
+    bad = json.loads(json.dumps(VALID_CONFIG))
+    bad['events']['duration'] = 'all'
+    with pytest.raises(ArrConfigError, match='events.duration must be a list'):
+        ArrConfig.from_dict(bad)
+
+
+def test_ifd_source_limb_requires_year_2020():
+    bad = json.loads(json.dumps(VALID_CONFIG))
+    bad['ifd'] = {'source': 'limb', 'year': 1990}
+    with pytest.raises(ArrConfigError, match='ifd.year must be 2020'):
+        ArrConfig.from_dict(bad)
+
+
+def test_ifd_source_limb_valid_year_2020():
+    data = json.loads(json.dumps(VALID_CONFIG))
+    data['ifd'] = {'source': 'limb', 'year': 2020}
+    config = ArrConfig.from_dict(data)
+    assert config.ifd.source == 'limb'
+    assert config.ifd.year == 2020
+
+
+def test_ifd_source_limb_incompatible_with_climate_change():
+    bad = json.loads(json.dumps(VALID_CONFIG))
+    bad['ifd'] = {'source': 'limb', 'year': 2020}
+    bad['climate_change'] = {'enabled': True, 'scenarios': [{'baseline_year': 2090, 'ssp': 'SSP2'}]}
+    with pytest.raises(ArrConfigError, match='climate_change.enabled cannot be used with'):
+        ArrConfig.from_dict(bad)

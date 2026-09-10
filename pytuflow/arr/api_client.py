@@ -73,6 +73,23 @@ class ArrApiResponse:
             )
         return rec_ifd[key]
 
+    def limb_ifd_table(self, year: int) -> dict:
+        """Returns the LIMB high-resolution IFD table (``AllIFDDatasets`` layer,
+        ``'LIMB <year> IFD Depths - High Resolution'`` key) for the given baseline year
+        (currently only 2020 is available). LIMB data is only available within South
+        East Queensland, so this raises :class:`ArrApiError` if the Data Hub hasn't
+        provided it for the queried location (i.e. the key is absent from the
+        ``AllIFDDatasets`` layer, even though the layer itself was returned)."""
+        all_ifd = self.layer('AllIFDDatasets', required=True)
+        key = f'LIMB {year} IFD Depths - High Resolution'
+        if key not in all_ifd:
+            raise ArrApiError(
+                f"ARR Data Hub response does not contain LIMB IFD data for baseline year '{year}' at this "
+                f"location - LIMB data is only available within South East Queensland "
+                f"(available datasets: {list(all_ifd)})"
+            )
+        return all_ifd[key]
+
     def cc_adj_ifd_table(self, baseline_year: int, ssp: str) -> dict:
         """Returns a climate-change-adjusted IFD table (``CCAdjIFDDatasets`` layer) for the
         given baseline year (2030, 2050, or 2090) and SSP scenario (SSP1/SSP2/SSP3/SSP5)."""
@@ -149,6 +166,8 @@ class ArrApiClient:
         if config.climate_change.enabled:
             params['CCAdjIFDDatasets'] = 1
             params['ClimateChange'] = 1
+        if config.ifd.source == 'limb':
+            params['AllIFDDatasets'] = 1
         return params
 
     def fetch(self, config: ArrConfig) -> ArrApiResponse:

@@ -149,14 +149,10 @@ class ArrEngine:
 
     def _durations(self) -> list:
         dur = self.config.events.duration
-        if dur == 'all':
-            raise ArrError("events.duration == 'all' is not yet supported.")
         return [float(d) for d in dur]
 
     def _aep_names(self) -> list:
         aep = self.config.events.aep
-        if aep == 'all':
-            raise ArrError("events.aep == 'all' is not yet supported.")
         aep_ = []
         for a in aep:
             try:
@@ -169,6 +165,8 @@ class ArrEngine:
     def _ifd_frame(self, baseline_year: int, ssp: Optional[str] = None) -> pd.DataFrame:
         if ssp is not None:
             table = self.response.cc_adj_ifd_table(baseline_year, ssp)
+        elif self.config.ifd.source == 'limb':
+            table = self.response.limb_ifd_table(baseline_year)
         else:
             table = self.response.ifd_table(baseline_year)
         return _table_to_frame(table)
