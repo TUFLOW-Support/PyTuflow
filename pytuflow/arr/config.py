@@ -64,14 +64,15 @@ class SiteConfig:
     longitude: Optional[float] = None
     catchment_area: Optional[float] = None
 
-    def validate(self) -> list[str]:
+    def validate(self, require_coordinates: bool = True) -> list[str]:
         errors = []
         if not self.name:
             errors.append("site.name is required")
-        if self.latitude is None:
-            errors.append("site.latitude is required")
-        if self.longitude is None:
-            errors.append("site.longitude is required")
+        if require_coordinates:
+            if self.latitude is None:
+                errors.append("site.latitude is required")
+            if self.longitude is None:
+                errors.append("site.longitude is required")
         return errors
 
 
@@ -279,6 +280,12 @@ class ArrConfig:
     arf: ArfConfig = field(default_factory=ArfConfig)
     complete_storm: bool = False
     output: OutputConfig = field(default_factory=OutputConfig)
+    #: Path to a previously-saved ARR Data Hub response JSON file (e.g. a prior run's
+    #: ``working_data/<site>_ARR_response.json`` output) to use instead of issuing a
+    #: live API request for this site. When set, ``site.latitude``/``site.longitude``
+    #: are not used to query the Data Hub (though they may still be required for other
+    #: purposes, e.g. logging) - see ``pytuflow.arr.__main__.run``.
+    response_json: Optional[str] = None
 
     #: path this config was loaded from, if any (used for error messages / relative paths)
     source_path: Optional[Path] = None
@@ -300,6 +307,7 @@ class ArrConfig:
             arf=_from_dict(ArfConfig, data.get('arf')),
             complete_storm=data.get('complete_storm', False),
             output=_from_dict(OutputConfig, data.get('output')),
+            response_json=data.get('response_json'),
             source_path=source_path,
         )
         errors = config.validate()
@@ -322,7 +330,10 @@ class ArrConfig:
 
     def validate(self) -> list[str]:
         errors = []
-        for section in (self.site, self.ifd, self.events, self.temporal_patterns,
+        errors.extend(self.site.validate(require_coordinates=self.response_json is None))
+        for section in (self.ifd, self.events, self.temporal_patterns,
                          self.climate_change, self.preburst, self.losses, self.arf, self.output):
             errors.extend(section.validate())
+        if self.response_json and not Path(self.response_json).is_file():
+            errors.append(f"response_json file not found: '{self.response_json}'")
         return errors

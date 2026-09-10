@@ -230,3 +230,32 @@ def test_additional_tp_bad_entry_raises():
     bad['temporal_patterns'] = {'additional_tp': ['nowhere']}
     with pytest.raises(ArrConfigError, match='not a recognised region name'):
         ArrConfig.from_dict(bad)
+
+
+def test_response_json_missing_file_raises():
+    bad = json.loads(json.dumps(VALID_CONFIG))
+    bad['response_json'] = '/no/such/response.json'
+    with pytest.raises(ArrConfigError, match='response_json file not found'):
+        ArrConfig.from_dict(bad)
+
+
+def test_response_json_relaxes_lat_lon_requirement(tmp_path):
+    response_path = tmp_path / 'response.json'
+    response_path.write_text('{}', encoding='utf-8')
+    data = {
+        'site': {'name': '1'},
+        'ifd': {'source': 'bom', 'year': 1990},
+        'events': {'aep': ['1%'], 'duration': [60], 'output_notation': 'ari'},
+        'output': {'path': '/tmp/out', 'format': 'csv'},
+        'response_json': str(response_path),
+    }
+    config = ArrConfig.from_dict(data)
+    assert config.response_json == str(response_path)
+    assert config.site.latitude is None
+
+
+def test_lat_lon_still_required_without_response_json():
+    bad = json.loads(json.dumps(VALID_CONFIG))
+    del bad['site']['latitude']
+    with pytest.raises(ArrConfigError, match='site.latitude'):
+        ArrConfig.from_dict(bad)

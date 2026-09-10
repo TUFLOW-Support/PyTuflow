@@ -13,12 +13,13 @@ each subsequent config.
 from __future__ import annotations
 
 import argparse
+import json
 import logging
 import sys
 from pathlib import Path
 from typing import Sequence
 
-from .api_client import ArrApiClient
+from .api_client import ArrApiClient, ArrApiResponse
 from .config import ArrConfig
 from .engine import ArrEngine
 from .exceptions import ArrError
@@ -37,6 +38,23 @@ def _configure_logging(verbose: bool) -> None:
     )
 
 
+def _load_response(client: ArrApiClient, config: ArrConfig) -> ArrApiResponse:
+    """Returns the ARR Data Hub response for ``config``'s site - loaded from a local
+    JSON file (``response_json``, e.g. a prior run's
+    ``working_data/<site>_ARR_response.json`` output) if set, instead of issuing a live
+    API request."""
+    if config.response_json:
+        logger.info("Loading ARR Data Hub response for site '%s' from local file '%s'",
+                    config.site.name, config.response_json)
+        try:
+            with open(config.response_json, encoding='utf-8') as f:
+                data = json.load(f)
+        except json.JSONDecodeError as e:
+            raise ArrError(f"response_json file '{config.response_json}' is not valid JSON: {e}") from e
+        return ArrApiResponse(data)
+    return client.fetch(config)
+
+
 def run(config_paths: Sequence[str]) -> int:
     """Loads and processes each config file in turn, returning a process exit code."""
     client = ArrApiClient()
@@ -49,7 +67,7 @@ def run(config_paths: Sequence[str]) -> int:
             return 1
         logger.info("Processing site '%s' from '%s' (append=%s)", config.site.name, config_path, append)
         try:
-            response = client.fetch(config)
+            response = _load_response(client, config)
         except ArrError as e:
             logger.error("Failed to fetch ARR Data Hub data for '%s': %s", config_path, e)
             return 1

@@ -113,7 +113,8 @@ being silently ignored, to catch typos early.
   "output": {
     "path": "C:\\path\\to\\output",
     "format": "csv"
-  }
+  },
+  "response_json": null
 }
 ```
 
@@ -122,8 +123,14 @@ being silently ignored, to catch typos early.
 | Key | Type | Description |
 | --- | --- | --- |
 | `name` | string | Site/catchment identifier - used as a prefix for output file names (e.g. `<name>_RF_...`) and as the TUFLOW `IL_<name>`/`CL_<name>` loss variable suffix. **Required.** |
-| `latitude` / `longitude` | number | Site (catchment centroid) coordinates, decimal degrees. **Required.** |
+| `latitude` / `longitude` | number | Site (catchment centroid) coordinates, decimal degrees. **Required**, unless the top-level `response_json` key is set (see below), in which case they are not used and may be omitted. |
 | `catchment_area` | number | Catchment area in km². Used for ARF calculation and to select the areal temporal pattern area bucket. |
+
+### `response_json` (top-level, optional)
+
+| Key | Type | Default | Description |
+| --- | --- | --- | --- |
+| `response_json` | string \| null | `null` | Path to a previously-saved ARR Data Hub response JSON file (e.g. a prior run's `working_data/<site>_ARR_response.json` output) to use instead of issuing a live API request for this site. Useful for offline/repeatable runs, or when iterating on config settings without re-querying the Data Hub each time. When set, `site.latitude`/`site.longitude` are not required. |
 
 ### `ifd`
 
