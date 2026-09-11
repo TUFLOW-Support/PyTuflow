@@ -92,8 +92,7 @@ being silently ignored, to catch typos early.
     "pattern_method": "recommended",
     "pattern_duration": null,
     "pattern_tp": null,
-    "duration_proportional": false,
-    "recommended_value": "depth"
+    "duration_proportional": false
   },
   "losses": {
     "method": "recommended",
@@ -215,19 +214,18 @@ Only used for **complete storm** events - see [Complete storm assembly](#complet
 
 | Key | Type | Default | Description |
 | --- | --- | --- | --- |
-| `percentile` | string | `"50%"` | Preburst depth/ratio percentile to use for the `"constant"`/`"temporal_pattern"` methods: one of `"10%"`, `"25%"`, `"50%"`, `"75%"`, `"90%"`, or `"recommended"` (the Data Hub's preferred/recommended preburst ratio, from the `RecPreburst` layer - not necessarily the same value as the exact `"50%"` percentile). Not used by the `pattern_method == "recommended"` method (which supplies its own preburst depth from `RecPreburstTP`). |
+| `percentile` | string | `"50%"` | Preburst ratio percentile to use to derive the preburst depth (for all three `pattern_method` options, including `"recommended"`): one of `"10%"`, `"25%"`, `"50%"`, `"75%"`, `"90%"`, or `"recommended"` (the Data Hub's preferred/recommended preburst ratio, from the `RecPreburst` layer - not necessarily the same value as the exact `"50%"` percentile). |
 | `pattern_method` | string \| null | `"recommended"` | Preburst pattern method: `"recommended"`, `"constant"`, or `"temporal_pattern"` (see below). |
 | `pattern_duration` | number \| null | `null` | Required for `"constant"`/`"temporal_pattern"` methods. Preburst duration in hours (or a proportion of the storm duration, if `duration_proportional` is `true`). |
 | `pattern_tp` | string \| null | `null` | Required for the `"temporal_pattern"` method: which existing point temporal pattern to shape the preburst rainfall with, e.g. `"TP03"` - or `"design_burst"`, which matches each design burst temporal pattern to a preburst pattern of the same `tp_number` (e.g. the `"TP01"` design burst gets a `"TP01"` preburst), rather than a single fixed pattern for every column. |
 | `duration_proportional` | bool | `false` | If `true`, `pattern_duration` is treated as a proportion of the storm duration rather than an absolute number of hours. |
-| `recommended_value` | string | `"depth"` | Only used by the `pattern_method == "recommended"` method: how to derive the matched historical event's preburst depth from the `RecPreburstTP` layer. `"depth"` (default) uses its `"Preburst Depth"` field directly (the historical event's actual recorded preburst depth). `"ratio"` instead uses its `"Preburst Ratio"` field (the historical event's preburst depth as a fraction of its own point burst depth), multiplied by the *current* point design burst depth - useful for users reconciling historical preburst events against current design rainfall statistics, since the ratio scales naturally with the design depth rather than reusing a fixed historical mm value. |
 
 ### `losses`
 
 | Key | Type | Default | Description |
 | --- | --- | --- | --- |
 | `method` | string | `"recommended"` | Which Data Hub burst initial loss table to use: `"recommended"` (the newer `BurstLossesNew` table), or `"probability_neutral"` (the legacy NSW-only probability-neutral `BurstIL` table - raises an error if that layer isn't available for the queried location). |
-| `extrapolation_method` | string | `"constant_preburst_ratio"` | How to extrapolate the burst initial loss for requested durations shorter than the Data Hub's shortest provided duration (independent of, and can be combined with, `method` above): `"none"` (do not extrapolate - raises an error if a shorter duration is requested), `"interpolate"` (linear interpolation of the burst initial loss from an assumed 0 mm at 0 min), `"log_interpolate"` (as `"interpolate"`, but on a `log10(duration)` axis), `"interpolate_preburst"` (linear interpolation of the *implied preburst depth* - `storm initial loss - burst initial loss` - from an assumed 0 mm at 0 min, then converted back to a burst initial loss; matches the legacy "Constant Rate"-style preburst-depth extrapolation), `"log_interpolate_preburst"` (as `"interpolate_preburst"`, but on a `log10(duration)` axis), `"rahman"` (Rahman et al. short-duration loss formula; requires `mar`), `"hill"` (Hill et al. formula; requires `mar`), `"static"` (a fixed loss value; requires `static_loss`), `"constant"` (holds the Data Hub's shortest known duration's loss value constant for all shorter durations - matches the legacy option to continue using the 60 min loss for smaller durations, adapted to the Data Hub's current shortest duration, typically 30 min), or `"constant_preburst_ratio"` (default; similar to `"constant"`, but holds the *preburst ratio* - preburst depth / point design burst depth - implied at the shortest known duration constant instead, then re-derives the preburst depth, and from it the burst initial loss, for each shorter duration using that duration's own point design burst depth). Note: any requested duration that instead falls *within* the Data Hub's provided duration range but isn't itself one of the table's rows (e.g. 270 min, between the table's 180 and 360 min rows) is always linearly gap-filled regardless of this setting, matching the legacy script's behaviour. |
+| `extrapolation_method` | string | `"constant_preburst_ratio"` | How to extrapolate the burst initial loss for requested durations shorter than the Data Hub's shortest provided duration (independent of, and can be combined with, `method` above): `"none"` (do not extrapolate - raises an error if a shorter duration is requested), `"interpolate"` (linear interpolation of the burst initial loss from an assumed 0 mm at 0 min), `"log_interpolate"` (as `"interpolate"`, but on a `log10(duration)` axis), `"interpolate_preburst"` (linear interpolation of the *implied preburst depth* - `storm initial loss - burst initial loss` - from an assumed 0 mm at 0 min, then converted back to a burst initial loss; matches the legacy "Constant Rate"-style preburst-depth extrapolation), `"log_interpolate_preburst"` (as `"interpolate_preburst"`, but on a `log10(duration)` axis), `"rahman"` (Rahman et al. short-duration loss formula; requires `mar`), `"hill"` (Hill et al. formula; requires `mar`), `"static"` (a fixed loss value; requires `static_loss`), `"constant"` (holds the Data Hub's shortest known duration's loss value constant for all shorter durations - matches the legacy option to continue using the 60 min loss for smaller durations, adapted to the Data Hub's current shortest duration, typically 30 min), or `"constant_preburst_ratio"` (default; similar to `"constant"`, but holds the *preburst ratio* - preburst depth / point design burst depth - implied at the shortest known duration constant instead, then re-derives the preburst depth, and from it the burst initial loss, for each shorter duration using that duration's own point design burst depth). Note: any requested duration that instead falls *within* the Data Hub's provided duration range but isn't itself one of the table's rows (e.g. 270 min, between the table's 180 and 360 min rows) is always linearly gap-filled regardless of this setting, matching the legacy script's behaviour. Separately (and always, regardless of this setting), any requested AEP *rarer* than the burst/storm loss tables' rarest provided AEP column (typically 1% - the Data Hub's IFD depth table extends much further, e.g. to 0.05% AEP, but its loss tables do not) is extrapolated by holding the `preburst.percentile` preburst ratio constant at that edge and applying it against the actual point design depth at the requested AEP (falling back to the single non-AEP-dependent `StormLosses`/`NewStormLosses`-derived storm initial loss where needed) - unlike the legacy script, which has no loss data at all for these AEPs and ultimately falls back to a burst initial loss of 0. |
 | `mar` | number \| null | `null` | Mean Annual Rainfall (mm), required when `extrapolation_method` is `"hill"`. |
 | `static_loss` | number \| null | `null` | Fixed initial loss value (mm), required when `extrapolation_method == "static"`. |
 | `tuflow_loss_method` | string | `"infiltration"` | `"infiltration"` writes a `soils.tsoilf` `ILCL` entry plus a companion `.trd` read file; `"excess"` writes only the `.trd` read file (rainfall excess method, no soils file). |
@@ -291,12 +289,14 @@ control files:
   Hub's climate-change initial loss adjustment factor applied.
 * `<site>_extrapolated_losses[_<cc_scenario>].csv` - the extrapolated burst initial
   loss (mm) values, in the same duration (index) x AEP% (columns) table format as
-  `<site>_burst_initial_loss...csv`, but containing **only** the rows for durations that
-  were actually extrapolated below the Data Hub's shortest provided duration (i.e.
-  `losses.extrapolation_method != "none"` and a shorter duration was requested) - for
-  easy visual comparison against the full burst initial loss table. One file per
-  climate change scenario (if enabled); a scenario's file is omitted entirely if nothing
-  was extrapolated for it.
+  `<site>_burst_initial_loss...csv`, but containing **only** the cells that were
+  actually extrapolated - either durations shorter than the Data Hub's shortest
+  provided duration (i.e. `losses.extrapolation_method != "none"` and a shorter
+  duration was requested), or AEPs rarer than the loss tables' rarest provided AEP
+  column (always, regardless of `losses.extrapolation_method`) - for easy visual
+  comparison against the full burst initial loss table. One file per climate change
+  scenario (if enabled); a scenario's file is omitted entirely if nothing was
+  extrapolated for it.
 * `<site>_PointTP_Increments.csv` / `<site>_ArealTP_Increments.csv` - the raw temporal
   pattern increment CSVs downloaded from the Data Hub (before selection/filtering to the
   specific patterns used for each event).
@@ -315,27 +315,25 @@ the loss). See [`complete_storm.py`](complete_storm.py) for the full implementat
 
 Three preburst pattern methods are available (`preburst.pattern_method`):
 
-- **`"recommended"`** (default) - uses the Data Hub's `RecPreburstTP` layer, which
-  supplies a specific historical event's preburst duration/depth/increments directly for
-  the requested AEP/duration. This is the only method available for AEP/duration cells
-  where the burst initial loss table returns the `"Use PB TP"` placeholder, since those
-  cells have no fixed burst initial loss value to derive a preburst depth from another
-  way. Only available in NSW (where the Data Hub provides this layer). If the Data Hub
-  has no exact (Duration, AEP) match in this layer, the first available preburst
-  pattern with the same duration and the same event rarity (AEP band -
-  `"frequent"`/`"intermediate"`/`"rare"`) as the requested event is used instead as an
-  assumed proxy (a warning is logged). If the Data Hub has no `RecPreburstTP` data at
-  all for that duration (e.g. very short durations below its minimum of 30 min), the
-  first available point/design temporal pattern (lowest `TP` number) with the same
-  duration and event rarity is used as the preburst shape instead - scaled to the
-  configured `percentile` ratio depth, same as the `"temporal_pattern"` method below (a
-  warning is logged). An error is only raised if no point temporal pattern at all is
-  available for that duration/event rarity combination either. `preburst.recommended_value`
-  (default `"depth"`) controls how the matched historical event's preburst depth is
-  derived: `"depth"` uses its `"Preburst Depth"` field directly (the historical event's
-  actual recorded depth); `"ratio"` instead uses its `"Preburst Ratio"` field, multiplied
-  by the *current* point design burst depth - useful for reconciling historical
-  preburst events against current design rainfall statistics.
+- **`"recommended"`** (default) - uses the Data Hub's `RecPreburstTP` layer to select a
+  specific historical event's preburst duration and temporal pattern *shape*
+  (increments/timestep) for the requested AEP/duration. This is the only method
+  available for AEP/duration cells where the burst initial loss table returns the
+  `"Use PB TP"` placeholder, since those cells have no fixed burst initial loss value to
+  derive a preburst depth from another way. Only available in NSW (where the Data Hub
+  provides this layer). If the Data Hub has no exact (Duration, AEP) match in this
+  layer, the first available preburst pattern with the same duration and the same
+  event rarity (AEP band - `"frequent"`/`"intermediate"`/`"rare"`) as the requested
+  event is used instead as an assumed proxy (a warning is logged). If the Data Hub has
+  no `RecPreburstTP` data at all for that duration (e.g. very short durations below its
+  minimum of 30 min), the first available point/design temporal pattern (lowest `TP`
+  number) with the same duration and event rarity is used as the preburst shape
+  instead (a warning is logged). An error is only raised if no point temporal pattern
+  at all is available for that duration/event rarity combination either. The preburst
+  *depth* is not taken from `RecPreburstTP` (its `"Preburst Depth"`/`"Preburst Ratio"`
+  fields are not used, since the Data Hub's `"Preburst Depth"` field is not actually a
+  preburst depth) - instead, as with the `"constant"`/`"temporal_pattern"` methods
+  below, it is derived from the `preburst.percentile` ratio table.
 - **`"constant"`** - a single preburst block of a fixed duration (`preburst.pattern_duration`)
   at a constant rate, matching the legacy "Constant Rate" method. The preburst depth is
   derived from the `Preburst<percentile>` ratio table (or the `RecPreburst` layer, if
@@ -407,21 +405,6 @@ preburst pattern (the simplest option, NSW only):
 
 Since `"recommended"` is already the default `pattern_method`, this is equivalent to
 just setting `"complete_storm": true` with no `preburst` section at all.
-
-To instead derive the recommended preburst depth from the matched historical event's
-preburst *ratio* (scaled to the current point design burst depth) rather than reusing
-its raw historical depth directly - useful when reconciling historical preburst events
-against current design rainfall statistics:
-
-```json
-{
-  "complete_storm": true,
-  "preburst": {
-    "pattern_method": "recommended",
-    "recommended_value": "ratio"
-  }
-}
-```
 
 To force complete storm assembly for every event using a **constant-rate** preburst
 block (e.g. a 2-hour constant preburst ahead of the design burst, using the median (50%)

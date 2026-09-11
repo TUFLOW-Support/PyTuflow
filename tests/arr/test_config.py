@@ -33,21 +33,7 @@ def test_defaults_applied():
     assert config.arf.min_arf == 0.2
     assert config.complete_storm is False
     assert config.climate_change.enabled is False
-    assert config.preburst.recommended_value == 'depth'
-
-
-def test_preburst_recommended_value_ratio_accepted():
-    data = json.loads(json.dumps(VALID_CONFIG))
-    data['preburst'] = {'recommended_value': 'ratio'}
-    config = ArrConfig.from_dict(data)
-    assert config.preburst.recommended_value == 'ratio'
-
-
-def test_preburst_recommended_value_invalid_raises():
-    bad = json.loads(json.dumps(VALID_CONFIG))
-    bad['preburst'] = {'recommended_value': 'bogus'}
-    with pytest.raises(ArrConfigError, match='recommended_value'):
-        ArrConfig.from_dict(bad)
+    assert config.preburst.percentile == '50%'
 
 
 def test_missing_required_site_fields_raises():

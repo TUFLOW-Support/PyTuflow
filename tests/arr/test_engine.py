@@ -47,13 +47,13 @@ def test_engine_complete_storm_prepends_preburst(api_response_1990):
 
 
 def test_engine_drops_negligible_preburst_and_falls_back_to_burst(api_response_1990):
-    # force the recommended preburst depth for 50%/1440min to a negligible value
-    # (implied ratio << 0.01 of the point design burst depth) - the engine should drop
-    # the preburst period and fall back to a standard burst-only event.
-    layer = api_response_1990.layer('RecPreburstTP')
-    for row in layer['selected_patterns']:
-        if row['Duration'] == 1440 and row['AEP'] == 50.0:
-            row['Preburst Depth'] = 0.001
+    # force the preburst ratio (from the Preburst50 table, the default percentile) for
+    # 50%/1440min to a negligible value - the engine should drop the preburst period
+    # and fall back to a standard burst-only event.
+    layer = api_response_1990.layer('Preburst50')
+    idx = layer['index'].index(1440)
+    col = layer['columns'].index(50.0)
+    layer['data'][idx][col] = 0.00001
     config = make_config(complete_storm=True,
                           events={'aep': ['50%'], 'duration': [1440], 'output_notation': 'ari'})
     engine = ArrEngine(config, api_response_1990)
@@ -67,12 +67,13 @@ def test_engine_drops_negligible_preburst_and_falls_back_to_burst(api_response_1
 
 def test_engine_drops_negligible_preburst_for_placeholder_cell_uses_storm_il(api_response_1990):
     # 20%/1440min is a 'Use PB TP' placeholder cell (no fixed burst initial loss) - if
-    # its preburst depth is also negligible, the engine should fall back to the full
-    # storm initial loss (since no burst initial loss is available to fall back to).
-    layer = api_response_1990.layer('RecPreburstTP')
-    for row in layer['selected_patterns']:
-        if row['Duration'] == 1440 and row['AEP'] == 20.0:
-            row['Preburst Depth'] = 0.001
+    # its preburst ratio (from the Preburst50 table) is also negligible, the engine
+    # should fall back to the full storm initial loss (since no burst initial loss is
+    # available to fall back to).
+    layer = api_response_1990.layer('Preburst50')
+    idx = layer['index'].index(1440)
+    col = layer['columns'].index(20.0)
+    layer['data'][idx][col] = 0.00001
     config = make_config(events={'aep': ['20%'], 'duration': [1440], 'output_notation': 'ari'})
     engine = ArrEngine(config, api_response_1990)
     results = engine.run()
@@ -80,6 +81,39 @@ def test_engine_drops_negligible_preburst_for_placeholder_cell_uses_storm_il(api
     r = results[0]
     assert r.preburst is None
     assert r.initial_loss == pytest.approx(engine._storm_initial_loss('20%'))
+
+
+def test_initial_loss_extrapolates_for_aep_rarer_than_table(api_response_1990):
+    # BurstLossesNew/NewStormLosses are both limited to 50%-1% AEP - 0.5% AEP has no
+    # burst/storm initial loss data in the Data Hub at all. The burst initial loss
+    # should be derived by holding the preburst ratio constant at the 1% AEP edge
+    # (the Preburst50 table's rarest column) and applying it against the *actual*
+    # (not clamped) point design depth at 0.5% AEP - falling back to the single
+    # (non-AEP-dependent) 'StormLosses' scalar for the storm initial loss, since
+    # 'NewStormLosses' also has no 0.5% AEP row.
+    engine = ArrEngine(
+        make_config(events={'aep': ['0.5%'], 'duration': [1440], 'output_notation': 'ari'}),
+        api_response_1990,
+    )
+    value = engine._initial_loss(1440, '0.5%', [1440])
+    # Preburst50 ratio at (1440min, 1% AEP, the rarest available column) == 0.159;
+    # point depth at (1440min, 0.5% AEP) from the 1990 baseline IFD table == 325.0;
+    # storm initial loss falls back to the StormLosses scalar == 66.0.
+    assert value == pytest.approx(66.0 - 0.159 * 325.0)
+
+
+def test_initial_loss_does_not_extrapolate_for_aep_within_table(api_response_1990):
+    # sanity check - 2% AEP (well within the table's 50%-1% range) should NOT trigger
+    # the new rare-AEP extrapolation path, and should still return the Data Hub's own
+    # value.
+    engine = ArrEngine(
+        make_config(events={'aep': ['2%'], 'duration': [30], 'output_notation': 'ari'}),
+        api_response_1990,
+    )
+    burst_losses = engine._burst_loss_frame()
+    expected = float(burst_losses.loc[30, 2.0])
+    value = engine._initial_loss(30, '2%', [30])
+    assert value == pytest.approx(expected)
 
 
 def test_engine_assembles_single_event(api_response_1990):
@@ -198,6 +232,23 @@ def test_engine_no_extrapolated_losses_when_not_needed(api_response_1990):
     engine = ArrEngine(config, api_response_1990)
     engine.run()
     assert engine.extrapolated_loss_table[None].empty
+
+
+def test_engine_run_extrapolates_rare_aep_and_records_it(api_response_1990):
+    # 0.5% AEP is rarer than the burst/storm loss tables' rarest (1%) column - the
+    # engine should still assemble the event (rather than raising or silently reusing
+    # the 1% column's raw value), and record it in extrapolated_loss_table alongside
+    # any short-duration extrapolations.
+    config = make_config(events={'aep': ['0.5%'], 'duration': [1440], 'output_notation': 'ari'})
+    engine = ArrEngine(config, api_response_1990)
+    results = engine.run()
+    assert len(results) == 1
+    r = results[0]
+    assert r.initial_loss == pytest.approx(66.0 - 0.159 * 325.0)
+    table = engine.extrapolated_loss_table[None]
+    assert list(table.index) == [1440.0]
+    assert 0.5 in table.columns
+    assert table.loc[1440.0, 0.5] == pytest.approx(r.initial_loss)
 
 
 def test_engine_applies_climate_change_loss_factors(api_response_1990, monkeypatch):

@@ -257,7 +257,6 @@ class PreburstConfig:
     pattern_duration: Optional[float] = None
     pattern_tp: Optional[str] = None
     duration_proportional: bool = False
-    recommended_value: str = 'depth'
 
     def validate(self) -> list[str]:
         errors = []
@@ -269,10 +268,6 @@ class PreburstConfig:
             errors.append(
                 f"preburst.pattern_method must be one of (recommended, constant, temporal_pattern), "
                 f"got '{self.pattern_method}'"
-            )
-        if self.recommended_value not in ('depth', 'ratio'):
-            errors.append(
-                f"preburst.recommended_value must be one of (depth, ratio), got '{self.recommended_value}'"
             )
         return errors
 
