@@ -12,6 +12,7 @@ import pytest
 
 from pytuflow.arr.exceptions import ArrError
 from pytuflow.arr.losses import (
+    constant_preburst_ratio_loss,
     extrapolate_short_duration_losses,
     hill_loss,
     interpolate_missing_durations,
@@ -44,6 +45,17 @@ def test_hill_loss_matches_legacy_formula():
 def test_static_loss_is_constant():
     result = static_loss([10, 20, 30], 15.0)
     np.testing.assert_allclose(result, [15.0, 15.0, 15.0])
+
+
+def test_constant_preburst_ratio_loss_matches_formula():
+    # ils=50, ratio=0.4 => preburst_depth = 0.4 * point_depth; loss = 50 - preburst_depth
+    result = constant_preburst_ratio_loss([15, 30], ratio=0.4, point_depths=[10.0, 20.0], ils=50.0)
+    np.testing.assert_allclose(result, [50.0 - 0.4 * 10.0, 50.0 - 0.4 * 20.0])
+
+
+def test_constant_preburst_ratio_loss_requires_matching_lengths():
+    with pytest.raises(ArrError, match='same length'):
+        constant_preburst_ratio_loss([15, 30], ratio=0.4, point_depths=[10.0], ils=50.0)
 
 
 def test_linear_interp_loss_scales_from_reference():
@@ -101,6 +113,53 @@ def test_extrapolate_constant_handles_non_numeric_reference_cell():
     table = pd.DataFrame({'1.0': ['Use PB TP', 20.0]}, index=[30.0, 60.0])
     result = extrapolate_short_duration_losses(table, [15], method='constant')
     assert pd.isna(result.loc[15.0, '1.0'])
+
+
+def test_extrapolate_constant_preburst_ratio_requires_ils(known_losses):
+    point_depths = pd.DataFrame({'1.0': [40.0, 80.0], '50.0': [20.0, 40.0]}, index=[15.0, 30.0])
+    with pytest.raises(ArrError, match='ils'):
+        extrapolate_short_duration_losses(
+            known_losses, [15], method='constant_preburst_ratio', point_depths=point_depths
+        )
+
+
+def test_extrapolate_constant_preburst_ratio_requires_point_depths(known_losses):
+    with pytest.raises(ArrError, match='point_depths'):
+        extrapolate_short_duration_losses(known_losses, [15], method='constant_preburst_ratio', ils=50.0)
+
+
+def test_extrapolate_constant_preburst_ratio(known_losses):
+    # storm ils = 50mm; known burst IL at duration=30 (threshold) is 10.0 for AEP '1.0'
+    # => implied preburst depth at 30min = 40mm; point depth at 30min = 40mm => ratio = 1.0
+    # point depth at 15min = 20mm => preburst_depth(15) = 1.0 * 20 = 20mm
+    # => burst_il(15) = 50 - 20 = 30mm
+    point_depths = pd.DataFrame({'1.0': [20.0, 40.0], '50.0': [15.0, 30.0]}, index=[15.0, 30.0])
+    result = extrapolate_short_duration_losses(
+        known_losses, [15], method='constant_preburst_ratio', ils=50.0, point_depths=point_depths
+    )
+    assert result.loc[15.0, '1.0'] == pytest.approx(30.0)
+    # AEP '50.0': known burst IL at threshold = 30.0 => pb_depth(30) = 50 - 30 = 20mm
+    # point depth at 30min = 30mm => ratio = 20/30; point depth at 15min = 15mm
+    # => pb_depth(15) = (20/30) * 15 = 10mm => burst_il(15) = 50 - 10 = 40mm
+    assert result.loc[15.0, '50.0'] == pytest.approx(40.0)
+
+
+def test_extrapolate_constant_preburst_ratio_handles_non_numeric_reference_cell():
+    table = pd.DataFrame({'1.0': ['Use PB TP', 20.0]}, index=[30.0, 60.0])
+    point_depths = pd.DataFrame({'1.0': [20.0, 40.0]}, index=[15.0, 30.0])
+    result = extrapolate_short_duration_losses(
+        table, [15], method='constant_preburst_ratio', ils=50.0, point_depths=point_depths
+    )
+    assert pd.isna(result.loc[15.0, '1.0'])
+
+
+def test_extrapolate_constant_preburst_ratio_missing_point_depth_leaves_nan(known_losses):
+    point_depths = pd.DataFrame({'1.0': [40.0], '50.0': [30.0]}, index=[30.0])
+    result = extrapolate_short_duration_losses(
+        known_losses, [15], method='constant_preburst_ratio', ils=50.0, point_depths=point_depths
+    )
+    assert pd.isna(result.loc[15.0, '1.0'])
+    assert pd.isna(result.loc[15.0, '50.0'])
 
 
 def test_extrapolate_rahman(known_losses):

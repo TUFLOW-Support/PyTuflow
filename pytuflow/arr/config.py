@@ -24,11 +24,14 @@ LOSS_METHODS = ('recommended', 'probability_neutral')
 #: ``"interpolate"``/``"log_interpolate"`` extrapolate the burst initial loss directly
 #: (linear, or log-linear on a ``log10(duration)`` axis); ``"interpolate_preburst"``/
 #: ``"log_interpolate_preburst"`` instead extrapolate the implied preburst rainfall
-#: depth (requires the storm initial loss). These are independent of (not mutually
-#: exclusive with) ``losses.method`` above.
+#: depth (requires the storm initial loss). ``"constant_preburst_ratio"`` (the default)
+#: holds the implied preburst ratio (rather than the loss value) constant below the
+#: Data Hub's shortest provided duration, and re-derives the burst initial loss from
+#: that ratio and each duration's own point design burst depth. These are independent
+#: of (not mutually exclusive with) ``losses.method`` above.
 EXTRAPOLATION_METHODS = (
     'none', 'interpolate', 'log_interpolate', 'interpolate_preburst', 'log_interpolate_preburst',
-    'rahman', 'hill', 'static', 'constant',
+    'rahman', 'hill', 'static', 'constant', 'constant_preburst_ratio',
 )
 #: How the Data Hub's climate-change initial loss adjustment factor is applied to
 #: burst-loss (i.e. non complete-storm) events. ``"burst"`` (default, legacy-equivalent)
@@ -272,7 +275,7 @@ class PreburstConfig:
 @dataclass
 class LossesConfig:
     method: str = 'recommended'
-    extrapolation_method: str = 'none'
+    extrapolation_method: str = 'constant_preburst_ratio'
     mar: Optional[float] = None
     static_loss: Optional[float] = None
     tuflow_loss_method: str = 'infiltration'

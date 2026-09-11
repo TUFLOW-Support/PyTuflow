@@ -146,6 +146,36 @@ def test_engine_short_duration_extrapolation_produces_smaller_loss(api_response_
     assert results[15.0].initial_loss < results[30.0].initial_loss
 
 
+def test_engine_constant_preburst_ratio_is_default(api_response_1990):
+    # extrapolation_method defaults to 'constant_preburst_ratio' - a duration shorter
+    # than the Data Hub's shortest provided duration should extrapolate automatically
+    # without needing to set losses.extrapolation_method explicitly.
+    config = make_config(events={'aep': ['50%'], 'duration': [15, 30], 'output_notation': 'ari'})
+    assert config.losses.extrapolation_method == 'constant_preburst_ratio'
+    engine = ArrEngine(config, api_response_1990)
+    results = {r.duration: r for r in engine.run()}
+    assert results[15.0].initial_loss > 0
+    assert results[15.0].initial_loss != results[30.0].initial_loss
+
+
+def test_engine_constant_preburst_ratio_matches_implied_ratio(api_response_1990):
+    # verify the extrapolated 15min loss reproduces the ratio implied at the reference
+    # (threshold) duration, applied to the 15min point design burst depth.
+    config = make_config(
+        events={'aep': ['50%'], 'duration': [15, 30], 'output_notation': 'ari'},
+        losses={'extrapolation_method': 'constant_preburst_ratio'},
+    )
+    engine = ArrEngine(config, api_response_1990)
+    results = {r.duration: r for r in engine.run()}
+
+    storm_il = engine._storm_initial_loss_pct_datahub(50.0)
+    threshold_loss = engine._initial_loss(30, '50%', [15, 30])
+    point_depths = engine._point_depths_for_preburst_ratio([15, 30], 30.0, [50.0])
+    ratio = (storm_il - threshold_loss) / float(point_depths.loc[30.0, 50.0])
+    expected_15min_loss = storm_il - ratio * float(point_depths.loc[15.0, 50.0])
+    assert results[15.0].initial_loss == pytest.approx(expected_15min_loss)
+
+
 def test_engine_records_extrapolated_losses(api_response_1990):
     config = make_config(
         events={'aep': ['50%'], 'duration': [15, 30], 'output_notation': 'ari'},

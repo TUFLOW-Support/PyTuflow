@@ -18,6 +18,14 @@ Two families of extrapolation are available:
   loss - matching the legacy script's ``interpolate_linear_preburst`` /
   ``interpolate_log_preburst`` methods, which extrapolate the preburst rainfall depth
   rather than the loss value. These require the storm initial loss (``ils``).
+* ``"constant_preburst_ratio"`` (the default) is similar to ``"constant"``, but holds
+  the implied *preburst ratio* (preburst depth / point design burst depth) at the Data
+  Hub's shortest known duration constant, rather than the loss value itself. The
+  preburst depth for each shorter duration is then recomputed as
+  ``ratio * point_depth(duration)`` (using the point design burst depth at that
+  duration, which does vary with duration unlike a flat loss value), and converted back
+  to a burst initial loss (``storm initial loss - preburst depth``). Requires the storm
+  initial loss (``ils``) and the point design burst depths (``point_depths``).
 
 Separately, :func:`interpolate_missing_durations` linearly fills in any requested
 duration that falls *within* the Data Hub's provided duration range but isn't itself one
@@ -131,6 +139,34 @@ def constant_reference_loss(duration: Iterable[float], ref_value: float) -> np.n
 
 
 
+def constant_preburst_ratio_loss(duration: Iterable[float], ratio: float, point_depths: Iterable[float],
+                                  ils: float) -> np.ndarray:
+    """Holds the implied *preburst ratio* (preburst depth / point design burst depth) at
+    the shortest known duration constant for all shorter durations, then re-derives the
+    burst initial loss from that constant ratio and each duration's own point design
+    burst depth (which varies with duration, unlike :func:`constant_reference_loss`'s
+    flat loss value).
+
+    Parameters
+    ----------
+    duration : Iterable[float]
+        Durations (minutes) to compute the initial loss for.
+    ratio : float
+        The preburst ratio (dimensionless) implied at the shortest known duration, held
+        constant for all ``duration`` values.
+    point_depths : Iterable[float]
+        The point design burst depth (mm) for each corresponding entry in ``duration``.
+    ils : float
+        Representative storm initial loss (mm).
+    """
+    d = np.asarray(list(duration), dtype=float)
+    depths = np.asarray(list(point_depths), dtype=float)
+    if depths.shape != d.shape:
+        raise ArrError("'point_depths' must have the same length as 'duration'.")
+    preburst_depth = float(ratio) * depths
+    return np.full(d.shape, float(ils)) - preburst_depth
+
+
 def linear_interp_loss(duration: Iterable[float], ref_duration: float, ref_value: float) -> np.ndarray:
     """Linear interpolation of initial loss between an assumed 0 mm loss at 0 min
     duration, and a known loss value at ``ref_duration``.
@@ -198,6 +234,7 @@ def extrapolate_short_duration_losses(
         ils: Optional[float] = None,
         mar: Optional[float] = None,
         static_loss_value: Optional[float] = None,
+        point_depths: Optional[pd.DataFrame] = None,
 ) -> pd.DataFrame:
     """Extends a known initial-loss table (duration index, AEP columns) with additional
     rows for any ``target_durations`` shorter than the shortest known duration.
@@ -220,15 +257,21 @@ def extrapolate_short_duration_losses(
     method : str
         One of ``'interpolate'``, ``'log_interpolate'``, ``'interpolate_preburst'``,
         ``'log_interpolate_preburst'``, ``'rahman'``, ``'hill'``, ``'static'``,
-        ``'constant'``.
+        ``'constant'``, ``'constant_preburst_ratio'``.
     ils : float, optional
         Representative storm initial loss (mm). Required for ``'rahman'``/``'hill'``/
-        ``'interpolate_preburst'``/``'log_interpolate_preburst'``.
+        ``'interpolate_preburst'``/``'log_interpolate_preburst'``/
+        ``'constant_preburst_ratio'``.
     mar : float, optional
         Mean annual rainfall (mm). Required for ``'hill'`` only (not ``'rahman'``,
         which does not depend on MAR).
     static_loss_value : float, optional
         Constant initial loss (mm) to adopt. Required for ``'static'``.
+    point_depths : pd.DataFrame, optional
+        Point design burst depths (mm), same duration/AEP shape as ``known_losses``
+        (must include, at minimum, a row for ``known_losses.index.min()`` and every
+        entry in ``target_durations`` shorter than it). Required for
+        ``'constant_preburst_ratio'``.
 
     Returns
     -------
@@ -250,6 +293,12 @@ def extrapolate_short_duration_losses(
         raise ArrError("'ils' and 'mar' are required when using the 'hill' loss extrapolation method.")
     if method == 'static' and static_loss_value is None:
         raise ArrError("'static_loss_value' is required when using the 'static' loss extrapolation method.")
+    if method == 'constant_preburst_ratio' and ils is None:
+        raise ArrError("'ils' is required when using the 'constant_preburst_ratio' loss extrapolation method.")
+    if method == 'constant_preburst_ratio' and point_depths is None:
+        raise ArrError(
+            "'point_depths' is required when using the 'constant_preburst_ratio' loss extrapolation method."
+        )
 
     new_rows = pd.DataFrame(index=short_durations, columns=known_losses.columns, dtype=float)
     if method == 'rahman':
@@ -276,6 +325,52 @@ def extrapolate_short_duration_losses(
                 new_rows[col] = np.nan
                 continue
             new_rows[col] = constant_reference_loss(short_durations, float(ref_value))
+    elif method == 'constant_preburst_ratio':
+        ref_row = known_losses.loc[threshold]
+        for col in known_losses.columns:
+            ref_value = ref_row[col]
+            if not isinstance(ref_value, (int, float)) or pd.isna(ref_value):
+                logger.warning(
+                    "Cannot hold short duration preburst ratio constant for AEP column '%s' - reference "
+                    "burst initial loss value at duration %s is non-numeric ('%s'). Leaving as NaN.",
+                    col, threshold, ref_value,
+                )
+                new_rows[col] = np.nan
+                continue
+            if threshold not in point_depths.index or col not in point_depths.columns:
+                logger.warning(
+                    "Cannot hold short duration preburst ratio constant for AEP column '%s' - no point design "
+                    "burst depth available at duration %s. Leaving as NaN.", col, threshold,
+                )
+                new_rows[col] = np.nan
+                continue
+            ref_point_depth = point_depths.loc[threshold, col]
+            if not isinstance(ref_point_depth, (int, float)) or pd.isna(ref_point_depth) or ref_point_depth <= 0:
+                logger.warning(
+                    "Cannot hold short duration preburst ratio constant for AEP column '%s' - point design "
+                    "burst depth at duration %s is invalid ('%s'). Leaving as NaN.",
+                    col, threshold, ref_point_depth,
+                )
+                new_rows[col] = np.nan
+                continue
+            # invert `burst_loss = storm_ils - preburst_depth` to recover the preburst
+            # depth implied at `threshold`, then derive the (dimensionless) preburst
+            # ratio (preburst depth / point depth), held constant for all shorter
+            # durations - unlike `constant_reference_loss`'s flat loss value, the
+            # resulting preburst depth (and therefore loss) still varies with duration
+            # via each duration's own point design burst depth.
+            ref_pb_depth = float(ils) - float(ref_value)
+            ratio = ref_pb_depth / float(ref_point_depth)
+            missing = [d for d in short_durations if d not in point_depths.index]
+            if missing:
+                logger.warning(
+                    "Cannot hold short duration preburst ratio constant for AEP column '%s' - no point design "
+                    "burst depth available for duration(s) %s. Leaving as NaN.", col, missing,
+                )
+                new_rows[col] = np.nan
+                continue
+            short_point_depths = [float(point_depths.loc[d, col]) for d in short_durations]
+            new_rows[col] = constant_preburst_ratio_loss(short_durations, ratio, short_point_depths, ils)
     elif method in ('interpolate', 'log_interpolate'):
         interp_fn = linear_interp_loss if method == 'interpolate' else log_interp_loss
         ref_row = known_losses.loc[threshold]

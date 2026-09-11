@@ -171,6 +171,20 @@ class ArrEngine:
             table = self.response.ifd_table(baseline_year)
         return _table_to_frame(table)
 
+    def _point_depths_for_preburst_ratio(self, durations: list, threshold: Optional[float],
+                                          burst_loss_columns) -> pd.DataFrame:
+        """Builds a duration x AEP table of point (unARF'd) design burst depths, needed
+        by the ``'constant_preburst_ratio'`` loss extrapolation method - covers the
+        reference (``threshold``) duration plus every requested ``durations`` value,
+        for the same AEP columns as the burst initial loss table (aligned to those
+        exact column values/dtype so they can be indexed together)."""
+        baseline_ifd = self._ifd_frame(self.config.ifd.year, None)
+        needed_durations = sorted({float(d) for d in durations} | ({threshold} if threshold is not None else set()))
+        aep_pcts = [float(c) for c in burst_loss_columns]
+        point_depths = _interp_table(baseline_ifd, needed_durations, aep_pcts)
+        point_depths.columns = burst_loss_columns
+        return point_depths
+
     def _burst_loss_frame(self) -> pd.DataFrame:
         """Returns the burst initial loss table (duration x AEP%), according to
         ``losses.method``:
@@ -448,12 +462,19 @@ class ArrEngine:
             # space" (avoids double-scaling the extrapolated rows).
             ils = None
             if losses_cfg.extrapolation_method in ('rahman', 'hill', 'interpolate_preburst',
-                                                     'log_interpolate_preburst'):
+                                                     'log_interpolate_preburst', 'constant_preburst_ratio'):
                 ils = self._storm_initial_loss_pct_datahub(aep_pct)
+            point_depths = None
+            if losses_cfg.extrapolation_method == 'constant_preburst_ratio':
+                # point (unARF'd) design burst depths at the reference (threshold) and
+                # every requested short duration, matching the point depth convention
+                # used elsewhere for preburst ratios (see `complete_storm._preburst_ratio`).
+                point_depths = self._point_depths_for_preburst_ratio(durations, threshold, burst_losses.columns)
             extended = extrapolate_short_duration_losses(
                 burst_losses, durations, method=losses_cfg.extrapolation_method,
                 ils=ils, mar=losses_cfg.mar,
                 static_loss_value=losses_cfg.static_loss,
+                point_depths=point_depths,
             )
             burst_losses = extended
         if losses_cfg.user_initial_loss is not None:
