@@ -30,10 +30,10 @@ def test_valid_config_parses():
 def test_defaults_applied():
     config = ArrConfig.from_dict(VALID_CONFIG)
     assert config.losses.method == 'recommended'
-    assert config.arf.min_arf == 0.2
+    assert config.arf.min_arf == 0
     assert config.complete_storm is False
     assert config.climate_change.enabled is False
-    assert config.preburst.percentile == '50%'
+    assert config.preburst.percentile == 'recommended'
 
 
 def test_missing_required_site_fields_raises():
@@ -85,10 +85,10 @@ def test_hill_requires_mar():
         ArrConfig.from_dict(bad)
 
 
-def test_climate_change_method_defaults_to_burst():
+def test_climate_change_method_defaults_to_storm():
     data = json.loads(json.dumps(VALID_CONFIG))
     config = ArrConfig.from_dict(data)
-    assert config.losses.climate_change_method == 'burst'
+    assert config.losses.climate_change_method == 'storm'
 
 
 def test_climate_change_method_storm_accepted():

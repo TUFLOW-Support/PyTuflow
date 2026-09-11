@@ -140,10 +140,12 @@ def test_recommended_preburst_returns_none_when_band_has_no_data_at_all(api_resp
 
 
 def test_build_preburst_recommended_default(api_response_1990):
+    # preburst.percentile defaults to 'recommended' - the ratio comes from the
+    # RecPreburst layer (0.455 at 30min/1%), not Preburst50 (0.037).
     config = make_config(events={'aep': ['1%'], 'duration': [30], 'output_notation': 'ari'})
     pattern = build_preburst(api_response_1990, config, None, 30, '1%', 1.0, 58.7)
     assert pattern.method == 'recommended'
-    assert pattern.depth == pytest.approx(0.037 * 58.7)
+    assert pattern.depth == pytest.approx(0.455 * 58.7)
 
 
 def test_build_preburst_recommended_missing_raises(api_response_1990, monkeypatch):

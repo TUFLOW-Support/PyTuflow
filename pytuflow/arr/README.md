@@ -141,7 +141,7 @@ being silently ignored, to catch typos early.
 | Key | Type | Default | Description |
 | --- | --- | --- | --- |
 | `source` | string | `"bom"` | IFD data source: `"bom"` (standard BoM IFD depths) or `"limb"` (LIMB 2020 high-resolution IFD depths). LIMB is only available in South East Queensland; an error is raised if it is not available for the queried location. |
-| `year` | int | `1990` | IFD baseline year. For `source == "bom"`: `1990` (historical) or `2030` (current baseline). For `source == "limb"`: must be `2020` (LIMB is only available for 2020). Climate-change-adjusted depths for other baseline years/SSPs are configured separately, under `climate_change`, and are only supported for `source == "bom"`. The Data Hub's burst initial loss tables (`BurstLossesNew`/`BurstIL`) are only ever provided against the 2030 baseline - if a different `year` is selected, every numeric burst initial loss cell is instead recalculated as `storm initial loss - preburst.percentile ratio * point design depth` using that baseline's own point depths (falling back to the `"Use PB TP"` placeholder if the recalculated value would be negative), rather than the raw (2030-based) table value being used unmodified. |
+| `year` | int | `2030` | IFD baseline year. For `source == "bom"`: `1990` (historical) or `2030` (current baseline, default). For `source == "limb"`: must be `2020` (LIMB is only available for 2020). Climate-change-adjusted depths for other baseline years/SSPs are configured separately, under `climate_change`, and are only supported for `source == "bom"`. The Data Hub's burst initial loss tables (`BurstLossesNew`/`BurstIL`) are only ever provided against the 2030 baseline - if a different `year` is selected, every numeric burst initial loss cell is instead recalculated as `storm initial loss - preburst.percentile ratio * point design depth` using that baseline's own point depths (falling back to the `"Use PB TP"` placeholder if the recalculated value would be negative), rather than the raw (2030-based) table value being used unmodified. |
 
 ### `events` (required)
 
@@ -149,7 +149,7 @@ being silently ignored, to catch typos early.
 | --- | --- | --- |
 | `aep` | list[string] | AEP/ARI/EY magnitude labels to assemble events for, e.g. `"1%"`, `"1 in 200"`, `"0.5EY"`. **Required.** |
 | `duration` | list[number] | Storm durations in minutes, e.g. `60`, `1440`. **Required.** |
-| `output_notation` | string | `"ari"` (default) or `"aep"` - controls the `~ARI~`/`~AEP~` TUFLOW event variable used in `Event_File.tef` and `bc_dbase.csv`; does not change which events are calculated. |
+| `output_notation` | string | `"aep"` (default) or `"ari"` - controls the `~ARI~`/`~AEP~` TUFLOW event variable used in `Event_File.tef` and `bc_dbase.csv`; does not change which events are calculated. |
 
 ### `temporal_patterns`
 
@@ -232,14 +232,14 @@ Only used for **complete storm** events - see [Complete storm assembly](#complet
 | `user_initial_loss` | number \| null | `null` | Overrides the storm initial loss (used directly for complete storm events, and as the reference value climate-change `"storm"` scaling is anchored to) with a fixed user-supplied value. The burst initial loss table is proportionally scaled per-AEP so its (per-AEP) storm initial loss matches this value, preserving the Data Hub's relative duration/AEP reduction shape - matches the legacy script's `applyUserInitialLoss`. |
 | `user_continuing_loss` | number \| null | `null` | Overrides the storm continuing loss with a fixed user-supplied value (used directly for every AEP, in place of the Data Hub's `NewStormLosses`/`StormLosses` value) - matches the legacy script's `applyUserContinuingLoss`. |
 | `urban_initial_loss` / `urban_continuing_loss` | number \| null | `null` | Fixed impervious/urban area initial and continuing loss values (mm, mm/h). Must be set together (both or neither), and require `tuflow_loss_method == "infiltration"`. When set, an additional fixed-value `ILCL` entry (soil ID 1, labelled "Impervious/Urban Area Rainfall Losses") is written to `soils.tsoilf` ahead of the catchment's own design ARR losses entry - matches the legacy script's impervious-area loss row. Only written once per model (the first config in a multi-config/append run), matching the legacy script. |
-| `climate_change_method` | string | `"burst"` | How the Data Hub's climate-change initial loss adjustment factor is applied to burst-loss (i.e. non complete-storm) events: `"burst"` (default, legacy-equivalent) scales the burst initial loss directly by the factor; `"storm"` instead scales the (baseline) full storm initial loss by the factor, then subtracts a climate-change preburst depth (the climate-change-adjusted point rainfall depth at that duration/AEP, multiplied by the `preburst.percentile` preburst ratio) to derive the climate-change burst initial loss - i.e. the preburst reduction reflects the climate-change rainfall rather than being carried over unchanged from the baseline event. Complete storm events are unaffected by this setting (they already scale the unreduced full storm initial loss directly, matching the `"storm"` approach).
+| `climate_change_method` | string | `"storm"` | How the Data Hub's climate-change initial loss adjustment factor is applied to burst-loss (i.e. non complete-storm) events: `"burst"` (legacy-equivalent) scales the burst initial loss directly by the factor; `"storm"` (default) instead scales the (baseline) full storm initial loss by the factor, then subtracts a climate-change preburst depth (the climate-change-adjusted point rainfall depth at that duration/AEP, multiplied by the `preburst.percentile` preburst ratio) to derive the climate-change burst initial loss - i.e. the preburst reduction reflects the climate-change rainfall rather than being carried over unchanged from the baseline event. Complete storm events are unaffected by this setting (they already scale the unreduced full storm initial loss directly, matching the `"storm"` approach).
 
 ### `arf`
 
 | Key | Type | Default | Description |
 | --- | --- | --- | --- |
 | `ignore_limits_for_frequent` | bool | `false` | If `true`, applies the Areal Reduction Factor equations even to frequent events outside ARR's recommended range, rather than capping/warning. |
-| `min_arf` | number | `0.2` | Minimum allowed ARF value (0-1); calculated ARF values are clamped to this floor. |
+| `min_arf` | number | `0` | Minimum allowed ARF value (0-1); calculated ARF values are clamped to this floor. |
 
 ### `complete_storm`
 

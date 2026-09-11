@@ -47,15 +47,18 @@ def test_engine_complete_storm_prepends_preburst(api_response_1990):
 
 
 def test_engine_drops_negligible_preburst_and_falls_back_to_burst(api_response_1990):
-    # force the preburst ratio (from the Preburst50 table, the default percentile) for
-    # 50%/1440min to a negligible value - the engine should drop the preburst period
-    # and fall back to a standard burst-only event.
+    # force the preburst ratio (from the Preburst50 table) for 50%/1440min to a
+    # negligible value - the engine should drop the preburst period and fall back to a
+    # standard burst-only event. preburst.percentile is pinned to '50%' here (rather
+    # than relying on the 'recommended' default) so the Preburst50 monkeypatch below is
+    # actually used to derive the ratio.
     layer = api_response_1990.layer('Preburst50')
     idx = layer['index'].index(1440)
     col = layer['columns'].index(50.0)
     layer['data'][idx][col] = 0.00001
     config = make_config(complete_storm=True,
-                          events={'aep': ['50%'], 'duration': [1440], 'output_notation': 'ari'})
+                          events={'aep': ['50%'], 'duration': [1440], 'output_notation': 'ari'},
+                          preburst={'percentile': '50%'})
     engine = ArrEngine(config, api_response_1990)
     results = engine.run()
     assert len(results) == 1
@@ -69,12 +72,15 @@ def test_engine_drops_negligible_preburst_for_placeholder_cell_uses_storm_il(api
     # 20%/1440min is a 'Use PB TP' placeholder cell (no fixed burst initial loss) - if
     # its preburst ratio (from the Preburst50 table) is also negligible, the engine
     # should fall back to the full storm initial loss (since no burst initial loss is
-    # available to fall back to).
+    # available to fall back to). preburst.percentile is pinned to '50%' here (rather
+    # than relying on the 'recommended' default) so the Preburst50 monkeypatch below is
+    # actually used to derive the ratio.
     layer = api_response_1990.layer('Preburst50')
     idx = layer['index'].index(1440)
     col = layer['columns'].index(20.0)
     layer['data'][idx][col] = 0.00001
-    config = make_config(events={'aep': ['20%'], 'duration': [1440], 'output_notation': 'ari'})
+    config = make_config(events={'aep': ['20%'], 'duration': [1440], 'output_notation': 'ari'},
+                          preburst={'percentile': '50%'})
     engine = ArrEngine(config, api_response_1990)
     results = engine.run()
     assert len(results) == 1
@@ -87,19 +93,19 @@ def test_initial_loss_extrapolates_for_aep_rarer_than_table(api_response_1990):
     # BurstLossesNew/NewStormLosses are both limited to 50%-1% AEP - 0.5% AEP has no
     # burst/storm initial loss data in the Data Hub at all. The burst initial loss
     # should be derived by holding the preburst ratio constant at the 1% AEP edge
-    # (the Preburst50 table's rarest column) and applying it against the *actual*
-    # (not clamped) point design depth at 0.5% AEP - falling back to the single
-    # (non-AEP-dependent) 'StormLosses' scalar for the storm initial loss, since
-    # 'NewStormLosses' also has no 0.5% AEP row.
+    # (the RecPreburst layer's rarest column - preburst.percentile defaults to
+    # 'recommended') and applying it against the *actual* (not clamped) point design
+    # depth at 0.5% AEP - falling back to the single (non-AEP-dependent) 'StormLosses'
+    # scalar for the storm initial loss, since 'NewStormLosses' also has no 0.5% AEP row.
     engine = ArrEngine(
         make_config(events={'aep': ['0.5%'], 'duration': [1440], 'output_notation': 'ari'}),
         api_response_1990,
     )
     value = engine._initial_loss(1440, '0.5%', [1440])
-    # Preburst50 ratio at (1440min, 1% AEP, the rarest available column) == 0.159;
+    # RecPreburst ratio at (1440min, 1% AEP, the rarest available column) == 0.359;
     # point depth at (1440min, 0.5% AEP) from the 1990 baseline IFD table == 325.0;
     # storm initial loss falls back to the StormLosses scalar == 66.0.
-    assert value == pytest.approx(66.0 - 0.159 * 325.0)
+    assert value == pytest.approx(66.0 - 0.359 * 325.0)
 
 
 def test_initial_loss_does_not_extrapolate_for_aep_within_table(api_response_1990):
@@ -244,7 +250,7 @@ def test_engine_run_extrapolates_rare_aep_and_records_it(api_response_1990):
     results = engine.run()
     assert len(results) == 1
     r = results[0]
-    assert r.initial_loss == pytest.approx(66.0 - 0.159 * 325.0)
+    assert r.initial_loss == pytest.approx(66.0 - 0.359 * 325.0)
     table = engine.extrapolated_loss_table[None]
     assert list(table.index) == [1440.0]
     assert 0.5 in table.columns
@@ -254,7 +260,9 @@ def test_engine_run_extrapolates_rare_aep_and_records_it(api_response_1990):
 def test_engine_applies_climate_change_loss_factors(api_response_1990, monkeypatch):
     """Climate change scenario events should have their initial/continuing loss scaled
     by the Data Hub's 'ClimateChange' loss adjustment factors, relative to the base
-    (no climate change) event."""
+    (no climate change) event, when losses.climate_change_method == 'burst' (the
+    'storm' method - now the default - is covered separately by
+    test_engine_climate_change_storm_loss_method)."""
     rec_ifd = api_response_1990.layer('RecIFD')
     base_table = rec_ifd['Recommended Historical (1961-1990) Baseline']
     api_response_1990.layers['CCAdjIFDDatasets'] = {
@@ -278,6 +286,7 @@ def test_engine_applies_climate_change_loss_factors(api_response_1990, monkeypat
     config = make_config(
         events={'aep': ['50%'], 'duration': [1440], 'output_notation': 'ari'},
         climate_change={'enabled': True, 'scenarios': [{'baseline_year': 2090, 'ssp': 'SSP2'}]},
+        losses={'climate_change_method': 'burst'},
     )
     engine = ArrEngine(config, api_response_1990)
     results = engine.run()
@@ -340,12 +349,12 @@ def test_engine_climate_change_storm_loss_method(api_response_1990):
     assert cc.initial_loss != pytest.approx(burst_scaled_il)
 
 
-def test_engine_climate_change_burst_is_default(api_response_1990):
-    """losses.climate_change_method defaults to 'burst' - unaffected by this change."""
+def test_engine_climate_change_storm_is_default(api_response_1990):
+    """losses.climate_change_method defaults to 'storm'."""
     config = make_config(
         events={'aep': ['50%'], 'duration': [1440], 'output_notation': 'ari'},
     )
-    assert config.losses.climate_change_method == 'burst'
+    assert config.losses.climate_change_method == 'storm'
 
 
 def _patch_burst_losses_new(api_response_1990, columns, index, data):
