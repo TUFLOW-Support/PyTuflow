@@ -252,7 +252,7 @@ class ClimateChangeConfig:
 
 @dataclass
 class PreburstConfig:
-    percentile: str = '50%'
+    percentile: str = 'recommended'
     pattern_method: Optional[str] = None
     pattern_duration: Optional[float] = None
     pattern_tp: Optional[str] = None
