@@ -8,7 +8,7 @@ import pytest
 
 from pytuflow.arr import temporal_patterns as tp_module
 from pytuflow.arr.complete_storm import (
-    build_preburst, constant_preburst, temporal_pattern_preburst, recommended_preburst,
+    build_preburst, constant_preburst, temporal_pattern_preburst, recommended_preburst, _preburst_ratio,
 )
 from pytuflow.arr.config import ArrConfig
 from pytuflow.arr.exceptions import ArrError
@@ -100,9 +100,30 @@ def test_recommended_preburst_falls_back_to_same_duration_and_band(api_response_
     assert pattern.depth == pytest.approx(0.037 * 100.0)
 
 
-def test_recommended_preburst_returns_none_when_no_fallback_available(api_response_1990):
-    # duration=120 has no 'frequent' band (50%/20%) rows at all - neither an exact
-    # match nor a same-duration/same-band fallback exists.
+def test_recommended_preburst_falls_back_to_closest_duration_same_band(api_response_1990):
+    # duration=120min has no 'frequent' band (50%/20%) rows in RecPreburstTP at all -
+    # falls back to the closest available duration with a 'frequent' band row (90min,
+    # 30min away, vs 180min which is 60min away). The shape (event_id/increments/
+    # timestep) comes from that 90min row, but the depth/ratio still uses the
+    # *originally requested* duration/AEP (120min/50%), not the fallback row's own.
+    pattern = recommended_preburst(api_response_1990, 120, '50%', 50.0, point_depth=100.0)
+    assert pattern is not None
+    assert pattern.method == 'recommended'
+    layer = api_response_1990.layer('RecPreburstTP')
+    expected_row = next(r for r in layer['selected_patterns'] if r['Duration'] == 90 and r['AEP'] == 50.0)
+    assert pattern.event_id == expected_row['Event ID']
+    expected_ratio = _preburst_ratio(api_response_1990, '50%', 120, 50.0)
+    assert pattern.depth == pytest.approx(expected_ratio * 100.0)
+
+
+def test_recommended_preburst_returns_none_when_band_has_no_data_at_all(api_response_1990, monkeypatch):
+    # simulate a Data Hub response with no RecPreburstTP rows at all for the 'frequent'
+    # event rarity band (across every duration) - neither an exact match, a
+    # same-duration/band fallback, nor a closest-duration/band fallback exists.
+    from pytuflow.arr.temporal_patterns import aep_band
+    layer = api_response_1990.layer('RecPreburstTP')
+    rows = [r for r in layer['selected_patterns'] if aep_band(f"{float(r['AEP'])}%", 'ari') != 'frequent']
+    monkeypatch.setitem(api_response_1990.layers['RecPreburstTP'], 'selected_patterns', rows)
     assert recommended_preburst(api_response_1990, 120, '50%', 50.0, point_depth=100.0) is None
 
 
@@ -113,22 +134,42 @@ def test_build_preburst_recommended_default(api_response_1990):
     assert pattern.depth == pytest.approx(0.037 * 58.7)
 
 
-def test_build_preburst_recommended_missing_raises(api_response_1990):
+def test_build_preburst_recommended_missing_raises(api_response_1990, monkeypatch):
+    # same 'frequent' band removed entirely (see
+    # test_recommended_preburst_returns_none_when_band_has_no_data_at_all) and no
+    # tp_set available either - build_preburst should raise rather than silently
+    # returning nothing.
+    from pytuflow.arr.temporal_patterns import aep_band
+    layer = api_response_1990.layer('RecPreburstTP')
+    rows = [r for r in layer['selected_patterns'] if aep_band(f"{float(r['AEP'])}%", 'ari') != 'frequent']
+    monkeypatch.setitem(api_response_1990.layers['RecPreburstTP'], 'selected_patterns', rows)
     config = make_config(events={'aep': ['50%'], 'duration': [120], 'output_notation': 'ari'})
     with pytest.raises(ArrError, match='No recommended preburst'):
         build_preburst(api_response_1990, config, None, 120, '50%', 50.0, 58.7)
 
 
-def test_recommended_preburst_returns_none_for_duration_below_min(api_response_1990):
-    # RecPreburstTP's shortest duration is 30min - there is no row (of any AEP/band) at
-    # duration=10, so neither an exact match nor the same-duration/band fallback exists.
-    assert recommended_preburst(api_response_1990, 10, '1%', 1.0, point_depth=100.0) is None
+def test_recommended_preburst_falls_back_to_closest_duration_below_min(api_response_1990):
+    # RecPreburstTP's shortest duration is 30min - duration=10 has no row at all (of
+    # any AEP/band), so falls back to the closest available duration (30min) sharing
+    # the same event rarity band ('rare', for 1% AEP) rather than returning None.
+    pattern = recommended_preburst(api_response_1990, 10, '1%', 1.0, point_depth=100.0)
+    assert pattern is not None
+    assert pattern.method == 'recommended'
+    layer = api_response_1990.layer('RecPreburstTP')
+    assert next(r for r in layer['selected_patterns'] if r['Event ID'] == pattern.event_id)['Duration'] == 30
 
 
-def test_build_preburst_recommended_falls_back_to_first_point_tp_below_min_duration(api_response_1990, tp_set):
-    # duration=10 has no RecPreburstTP data at all - build_preburst should fall back
-    # further to the first available point/design temporal pattern (same duration/AEP
-    # band) as the preburst shape, rather than raising.
+def test_build_preburst_recommended_falls_back_to_first_point_tp_when_band_has_no_data(
+        api_response_1990, tp_set, monkeypatch):
+    # simulate a Data Hub response with no RecPreburstTP rows at all for the 'rare'
+    # event rarity band (across every duration, so even the closest-duration fallback
+    # finds nothing) - build_preburst should fall back further still, to the first
+    # available point/design temporal pattern (same duration/AEP band) as the preburst
+    # shape, rather than raising.
+    from pytuflow.arr.temporal_patterns import aep_band
+    layer = api_response_1990.layer('RecPreburstTP')
+    rows = [r for r in layer['selected_patterns'] if aep_band(f"{float(r['AEP'])}%", 'ari') != 'rare']
+    monkeypatch.setitem(api_response_1990.layers['RecPreburstTP'], 'selected_patterns', rows)
     config = make_config(events={'aep': ['1%'], 'duration': [10], 'output_notation': 'ari'})
     pattern = build_preburst(api_response_1990, config, tp_set, 10, '1%', 1.0, 24.0)
     assert pattern.method == 'recommended'

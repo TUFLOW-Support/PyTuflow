@@ -325,15 +325,20 @@ Three preburst pattern methods are available (`preburst.pattern_method`):
   layer, the first available preburst pattern with the same duration and the same
   event rarity (AEP band - `"frequent"`/`"intermediate"`/`"rare"`) as the requested
   event is used instead as an assumed proxy (a warning is logged). If the Data Hub has
-  no `RecPreburstTP` data at all for that duration (e.g. very short durations below its
-  minimum of 30 min), the first available point/design temporal pattern (lowest `TP`
-  number) with the same duration and event rarity is used as the preburst shape
-  instead (a warning is logged). An error is only raised if no point temporal pattern
-  at all is available for that duration/event rarity combination either. The preburst
-  *depth* is not taken from `RecPreburstTP` (its `"Preburst Depth"`/`"Preburst Ratio"`
-  fields are not used, since the Data Hub's `"Preburst Depth"` field is not actually a
-  preburst depth) - instead, as with the `"constant"`/`"temporal_pattern"` methods
-  below, it is derived from the `preburst.percentile` ratio table.
+  no `RecPreburstTP` data at all for that exact duration (e.g. very short durations
+  below its minimum of 30 min), the preburst pattern (of the same event rarity band)
+  whose *duration* is closest to the requested duration is used instead (a warning is
+  logged), rather than falling back to a point/design temporal pattern. Only if the
+  Data Hub has no `RecPreburstTP` data at all for that event rarity band (across every
+  duration) does it fall back further still, to the first available point/design
+  temporal pattern (lowest `TP` number) with the same duration and event rarity (a
+  warning is logged). An error is only raised if no point temporal pattern at all is
+  available for that duration/event rarity combination either. The preburst *depth* is
+  not taken from `RecPreburstTP` (its `"Preburst Depth"`/`"Preburst Ratio"` fields are
+  not used, since the Data Hub's `"Preburst Depth"` field is not actually a preburst
+  depth) - instead, as with the `"constant"`/`"temporal_pattern"` methods below, it is
+  derived from the `preburst.percentile` ratio table (using the *originally requested*
+  duration/AEP, not the fallback pattern's own duration/AEP, in either fallback case).
 - **`"constant"`** - a single preburst block of a fixed duration (`preburst.pattern_duration`)
   at a constant rate, matching the legacy "Constant Rate" method. The preburst depth is
   derived from the `Preburst<percentile>` ratio table (or the `RecPreburst` layer, if
