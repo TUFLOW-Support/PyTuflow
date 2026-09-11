@@ -148,7 +148,7 @@ class SiteConfig:
 @dataclass
 class IFDConfig:
     source: str = 'bom'
-    year: int = 1990
+    year: int = 2030
 
     def validate(self) -> list[str]:
         errors = []
@@ -167,7 +167,7 @@ class IFDConfig:
 class EventsConfig:
     aep: list = field(default_factory=list)
     duration: list = field(default_factory=list)
-    output_notation: str = 'ari'
+    output_notation: str = 'aep'
 
     def validate(self) -> list[str]:
         errors = []
@@ -283,7 +283,7 @@ class LossesConfig:
     user_continuing_loss: Optional[float] = None
     urban_initial_loss: Optional[float] = None
     urban_continuing_loss: Optional[float] = None
-    climate_change_method: str = 'burst'
+    climate_change_method: str = 'storm'
 
     def validate(self) -> list[str]:
         errors = []
@@ -319,7 +319,7 @@ class LossesConfig:
 @dataclass
 class ArfConfig:
     ignore_limits_for_frequent: bool = False
-    min_arf: float = 0.2
+    min_arf: float = 0
 
     def validate(self) -> list[str]:
         errors = []
