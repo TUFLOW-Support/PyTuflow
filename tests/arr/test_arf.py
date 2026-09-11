@@ -13,7 +13,7 @@ import pytest
 
 from pytuflow.arr.arf import aep_name_to_pct, arf_factors
 
-LEGACY_LIB_PATH = Path(__file__).parents[2] / 'ARR_legacy' / 'ARR_TUFLOW_func_lib.py'
+LEGACY_LIB_PATH = Path(__file__).parent / 'arr_legacy' / 'ARR_TUFLOW_func_lib.py'
 
 
 @pytest.fixture(scope='module')
