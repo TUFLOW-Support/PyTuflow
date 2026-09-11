@@ -322,9 +322,11 @@ Three preburst pattern methods are available (`preburst.pattern_method`):
   `"Use PB TP"` placeholder, since those cells have no fixed burst initial loss value to
   derive a preburst depth from another way. Only available in NSW (where the Data Hub
   provides this layer). If the Data Hub has no exact (Duration, AEP) match in this
-  layer, the first available preburst pattern with the same duration and the same
-  event rarity (AEP band - `"frequent"`/`"intermediate"`/`"rare"`) as the requested
-  event is used instead as an assumed proxy (a warning is logged). If the Data Hub has
+  layer, the preburst pattern with the same duration and the same event rarity (AEP
+  band - `"frequent"`/`"intermediate"`/`"rare"`) as the requested event, whose *AEP* is
+  closest to the requested one, is used instead as an assumed proxy (a warning is
+  logged) - e.g. for an AEP rarer than the rarest AEP available for that band/duration
+  (typically 1%), the 1% AEP pattern is used. If the Data Hub has
   no `RecPreburstTP` data at all for that exact duration (e.g. very short durations
   below its minimum of 30 min), the preburst pattern (of the same event rarity band)
   whose *duration* is closest to the requested duration is used instead (a warning is

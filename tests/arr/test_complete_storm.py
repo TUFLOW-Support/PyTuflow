@@ -100,6 +100,18 @@ def test_recommended_preburst_falls_back_to_same_duration_and_band(api_response_
     assert pattern.depth == pytest.approx(0.037 * 100.0)
 
 
+def test_recommended_preburst_for_aep_rarer_than_1pct_uses_1pct_pattern(api_response_1990):
+    # 0.5% AEP has no exact (Duration, AEP) row in RecPreburstTP (the layer's rarest
+    # AEP is 1%) - among the same-duration 'rare' band candidates (2%, 1%), the
+    # fallback should pick the one *closest* to 0.5% (i.e. 1%), not simply the first
+    # one found in the Data Hub's response ordering (which happens to be 2%).
+    pattern = recommended_preburst(api_response_1990, 1440, '0.5%', 0.5, point_depth=100.0)
+    assert pattern is not None
+    layer = api_response_1990.layer('RecPreburstTP')
+    expected_row = next(r for r in layer['selected_patterns'] if r['Duration'] == 1440 and r['AEP'] == 1.0)
+    assert pattern.event_id == expected_row['Event ID']
+
+
 def test_recommended_preburst_falls_back_to_closest_duration_same_band(api_response_1990):
     # duration=120min has no 'frequent' band (50%/20%) rows in RecPreburstTP at all -
     # falls back to the closest available duration with a 'frequent' band row (90min,
