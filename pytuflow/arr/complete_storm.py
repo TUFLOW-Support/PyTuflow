@@ -24,7 +24,12 @@ config):
   this duration (e.g. very short durations below its minimum of 30 min), the first
   available point/design temporal pattern with the same duration and event rarity is
   used as the preburst shape instead (a warning is logged) - see
-  :func:`_first_tp_preburst`.
+  :func:`_first_tp_preburst`. ``preburst.recommended_value`` (default ``"depth"``)
+  controls how the matched historical event's preburst depth is derived: ``"depth"``
+  uses its ``"Preburst Depth"`` field directly (the historical event's actual recorded
+  depth); ``"ratio"`` instead uses its ``"Preburst Ratio"`` field, multiplied by the
+  *current* point design burst depth - useful for reconciling historical preburst
+  events against current design rainfall statistics.
 * ``"constant"`` - a single preburst block of a fixed duration (``preburst.pattern_duration``,
   in hours, or a proportion of the storm duration if ``preburst.duration_proportional``)
   at a constant rate, matching the legacy "Constant Rate" method.
@@ -112,14 +117,26 @@ def _same_duration_and_band_row(rows: list, duration: float, aep_name: str, outp
 
 
 def recommended_preburst(response: ArrApiResponse, duration: float, aep_name: str, aep_pct: float,
-                          output_notation: str = 'ari') -> Optional[PreburstPattern]:
+                          output_notation: str = 'ari', point_depth: Optional[float] = None,
+                          recommended_value: str = 'depth') -> Optional[PreburstPattern]:
     """Looks up the Data Hub's recommended preburst temporal pattern (``RecPreburstTP``
     layer) for the given duration/AEP. If no exact (Duration, AEP) match is available,
     falls back to the first available preburst pattern with the same duration and the
     same event rarity (AEP band) as the requested event (see
     :func:`_same_duration_and_band_row`) - a warning is logged when this fallback is
     used. Returns ``None`` if no match is found at all (e.g. no preburst data available
-    for that duration at all)."""
+    for that duration at all).
+
+    ``recommended_value`` controls how the matched historical event's preburst depth is
+    derived: ``"depth"`` (default) uses the layer's ``"Preburst Depth"`` field directly
+    (the historical event's actual recorded preburst depth); ``"ratio"`` instead uses
+    its ``"Preburst Ratio"`` field (the historical event's preburst depth as a fraction
+    of its own point burst depth), multiplied by ``point_depth`` (the *current* point
+    design burst depth) - useful for users reconciling historical preburst events
+    against current design rainfall statistics, since the ratio is dimensionless and
+    scales naturally with the design depth rather than reusing a fixed historical mm
+    value. ``point_depth`` is required when ``recommended_value == "ratio"``.
+    """
     layer = response.layer('RecPreburstTP')
     if not layer or 'selected_patterns' not in layer:
         return None
@@ -148,8 +165,17 @@ def recommended_preburst(response: ArrApiResponse, duration: float, aep_name: st
     total = sum(raw)
 
     increments = [v / total * 100.0 for v in raw] if total else raw
+    if recommended_value == 'ratio':
+        if point_depth is None:
+            raise ArrError(
+                "'point_depth' is required to derive the recommended preburst depth from 'Preburst Ratio' "
+                "(preburst.recommended_value == 'ratio')."
+            )
+        depth = float(row['Preburst Ratio']) * float(point_depth)
+    else:
+        depth = float(row['Preburst Depth'])
     return PreburstPattern(
-        depth=float(row['Preburst Depth']), timestep=timestep, increments=increments,
+        depth=depth, timestep=timestep, increments=increments,
         method='recommended', event_id=int(row['Event ID']) if row.get('Event ID') is not None else None,
     )
 
@@ -302,7 +328,10 @@ def build_preburst(response: ArrApiResponse, config: ArrConfig, tp_set: Temporal
     with ``preburst.pattern_tp == "design_burst"``."""
     method = (config.preburst.pattern_method or 'recommended').lower()
     if method == 'recommended':
-        pattern = recommended_preburst(response, duration, aep_name, aep_pct, config.events.output_notation)
+        pattern = recommended_preburst(
+            response, duration, aep_name, aep_pct, config.events.output_notation,
+            point_depth=point_depth, recommended_value=config.preburst.recommended_value,
+        )
         if pattern is None:
             pattern = _first_tp_preburst(response, config, tp_set, duration, aep_name, aep_pct, point_depth)
         if pattern is None:

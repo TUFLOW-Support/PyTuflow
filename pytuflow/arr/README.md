@@ -92,7 +92,8 @@ being silently ignored, to catch typos early.
     "pattern_method": "recommended",
     "pattern_duration": null,
     "pattern_tp": null,
-    "duration_proportional": false
+    "duration_proportional": false,
+    "recommended_value": "depth"
   },
   "losses": {
     "method": "recommended",
@@ -219,6 +220,7 @@ Only used for **complete storm** events - see [Complete storm assembly](#complet
 | `pattern_duration` | number \| null | `null` | Required for `"constant"`/`"temporal_pattern"` methods. Preburst duration in hours (or a proportion of the storm duration, if `duration_proportional` is `true`). |
 | `pattern_tp` | string \| null | `null` | Required for the `"temporal_pattern"` method: which existing point temporal pattern to shape the preburst rainfall with, e.g. `"TP03"` - or `"design_burst"`, which matches each design burst temporal pattern to a preburst pattern of the same `tp_number` (e.g. the `"TP01"` design burst gets a `"TP01"` preburst), rather than a single fixed pattern for every column. |
 | `duration_proportional` | bool | `false` | If `true`, `pattern_duration` is treated as a proportion of the storm duration rather than an absolute number of hours. |
+| `recommended_value` | string | `"depth"` | Only used by the `pattern_method == "recommended"` method: how to derive the matched historical event's preburst depth from the `RecPreburstTP` layer. `"depth"` (default) uses its `"Preburst Depth"` field directly (the historical event's actual recorded preburst depth). `"ratio"` instead uses its `"Preburst Ratio"` field (the historical event's preburst depth as a fraction of its own point burst depth), multiplied by the *current* point design burst depth - useful for users reconciling historical preburst events against current design rainfall statistics, since the ratio scales naturally with the design depth rather than reusing a fixed historical mm value. |
 
 ### `losses`
 
@@ -328,7 +330,12 @@ Three preburst pattern methods are available (`preburst.pattern_method`):
   duration and event rarity is used as the preburst shape instead - scaled to the
   configured `percentile` ratio depth, same as the `"temporal_pattern"` method below (a
   warning is logged). An error is only raised if no point temporal pattern at all is
-  available for that duration/event rarity combination either.
+  available for that duration/event rarity combination either. `preburst.recommended_value`
+  (default `"depth"`) controls how the matched historical event's preburst depth is
+  derived: `"depth"` uses its `"Preburst Depth"` field directly (the historical event's
+  actual recorded depth); `"ratio"` instead uses its `"Preburst Ratio"` field, multiplied
+  by the *current* point design burst depth - useful for reconciling historical
+  preburst events against current design rainfall statistics.
 - **`"constant"`** - a single preburst block of a fixed duration (`preburst.pattern_duration`)
   at a constant rate, matching the legacy "Constant Rate" method. The preburst depth is
   derived from the `Preburst<percentile>` ratio table (or the `RecPreburst` layer, if
@@ -400,6 +407,21 @@ preburst pattern (the simplest option, NSW only):
 
 Since `"recommended"` is already the default `pattern_method`, this is equivalent to
 just setting `"complete_storm": true` with no `preburst` section at all.
+
+To instead derive the recommended preburst depth from the matched historical event's
+preburst *ratio* (scaled to the current point design burst depth) rather than reusing
+its raw historical depth directly - useful when reconciling historical preburst events
+against current design rainfall statistics:
+
+```json
+{
+  "complete_storm": true,
+  "preburst": {
+    "pattern_method": "recommended",
+    "recommended_value": "ratio"
+  }
+}
+```
 
 To force complete storm assembly for every event using a **constant-rate** preburst
 block (e.g. a 2-hour constant preburst ahead of the design burst, using the median (50%)

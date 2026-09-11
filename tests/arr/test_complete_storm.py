@@ -59,6 +59,31 @@ def test_recommended_preburst_different_aep_same_duration(api_response_1990):
     assert sum(pattern.increments) == pytest.approx(100.0)
 
 
+def test_recommended_preburst_ratio_uses_preburst_ratio_times_point_depth(api_response_1990):
+    # AEP 1%/30min row: Preburst Ratio == 0.455 - scaled to a supplied point depth of
+    # 100mm (rather than the raw historical 'Preburst Depth' of 69.6mm).
+    pattern = recommended_preburst(
+        api_response_1990, 30, '1%', 1.0, point_depth=100.0, recommended_value='ratio',
+    )
+    assert pattern is not None
+    assert pattern.depth == pytest.approx(45.5)
+
+
+def test_recommended_preburst_ratio_requires_point_depth(api_response_1990):
+    with pytest.raises(ArrError, match='point_depth'):
+        recommended_preburst(api_response_1990, 30, '1%', 1.0, recommended_value='ratio')
+
+
+def test_build_preburst_recommended_value_ratio(api_response_1990):
+    config = make_config(
+        events={'aep': ['1%'], 'duration': [30], 'output_notation': 'ari'},
+        preburst={'recommended_value': 'ratio'},
+    )
+    pattern = build_preburst(api_response_1990, config, None, 30, '1%', 1.0, 100.0)
+    assert pattern.method == 'recommended'
+    assert pattern.depth == pytest.approx(45.5)
+
+
 def test_recommended_preburst_falls_back_to_same_duration_and_band(api_response_1990, monkeypatch):
     # remove the exact 1% AEP/30min row, leaving the 2% row (also 'rare' band, per
     # aep_band) at the same duration - the fallback should pick it up.
