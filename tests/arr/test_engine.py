@@ -411,6 +411,7 @@ def test_engine_placeholder_adjacent_gap_both_placeholders_triggers_complete_sto
 def test_engine_probability_neutral_method_uses_burst_il_layer(api_response_1990):
     config = make_config(
         events={'aep': ['50%'], 'duration': [1440], 'output_notation': 'ari'},
+        ifd={'source': 'bom', 'year': 2030},  # avoid the ifd.year != 2030 burst loss recalculation
         losses={'method': 'probability_neutral'},
     )
     engine = ArrEngine(config, api_response_1990)
@@ -472,12 +473,40 @@ def test_engine_user_initial_loss_scales_burst_losses(api_response_1990):
     # loss should also be halved (7.4mm), preserving the relative reduction shape.
     config = make_config(
         events={'aep': ['50%'], 'duration': [1440], 'output_notation': 'ari'},
+        ifd={'source': 'bom', 'year': 2030},  # avoid the ifd.year != 2030 burst loss recalculation
         losses={'user_initial_loss': 10.0},
     )
     engine = ArrEngine(config, api_response_1990)
     results = engine.run()
     assert len(results) == 1
     assert results[0].initial_loss == pytest.approx(7.4)
+
+
+def test_engine_recalculates_burst_losses_for_non_2030_ifd_year(api_response_1990):
+    # BurstLossesNew/BurstIL are only ever provided by the Data Hub against the 2030
+    # ("current") baseline - when a different `ifd.year` is selected, every numeric
+    # burst initial loss cell should instead be recalculated as
+    # storm_il - preburst_ratio(percentile, duration, aep) * point_depth(ifd.year),
+    # rather than the raw (2030-based) BurstLossesNew value being used unmodified.
+    from pytuflow.arr.complete_storm import _preburst_ratio
+    from pytuflow.arr.engine import _interp_table, _table_to_frame
+
+    config = make_config(
+        events={'aep': ['50%'], 'duration': [1440], 'output_notation': 'ari'},
+        ifd={'source': 'bom', 'year': 1990},
+    )
+    engine = ArrEngine(config, api_response_1990)
+    results = engine.run()
+    assert len(results) == 1
+
+    baseline_ifd = _table_to_frame(api_response_1990.ifd_table(1990))
+    point_depth = float(_interp_table(baseline_ifd, [1440.0], [50.0]).iloc[0, 0])
+    ratio = _preburst_ratio(api_response_1990, '50%', 1440.0, 50.0)
+    storm_il = 20.0  # Data Hub storm initial loss for 50% AEP
+    expected = storm_il - ratio * point_depth
+    # sanity check: differs from the raw (2030-based) BurstLossesNew value of 14.8mm
+    assert expected != pytest.approx(14.8)
+    assert results[0].initial_loss == pytest.approx(expected)
 
 
 def test_engine_user_initial_loss_used_directly_for_complete_storm(api_response_1990):

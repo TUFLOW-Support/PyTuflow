@@ -141,7 +141,7 @@ being silently ignored, to catch typos early.
 | Key | Type | Default | Description |
 | --- | --- | --- | --- |
 | `source` | string | `"bom"` | IFD data source: `"bom"` (standard BoM IFD depths) or `"limb"` (LIMB 2020 high-resolution IFD depths). LIMB is only available in South East Queensland; an error is raised if it is not available for the queried location. |
-| `year` | int | `1990` | IFD baseline year. For `source == "bom"`: `1990` (historical) or `2030` (current baseline). For `source == "limb"`: must be `2020` (LIMB is only available for 2020). Climate-change-adjusted depths for other baseline years/SSPs are configured separately, under `climate_change`, and are only supported for `source == "bom"`. |
+| `year` | int | `1990` | IFD baseline year. For `source == "bom"`: `1990` (historical) or `2030` (current baseline). For `source == "limb"`: must be `2020` (LIMB is only available for 2020). Climate-change-adjusted depths for other baseline years/SSPs are configured separately, under `climate_change`, and are only supported for `source == "bom"`. The Data Hub's burst initial loss tables (`BurstLossesNew`/`BurstIL`) are only ever provided against the 2030 baseline - if a different `year` is selected, every numeric burst initial loss cell is instead recalculated as `storm initial loss - preburst.percentile ratio * point design depth` using that baseline's own point depths (falling back to the `"Use PB TP"` placeholder if the recalculated value would be negative), rather than the raw (2030-based) table value being used unmodified. |
 
 ### `events` (required)
 
