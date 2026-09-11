@@ -82,7 +82,7 @@ class SiteConfig:
     name: str = ''
     latitude: Optional[float] = None
     longitude: Optional[float] = None
-    catchment_area: Optional[float] = None
+    catchment_area: Optional[float] = 0
     #: Path to a catchment boundary polygon file (GeoJSON/``.json``, KML, or Shapefile
     #: ``.shp``) to upload to the ARR Data Hub instead of a single lat/lon point - see
     #: https://data-dev.arr-software.org/about. Mutually exclusive with
