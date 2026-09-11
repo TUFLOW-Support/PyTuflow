@@ -184,6 +184,8 @@ class TuflowBinaries:
                 if not f.is_file() or (os.name != 'nt' and f.suffix == '.sh'):
                     continue
                 version = f.parent.name
+                if os.name == 'nt' and version == 'w64':
+                    version = f.parents[1].name
                 if os.name != 'nt':
                     version = re.sub(rf'{cls.NAME}[-_]', '', version, flags=re.IGNORECASE)
                 match = re.match(r'\d{4}[-\.]\d+[-\.](?:\d+)?', version) or re.match(r'\d{4}[-\.]\d+[-\.][A-Z]{2}', version)
