@@ -545,7 +545,11 @@ def test_engine_user_continuing_loss_overrides_storm_continuing_loss(api_respons
 
 def test_engine_uses_local_point_tp_csv(tmp_path, api_response_1990, point_tp_csv):
     point_path = tmp_path / 'point.csv'
-    point_path.write_text(point_tp_csv, encoding='utf-8')
+    # newline='' - point_tp_csv already contains literal '\r\n' line endings (from the
+    # cached zip fixture); without this, write_text()'s universal-newline translation
+    # would double them up on Windows (os.linesep == '\r\n'), producing spurious blank
+    # lines when the file is read back.
+    point_path.write_text(point_tp_csv, encoding='utf-8', newline='')
     config = make_config(
         events={'aep': ['50%'], 'duration': [1440], 'output_notation': 'ari'},
         temporal_patterns={'point_tp_csv': str(point_path)},
@@ -560,9 +564,9 @@ def test_engine_uses_local_point_tp_csv(tmp_path, api_response_1990, point_tp_cs
 
 def test_engine_uses_local_point_and_areal_tp_csv(tmp_path, api_response_1990, point_tp_csv, areal_tp_csv):
     point_path = tmp_path / 'point.csv'
-    point_path.write_text(point_tp_csv, encoding='utf-8')
+    point_path.write_text(point_tp_csv, encoding='utf-8', newline='')
     areal_path = tmp_path / 'areal.csv'
-    areal_path.write_text(areal_tp_csv, encoding='utf-8')
+    areal_path.write_text(areal_tp_csv, encoding='utf-8', newline='')
     config = make_config(
         events={'aep': ['50%'], 'duration': [1440], 'output_notation': 'ari'},
         temporal_patterns={'point_tp_csv': str(point_path), 'areal_tp_csv': str(areal_path)},
@@ -576,7 +580,7 @@ def test_engine_uses_local_point_and_areal_tp_csv(tmp_path, api_response_1990, p
 
 def test_engine_additional_tp_accepts_local_csv_file(tmp_path, api_response_1990, point_tp_csv):
     prior_output = tmp_path / 'previous_PointTP_Increments.csv'
-    prior_output.write_text(point_tp_csv, encoding='utf-8')
+    prior_output.write_text(point_tp_csv, encoding='utf-8', newline='')
     config = make_config(
         events={'aep': ['50%'], 'duration': [1440], 'output_notation': 'ari'},
         temporal_patterns={'additional_tp': [str(prior_output)]},

@@ -91,16 +91,22 @@ def write_working_data(config: ArrConfig, response: ArrApiResponse, engine: ArrE
     if tp_set is not None:
         if tp_set.point_tp_csv:
             path = out_path / f'{site}_PointTP_Increments.csv'
-            path.write_text(tp_set.point_tp_csv, encoding='utf-8')
+            # `newline=''` - `tp_set.point_tp_csv` (from the Data Hub zip/a local file)
+            # may already contain literal '\r\n' line endings; without `newline=''`,
+            # `write_text()`'s universal-newline translation would additionally
+            # translate each '\n' to `os.linesep` on write, doubling up to '\r\r\n' on
+            # Windows (where `os.linesep == '\r\n'`) - which then reads back as blank
+            # lines between every row.
+            path.write_text(tp_set.point_tp_csv, encoding='utf-8', newline='')
             logger.info("Wrote point temporal pattern increments to '%s'", path)
         if tp_set.areal_tp_csv:
             path = out_path / f'{site}_ArealTP_Increments.csv'
-            path.write_text(tp_set.areal_tp_csv, encoding='utf-8')
+            path.write_text(tp_set.areal_tp_csv, encoding='utf-8', newline='')
             logger.info("Wrote areal temporal pattern increments to '%s'", path)
 
     for region_name, info in engine.additional_tp_responses.items():
         region_token = ''.join(ch for ch in region_name if ch.isalnum())
         path = out_path / f'{site}_PointTP_Increments_{region_token}.csv'
-        path.write_text(info['csv'], encoding='utf-8')
+        path.write_text(info['csv'], encoding='utf-8', newline='')
         logger.info("Wrote additional temporal pattern region '%s' point temporal pattern increments to '%s'",
                     region_name, path)

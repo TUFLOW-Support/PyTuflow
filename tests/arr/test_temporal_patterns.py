@@ -184,9 +184,9 @@ def test_add_region_patterns_merges_into_point_tp(point_tp_csv):
 
 def test_temporal_pattern_set_from_files(tmp_path, point_tp_csv, areal_tp_csv):
     point_path = tmp_path / 'point.csv'
-    point_path.write_text(point_tp_csv, encoding='utf-8')
+    point_path.write_text(point_tp_csv, encoding='utf-8', newline='')
     areal_path = tmp_path / 'areal.csv'
-    areal_path.write_text(areal_tp_csv, encoding='utf-8')
+    areal_path.write_text(areal_tp_csv, encoding='utf-8', newline='')
 
     tps = TemporalPatternSet.from_files(str(point_path), str(areal_path), catchment_area=150)
     assert not tps.point_tp.empty
@@ -197,7 +197,7 @@ def test_temporal_pattern_set_from_files(tmp_path, point_tp_csv, areal_tp_csv):
 
 def test_temporal_pattern_set_from_files_point_only(tmp_path, point_tp_csv):
     point_path = tmp_path / 'point.csv'
-    point_path.write_text(point_tp_csv, encoding='utf-8')
+    point_path.write_text(point_tp_csv, encoding='utf-8', newline='')
     tps = TemporalPatternSet.from_files(str(point_path), catchment_area=150)
     assert not tps.point_tp.empty
     assert tps.areal_tp is None
@@ -212,7 +212,7 @@ def test_temporal_pattern_set_from_files_missing_point_raises():
 def test_load_additional_region_point_tp_csv(tmp_path, point_tp_csv):
     from pytuflow.arr.temporal_patterns import load_additional_region_point_tp_csv
     path = tmp_path / 'previous_PointTP_Increments.csv'
-    path.write_text(point_tp_csv, encoding='utf-8')
+    path.write_text(point_tp_csv, encoding='utf-8', newline='')
     result = load_additional_region_point_tp_csv(str(path))
     assert result.raw_response is None
     assert result.csv_text == point_tp_csv.replace('\r\n', '\n')
