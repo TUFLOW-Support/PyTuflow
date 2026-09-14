@@ -257,6 +257,36 @@ def test_write_outputs_append_mode_multi_site(tmp_path, api_response_1990):
     assert '2, ILCL, <<IL_B>>' in tsoilf
 
 
+def test_rf_inflow_preburst_and_design_burst_use_their_own_distinct_timesteps(tmp_path):
+    # regression test: the preburst pattern's own timestep may be much finer (or
+    # coarser) than the design burst's timestep (e.g. a short preburst prepended to a
+    # very long design burst duration) - the total written time axis must account for
+    # each period's own timestep separately, rather than assuming a single shared
+    # timestep for the whole file.
+    from pytuflow.arr.complete_storm import PreburstPattern
+    config = make_config(
+        tmp_path,
+        events={'aep': ['1%'], 'duration': [4320], 'output_notation': 'ari'},
+    )
+    patterns = [
+        TemporalPattern(event_id=1, tp_number=1, timestep=180.0, increments=[50.0, 50.0], source='point'),
+    ]
+    preburst = PreburstPattern(depth=10.0, timestep=15.0, increments=[25.0, 25.0, 25.0, 25.0], method='temporal_pattern')
+    result = EventResult(
+        aep_name='1%', duration=4320.0, depth_point=240.0, arf=0.9, depth_areal=216.0,
+        initial_loss=14.0, continuing_loss=2.1, aep_band='rare', patterns=patterns,
+        cc_scenario=None, preburst=preburst,
+    )
+    write_outputs(config, [result])
+
+    lines = (tmp_path / 'rf_inflow' / '1_RF_01p4320m.csv').read_text().splitlines()
+    data_rows = lines[4:]
+    times = [float(row.split(',')[0]) for row in data_rows]
+    # 4 preburst steps @ 15 min + 2 design burst steps @ 180 min + trailing row @ 180 min
+    expected_times = [15 / 60, 30 / 60, 45 / 60, 60 / 60, 60 / 60 + 3.0, 60 / 60 + 6.0, 60 / 60 + 9.0]
+    assert times == pytest.approx(expected_times)
+
+
 def test_rf_inflow_merges_climate_change_scenarios_into_one_file(tmp_path):
     config = make_config(
         tmp_path,

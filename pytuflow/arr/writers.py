@@ -243,6 +243,13 @@ def write_rf_inflow(folder: Path, config: ArrConfig, results: list) -> Path:
         return len(pb.increments)
 
     pb_n_steps = max((_pb_len(g['preburst']) for g in col_groups), default=0)
+    # the preburst pattern's own timestep is independent of (and may be finer/coarser
+    # than) the design burst's timestep - e.g. a short preburst duration prepended to a
+    # very long design burst duration - so it must be stepped through separately below,
+    # rather than assuming they share a single timestep. All scenario groups build their
+    # preburst pattern for the same duration/AEP, so their timesteps are always the same
+    # regardless of which group's preburst is picked here.
+    pb_timestep = next((g['preburst'].timestep for g in col_groups if g['preburst'] is not None), timestep)
 
     with open(fpath, 'w', encoding='utf-8', newline='') as f:
         f.write(f'! Written by pytuflow.arr based on {base.aep_band} temporal pattern\n')
@@ -261,7 +268,7 @@ def write_rf_inflow(folder: Path, config: ArrConfig, results: list) -> Path:
         writer.writerow([0] + [0] * total_cols)
         t = 0.0
         for i in range(pb_n_steps):
-            t += timestep / time_divisor
+            t += pb_timestep / time_divisor
             row = [t]
             for g in col_groups:
                 pb = g['preburst']
