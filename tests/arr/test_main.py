@@ -25,7 +25,7 @@ def mock_tp_downloads(monkeypatch, point_tp_csv, areal_tp_csv):
 def make_config_dict(tmp_path, response_json_path=None):
     data = {
         'site': {'name': '1', 'latitude': -33.9347, 'longitude': 150.8372, 'catchment_area': 11.4},
-        'ifd': {'source': 'bom', 'year': 1990},
+        'ifd': {'baseline_year': 1990},
         'events': {'aep': ['50%'], 'duration': [1440], 'output_notation': 'ari'},
         'output': {'path': str(tmp_path), 'format': 'csv'},
     }

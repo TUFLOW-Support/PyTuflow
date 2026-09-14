@@ -8,13 +8,13 @@ rainfall having "used up" some of the loss). This module ports the relevant logi
 Data Hub's new ``RecPreburstTP`` "recommended" preburst temporal pattern (which the
 legacy script did not have access to).
 
-Three preburst pattern methods are supported (``preburst.pattern_method`` in the
+Four preburst pattern methods are supported (``preburst.pattern_method`` in the
 config):
 
 * ``"recommended"`` (default) - uses the Data Hub's ``RecPreburstTP`` layer to select a
   specific historical event's preburst *duration and temporal pattern shape*
   (increments/timestep) for the requested AEP/duration - no extra
-  interpolation/derivation needed for the shape. This is the only method available for
+  interpolation/derivation needed for the shape. This is the preferred method for
   AEP/duration cells where the burst initial loss table returns the ``"Use PB TP"``
   placeholder (see :mod:`pytuflow.arr.engine`), since those cells have no fixed burst
   initial loss value to derive a preburst depth from. If the Data Hub has no exact
@@ -25,15 +25,18 @@ config):
   no ``RecPreburstTP`` data at all for this exact duration (e.g. very short durations
   below its minimum of 30 min), the preburst pattern (of the same event rarity band)
   whose *duration* is closest to the requested duration is used instead (a warning is
-  logged) - see :func:`_closest_duration_and_band_row`. Only if the Data Hub has no
-  ``RecPreburstTP`` data at all for that event rarity band (across every duration) does
-  it fall back further still, to the first available point/design temporal pattern with
-  the same duration and event rarity - see :func:`_first_tp_preburst`. The preburst
-  *depth* (magnitude) is not taken from ``RecPreburstTP`` at all (its own ``"Preburst
-  Depth"``/``"Preburst Ratio"`` fields are not used, since the Data Hub's ``"Preburst
-  Depth"`` field is not actually a preburst depth) - instead, as with the
-  ``"constant"``/``"temporal_pattern"`` methods below, it is derived from the
-  ``preburst.percentile`` ratio table multiplied by the point design burst depth.
+  logged) - see :func:`_closest_duration_and_band_row`. ``RecPreburstTP`` is an NSW-only
+  layer - if the Data Hub has no ``RecPreburstTP`` data at all for the queried location
+  (e.g. any non-NSW location), this falls back further still to shaping the preburst
+  using ``preburst.pattern_duration``/``pattern_tp``/``duration_proportional`` (the same
+  settings as the ``"temporal_pattern"`` method below, defaulting to a preburst twice
+  the storm duration, shaped by ``"TP01"``) - a warning is logged - see
+  :func:`build_preburst`. The preburst *depth* (magnitude) is not taken from
+  ``RecPreburstTP`` at all (its own ``"Preburst Depth"``/``"Preburst Ratio"`` fields are
+  not used, since the Data Hub's ``"Preburst Depth"`` field is not actually a preburst
+  depth) - instead, as with the ``"constant"``/``"temporal_pattern"`` methods below, it
+  is derived from the ``preburst.percentile`` ratio table multiplied by the point design
+  burst depth.
 * ``"constant"`` - a single preburst block of a fixed duration (``preburst.pattern_duration``,
   in hours, or a proportion of the storm duration if ``preburst.duration_proportional``)
   at a constant rate, matching the legacy "Constant Rate" method.
@@ -45,9 +48,16 @@ config):
   temporal pattern to a preburst pattern of the *same* ``tp_number`` (e.g. the
   ``"TP01"`` design burst gets a ``"TP01"`` preburst) - see
   :func:`temporal_pattern_preburst`.
+* ``"none"`` - disables complete storm assembly for any AEP/duration cell that would
+  otherwise auto-trigger it (a ``"Use PB TP"`` placeholder cell, or a missing burst
+  initial loss table entirely - see :mod:`pytuflow.arr.engine`): instead of building a
+  preburst pattern, the burst initial loss for that cell is simply set to 0 (a warning
+  is logged). Cannot be combined with ``complete_storm: true`` (which forces every
+  event to be a complete storm, and therefore always needs a preburst pattern to be
+  built) - see :meth:`pytuflow.arr.config.ArrConfig.validate`.
 
-For all three methods, the preburst depth is derived from the appropriate percentile
-preburst ratio table (``Preburst10``/``25``/``50``/``75``/``90``, selected by
+For the first three methods, the preburst depth is derived from the appropriate
+percentile preburst ratio table (``Preburst10``/``25``/``50``/``75``/``90``, selected by
 ``preburst.percentile``), log-log interpolated (in duration and AEP, matching the IFD
 depth interpolation) and multiplied by the point (pre-ARF) design burst depth -
 matching the legacy script's use of ``PreBurst.get_depths()``. If
@@ -217,33 +227,6 @@ def recommended_preburst(response: ArrApiResponse, duration: float, aep_name: st
     )
 
 
-def _first_tp_preburst(response: ArrApiResponse, config: ArrConfig, tp_set: TemporalPatternSet,
-                        duration: float, aep_name: str, aep_pct: float, point_depth: float) -> Optional[PreburstPattern]:
-    """Last-resort fallback for :func:`recommended_preburst`, used when the
-    ``RecPreburstTP`` layer has no data at all for this duration (e.g. very short
-    durations below the Data Hub's minimum ``RecPreburstTP`` duration of 30 min, which
-    means :func:`_same_duration_and_band_row` also finds nothing to fall back to).
-    Uses the first available point temporal pattern (lowest ``tp_number``) for the same
-    duration and event rarity (AEP band) as the requested event as the preburst shape,
-    scaled to the configured preburst ratio depth. Returns ``None`` if no point temporal
-    patterns are available for that duration/band either."""
-    if tp_set is None:
-        return None
-    from .temporal_patterns import aep_band
-    band = aep_band(aep_name, config.events.output_notation)
-    rows = tp_set.point_tp[(tp_set.point_tp['duration'] == duration) & (tp_set.point_tp['aep_band'] == band)]
-    if rows.empty:
-        return None
-    row = rows.sort_values('tp_number').iloc[0]
-    ratio = _preburst_ratio(response, config.preburst.percentile, duration, aep_pct)
-    depth = ratio * point_depth
-    logger.warning(
-        "No recommended preburst temporal pattern available for %s/%smin at all ('RecPreburstTP' layer has no "
-        "data for this duration) - falling back to the first design temporal pattern (TP%02d, same duration/event "
-        "rarity) as the preburst shape.",
-        aep_name, duration, int(row.tp_number),
-    )
-    return PreburstPattern(depth=depth, timestep=float(row.timestep), increments=list(row.increments), method='recommended')
 
 
 def _preburst_ratio(response: ArrApiResponse, percentile: str, duration: float, aep_pct: float) -> float:
@@ -251,10 +234,23 @@ def _preburst_ratio(response: ArrApiResponse, percentile: str, duration: float, 
     ``Preburst<percentile>`` layer (or, if ``percentile == 'recommended'``, the
     ``RecPreburst`` layer - the Data Hub's preferred/recommended preburst ratio, which
     is not necessarily the same as the exact 50th percentile) for the given
-    duration/AEP, using the same log-log interpolation as the IFD depth tables."""
+    duration/AEP, using the same log-log interpolation as the IFD depth tables.
+
+    ``RecPreburst`` is an NSW-only layer - for other locations (where it's absent),
+    ``percentile == 'recommended'`` automatically falls back to the ``Preburst50``
+    (50th percentile) layer instead (a warning is logged), rather than raising."""
     from .engine import _interp_table, _table_to_frame  # local import - avoids a cycle
     key = 'RecPreburst' if percentile == 'recommended' else f'Preburst{percentile.strip("%")}'
-    table = response.layer(key, required=True)
+    table = response.layer(key)
+    if table is None and key == 'RecPreburst':
+        logger.warning(
+            "preburst.percentile == 'recommended' was requested, but the ARR Data Hub response does not "
+            "contain a 'RecPreburst' layer for this location (it's NSW-only) - falling back to the 50%% "
+            "percentile ('Preburst50' layer) instead."
+        )
+        table = response.layer('Preburst50', required=True)
+    elif table is None:
+        raise ArrError(f"ARR Data Hub response is missing the '{key}' preburst ratio layer.")
     df = _table_to_frame(table)
     return float(_interp_table(df, [duration], [aep_pct]).iloc[0, 0])
 
@@ -362,19 +358,52 @@ def build_preburst(response: ArrApiResponse, config: ArrConfig, tp_set: Temporal
     event, dispatching to the configured ``preburst.pattern_method`` (defaulting to
     ``"recommended"``). ``design_patterns`` (the design burst's own point temporal
     patterns for this event) is only required for the ``"temporal_pattern"`` method
-    with ``preburst.pattern_tp == "design_burst"``."""
+    with ``preburst.pattern_tp == "design_burst"``.
+
+    ``preburst.pattern_method == "none"`` should never reach this function - the caller
+    (:meth:`pytuflow.arr.engine.ArrEngine.run`) is expected to special-case it before
+    calling :func:`build_preburst` (setting the burst initial loss to 0 with a warning,
+    rather than building any preburst pattern at all)."""
     method = (config.preburst.pattern_method or 'recommended').lower()
+    if method == 'none':
+        raise ArrError(
+            "build_preburst() should not be called when preburst.pattern_method == 'none' - the caller must "
+            "handle this case (setting the burst initial loss to 0) before calling build_preburst()."
+        )
     if method == 'recommended':
         pattern = recommended_preburst(
             response, duration, aep_name, aep_pct, config.events.output_notation,
             point_depth=point_depth, percentile=config.preburst.percentile,
         )
         if pattern is None:
-            pattern = _first_tp_preburst(response, config, tp_set, duration, aep_name, aep_pct, point_depth)
+            # the Data Hub's 'RecPreburstTP' layer (NSW-only) has no data at all for
+            # this event rarity band (e.g. any non-NSW location) - fall back to
+            # shaping the preburst using the configured (or defaulted)
+            # `pattern_duration`/`pattern_tp`/`duration_proportional`, the same as the
+            # 'temporal_pattern' pattern method. This fallback needs `tp_set` (to look
+            # up the point temporal pattern shape) - if it isn't available, there's
+            # nothing further to fall back to.
+            if tp_set is not None:
+                try:
+                    pattern = temporal_pattern_preburst(
+                        response, config, tp_set, duration, aep_name, aep_pct, point_depth,
+                        design_patterns=design_patterns)
+                except ArrError:
+                    pattern = None
+                else:
+                    logger.warning(
+                        "No recommended preburst temporal pattern available for %s/%smin at all ('RecPreburstTP' "
+                        "layer has no data for this location/event rarity) - falling back to "
+                        "preburst.pattern_duration=%s (duration_proportional=%s) / pattern_tp=%s as the preburst "
+                        "shape.",
+                        aep_name, duration, config.preburst.pattern_duration,
+                        config.preburst.duration_proportional, config.preburst.pattern_tp,
+                    )
         if pattern is None:
             raise ArrError(
                 f"No recommended preburst temporal pattern available for {aep_name}/{duration}min "
-                f"('RecPreburstTP' layer) - try a different preburst.pattern_method."
+                f"('RecPreburstTP' layer), and the pattern_duration/pattern_tp fallback also failed - try a "
+                f"different preburst.pattern_method."
             )
         return pattern
     if method == 'constant':

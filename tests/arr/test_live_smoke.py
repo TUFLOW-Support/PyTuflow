@@ -24,7 +24,7 @@ pytestmark = pytest.mark.skipif(
 def test_live_fetch_and_assemble(tmp_path):
     config = ArrConfig.from_dict({
         'site': {'name': '1', 'latitude': -33.9347, 'longitude': 150.8372, 'catchment_area': 11.4},
-        'ifd': {'source': 'bom', 'year': 1990},
+        'ifd': {'baseline_year': 1990},
         'events': {'aep': ['50%'], 'duration': [60, 1440], 'output_notation': 'ari'},
         'losses': {'extrapolation_method': 'interpolate'},
         'output': {'path': str(tmp_path), 'format': 'csv'},

@@ -32,6 +32,26 @@ def api_response_1990() -> ArrApiResponse:
 
 
 @pytest.fixture
+def api_response_seq() -> ArrApiResponse:
+    """A cached, real ARR Data Hub API response for a South East Queensland site (lat
+    -27.389, lon 152.858, area 5.0 km2, TP region 'ECnorth') - a non-NSW location, so
+    NSW-only layers (``BurstLossesNew``, ``NewStormLosses``, ``RecPreburstTP``,
+    ``RecPreburst``) are entirely absent; only ``StormLossesNonNSW`` and the raw
+    ``Preburst<pct>`` percentile ratio layers are available.
+
+    The response's ``PointTP``/``ArealTP`` zip URLs are rewritten from the API's
+    internal-network host to the public Data Hub host, matching the automatic fallback
+    behaviour that :mod:`pytuflow.arr.temporal_patterns` performs at runtime.
+    """
+    with open(FIXTURES / 'api_response_seq.json', encoding='utf-8') as f:
+        data = json.load(f)
+    for layer in ('PointTP', 'ArealTP'):
+        data['layers'][layer]['url'] = data['layers'][layer]['url'].replace(
+            '192.168.70.14:5000', 'data-dev.arr-software.org')
+    return ArrApiResponse(data)
+
+
+@pytest.fixture
 def point_tp_csv() -> str:
     """Real ``ECsouth`` point temporal pattern increments CSV, extracted from a cached
     Data Hub zip download."""

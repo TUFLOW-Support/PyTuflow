@@ -44,16 +44,6 @@ EXTRAPOLATION_METHODS = (
 #: events; complete storm events already scale the (unreduced) full storm initial loss
 #: directly, matching the ``"storm"`` approach.
 CC_LOSS_METHODS = ('burst', 'storm')
-#: IFD data sources. ``"bom"`` (default) uses the Data Hub's recommended BoM IFD table
-#: (``RecIFD``/``CCAdjIFDDatasets`` layers), available for baseline years 1990/2030,
-#: with climate-change-adjusted depths available for other baseline years/SSPs.
-#: ``"limb"`` uses the Data Hub's LIMB 2020 high-resolution IFD table
-#: (``AllIFDDatasets`` layer) instead - only available for the 2020 baseline, and only
-#: within South East Queensland (an :class:`~pytuflow.arr.exceptions.ArrApiError` is
-#: raised if the Data Hub hasn't provided LIMB data for the queried location). LIMB data
-#: cannot be combined with ``climate_change.enabled`` (no climate-change-adjusted LIMB
-#: depths are available).
-IFD_SOURCES = ('bom', 'limb')
 OUTPUT_FORMATS = ('csv', 'ts1')
 OUTPUT_NOTATIONS = ('ari', 'aep')
 #: File extensions accepted for ``site.catchment_boundary`` (a catchment boundary
@@ -147,19 +137,15 @@ class SiteConfig:
 
 @dataclass
 class IFDConfig:
-    source: str = 'bom'
-    year: int = 2030
+    #: IFD baseline year - ``1990`` (historical) or ``2030`` (current baseline,
+    #: default). Climate-change-adjusted depths for other baseline years/SSPs are
+    #: configured separately, under ``climate_change``.
+    baseline_year: int = 2030
 
     def validate(self) -> list[str]:
         errors = []
-        if self.source not in IFD_SOURCES:
-            errors.append(f"ifd.source must be one of {IFD_SOURCES}, got '{self.source}'")
-        elif self.source == 'limb':
-            if self.year != 2020:
-                errors.append(f"ifd.year must be 2020 when ifd.source == 'limb' (LIMB IFD data is only "
-                               f"available for the 2020 baseline), got '{self.year}'")
-        elif self.year not in (1990, 2030):
-            errors.append(f"ifd.year must be one of (1990, 2030), got '{self.year}'")
+        if self.baseline_year not in (1990, 2030):
+            errors.append(f"ifd.baseline_year must be one of (1990, 2030), got '{self.baseline_year}'")
         return errors
 
 
@@ -254,9 +240,19 @@ class ClimateChangeConfig:
 class PreburstConfig:
     percentile: str = 'recommended'
     pattern_method: Optional[str] = None
-    pattern_duration: Optional[float] = None
-    pattern_tp: Optional[str] = None
-    duration_proportional: bool = False
+    #: Target preburst duration (hours, or a proportion of the storm duration if
+    #: ``duration_proportional``), used by the ``"constant"``/``"temporal_pattern"``
+    #: pattern methods, and as the fallback for the ``"recommended"`` method when the
+    #: Data Hub has no ``RecPreburstTP`` data at all for the requested event (see
+    #: :func:`pytuflow.arr.complete_storm.build_preburst`). Defaults to twice the storm
+    #: duration (``duration_proportional=True``).
+    pattern_duration: Optional[float] = 2
+    #: Existing point temporal pattern used to shape the preburst rainfall for the
+    #: ``"temporal_pattern"`` pattern method (and the ``"recommended"`` method's
+    #: no-``RecPreburstTP``-data fallback - see ``pattern_duration`` above). Defaults to
+    #: ``"TP01"``.
+    pattern_tp: Optional[str] = 'TP01'
+    duration_proportional: bool = True
 
     def validate(self) -> list[str]:
         errors = []
@@ -264,9 +260,10 @@ class PreburstConfig:
             errors.append(
                 f"preburst.percentile must be one of (10%, 25%, 50%, 75%, 90%, recommended), got '{self.percentile}'"
             )
-        if self.pattern_method is not None and self.pattern_method.lower() not in ('recommended', 'constant', 'temporal_pattern'):
+        if self.pattern_method is not None and self.pattern_method.lower() not in (
+                'recommended', 'constant', 'temporal_pattern', 'none'):
             errors.append(
-                f"preburst.pattern_method must be one of (recommended, constant, temporal_pattern), "
+                f"preburst.pattern_method must be one of (recommended, constant, temporal_pattern, none), "
                 f"got '{self.pattern_method}'"
             )
         return errors
@@ -413,8 +410,10 @@ class ArrConfig:
             errors.extend(section.validate())
         if self.response_json and not Path(self.response_json).is_file():
             errors.append(f"response_json file not found: '{self.response_json}'")
-        if self.ifd.source == 'limb' and self.climate_change.enabled:
+        if (self.preburst.pattern_method or '').lower() == 'none' and self.complete_storm:
             errors.append(
-                "climate_change.enabled cannot be used with ifd.source == 'limb' (no climate-change-adjusted "
-                "LIMB IFD depths are available - use ifd.source == 'bom' for climate change scenarios)")
+                "preburst.pattern_method == 'none' cannot be used with complete_storm == true - 'none' "
+                "disables preburst pattern assembly entirely (burst initial loss is set to 0 instead), which "
+                "is incompatible with forcing every event to be assembled as a complete storm."
+            )
         return errors

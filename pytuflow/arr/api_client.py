@@ -62,8 +62,10 @@ class ArrApiResponse:
         return value
 
     def ifd_table(self, year: int) -> dict:
-        """Returns the BoM recommended IFD table (``RecIFD`` layer) for the given baseline
-        year (1990 or 2030)."""
+        """Returns the Data Hub's recommended IFD table (``RecIFD`` layer) for the given
+        baseline year (1990 or 2030). This is always the Data Hub's own recommended
+        dataset for the queried location - which jurisdiction-specific source underlies
+        it (e.g. BoM, or LIMB for South East Queensland) is determined server-side."""
         rec_ifd = self.layer('RecIFD', required=True)
         key = {
             1990: 'Recommended Historical (1961-1990) Baseline',
@@ -75,23 +77,6 @@ class ArrApiResponse:
                 f"(available: {list(rec_ifd)})"
             )
         return rec_ifd[key]
-
-    def limb_ifd_table(self, year: int) -> dict:
-        """Returns the LIMB high-resolution IFD table (``AllIFDDatasets`` layer,
-        ``'LIMB <year> IFD Depths - High Resolution'`` key) for the given baseline year
-        (currently only 2020 is available). LIMB data is only available within South
-        East Queensland, so this raises :class:`ArrApiError` if the Data Hub hasn't
-        provided it for the queried location (i.e. the key is absent from the
-        ``AllIFDDatasets`` layer, even though the layer itself was returned)."""
-        all_ifd = self.layer('AllIFDDatasets', required=True)
-        key = f'LIMB {year} IFD Depths - High Resolution'
-        if key not in all_ifd:
-            raise ArrApiError(
-                f"ARR Data Hub response does not contain LIMB IFD data for baseline year '{year}' at this "
-                f"location - LIMB data is only available within South East Queensland "
-                f"(available datasets: {list(all_ifd)})"
-            )
-        return all_ifd[key]
 
     def cc_adj_ifd_table(self, baseline_year: int, ssp: str) -> dict:
         """Returns a climate-change-adjusted IFD table (``CCAdjIFDDatasets`` layer) for the
@@ -177,8 +162,6 @@ class ArrApiClient:
         if config.climate_change.enabled:
             params['CCAdjIFDDatasets'] = 1
             params['ClimateChange'] = 1
-        if config.ifd.source == 'limb':
-            params['AllIFDDatasets'] = 1
         return params
 
     @staticmethod

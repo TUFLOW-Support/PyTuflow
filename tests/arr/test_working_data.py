@@ -24,7 +24,7 @@ def mock_tp_downloads(monkeypatch, point_tp_csv, areal_tp_csv):
 def make_config(tmp_path, verbose=False, **overrides):
     data = {
         'site': {'name': '1', 'latitude': -33.9347, 'longitude': 150.8372, 'catchment_area': 11.4},
-        'ifd': {'source': 'bom', 'year': 1990},
+        'ifd': {'baseline_year': 1990},
         'output': {'path': str(tmp_path), 'format': 'csv', 'verbose': verbose},
     }
     data.update(overrides)

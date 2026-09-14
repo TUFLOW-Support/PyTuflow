@@ -11,7 +11,7 @@ from pytuflow.arr.exceptions import ArrConfigError
 
 VALID_CONFIG = {
     'site': {'name': '1', 'latitude': -33.9347, 'longitude': 150.8372, 'catchment_area': 11.4},
-    'ifd': {'source': 'bom', 'year': 1990},
+    'ifd': {'baseline_year': 1990},
     'events': {'aep': ['1%', '5%'], 'duration': [60, 1440], 'output_notation': 'ari'},
     'output': {'path': '/tmp/out', 'format': 'csv'},
 }
@@ -23,7 +23,7 @@ def test_valid_config_parses():
     assert config.site.latitude == -33.9347
     assert config.events.aep == ['1%', '5%']
     assert config.events.duration == [60, 1440]
-    assert config.ifd.year == 1990
+    assert config.ifd.baseline_year == 1990
     assert config.output.path == '/tmp/out'
 
 
@@ -66,8 +66,8 @@ def test_unknown_nested_key_raises():
 
 def test_bad_ifd_year_raises():
     bad = json.loads(json.dumps(VALID_CONFIG))
-    bad['ifd']['year'] = 2050
-    with pytest.raises(ArrConfigError, match='ifd.year'):
+    bad['ifd']['baseline_year'] = 2050
+    with pytest.raises(ArrConfigError, match='ifd.baseline_year'):
         ArrConfig.from_dict(bad)
 
 
@@ -245,7 +245,7 @@ def test_response_json_relaxes_lat_lon_requirement(tmp_path):
     response_path.write_text('{}', encoding='utf-8')
     data = {
         'site': {'name': '1'},
-        'ifd': {'source': 'bom', 'year': 1990},
+        'ifd': {'baseline_year': 1990},
         'events': {'aep': ['1%'], 'duration': [60], 'output_notation': 'ari'},
         'output': {'path': '/tmp/out', 'format': 'csv'},
         'response_json': str(response_path),
@@ -276,26 +276,10 @@ def test_events_duration_all_string_rejected():
         ArrConfig.from_dict(bad)
 
 
-def test_ifd_source_limb_requires_year_2020():
+def test_ifd_source_field_removed_raises():
     bad = json.loads(json.dumps(VALID_CONFIG))
-    bad['ifd'] = {'source': 'limb', 'year': 1990}
-    with pytest.raises(ArrConfigError, match='ifd.year must be 2020'):
-        ArrConfig.from_dict(bad)
-
-
-def test_ifd_source_limb_valid_year_2020():
-    data = json.loads(json.dumps(VALID_CONFIG))
-    data['ifd'] = {'source': 'limb', 'year': 2020}
-    config = ArrConfig.from_dict(data)
-    assert config.ifd.source == 'limb'
-    assert config.ifd.year == 2020
-
-
-def test_ifd_source_limb_incompatible_with_climate_change():
-    bad = json.loads(json.dumps(VALID_CONFIG))
-    bad['ifd'] = {'source': 'limb', 'year': 2020}
-    bad['climate_change'] = {'enabled': True, 'scenarios': [{'baseline_year': 2090, 'ssp': 'SSP2'}]}
-    with pytest.raises(ArrConfigError, match='climate_change.enabled cannot be used with'):
+    bad['ifd'] = {'source': 'bom', 'baseline_year': 1990}
+    with pytest.raises(ArrConfigError, match='source'):
         ArrConfig.from_dict(bad)
 
 

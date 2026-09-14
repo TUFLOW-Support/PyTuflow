@@ -45,7 +45,7 @@ def test_format_duration(duration, expected):
 def make_config(tmp_path, **overrides):
     data = {
         'site': {'name': '1', 'latitude': -33.9347, 'longitude': 150.8372, 'catchment_area': 11.4},
-        'ifd': {'source': 'bom', 'year': 1990},
+        'ifd': {'baseline_year': 1990},
         'output': {'path': str(tmp_path), 'format': 'csv'},
     }
     data.update(overrides)

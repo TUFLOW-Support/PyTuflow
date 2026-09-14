@@ -31,7 +31,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -165,8 +165,6 @@ class ArrEngine:
     def _ifd_frame(self, baseline_year: int, ssp: Optional[str] = None) -> pd.DataFrame:
         if ssp is not None:
             table = self.response.cc_adj_ifd_table(baseline_year, ssp)
-        elif self.config.ifd.source == 'limb':
-            table = self.response.limb_ifd_table(baseline_year)
         else:
             table = self.response.ifd_table(baseline_year)
         return _table_to_frame(table)
@@ -178,7 +176,7 @@ class ArrEngine:
         reference (``threshold``) duration plus every requested ``durations`` value,
         for the same AEP columns as the burst initial loss table (aligned to those
         exact column values/dtype so they can be indexed together)."""
-        baseline_ifd = self._ifd_frame(self.config.ifd.year, None)
+        baseline_ifd = self._ifd_frame(self.config.ifd.baseline_year, None)
         needed_durations = sorted({float(d) for d in durations} | ({threshold} if threshold is not None else set()))
         aep_pcts = [float(c) for c in burst_loss_columns]
         point_depths = _interp_table(baseline_ifd, needed_durations, aep_pcts)
@@ -192,15 +190,21 @@ class ArrEngine:
         * ``"recommended"`` - the Data Hub's newer burst initial loss table
           (``BurstLossesNew``). Derived by the Data Hub (as storm initial loss minus
           preburst depth) against the 2030 ("current") baseline IFD depths, regardless
-          of ``ifd.year`` - if a different baseline year has been selected, every
+          of ``ifd.baseline_year`` - if a different baseline year has been selected, every
           numeric cell is recalculated against that baseline's own point depths
-          instead - see :meth:`_recompute_burst_losses_for_ifd_year`.
+          instead - see :meth:`_recompute_burst_losses_for_ifd_year`. ``BurstLossesNew``
+          is NSW-only - for other locations, an empty table is returned instead of
+          raising, signalling to :meth:`_initial_loss` that every duration/AEP cell must
+          instead be derived directly from the preburst ratio and storm initial loss
+          (equivalent to every cell being a ``"Use PB TP"`` placeholder).
         * ``"probability_neutral"`` - the legacy (NSW-only) probability-neutral burst
           initial loss table (``BurstIL``). Raises :class:`ArrError` if the Data Hub
-          hasn't provided this layer for the queried location (i.e. it's not in NSW).
+          hasn't provided this layer for the queried location (i.e. it's not in NSW) -
+          unlike ``BurstLossesNew`` above, there is no meaningful fallback for this
+          method if the table is missing, since it isn't preburst-derived at all.
           Unlike ``BurstLossesNew``, this is an independently-calibrated table that is
           *not* derived from preburst depths/ratios and is not tied to any particular
-          IFD baseline year - it is always used as-is, unaffected by ``ifd.year``.
+          IFD baseline year - it is always used as-is, unaffected by ``ifd.baseline_year``.
         """
         method = self.config.losses.method
         if method == 'probability_neutral':
@@ -214,9 +218,15 @@ class ArrEngine:
             return _table_to_frame(table)
         table = self.response.layer('BurstLossesNew')
         if table is None:
-            raise ArrError("ARR Data Hub response is missing burst initial loss data ('BurstLossesNew' layer).")
+            # 'BurstLossesNew' is NSW-only - for other locations, there is no per-
+            # duration/AEP burst initial loss table at all, only the flat (AEP/duration
+            # independent) storm initial loss - see _storm_initial_loss_pct_datahub.
+            # Return an empty table rather than raising: _initial_loss() treats an
+            # empty table as "every cell must be derived from the preburst ratio",
+            # exactly as it already does for individual 'Use PB TP' placeholder cells.
+            return pd.DataFrame()
         burst_losses = _table_to_frame(table)
-        if self.config.ifd.year != 2030:
+        if self.config.ifd.baseline_year != 2030:
             burst_losses = self._recompute_burst_losses_for_ifd_year(burst_losses)
         return burst_losses
 
@@ -225,12 +235,12 @@ class ArrEngine:
         only provided against the 2030 ("current") baseline IFD depths - it is derived
         as the (duration-independent) storm initial loss minus a preburst depth, where
         that preburst depth is itself the ``preburst.percentile`` ratio multiplied by
-        the 2030 baseline's point design depth. When a different ``ifd.year`` baseline
+        the 2030 baseline's point design depth. When a different ``ifd.baseline_year`` baseline
         has been selected instead (e.g. 1990), that fixed 2030-based value no longer
         applies, so every numeric cell is recalculated the same way but against the
         chosen baseline's own point depths:
 
-            burst_il = storm_il - preburst_ratio(percentile, duration, aep) * point_depth(ifd.year)
+            burst_il = storm_il - preburst_ratio(percentile, duration, aep) * point_depth(ifd.baseline_year)
 
         matching the same preburst-based derivation used elsewhere (see
         :meth:`_fill_placeholder_adjacent_gaps`, :meth:`_extrapolate_rare_aep_loss`). If
@@ -239,10 +249,10 @@ class ArrEngine:
         instead, forcing complete storm assembly for that cell - matching the Data
         Hub's own convention. ``"Use PB TP"`` placeholder cells are left untouched (they
         already trigger complete storm assembly, which derives its own preburst depth
-        against the correct ``ifd.year`` baseline - see :func:`complete_storm.build_preburst`).
+        against the correct ``ifd.baseline_year`` baseline - see :func:`complete_storm.build_preburst`).
         """
         from .complete_storm import _preburst_ratio
-        baseline_ifd = self._ifd_frame(self.config.ifd.year, None)
+        baseline_ifd = self._ifd_frame(self.config.ifd.baseline_year, None)
         percentile = self.config.preburst.percentile
         # cast to object dtype upfront - a recalculated cell may need to become the
         # "Use PB TP" placeholder string, which a purely-numeric (float64) column
@@ -261,10 +271,10 @@ class ArrEngine:
                 recalculated = storm_il - ratio * point_depth
                 if recalculated < 0:
                     logger.info(
-                        "Duration %s min, AEP %s%%: recalculated burst initial loss for ifd.year=%s (storm "
+                        "Duration %s min, AEP %s%%: recalculated burst initial loss for ifd.baseline_year=%s (storm "
                         "initial loss %.3f mm - preburst depth %.3f mm = %.3f mm) is negative - treating this "
                         "cell as 'Use PB TP' (complete storm assembly required).", dur, aep_pct,
-                        self.config.ifd.year, storm_il, ratio * point_depth, recalculated,
+                        self.config.ifd.baseline_year, storm_il, ratio * point_depth, recalculated,
                     )
                     result.loc[dur, col] = 'Use PB TP'
                 else:
@@ -285,12 +295,17 @@ class ArrEngine:
             for row in new_losses['losses']:
                 if abs(_aep_str_to_pct(row['AEP']) - aep_pct) < 1e-6:
                     return float(row['Continuing Loss (mm/h)'])
+        # 'NewStormLosses' is NSW-only - non-NSW locations instead have a flat (not
+        # AEP-dependent) 'StormLossesNonNSW' summary value.
+        non_nsw_losses = self.response.layer('StormLossesNonNSW')
+        if non_nsw_losses and 'Storm Continuing Losses (mm/h)' in non_nsw_losses:
+            return float(non_nsw_losses['Storm Continuing Losses (mm/h)'])
         # fall back to the legacy single 'StormLosses' summary value (not AEP-dependent)
         storm_losses = self.response.layer('StormLosses')
         if storm_losses and 'Storm Continuing Losses (mm/h)' in storm_losses:
             return float(storm_losses['Storm Continuing Losses (mm/h)'])
         raise ArrError("ARR Data Hub response is missing continuing loss data "
-                        "('NewStormLosses'/'StormLosses' layers).")
+                        "('NewStormLosses'/'StormLossesNonNSW'/'StormLosses' layers).")
 
     def _tp_set_for_config(self) -> TemporalPatternSet:
         if self._tp_set is None:
@@ -350,11 +365,16 @@ class ArrEngine:
             for row in new_losses['losses']:
                 if abs(_aep_str_to_pct(row['AEP']) - aep_pct) < 1e-6:
                     return float(row['Storm Initial Loss (mm)'])
+        # 'NewStormLosses' is NSW-only - non-NSW locations instead have a flat (not
+        # AEP-dependent) 'StormLossesNonNSW' summary value.
+        non_nsw_losses = self.response.layer('StormLossesNonNSW')
+        if non_nsw_losses and 'Storm Initial Losses (mm)' in non_nsw_losses:
+            return float(non_nsw_losses['Storm Initial Losses (mm)'])
         storm_losses = self.response.layer('StormLosses')
         if storm_losses and 'Storm Initial Losses (mm)' in storm_losses:
             return float(storm_losses['Storm Initial Losses (mm)'])
         raise ArrError("ARR Data Hub response is missing storm initial loss data "
-                        "('NewStormLosses'/'StormLosses' layers).")
+                        "('NewStormLosses'/'StormLossesNonNSW'/'StormLosses' layers).")
 
     def _scale_burst_losses_to_user_il(self, burst_losses: pd.DataFrame) -> pd.DataFrame:
         """Proportionally scales every numeric cell of a duration x AEP% burst initial
@@ -418,6 +438,38 @@ class ArrEngine:
                 table.loc[row_dur, col] = storm_il_cc - cc_preburst
         return table
 
+    def _derive_burst_loss_via_ratio(self, duration: float, aep_pct: float) -> Union[float, str]:
+        """Derives a single burst initial loss cell directly from the preburst ratio
+        and storm initial loss (log-log interpolated, never interpolating the burst
+        loss table's own values)::
+
+            burst_il = storm_il - preburst_ratio(percentile, duration, aep) * point_depth(duration, aep)
+
+        Returns the ``"Use PB TP"`` placeholder string instead (with an info-level log
+        message) if the result would be negative (the preburst rainfall alone exceeds
+        the storm initial loss) - matching the Data Hub's own convention, and forcing
+        complete storm assembly for that cell. Used both to gap-fill individual missing
+        duration cells within an existing ``BurstLossesNew`` table (see
+        :meth:`_derive_missing_duration_burst_losses`) and to derive every cell when no
+        ``BurstLossesNew`` table exists at all for this location (see
+        :meth:`_initial_loss`)."""
+        from .complete_storm import _preburst_ratio
+        baseline_ifd = self._ifd_frame(self.config.ifd.baseline_year, None)
+        percentile = self.config.preburst.percentile
+        point_depth = float(_interp_table(baseline_ifd, [duration], [aep_pct]).iloc[0, 0])
+        ratio = _preburst_ratio(self.response, percentile, duration, aep_pct)
+        storm_il = self._storm_initial_loss_pct_datahub(aep_pct)
+        implied_burst_loss = storm_il - ratio * point_depth
+        if implied_burst_loss < 0:
+            logger.info(
+                "Duration %s min, AEP %s%%: implied burst initial loss (storm initial loss %.3f mm - "
+                "preburst depth %.3f mm = %.3f mm) is negative - treating this cell as 'Use PB TP' "
+                "(complete storm assembly required).", duration, aep_pct, storm_il, ratio * point_depth,
+                implied_burst_loss,
+            )
+            return 'Use PB TP'
+        return implied_burst_loss
+
     def _derive_missing_duration_burst_losses(self, burst_losses: pd.DataFrame, durations: list) -> pd.DataFrame:
         """Gap-fills any requested duration that falls *within* the range of
         ``burst_losses`` (i.e. between its minimum and maximum duration) but isn't
@@ -428,22 +480,14 @@ class ArrEngine:
           the table's raw (2030-baseline-derived) loss *values* between the two
           bracketing duration rows - which would be inconsistent with
           :meth:`_recompute_burst_losses_for_ifd_year` (which recalculates every
-          numeric cell from the preburst ratio table when ``ifd.year != 2030``) and
+          numeric cell from the preburst ratio table when ``ifd.baseline_year != 2030``) and
           would not make sense for a gap bracketed by (or adjacent to) a
           ``"Use PB TP"`` placeholder cell - every missing duration/AEP cell is instead
-          derived directly, the same way as
-          :meth:`_recompute_burst_losses_for_ifd_year`/:meth:`_extrapolate_rare_aep_loss`::
-
-              burst_il = storm_il - preburst_ratio(percentile, duration, aep) * point_depth(duration, aep)
-
-          with the preburst ratio and point depth both log-log interpolated at the
-          exact requested duration/AEP - never interpolating the burst loss table's own
-          values. If the result would be negative (the preburst rainfall alone exceeds
-          the storm initial loss), the cell is set to the ``"Use PB TP"`` placeholder
-          instead, forcing complete storm assembly for that cell (matching the Data
-          Hub's own convention). Applied uniformly regardless of whether the
-          bracketing/neighbouring cells are numeric or already ``"Use PB TP"``
-          placeholders.
+          derived directly via :meth:`_derive_burst_loss_via_ratio`, the same way as
+          :meth:`_recompute_burst_losses_for_ifd_year`/:meth:`_extrapolate_rare_aep_loss`,
+          never interpolating the burst loss table's own values. Applied uniformly
+          regardless of whether the bracketing/neighbouring cells are numeric or already
+          ``"Use PB TP"`` placeholders.
         * ``"probability_neutral"`` (``BurstIL``) - unlike ``BurstLossesNew``, this
           table is an independently-calibrated NSW probability-neutral loss table, not
           derived from preburst depths/ratios at all (confirmed against the legacy
@@ -469,9 +513,6 @@ class ArrEngine:
         if not missing:
             return burst_losses
 
-        from .complete_storm import _preburst_ratio
-        baseline_ifd = self._ifd_frame(self.config.ifd.year, None)
-        percentile = self.config.preburst.percentile
         # cast to object dtype upfront - a derived cell may need to become the
         # "Use PB TP" placeholder string, which a purely-numeric (float64) column
         # dtype cannot hold.
@@ -479,21 +520,9 @@ class ArrEngine:
         for dur in missing:
             for col in burst_losses.columns:
                 aep_pct = float(col)
-                point_depth = float(_interp_table(baseline_ifd, [dur], [aep_pct]).iloc[0, 0])
-                ratio = _preburst_ratio(self.response, percentile, dur, aep_pct)
-                storm_il = self._storm_initial_loss_pct_datahub(aep_pct)
-                implied_burst_loss = storm_il - ratio * point_depth
-                if implied_burst_loss < 0:
-                    logger.info(
-                        "Duration %s min, AEP %s%%: implied burst initial loss (storm initial loss %.3f mm - "
-                        "preburst depth %.3f mm = %.3f mm) is negative - treating this cell as 'Use PB TP' "
-                        "(complete storm assembly required).", dur, aep_pct, storm_il, ratio * point_depth,
-                        implied_burst_loss,
-                    )
-                    result.loc[dur, col] = 'Use PB TP'
-                else:
-                    result.loc[dur, col] = implied_burst_loss
+                result.loc[dur, col] = self._derive_burst_loss_via_ratio(dur, aep_pct)
         return result.sort_index()
+
 
     def _extrapolate_rare_aep_loss(self, burst_losses: pd.DataFrame, duration: float, aep_pct: float,
                                     durations: list) -> float:
@@ -540,7 +569,7 @@ class ArrEngine:
         from .complete_storm import _preburst_ratio
         percentile = self.config.preburst.percentile
         ratio = _preburst_ratio(self.response, percentile, duration, aep_pct)
-        baseline_ifd = self._ifd_frame(self.config.ifd.year, None)
+        baseline_ifd = self._ifd_frame(self.config.ifd.baseline_year, None)
         point_depth = float(_interp_table(baseline_ifd, [duration], [aep_pct]).iloc[0, 0])
         storm_il = self._storm_initial_loss_pct(aep_pct)
         return storm_il - ratio * point_depth
@@ -549,6 +578,26 @@ class ArrEngine:
                        scenario_label: Optional[str] = None) -> float:
         aep_pct = aep_name_to_pct(aep_name)
         burst_losses = self._burst_loss_frame()
+        if burst_losses.empty:
+            # no per-duration/AEP burst initial loss table exists at all for this
+            # location/method (e.g. 'BurstLossesNew' is NSW-only, and is missing
+            # entirely for other locations - see _burst_loss_frame) - derive this cell
+            # directly from the preburst ratio and storm initial loss, exactly as for an
+            # individual 'Use PB TP' placeholder cell in an existing table.
+            value = self._derive_burst_loss_via_ratio(duration, aep_pct)
+            if value == 'Use PB TP':
+                raise _NeedsCompleteStorm(
+                    f"No burst initial loss table is available for this location (e.g. 'BurstLossesNew' is "
+                    f"NSW-only), and the derived burst initial loss for {aep_name}/{duration}min would be "
+                    f"negative (the preburst rainfall alone exceeds the storm initial loss)."
+                )
+            self._extrapolated_loss_records.append({
+                'cc_scenario': scenario_label,
+                'duration': duration,
+                'aep_pct': aep_pct,
+                'initial_loss': value,
+            })
+            return value
         # AEPs rarer than the burst loss table's rarest (smallest %) column have no
         # burst/storm initial loss data at all in the Data Hub (the loss tables are
         # limited to 50%-1% AEP, unlike the IFD depth table, which extends much
@@ -646,7 +695,7 @@ class ArrEngine:
         tp_set = self._tp_set_for_config()
 
         results = []
-        scenarios: list = [(None, self.config.ifd.year, None)]
+        scenarios: list = [(None, self.config.ifd.baseline_year, None)]
         if self.config.climate_change.enabled:
             for s in self.config.climate_change.scenarios:
                 scenarios.append((f'{s.baseline_year}_{s.ssp}', s.baseline_year, s.ssp))
@@ -705,11 +754,23 @@ class ArrEngine:
                         try:
                             il = self._initial_loss(duration, aep_name, durations, scenario_label=scenario_label)
                         except _NeedsCompleteStorm as e:
-                            logger.info(
-                                "%s/%smin requires complete storm assembly (%s) - automatically switching to "
-                                "complete storm for this event.", aep_name, duration, e
-                            )
-                            needs_complete_storm = True
+                            if (self.config.preburst.pattern_method or '').lower() == 'none':
+                                # 'none' disables auto complete storm assembly entirely -
+                                # just set the burst initial loss to 0 for this cell
+                                # instead of building any preburst pattern.
+                                logger.warning(
+                                    "%s/%smin requires complete storm assembly (%s), but "
+                                    "preburst.pattern_method == 'none' - setting the burst initial loss to 0 "
+                                    "for this event instead of assembling a complete storm.",
+                                    aep_name, duration, e,
+                                )
+                                il = 0.0
+                            else:
+                                logger.info(
+                                    "%s/%smin requires complete storm assembly (%s) - automatically switching to "
+                                    "complete storm for this event.", aep_name, duration, e
+                                )
+                                needs_complete_storm = True
 
                     if needs_complete_storm:
                         from .complete_storm import build_preburst

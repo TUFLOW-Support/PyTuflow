@@ -13,9 +13,23 @@ from pytuflow.arr.exceptions import ArrError
 
 SITE_CONFIG = {
     'site': {'name': '1', 'latitude': -33.9347, 'longitude': 150.8372, 'catchment_area': 11.4},
-    'ifd': {'source': 'bom', 'year': 1990},
+    'ifd': {'baseline_year': 1990},
     'output': {'path': '/tmp/unused', 'format': 'csv'},
 }
+
+#: A non-NSW (South East Queensland) site - its cached ARR Data Hub response
+#: (`api_response_seq`) has no `BurstLossesNew`/`NewStormLosses`/`RecPreburstTP`/
+#: `RecPreburst` layers at all (all NSW-only), unlike `SITE_CONFIG`'s NSW site.
+SITE_CONFIG_SEQ = {
+    'site': {'name': 'seq', 'latitude': -27.389, 'longitude': 152.858, 'catchment_area': 5.0},
+    'ifd': {'baseline_year': 2030},
+    'output': {'path': '/tmp/unused', 'format': 'csv'},
+}
+
+
+def make_config_seq(**overrides) -> ArrConfig:
+    data = {**SITE_CONFIG_SEQ, **overrides}
+    return ArrConfig.from_dict(data)
 
 
 @pytest.fixture(autouse=True)
@@ -425,7 +439,7 @@ def test_engine_placeholder_adjacent_gap_both_placeholders_derives_burst_loss(ap
 def test_engine_probability_neutral_method_uses_burst_il_layer(api_response_1990):
     config = make_config(
         events={'aep': ['50%'], 'duration': [1440], 'output_notation': 'ari'},
-        ifd={'source': 'bom', 'year': 2030},  # avoid the ifd.year != 2030 burst loss recalculation
+        ifd={'baseline_year': 2030},  # avoid the ifd.baseline_year != 2030 burst loss recalculation
         losses={'method': 'probability_neutral'},
     )
     engine = ArrEngine(config, api_response_1990)
@@ -450,10 +464,10 @@ def test_engine_probability_neutral_does_not_recompute_for_non_2030_ifd_year(api
     # unlike BurstLossesNew ('recommended'), BurstIL ('probability_neutral') is an
     # independently-calibrated NSW table with no relationship to preburst ratios or
     # any specific IFD baseline year - the raw table value should be used as-is even
-    # when ifd.year != 2030 (no preburst-ratio-based recalculation should occur).
+    # when ifd.baseline_year != 2030 (no preburst-ratio-based recalculation should occur).
     config = make_config(
         events={'aep': ['50%'], 'duration': [1440], 'output_notation': 'ari'},
-        ifd={'source': 'bom', 'year': 1990},
+        ifd={'baseline_year': 1990},
         losses={'method': 'probability_neutral'},
     )
     engine = ArrEngine(config, api_response_1990)
@@ -473,7 +487,7 @@ def test_engine_probability_neutral_uses_plain_linear_interpolation_for_missing_
     burst_il['columns'] = [50.0]
     config = make_config(
         events={'aep': ['50%'], 'duration': [120], 'output_notation': 'ari'},
-        ifd={'source': 'bom', 'year': 2030},
+        ifd={'baseline_year': 2030},
         losses={'method': 'probability_neutral'},
     )
     engine = ArrEngine(config, api_response_1990)
@@ -490,7 +504,7 @@ def test_engine_probability_neutral_extrapolation_holds_nearest_aep_column_const
     # meaningless for BurstIL - see _burst_loss_frame/_extrapolate_rare_aep_loss).
     config = make_config(
         events={'aep': ['0.5%'], 'duration': [1440], 'output_notation': 'ari'},
-        ifd={'source': 'bom', 'year': 2030},
+        ifd={'baseline_year': 2030},
         losses={'method': 'probability_neutral'},
     )
     engine = ArrEngine(config, api_response_1990)
@@ -541,7 +555,7 @@ def test_engine_user_initial_loss_scales_burst_losses(api_response_1990):
     # loss should also be halved (7.4mm), preserving the relative reduction shape.
     config = make_config(
         events={'aep': ['50%'], 'duration': [1440], 'output_notation': 'ari'},
-        ifd={'source': 'bom', 'year': 2030},  # avoid the ifd.year != 2030 burst loss recalculation
+        ifd={'baseline_year': 2030},  # avoid the ifd.baseline_year != 2030 burst loss recalculation
         losses={'user_initial_loss': 10.0},
     )
     engine = ArrEngine(config, api_response_1990)
@@ -552,16 +566,16 @@ def test_engine_user_initial_loss_scales_burst_losses(api_response_1990):
 
 def test_engine_recalculates_burst_losses_for_non_2030_ifd_year(api_response_1990):
     # BurstLossesNew/BurstIL are only ever provided by the Data Hub against the 2030
-    # ("current") baseline - when a different `ifd.year` is selected, every numeric
+    # ("current") baseline - when a different `ifd.baseline_year` is selected, every numeric
     # burst initial loss cell should instead be recalculated as
-    # storm_il - preburst_ratio(percentile, duration, aep) * point_depth(ifd.year),
+    # storm_il - preburst_ratio(percentile, duration, aep) * point_depth(ifd.baseline_year),
     # rather than the raw (2030-based) BurstLossesNew value being used unmodified.
     from pytuflow.arr.complete_storm import _preburst_ratio
     from pytuflow.arr.engine import _interp_table, _table_to_frame
 
     config = make_config(
         events={'aep': ['50%'], 'duration': [1440], 'output_notation': 'ari'},
-        ifd={'source': 'bom', 'year': 1990},
+        ifd={'baseline_year': 1990},
     )
     engine = ArrEngine(config, api_response_1990)
     results = engine.run()
@@ -656,34 +670,68 @@ def test_engine_additional_tp_accepts_local_csv_file(tmp_path, api_response_1990
     assert info['csv'] == point_tp_csv.replace('\r\n', '\n')
 
 
-def test_engine_ifd_frame_uses_limb_table_when_source_is_limb(api_response_1990):
-    from pytuflow.arr.api_client import ArrApiResponse
-    # inject a synthetic 'AllIFDDatasets' layer alongside the cached NSW response's
-    # other layers, so only the IFD source dispatch is under test.
-    limb_table = {
-        'index': [30, 60],
-        'columns': [50.0, 20.0, 10.0],
-        'data': [[10.0, 20.0, 30.0], [15.0, 25.0, 35.0]],
-    }
-    data = dict(api_response_1990.raw)
-    data['layers'] = dict(data['layers'])
-    data['layers']['AllIFDDatasets'] = {'LIMB 2020 IFD Depths - High Resolution': limb_table}
-    response = ArrApiResponse(data)
+# --- South East Queensland (non-NSW) tests -----------------------------------------
+# These use `api_response_seq`, a cached real Data Hub response for a location with no
+# BurstLossesNew/NewStormLosses/RecPreburstTP/RecPreburst layers at all (all NSW-only).
 
-    config = make_config(
-        ifd={'source': 'limb', 'year': 2020},
-        events={'aep': ['50%'], 'duration': [60], 'output_notation': 'ari'},
+def test_engine_seq_storm_losses_fall_back_to_non_nsw_layer(api_response_seq):
+    config = make_config_seq(events={'aep': ['1%'], 'duration': [60], 'output_notation': 'ari'})
+    engine = ArrEngine(config, api_response_seq)
+    assert engine._storm_continuing_loss('1%') == pytest.approx(2.1)
+    assert engine._storm_initial_loss_pct_datahub(1.0) == pytest.approx(14.0)
+
+
+def test_engine_seq_missing_burst_loss_table_does_not_crash(api_response_seq):
+    # no 'BurstLossesNew' layer at all for this location - the engine should not raise,
+    # and should automatically fall back to complete storm assembly (using the
+    # pattern_duration/pattern_tp defaults, since 'RecPreburstTP' is also absent) rather
+    # than crashing.
+    config = make_config_seq(events={'aep': ['1%'], 'duration': [1440], 'output_notation': 'ari'})
+    engine = ArrEngine(config, api_response_seq)
+    results = engine.run()
+    assert len(results) == 1
+    r = results[0]
+    assert r.preburst is not None
+    assert r.preburst.method == 'temporal_pattern'
+    assert r.initial_loss > 0
+
+
+def test_engine_seq_pattern_method_none_zeroes_burst_loss_instead_of_crashing(api_response_seq, caplog):
+    config = make_config_seq(
+        events={'aep': ['1%'], 'duration': [1440], 'output_notation': 'ari'},
+        preburst={'pattern_method': 'none'},
     )
-    engine = ArrEngine(config, response)
-    frame = engine._ifd_frame(2020, None)
-    assert frame.loc[60.0, 50.0] == 15.0
+    engine = ArrEngine(config, api_response_seq)
+    with caplog.at_level('WARNING'):
+        results = engine.run()
+    assert len(results) == 1
+    r = results[0]
+    assert r.preburst is None
+    assert r.initial_loss == 0.0
+    assert any("pattern_method == 'none'" in rec.message for rec in caplog.records)
 
 
-def test_engine_ifd_frame_limb_missing_raises(api_response_1990):
-    config = make_config(
-        ifd={'source': 'limb', 'year': 2020},
-        events={'aep': ['50%'], 'duration': [60], 'output_notation': 'ari'},
-    )
-    engine = ArrEngine(config, api_response_1990)
-    with pytest.raises(ArrError, match='AllIFDDatasets'):
-        engine._ifd_frame(2020, None)
+def test_engine_seq_recommended_fallback_uses_pattern_duration_defaults(api_response_seq):
+    # 'RecPreburstTP' is absent entirely (NSW-only) - build_preburst should fall back to
+    # the (defaulted) pattern_duration=2/pattern_tp='TP01'/duration_proportional=True
+    # temporal_pattern_preburst method.
+    from pytuflow.arr.complete_storm import build_preburst, temporal_pattern_preburst
+    config = make_config_seq(events={'aep': ['1%'], 'duration': [1440], 'output_notation': 'ari'})
+    engine = ArrEngine(config, api_response_seq)
+    tp_set = engine._tp_set_for_config()
+    pattern = build_preburst(api_response_seq, config, tp_set, 1440, '1%', 1.0, 200.0)
+    assert pattern.method == 'temporal_pattern'
+    expected = temporal_pattern_preburst(api_response_seq, config, tp_set, 1440, '1%', 1.0, 200.0)
+    assert pattern.increments == expected.increments
+    assert pattern.timestep == pytest.approx(expected.timestep)
+
+
+def test_engine_seq_percentile_recommended_falls_back_to_50_percent(api_response_seq, caplog):
+    # 'RecPreburst' is absent entirely (NSW-only) - preburst.percentile == 'recommended'
+    # should automatically fall back to the 'Preburst50' layer instead of raising.
+    from pytuflow.arr.complete_storm import _preburst_ratio
+    with caplog.at_level('WARNING'):
+        ratio = _preburst_ratio(api_response_seq, 'recommended', 60, 1.0)
+    expected = _preburst_ratio(api_response_seq, '50%', 60, 1.0)
+    assert ratio == pytest.approx(expected)
+    assert any('RecPreburst' in rec.message for rec in caplog.records)
