@@ -253,6 +253,14 @@ class PreburstConfig:
     #: ``"TP01"``.
     pattern_tp: Optional[str] = 'TP01'
     duration_proportional: bool = True
+    #: Caps the computed preburst duration (hours) when ``duration_proportional`` is
+    #: ``True`` - without this, a proportional ``pattern_duration`` (e.g. the default
+    #: of 2x the storm duration) would produce an unrealistically long preburst period
+    #: for long storm durations (e.g. a 72 hour storm would otherwise get a 144 hour
+    #: preburst). Has no effect when ``duration_proportional`` is ``False`` (an
+    #: absolute ``pattern_duration`` is always used as given). Set to ``None`` to
+    #: disable capping entirely.
+    pattern_duration_max: Optional[float] = 6
 
     def validate(self) -> list[str]:
         errors = []
@@ -265,6 +273,11 @@ class PreburstConfig:
             errors.append(
                 f"preburst.pattern_method must be one of (recommended, constant, temporal_pattern, none), "
                 f"got '{self.pattern_method}'"
+            )
+        if self.pattern_duration_max is not None and self.pattern_duration_max <= 0:
+            errors.append(
+                f"preburst.pattern_duration_max must be a positive number of hours (or null to disable), "
+                f"got '{self.pattern_duration_max}'"
             )
         return errors
 

@@ -30,7 +30,8 @@ config):
   (e.g. any non-NSW location), this falls back further still to shaping the preburst
   using ``preburst.pattern_duration``/``pattern_tp``/``duration_proportional`` (the same
   settings as the ``"temporal_pattern"`` method below, defaulting to a preburst twice
-  the storm duration, shaped by ``"TP01"``) - a warning is logged - see
+  the storm duration, shaped by ``"TP01"``, capped at ``pattern_duration_max`` hours) -
+  a warning is logged - see
   :func:`build_preburst`. The preburst *depth* (magnitude) is not taken from
   ``RecPreburstTP`` at all (its own ``"Preburst Depth"``/``"Preburst Ratio"`` fields are
   not used, since the Data Hub's ``"Preburst Depth"`` field is not actually a preburst
@@ -38,11 +39,13 @@ config):
   is derived from the ``preburst.percentile`` ratio table multiplied by the point design
   burst depth.
 * ``"constant"`` - a single preburst block of a fixed duration (``preburst.pattern_duration``,
-  in hours, or a proportion of the storm duration if ``preburst.duration_proportional``)
+  in hours, or a proportion of the storm duration if ``preburst.duration_proportional``,
+  capped at ``pattern_duration_max`` hours in the proportional case)
   at a constant rate, matching the legacy "Constant Rate" method.
 * ``"temporal_pattern"`` - shapes the preburst rainfall using an existing point temporal
   pattern (``preburst.pattern_tp``) at the closest available duration to the computed
-  preburst duration, matching the legacy non-constant method. ``preburst.pattern_tp``
+  preburst duration (see ``pattern_duration_max`` above), matching the legacy
+  non-constant method. ``preburst.pattern_tp``
   is either a specific pattern (e.g. ``"TP03"``, used for every design burst temporal
   pattern in the event), or ``"design_burst"``, which matches each design burst
   temporal pattern to a preburst pattern of the *same* ``tp_number`` (e.g. the
@@ -255,11 +258,22 @@ def _preburst_ratio(response: ArrApiResponse, percentile: str, duration: float, 
     return float(_interp_table(df, [duration], [aep_pct]).iloc[0, 0])
 
 
-def _figure_out_pb_duration(target_duration: float, pattern_duration: float, duration_proportional: bool) -> float:
+def _figure_out_pb_duration(target_duration: float, pattern_duration: float, duration_proportional: bool,
+                             pattern_duration_max: Optional[float] = None) -> float:
     """Computes the target preburst duration (minutes), given either an absolute
-    duration (hours) or a proportion of the storm duration."""
+    duration (hours) or a proportion of the storm duration.
+
+    ``pattern_duration_max`` (hours) caps the result when ``duration_proportional`` is
+    ``True`` - without this, a proportional ``pattern_duration`` would produce an
+    unrealistically long preburst period for long storm durations (e.g. a 72 hour storm
+    with the default ``pattern_duration=2`` would otherwise get a 144 hour preburst).
+    Has no effect when ``duration_proportional`` is ``False`` (an absolute
+    ``pattern_duration`` is always used as given, uncapped)."""
     if duration_proportional:
-        return target_duration * float(pattern_duration)
+        pb_duration = target_duration * float(pattern_duration)
+        if pattern_duration_max is not None:
+            pb_duration = min(pb_duration, float(pattern_duration_max) * 60.0)
+        return pb_duration
     return float(pattern_duration) * 60.0
 
 
@@ -270,7 +284,8 @@ def constant_preburst(response: ArrApiResponse, config: ArrConfig, duration: flo
     cfg = config.preburst
     if cfg.pattern_duration is None:
         raise ArrError("preburst.pattern_duration is required for the 'constant' preburst pattern method.")
-    pb_duration = _figure_out_pb_duration(duration, cfg.pattern_duration, cfg.duration_proportional)
+    pb_duration = _figure_out_pb_duration(
+        duration, cfg.pattern_duration, cfg.duration_proportional, cfg.pattern_duration_max)
     ratio = _preburst_ratio(response, cfg.percentile, duration, aep_pct)
     depth = ratio * point_depth
     return PreburstPattern(depth=depth, timestep=pb_duration, increments=[100.0], method='constant')
@@ -297,7 +312,8 @@ def temporal_pattern_preburst(response: ArrApiResponse, config: ArrConfig, tp_se
             "preburst.pattern_tp is required for the 'temporal_pattern' preburst pattern method - a specific "
             "temporal pattern (e.g. 'TP03') or 'design_burst'."
         )
-    target_dur = _figure_out_pb_duration(duration, cfg.pattern_duration, cfg.duration_proportional)
+    target_dur = _figure_out_pb_duration(
+        duration, cfg.pattern_duration, cfg.duration_proportional, cfg.pattern_duration_max)
     from .temporal_patterns import aep_band
     band = aep_band(aep_name, config.events.output_notation)
     available = sorted(tp_set.point_tp.loc[tp_set.point_tp['aep_band'] == band, 'duration'].unique())

@@ -212,7 +212,7 @@ def test_constant_preburst_proportional_duration(api_response_1990):
     config = make_config(
         events={'aep': ['1%'], 'duration': [1440], 'output_notation': 'ari'},
         preburst={'percentile': '50%', 'pattern_method': 'constant', 'pattern_duration': 0.5,
-                  'duration_proportional': True},
+                  'duration_proportional': True, 'pattern_duration_max': None},
     )
     pattern = constant_preburst(api_response_1990, config, 1440, '1%', 1.0, 74.5)
     assert pattern.timestep == pytest.approx(720.0)  # 0.5 * 1440
@@ -308,3 +308,38 @@ def test_constant_preburst_recommended_percentile_uses_rec_preburst_layer(api_re
     )
     pattern = constant_preburst(api_response_1990, config, 1440, '1%', 1.0, 74.5)
     assert pattern.depth == pytest.approx(ratio_recommended * 74.5)
+
+
+def test_constant_preburst_proportional_duration_capped_for_long_storms(api_response_1990):
+    # default pattern_duration=2 (proportional) would otherwise give a 4320 min (72hr)
+    # preburst for a 2160 min (36hr) storm - pattern_duration_max (default 6 hours)
+    # should cap this instead.
+    config = make_config(
+        events={'aep': ['1%'], 'duration': [2160], 'output_notation': 'ari'},
+        preburst={'percentile': '50%', 'pattern_method': 'constant', 'pattern_duration': 2.0,
+                  'duration_proportional': True},
+    )
+    pattern = constant_preburst(api_response_1990, config, 2160, '1%', 1.0, 74.5)
+    assert pattern.timestep == pytest.approx(360.0)  # capped at 6 hours -> 360 min
+
+
+def test_constant_preburst_proportional_duration_uncapped_when_max_is_none(api_response_1990):
+    config = make_config(
+        events={'aep': ['1%'], 'duration': [2160], 'output_notation': 'ari'},
+        preburst={'percentile': '50%', 'pattern_method': 'constant', 'pattern_duration': 2.0,
+                  'duration_proportional': True, 'pattern_duration_max': None},
+    )
+    pattern = constant_preburst(api_response_1990, config, 2160, '1%', 1.0, 74.5)
+    assert pattern.timestep == pytest.approx(4320.0)  # 2 * 2160, uncapped
+
+
+def test_constant_preburst_absolute_duration_not_capped(api_response_1990):
+    # duration_proportional=False: pattern_duration is an absolute number of hours and
+    # is never capped, even if it exceeds pattern_duration_max.
+    config = make_config(
+        events={'aep': ['1%'], 'duration': [2160], 'output_notation': 'ari'},
+        preburst={'percentile': '50%', 'pattern_method': 'constant', 'pattern_duration': 10.0,
+                  'duration_proportional': False, 'pattern_duration_max': 6.0},
+    )
+    pattern = constant_preburst(api_response_1990, config, 2160, '1%', 1.0, 74.5)
+    assert pattern.timestep == pytest.approx(600.0)  # 10 hours, uncapped

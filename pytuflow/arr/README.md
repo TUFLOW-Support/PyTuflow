@@ -91,7 +91,8 @@ being silently ignored, to catch typos early.
     "pattern_method": "recommended",
     "pattern_duration": 2,
     "pattern_tp": "TP01",
-    "duration_proportional": true
+    "duration_proportional": true,
+    "pattern_duration_max": 6
   },
   "losses": {
     "method": "recommended",
@@ -217,6 +218,7 @@ Only used for **complete storm** events - see [Complete storm assembly](#complet
 | `pattern_duration` | number \| null | `2` | Preburst duration in hours (or a proportion of the storm duration, if `duration_proportional` is `true`). Used by the `"constant"`/`"temporal_pattern"` methods directly, and as the `"recommended"` method's own fallback (see below). |
 | `pattern_tp` | string \| null | `"TP01"` | Which existing point temporal pattern to shape the preburst rainfall with, e.g. `"TP03"` - or `"design_burst"`, which matches each design burst temporal pattern to a preburst pattern of the same `tp_number` (e.g. the `"TP01"` design burst gets a `"TP01"` preburst), rather than a single fixed pattern for every column. Used by the `"temporal_pattern"` method directly, and as the `"recommended"` method's own fallback (see below). |
 | `duration_proportional` | bool | `true` | If `true`, `pattern_duration` is treated as a proportion of the storm duration rather than an absolute number of hours. |
+| `pattern_duration_max` | number \| null | `6` | Caps the computed preburst duration (hours) when `duration_proportional` is `true` - without this, a proportional `pattern_duration` (e.g. the default of 2x the storm duration) would produce an unrealistically long preburst period for long storm durations (e.g. a 72 hour storm would otherwise get a 144 hour preburst). Has no effect when `duration_proportional` is `false` (an absolute `pattern_duration` is always used as given, uncapped). Set to `null` to disable capping entirely. |
 
 ### `losses`
 

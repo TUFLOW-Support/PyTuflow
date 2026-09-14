@@ -71,6 +71,25 @@ def test_bad_ifd_year_raises():
         ArrConfig.from_dict(bad)
 
 
+def test_preburst_pattern_duration_max_defaults_to_6_hours():
+    config = ArrConfig.from_dict(VALID_CONFIG)
+    assert config.preburst.pattern_duration_max == 6
+
+
+def test_preburst_pattern_duration_max_zero_or_negative_raises():
+    bad = json.loads(json.dumps(VALID_CONFIG))
+    bad['preburst'] = {'pattern_duration_max': 0}
+    with pytest.raises(ArrConfigError, match='pattern_duration_max'):
+        ArrConfig.from_dict(bad)
+
+
+def test_preburst_pattern_duration_max_none_accepted():
+    data = json.loads(json.dumps(VALID_CONFIG))
+    data['preburst'] = {'pattern_duration_max': None}
+    config = ArrConfig.from_dict(data)
+    assert config.preburst.pattern_duration_max is None
+
+
 def test_rahman_does_not_require_mar():
     data = json.loads(json.dumps(VALID_CONFIG))
     data['losses'] = {'extrapolation_method': 'rahman'}
