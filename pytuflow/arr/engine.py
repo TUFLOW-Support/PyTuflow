@@ -190,16 +190,17 @@ class ArrEngine:
         ``losses.method``:
 
         * ``"recommended"`` - the Data Hub's newer burst initial loss table
-          (``BurstLossesNew``).
+          (``BurstLossesNew``). Derived by the Data Hub (as storm initial loss minus
+          preburst depth) against the 2030 ("current") baseline IFD depths, regardless
+          of ``ifd.year`` - if a different baseline year has been selected, every
+          numeric cell is recalculated against that baseline's own point depths
+          instead - see :meth:`_recompute_burst_losses_for_ifd_year`.
         * ``"probability_neutral"`` - the legacy (NSW-only) probability-neutral burst
           initial loss table (``BurstIL``). Raises :class:`ArrError` if the Data Hub
           hasn't provided this layer for the queried location (i.e. it's not in NSW).
-
-        The Data Hub only provides one such table per location - it is derived (as
-        storm initial loss minus preburst depth) against the 2030 ("current")
-        baseline IFD depths, regardless of ``ifd.year``. If a different baseline year
-        has been selected, every numeric cell is recalculated against that baseline's
-        own point depths instead - see :meth:`_recompute_burst_losses_for_ifd_year`.
+          Unlike ``BurstLossesNew``, this is an independently-calibrated table that is
+          *not* derived from preburst depths/ratios and is not tied to any particular
+          IFD baseline year - it is always used as-is, unaffected by ``ifd.year``.
         """
         method = self.config.losses.method
         if method == 'probability_neutral':
@@ -210,10 +211,10 @@ class ArrEngine:
                     "does not contain a 'BurstIL' layer for this location (probability-neutral burst "
                     "initial losses are only available in NSW)."
                 )
-        else:
-            table = self.response.layer('BurstLossesNew')
-            if table is None:
-                raise ArrError("ARR Data Hub response is missing burst initial loss data ('BurstLossesNew' layer).")
+            return _table_to_frame(table)
+        table = self.response.layer('BurstLossesNew')
+        if table is None:
+            raise ArrError("ARR Data Hub response is missing burst initial loss data ('BurstLossesNew' layer).")
         burst_losses = _table_to_frame(table)
         if self.config.ifd.year != 2030:
             burst_losses = self._recompute_burst_losses_for_ifd_year(burst_losses)
@@ -417,33 +418,48 @@ class ArrEngine:
                 table.loc[row_dur, col] = storm_il_cc - cc_preburst
         return table
 
-    def _fill_placeholder_adjacent_gaps(self, burst_losses: pd.DataFrame, durations: list) -> pd.DataFrame:
-        """Gap-fills any requested duration that falls between a ``"Use PB TP"``
-        placeholder cell and a numeric burst initial loss cell (for the same AEP
-        column) - rather than the plain linear interpolation used for gaps bracketed by
-        two numeric cells (see :func:`pytuflow.arr.losses.interpolate_missing_durations`,
-        called separately after this method), since interpolating a loss *value*
-        towards/from an undefined placeholder doesn't make sense.
+    def _derive_missing_duration_burst_losses(self, burst_losses: pd.DataFrame, durations: list) -> pd.DataFrame:
+        """Gap-fills any requested duration that falls *within* the range of
+        ``burst_losses`` (i.e. between its minimum and maximum duration) but isn't
+        itself one of its rows - e.g. a requested duration of 270 min, when the table
+        only has rows at 180 and 360 min. Dispatches on ``losses.method``:
 
-        Instead, for such a duration/AEP cell, the (interpolated) preburst depth -
-        ``preburst.percentile`` ratio multiplied by the point design burst depth at that
-        duration - is subtracted from the (duration-independent) storm initial loss to
-        derive an implied burst initial loss:
+        * ``"recommended"`` (``BurstLossesNew``) - rather than linearly interpolating
+          the table's raw (2030-baseline-derived) loss *values* between the two
+          bracketing duration rows - which would be inconsistent with
+          :meth:`_recompute_burst_losses_for_ifd_year` (which recalculates every
+          numeric cell from the preburst ratio table when ``ifd.year != 2030``) and
+          would not make sense for a gap bracketed by (or adjacent to) a
+          ``"Use PB TP"`` placeholder cell - every missing duration/AEP cell is instead
+          derived directly, the same way as
+          :meth:`_recompute_burst_losses_for_ifd_year`/:meth:`_extrapolate_rare_aep_loss`::
 
-        * If that implied burst initial loss is positive, it is used as the cell's
-          value directly.
-        * If it would be negative (i.e. the preburst rainfall alone exceeds the storm
-          initial loss), the cell is set to the ``"Use PB TP"`` placeholder too, forcing
-          complete storm assembly for that specific AEP/duration (matching the
-          Data Hub's own convention for cells where a single fixed burst initial loss
-          value isn't meaningful).
+              burst_il = storm_il - preburst_ratio(percentile, duration, aep) * point_depth(duration, aep)
 
-        A duration/AEP gap bracketed by two placeholder cells is also set to the
-        placeholder (no numeric neighbour exists to derive anything from either way).
-        Gaps bracketed by two numeric cells are left untouched (handled separately).
+          with the preburst ratio and point depth both log-log interpolated at the
+          exact requested duration/AEP - never interpolating the burst loss table's own
+          values. If the result would be negative (the preburst rainfall alone exceeds
+          the storm initial loss), the cell is set to the ``"Use PB TP"`` placeholder
+          instead, forcing complete storm assembly for that cell (matching the Data
+          Hub's own convention). Applied uniformly regardless of whether the
+          bracketing/neighbouring cells are numeric or already ``"Use PB TP"``
+          placeholders.
+        * ``"probability_neutral"`` (``BurstIL``) - unlike ``BurstLossesNew``, this
+          table is an independently-calibrated NSW probability-neutral loss table, not
+          derived from preburst depths/ratios at all (confirmed against the legacy
+          script, which loads it from its own ``[BURSTIL]`` data block and applies no
+          preburst-based derivation to it whatsoever). So its gaps are instead plainly
+          (straight duration axis, not log) linearly interpolated between the two
+          bracketing rows' own raw loss values, matching the legacy script's
+          ``interpolate_nan`` for this table - see
+          :func:`pytuflow.arr.losses.interpolate_missing_durations`. This table has no
+          ``"Use PB TP"`` placeholder cells in practice.
         """
         if burst_losses.empty:
             return burst_losses
+        if self.config.losses.method == 'probability_neutral':
+            return interpolate_missing_durations(burst_losses, durations)
+
         lower_bound = float(burst_losses.index.min())
         upper_bound = float(burst_losses.index.max())
         missing = sorted({
@@ -453,71 +469,74 @@ class ArrEngine:
         if not missing:
             return burst_losses
 
-        known_durations = sorted(burst_losses.index)
-        result = burst_losses.copy()
-        baseline_ifd = None
+        from .complete_storm import _preburst_ratio
+        baseline_ifd = self._ifd_frame(self.config.ifd.year, None)
+        percentile = self.config.preburst.percentile
+        # cast to object dtype upfront - a derived cell may need to become the
+        # "Use PB TP" placeholder string, which a purely-numeric (float64) column
+        # dtype cannot hold.
+        result = burst_losses.astype(object).copy()
         for dur in missing:
-            lower_dur = max(d for d in known_durations if d < dur)
-            upper_dur = min(d for d in known_durations if d > dur)
             for col in burst_losses.columns:
-                lower_value = burst_losses.loc[lower_dur, col]
-                upper_value = burst_losses.loc[upper_dur, col]
-                lower_numeric = isinstance(lower_value, (int, float)) and not pd.isna(lower_value)
-                upper_numeric = isinstance(upper_value, (int, float)) and not pd.isna(upper_value)
-                if lower_numeric and upper_numeric:
-                    continue  # both numeric - handled by interpolate_missing_durations
-                if not lower_numeric and not upper_numeric:
-                    # bracketed by two placeholders - no numeric neighbour to derive
-                    # anything from, so the gap is a placeholder too.
-                    result.loc[dur, col] = 'Use PB TP'
-                    continue
-                # exactly one side is numeric, the other a "Use PB TP" placeholder -
-                # derive the implied burst initial loss from the preburst depth/storm
-                # initial loss instead of interpolating towards/from an undefined value.
                 aep_pct = float(col)
-                if baseline_ifd is None:
-                    baseline_ifd = self._ifd_frame(self.config.ifd.year, None)
-                from .complete_storm import _preburst_ratio
                 point_depth = float(_interp_table(baseline_ifd, [dur], [aep_pct]).iloc[0, 0])
-                preburst_ratio = _preburst_ratio(self.response, self.config.preburst.percentile, dur, aep_pct)
-                preburst_depth = preburst_ratio * point_depth
-                # use the Data Hub's own (unscaled) storm initial loss here, not
-                # `losses.user_initial_loss`, so this cell stays in "Data Hub space"
-                # and is scaled consistently with the rest of the table afterwards
-                # (see `_scale_burst_losses_to_user_il`, called by `_initial_loss`).
+                ratio = _preburst_ratio(self.response, percentile, dur, aep_pct)
                 storm_il = self._storm_initial_loss_pct_datahub(aep_pct)
-                implied_burst_loss = storm_il - preburst_depth
+                implied_burst_loss = storm_il - ratio * point_depth
                 if implied_burst_loss < 0:
                     logger.info(
                         "Duration %s min, AEP %s%%: implied burst initial loss (storm initial loss %.3f mm - "
                         "preburst depth %.3f mm = %.3f mm) is negative - treating this cell as 'Use PB TP' "
-                        "(complete storm assembly required).", dur, aep_pct, storm_il, preburst_depth,
+                        "(complete storm assembly required).", dur, aep_pct, storm_il, ratio * point_depth,
                         implied_burst_loss,
                     )
                     result.loc[dur, col] = 'Use PB TP'
                 else:
                     result.loc[dur, col] = implied_burst_loss
-        return result
+        return result.sort_index()
 
-    def _extrapolate_rare_aep_loss(self, duration: float, aep_pct: float) -> float:
+    def _extrapolate_rare_aep_loss(self, burst_losses: pd.DataFrame, duration: float, aep_pct: float,
+                                    durations: list) -> float:
         """Computes the burst initial loss for an AEP rarer than the Data Hub's burst
         initial loss table's rarest column (e.g. rarer than the 1% AEP that
-        ``BurstLossesNew``/``BurstIL``/``NewStormLosses`` are limited to), by holding
-        the preburst ratio constant beyond that edge and applying it against the
-        actual (not clamped) point design depth at the requested AEP - the same
-        principle as the ``'constant_preburst_ratio'`` short-duration extrapolation
-        method, applied along the AEP axis instead of the duration axis.
+        ``BurstLossesNew``/``BurstIL``/``NewStormLosses`` are limited to). Dispatches on
+        ``losses.method``:
 
-        Unlike the legacy script (which has no burst/storm initial loss data at all
-        for these AEPs and ultimately falls back to a burst initial loss of 0), the
-        preburst ratio table (``Preburst<percentile>``/``RecPreburst``) is looked up
-        via :func:`complete_storm._preburst_ratio`, which log-log interpolates and
-        clamps to the nearest edge value beyond the table's rarest AEP column -
-        i.e. it naturally "holds the ratio constant" without any extra code here.
-        The point design depth, however, is *not* clamped - the Data Hub's IFD table
-        extends to much rarer AEPs (e.g. 0.05%) than the loss tables do, so the actual
-        (log-log interpolated) point depth at the requested AEP is used.
+        * ``"recommended"`` (``BurstLossesNew``) - holds the preburst ratio constant
+          beyond that edge and applies it against the actual (not clamped) point design
+          depth at the requested AEP - the same principle as the
+          ``'constant_preburst_ratio'`` short-duration extrapolation method, applied
+          along the AEP axis instead of the duration axis.
+
+          Unlike the legacy script (which has no burst/storm initial loss data at all
+          for these AEPs and ultimately falls back to a burst initial loss of 0), the
+          preburst ratio table (``Preburst<percentile>``/``RecPreburst``) is looked up
+          via :func:`complete_storm._preburst_ratio`, which log-log interpolates and
+          clamps to the nearest edge value beyond the table's rarest AEP column -
+          i.e. it naturally "holds the ratio constant" without any extra code here.
+          The point design depth, however, is *not* clamped - the Data Hub's IFD table
+          extends to much rarer AEPs (e.g. 0.05%) than the loss tables do, so the actual
+          (log-log interpolated) point depth at the requested AEP is used.
+        * ``"probability_neutral"`` (``BurstIL``) - unlike ``BurstLossesNew``, this
+          table is not derived from preburst depths/ratios at all (see
+          :meth:`_burst_loss_frame`), so there is no principled preburst-based way to
+          extrapolate it. Instead, the nearest (rarest) available AEP column's own raw
+          loss value is held constant (at the requested duration, gap-filled via
+          :meth:`_derive_missing_duration_burst_losses` if needed, clamped to the
+          nearest available duration if the requested duration falls outside the
+          table's own duration range entirely).
         """
+        if self.config.losses.method == 'probability_neutral':
+            filled = self._derive_missing_duration_burst_losses(burst_losses, durations)
+            if duration in filled.index:
+                row_duration = duration
+            else:
+                # requested duration is outside the table's own duration range entirely
+                # (handled separately by `losses.extrapolation_method`) - clamp to the
+                # nearest available duration rather than attempting to extrapolate here.
+                row_duration = min(filled.index, key=lambda d: abs(float(d) - duration))
+            nearest_aep_col = min(filled.columns, key=lambda c: float(c))
+            return float(filled.loc[row_duration, nearest_aep_col])
         from .complete_storm import _preburst_ratio
         percentile = self.config.preburst.percentile
         ratio = _preburst_ratio(self.response, percentile, duration, aep_pct)
@@ -533,11 +552,13 @@ class ArrEngine:
         # AEPs rarer than the burst loss table's rarest (smallest %) column have no
         # burst/storm initial loss data at all in the Data Hub (the loss tables are
         # limited to 50%-1% AEP, unlike the IFD depth table, which extends much
-        # further) - hold the preburst ratio constant beyond that edge instead of
-        # silently reusing the 1% AEP column's raw loss value unchanged.
+        # further) - hold the preburst ratio constant beyond that edge (or, for
+        # 'probability_neutral', the nearest AEP column's raw loss value - see
+        # _extrapolate_rare_aep_loss) instead of silently reusing the 1% AEP column's
+        # raw loss value unchanged.
         available_aeps = [float(c) for c in burst_losses.columns]
         if available_aeps and aep_pct < min(available_aeps):
-            value = self._extrapolate_rare_aep_loss(duration, aep_pct)
+            value = self._extrapolate_rare_aep_loss(burst_losses, duration, aep_pct, durations)
             self._extrapolated_loss_records.append({
                 'cc_scenario': scenario_label,
                 'duration': duration,
@@ -545,15 +566,12 @@ class ArrEngine:
                 'initial_loss': value,
             })
             return value
-        # gap-fill any requested duration bracketed by a "Use PB TP" placeholder and a
-        # numeric cell (or two placeholders) first - see _fill_placeholder_adjacent_gaps
-        # - then fall back to plain linear interpolation for any remaining gaps
-        # bracketed by two numeric cells (e.g. 270 min, between rows at 180 and 360 min)
-        # - matches the legacy script's `interpolate_nan`, independent of
-        # `losses.extrapolation_method` (which only controls extrapolation *below* the
-        # table's shortest duration).
-        burst_losses = self._fill_placeholder_adjacent_gaps(burst_losses, durations)
-        burst_losses = interpolate_missing_durations(burst_losses, durations)
+        # gap-fill any requested duration that falls within the table's duration range
+        # but isn't itself one of its rows (e.g. 270 min, between rows at 180 and
+        # 360 min) - derived directly from the preburst ratio/point depth (log-log
+        # interpolated), never by interpolating the burst loss table's raw values -
+        # see _derive_missing_duration_burst_losses.
+        burst_losses = self._derive_missing_duration_burst_losses(burst_losses, durations)
         losses_cfg = self.config.losses
         threshold = float(burst_losses.index.min()) if not burst_losses.empty else None
         if losses_cfg.extrapolation_method != 'none':

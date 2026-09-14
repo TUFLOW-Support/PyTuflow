@@ -34,7 +34,13 @@ the legacy script's ``interpolate_nan``, which always linearly gap-fills such "i
 missing durations regardless of the chosen ``lossMethod`` (the ``lossMethod``/
 ``extrapolation_method`` setting only controls extrapolation *below* the table's
 shortest duration). This gap-filling is therefore always applied, independently of
-``losses.extrapolation_method``.
+``losses.extrapolation_method`` - but only for ``losses.method == "probability_neutral"``
+(the ``BurstIL`` table, which is not preburst-derived). For ``losses.method ==
+"recommended"`` (``BurstLossesNew``), interior missing durations are instead derived from
+the preburst ratio/depth directly (see :meth:`engine.ArrEngine._derive_missing_duration_burst_losses`),
+since that table *is* preburst-derived and doing so keeps duration-axis gap-filling
+consistent with the AEP-axis and IFD-year-recalculation logic that already relies on
+preburst ratios for this method.
 
 Continuing loss is not duration-dependent and is not extrapolated by these methods - the
 Data Hub's storm continuing loss value is used as-is for all durations.

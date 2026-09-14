@@ -405,16 +405,21 @@ def test_engine_placeholder_adjacent_gap_negative_triggers_complete_storm(api_re
     assert r.initial_loss == pytest.approx(0.05)
 
 
-def test_engine_placeholder_adjacent_gap_both_placeholders_triggers_complete_storm(api_response_1990):
-    # duration=180 bracketed by two 'Use PB TP' cells (60min and 1440min) - no numeric
-    # neighbour to derive anything from, so it should also be 'Use PB TP'.
+def test_engine_placeholder_adjacent_gap_both_placeholders_derives_burst_loss(api_response_1990):
+    # duration=180 bracketed by two 'Use PB TP' cells (60min and 1440min) - unlike the
+    # old neighbour-interpolation approach (which had no numeric neighbour to derive
+    # anything from here), the burst initial loss is now always derived directly from
+    # the storm initial loss and the (log-log interpolated) preburst depth at the
+    # requested duration, regardless of the neighbouring cells' placeholder status - so
+    # this should resolve to a positive derived value rather than 'Use PB TP'.
     _patch_burst_losses_new(api_response_1990, [50.0], [60, 1440], [['Use PB TP'], ['Use PB TP']])
     config = make_config(events={'aep': ['50%'], 'duration': [180], 'output_notation': 'ari'})
     engine = ArrEngine(config, api_response_1990)
     results = engine.run()
     assert len(results) == 1
     r = results[0]
-    assert r.preburst is not None
+    assert r.preburst is None
+    assert r.initial_loss == pytest.approx(19.5171, abs=1e-3)
 
 
 def test_engine_probability_neutral_method_uses_burst_il_layer(api_response_1990):
@@ -439,6 +444,60 @@ def test_engine_probability_neutral_method_raises_when_unavailable(api_response_
     engine = ArrEngine(config, api_response_1990)
     with pytest.raises(ArrError, match='probability_neutral'):
         engine.run()
+
+
+def test_engine_probability_neutral_does_not_recompute_for_non_2030_ifd_year(api_response_1990):
+    # unlike BurstLossesNew ('recommended'), BurstIL ('probability_neutral') is an
+    # independently-calibrated NSW table with no relationship to preburst ratios or
+    # any specific IFD baseline year - the raw table value should be used as-is even
+    # when ifd.year != 2030 (no preburst-ratio-based recalculation should occur).
+    config = make_config(
+        events={'aep': ['50%'], 'duration': [1440], 'output_notation': 'ari'},
+        ifd={'source': 'bom', 'year': 1990},
+        losses={'method': 'probability_neutral'},
+    )
+    engine = ArrEngine(config, api_response_1990)
+    results = engine.run()
+    assert len(results) == 1
+    expected = api_response_1990.layer('BurstIL')['data'][7][0]  # duration 1440, aep '50.0'
+    assert results[0].initial_loss == pytest.approx(expected)
+
+
+def test_engine_probability_neutral_uses_plain_linear_interpolation_for_missing_duration(api_response_1990):
+    # unlike BurstLossesNew's preburst-ratio-based gap-fill, BurstIL interior duration
+    # gaps should use plain linear interpolation on the raw table values (matching the
+    # legacy script), since BurstIL is not preburst-derived.
+    burst_il = api_response_1990.layer('BurstIL')
+    burst_il['index'] = [60, 1440]
+    burst_il['data'] = [[31.6], [47.9]]
+    burst_il['columns'] = [50.0]
+    config = make_config(
+        events={'aep': ['50%'], 'duration': [120], 'output_notation': 'ari'},
+        ifd={'source': 'bom', 'year': 2030},
+        losses={'method': 'probability_neutral'},
+    )
+    engine = ArrEngine(config, api_response_1990)
+    results = engine.run()
+    assert len(results) == 1
+    # plain linear interpolation between (60, 31.6) and (1440, 47.9) at duration=120
+    expected = 31.6 + (47.9 - 31.6) * (120 - 60) / (1440 - 60)
+    assert results[0].initial_loss == pytest.approx(expected)
+
+
+def test_engine_probability_neutral_extrapolation_holds_nearest_aep_column_constant(api_response_1990):
+    # AEPs rarer than BurstIL's rarest (1%) column should hold that column's raw loss
+    # value constant, rather than extrapolating via preburst ratio (which is
+    # meaningless for BurstIL - see _burst_loss_frame/_extrapolate_rare_aep_loss).
+    config = make_config(
+        events={'aep': ['0.5%'], 'duration': [1440], 'output_notation': 'ari'},
+        ifd={'source': 'bom', 'year': 2030},
+        losses={'method': 'probability_neutral'},
+    )
+    engine = ArrEngine(config, api_response_1990)
+    results = engine.run()
+    assert len(results) == 1
+    expected = api_response_1990.layer('BurstIL')['data'][7][-1]  # duration 1440, aep '1.0'
+    assert results[0].initial_loss == pytest.approx(expected)
 
 
 def test_engine_add_areal_tp_adds_extra_patterns(api_response_1990):
