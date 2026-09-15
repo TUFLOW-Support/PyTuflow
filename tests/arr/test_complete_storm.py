@@ -87,16 +87,39 @@ def test_build_preburst_recommended_uses_percentile_setting(api_response_1990):
     assert pattern.depth != default_pattern.depth
 
 
-def test_recommended_preburst_falls_back_to_same_duration_and_band(api_response_1990, monkeypatch):
-    # remove the exact 1% AEP/30min row, leaving the 2% row (also 'rare' band, per
-    # aep_band) at the same duration - the fallback should pick it up for the *shape*,
-    # but the depth still uses the originally requested duration/AEP (30min/1%) against
-    # the ratio table, not the fallback row's own duration/AEP.
-    layer = api_response_1990.layer('RecPreburstTP')
-    rows = [r for r in layer['selected_patterns'] if not (r['Duration'] == 30 and r['AEP'] == 1.0)]
-    monkeypatch.setitem(api_response_1990.layers['RecPreburstTP'], 'selected_patterns', rows)
-    pattern = recommended_preburst(api_response_1990, 30, '1%', 1.0, point_depth=100.0)
+def test_recommended_preburst_falls_back_to_closest_duration_same_aep(api_response_1990):
+    # 1%AEP/270min has no exact row (RecPreburstTP has no duration=270 row at all) -
+    # the primary fallback should pick the *same* AEP's (1%) closest duration, not a
+    # different AEP at some other duration. 270min is equidistant between the 1%
+    # AEP's 180min and 360min rows (90min away from each) - ties are broken by
+    # choosing the *lower* duration (180min), matching ARR guidance to prefer the
+    # shorter/more conservative preburst duration.
+    pattern = recommended_preburst(api_response_1990, 270, '1%', 1.0, point_depth=100.0)
     assert pattern is not None
+    layer = api_response_1990.layer('RecPreburstTP')
+    matched_row = next(r for r in layer['selected_patterns'] if r['Event ID'] == pattern.event_id)
+    assert matched_row['AEP'] == 1.0
+    assert matched_row['Duration'] == 180
+
+
+def test_recommended_preburst_falls_back_to_same_duration_and_band(api_response_1990, monkeypatch, caplog):
+    # remove every 1% AEP row entirely (so the primary same-AEP/closest-duration
+    # fallback finds nothing), leaving the 2% row (also 'rare' band, per aep_band) at
+    # the same duration (30min) - the secondary fallback should pick it up for the
+    # *shape*, but the depth still uses the originally requested duration/AEP
+    # (30min/1%) against the ratio table, not the fallback row's own duration/AEP.
+    # (checked via the logged fallback message rather than the returned event_id,
+    # since the same historical event/Event ID can be reused across multiple AEPs at
+    # the same duration, e.g. both the 2% and 5% rows at 30min share an Event ID here.)
+    layer = api_response_1990.layer('RecPreburstTP')
+    rows = [r for r in layer['selected_patterns'] if r['AEP'] != 1.0]
+    monkeypatch.setitem(api_response_1990.layers['RecPreburstTP'], 'selected_patterns', rows)
+    with caplog.at_level('WARNING'):
+        pattern = recommended_preburst(api_response_1990, 30, '1%', 1.0, point_depth=100.0)
+    assert pattern is not None
+    assert 'falling back to the preburst pattern for 2.0% AEP/30min (same duration, same event rarity)' \
+        in caplog.text
+    assert pattern.depth == pytest.approx(0.037 * 100.0)
     assert pattern.depth == pytest.approx(0.037 * 100.0)
 
 
@@ -113,11 +136,11 @@ def test_recommended_preburst_for_aep_rarer_than_1pct_uses_1pct_pattern(api_resp
 
 
 def test_recommended_preburst_falls_back_to_closest_duration_same_band(api_response_1990):
-    # duration=120min has no 'frequent' band (50%/20%) rows in RecPreburstTP at all -
-    # falls back to the closest available duration with a 'frequent' band row (90min,
-    # 30min away, vs 180min which is 60min away). The shape (event_id/increments/
-    # timestep) comes from that 90min row, but the depth/ratio still uses the
-    # *originally requested* duration/AEP (120min/50%), not the fallback row's own.
+    # duration=120min has no 50% AEP row in RecPreburstTP at all - falls back (via the
+    # primary same-AEP fallback) to the closest available duration for 50% AEP itself
+    # (90min, 30min away, vs 180min which is 60min away). The shape (event_id/
+    # increments/timestep) comes from that 90min row, but the depth/ratio still uses
+    # the *originally requested* duration/AEP (120min/50%), not the fallback row's own.
     pattern = recommended_preburst(api_response_1990, 120, '50%', 50.0, point_depth=100.0)
     assert pattern is not None
     assert pattern.method == 'recommended'
@@ -163,9 +186,9 @@ def test_build_preburst_recommended_missing_raises(api_response_1990, monkeypatc
 
 
 def test_recommended_preburst_falls_back_to_closest_duration_below_min(api_response_1990):
-    # RecPreburstTP's shortest duration is 30min - duration=10 has no row at all (of
-    # any AEP/band), so falls back to the closest available duration (30min) sharing
-    # the same event rarity band ('rare', for 1% AEP) rather than returning None.
+    # RecPreburstTP's shortest duration is 30min - duration=10 has no row at all, so
+    # falls back (via the primary same-AEP fallback) to the closest available duration
+    # for 1% AEP itself (30min) rather than returning None.
     pattern = recommended_preburst(api_response_1990, 10, '1%', 1.0, point_depth=100.0)
     assert pattern is not None
     assert pattern.method == 'recommended'

@@ -322,15 +322,22 @@ Four preburst pattern methods are available (`preburst.pattern_method`):
   `"Use PB TP"` placeholder, since those cells have no fixed burst initial loss value to
   derive a preburst depth from another way. `RecPreburstTP` is only available in NSW
   (where the Data Hub provides this layer). If the Data Hub has no exact (Duration,
-  AEP) match in this layer, the preburst pattern with the same duration and the same
-  event rarity (AEP band - `"frequent"`/`"intermediate"`/`"rare"`) as the requested
-  event, whose *AEP* is closest to the requested one, is used instead as an assumed
-  proxy (a warning is logged) - e.g. for an AEP rarer than the rarest AEP available for
-  that band/duration (typically 1%), the 1% AEP pattern is used. If the Data Hub has
-  no `RecPreburstTP` data at all for that exact duration (e.g. very short durations
-  below its minimum of 30 min), the preburst pattern (of the same event rarity band)
-  whose *duration* is closest to the requested duration is used instead (a warning is
-  logged), rather than falling back to a point/design temporal pattern. Only if the
+  AEP) match in this layer, the preburst pattern for the *same* AEP as requested, whose
+  *duration* is closest to the requested duration, is used instead as an assumed proxy
+  (a warning is logged) - ties (two candidate durations equally close) are broken by
+  choosing the lower duration - e.g. a duration that falls between two durations the
+  Data Hub does have data for at this AEP (such as 270 min, between the Data Hub's 180
+  and 360 min rows) uses the 180 min pattern. If no row at all shares the requested AEP
+  (e.g. an AEP band the Data Hub has no `RecPreburstTP` data for whatsoever), the
+  preburst pattern with the same duration and the same event rarity (AEP band -
+  `"frequent"`/`"intermediate"`/`"rare"`) as the requested event, whose *AEP* is closest
+  to the requested one, is used instead (a warning is logged) - e.g. for an AEP rarer
+  than the rarest AEP available for that band/duration (typically 1%), the 1% AEP
+  pattern is used. If no row at all shares the requested duration either (e.g. very
+  short durations below the Data Hub's minimum of 30 min), the preburst pattern (of the
+  same event rarity band) whose *duration* is closest to the requested duration is used
+  instead (a warning is logged), rather than falling back to a point/design temporal
+  pattern. Only if the
   Data Hub has no `RecPreburstTP` data at all (e.g. any non-NSW location) does it fall
   back further still, to the `"temporal_pattern"` method below, using the (defaulted)
   `preburst.pattern_duration`/`pattern_tp`/`duration_proportional` (a warning is

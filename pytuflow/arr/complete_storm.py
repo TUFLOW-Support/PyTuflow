@@ -18,14 +18,14 @@ config):
   AEP/duration cells where the burst initial loss table returns the ``"Use PB TP"``
   placeholder (see :mod:`pytuflow.arr.engine`), since those cells have no fixed burst
   initial loss value to derive a preburst depth from. If the Data Hub has no exact
-  (Duration, AEP) match for this layer, the preburst pattern with the same duration
-  and the same event rarity (AEP band) as the requested event, whose AEP is *closest*
-  to the requested one, is used instead (a warning is logged) - see
-  :func:`recommended_preburst`. If the Data Hub has
-  no ``RecPreburstTP`` data at all for this exact duration (e.g. very short durations
-  below its minimum of 30 min), the preburst pattern (of the same event rarity band)
-  whose *duration* is closest to the requested duration is used instead (a warning is
-  logged) - see :func:`_closest_duration_and_band_row`. ``RecPreburstTP`` is an NSW-only
+  (Duration, AEP) match for this layer, the preburst pattern for the *same* AEP as
+  requested, whose *duration* is closest to the requested duration, is used instead (a
+  warning is logged) - see :func:`recommended_preburst`/
+  :func:`_closest_duration_same_aep_row`. If no row at all shares the requested AEP
+  (and, failing that, no row at all shares the requested duration), further fallbacks
+  based on the same event rarity (AEP band) are used instead - see
+  :func:`_same_duration_and_band_row`/:func:`_closest_duration_and_band_row`.
+  ``RecPreburstTP`` is an NSW-only
   layer - if the Data Hub has no ``RecPreburstTP`` data at all for the queried location
   (e.g. any non-NSW location), this falls back further still to shaping the preburst
   using ``preburst.pattern_duration``/``pattern_tp``/``duration_proportional`` (the same
@@ -118,6 +118,20 @@ def _nearest_row(df: pd.DataFrame, duration: float, aep_pct: float) -> Optional[
     return None
 
 
+def _closest_duration_same_aep_row(rows: list, duration: float, aep_pct: float) -> Optional[dict]:
+    """Primary fallback for :func:`recommended_preburst`, when no exact (Duration, AEP)
+    match is available: among ``selected_patterns`` rows for the *same* (exact) AEP as
+    requested, returns the one whose *duration* is closest to the requested duration,
+    breaking ties (two candidate durations equally close) by choosing the lower
+    duration. Returns ``None`` if no row at all shares the requested AEP."""
+    candidates = [row for row in rows if abs(float(row['AEP']) - aep_pct) < 1e-6]
+    if not candidates:
+        return None
+    min_dist = min(abs(float(row['Duration']) - duration) for row in candidates)
+    tied = [row for row in candidates if abs(float(row['Duration']) - duration) == min_dist]
+    return min(tied, key=lambda row: float(row['Duration']))
+
+
 def _same_duration_and_band_row(rows: list, duration: float, aep_name: str, aep_pct: float,
                                  output_notation: str) -> Optional[dict]:
     """Fallback for :func:`recommended_preburst`, when no exact (Duration, AEP) match is
@@ -162,19 +176,24 @@ def recommended_preburst(response: ArrApiResponse, duration: float, aep_name: st
     layer) for the given duration/AEP, to use as the preburst *shape* (increments/
     timestep). If no exact (Duration, AEP) match is available, falls back, in order:
 
-    1. The preburst pattern with the same duration and same event rarity (AEP band) as
-       the requested event, whose *AEP* is closest to the requested one (see
-       :func:`_same_duration_and_band_row`) - e.g. for an AEP rarer than the table's
-       rarest AEP for that band/duration (typically 1%), this uses that rarest AEP's
-       pattern.
-    2. If no row at all shares the requested duration, the preburst pattern (of the same
-       event rarity band) whose *duration* is closest to the requested duration (see
-       :func:`_closest_duration_and_band_row`) - e.g. for durations shorter than the
-       Data Hub's minimum ``RecPreburstTP`` duration of 30 min.
+    1. The preburst pattern for the *same* (exact) AEP as requested, whose *duration*
+       is closest to the requested duration (ties - two candidate durations equally
+       close - broken by choosing the lower duration) - see
+       :func:`_closest_duration_same_aep_row`. This is the primary fallback, e.g. for a
+       duration that falls between two durations the Data Hub does have data for at
+       this AEP (such as 270 min, between the Data Hub's 180 and 360 min rows).
+    2. If no row at all shares the requested AEP (e.g. an AEP band the Data Hub has no
+       ``RecPreburstTP`` data for whatsoever), the preburst pattern with the same
+       duration and the same event rarity (AEP band) as the requested event, whose
+       *AEP* is closest to the requested one (see :func:`_same_duration_and_band_row`).
+    3. If no row at all shares the requested duration either, the preburst pattern (of
+       the same event rarity band) whose *duration* is closest to the requested
+       duration (see :func:`_closest_duration_and_band_row`) - e.g. for durations
+       shorter than the Data Hub's minimum ``RecPreburstTP`` duration of 30 min.
 
-    A warning is logged whenever either fallback is used. Returns ``None`` if no match
-    is found at all (e.g. the Data Hub has no ``RecPreburstTP`` data for this event
-    rarity band whatsoever).
+    A warning is logged whenever any of these fallbacks is used. Returns ``None`` if no
+    match is found at all (e.g. the Data Hub has no ``RecPreburstTP`` data for this
+    event rarity band whatsoever).
 
     The preburst *depth* (magnitude) is not taken from ``RecPreburstTP`` at all - its
     own ``"Preburst Depth"``/``"Preburst Ratio"`` fields are not used, since the Data
@@ -189,6 +208,14 @@ def recommended_preburst(response: ArrApiResponse, duration: float, aep_name: st
         return None
     rows = layer['selected_patterns']
     row = _nearest_row(rows, duration, aep_pct)
+    if row is None:
+        row = _closest_duration_same_aep_row(rows, duration, aep_pct)
+        if row is not None:
+            logger.warning(
+                "No recommended preburst temporal pattern available for %s/%smin - falling back to the "
+                "preburst pattern for %s%% AEP/%smin (closest available duration, same AEP).",
+                aep_name, duration, row['AEP'], row['Duration'],
+            )
     if row is None:
         row = _same_duration_and_band_row(rows, duration, aep_name, aep_pct, output_notation)
         if row is not None:
