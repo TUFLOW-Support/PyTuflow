@@ -417,14 +417,30 @@ class ArrEngine:
         """The Data Hub's own storm initial loss (mm) for the given AEP percentage,
         ignoring ``losses.user_initial_loss`` - used as the reference value when
         proportionally scaling the burst initial loss table for a user-supplied storm
-        initial loss (see :meth:`_initial_loss`)."""
+        initial loss (see :meth:`_initial_loss`).
+
+        An AEP outside ``NewStormLosses``' own AEP row range - rarer than its rarest,
+        or more frequent than its most frequent (typically 50%-1% AEP; e.g. 63.2%
+        AEP/1 EY) - holds the nearest edge row's own storm initial loss constant,
+        mirroring how the burst initial loss table/preburst ratio are extrapolated at
+        those same edges (see :meth:`_extrapolate_edge_aep_loss`), rather than falling
+        back to the non-AEP-specific ``StormLossesNonNSW``/``StormLosses`` layers,
+        which aren't NSW's per-AEP storm initial loss dataset.
+        """
         new_losses = self.response.layer('NewStormLosses')
         if new_losses and 'losses' in new_losses:
-            for row in new_losses['losses']:
+            rows = new_losses['losses']
+            for row in rows:
                 if abs(_aep_str_to_pct(row['AEP']) - aep_pct) < 1e-6:
                     return float(row['Storm Initial Loss (mm)'])
+            row_aeps = [_aep_str_to_pct(row['AEP']) for row in rows]
+            if row_aeps and (aep_pct < min(row_aeps) or aep_pct > max(row_aeps)):
+                nearest_row = min(rows, key=lambda row: abs(_aep_str_to_pct(row['AEP']) - aep_pct))
+                return float(nearest_row['Storm Initial Loss (mm)'])
         # 'NewStormLosses' is NSW-only - non-NSW locations instead have a flat (not
-        # AEP-dependent) 'StormLossesNonNSW' summary value.
+        # AEP-dependent) 'StormLossesNonNSW' summary value. Also used as a last-resort
+        # fallback for an NSW AEP that falls strictly *within* NewStormLosses' own AEP
+        # range but isn't itself one of its rows (an interior gap, not an edge).
         non_nsw_losses = self.response.layer('StormLossesNonNSW')
         if non_nsw_losses and 'Storm Initial Losses (mm)' in non_nsw_losses:
             return float(non_nsw_losses['Storm Initial Losses (mm)'])

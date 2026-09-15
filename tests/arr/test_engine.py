@@ -120,8 +120,9 @@ def test_initial_loss_extrapolates_for_aep_rarer_than_table(api_response_1990):
     # should be derived by holding the preburst ratio constant at the 1% AEP edge
     # (the RecPreburst layer's rarest column - preburst.percentile defaults to
     # 'recommended') and applying it against the *actual* (not clamped) point design
-    # depth at 0.5% AEP - falling back to the single (non-AEP-dependent) 'StormLosses'
-    # scalar for the storm initial loss, since 'NewStormLosses' also has no 0.5% AEP row.
+    # depth at 0.5% AEP - holding NewStormLosses' own rarest (1%) row's storm initial
+    # loss constant too, rather than falling back to the non-AEP-specific
+    # 'StormLosses' scalar.
     engine = ArrEngine(
         make_config(events={'aep': ['0.5%'], 'duration': [1440], 'output_notation': 'ari'}),
         api_response_1990,
@@ -129,8 +130,8 @@ def test_initial_loss_extrapolates_for_aep_rarer_than_table(api_response_1990):
     value = engine._initial_loss(1440, '0.5%', [1440])
     # RecPreburst ratio at (1440min, 1% AEP, the rarest available column) == 0.359;
     # point depth at (1440min, 0.5% AEP) from the 1990 baseline IFD table == 325.0;
-    # storm initial loss falls back to the StormLosses scalar == 66.0.
-    assert value == pytest.approx(66.0 - 0.359 * 325.0)
+    # storm initial loss holds NewStormLosses' own 1% AEP row constant == 20.0.
+    assert value == pytest.approx(20.0 - 0.359 * 325.0)
 
 
 def test_initial_loss_does_not_extrapolate_for_aep_within_table(api_response_1990):
@@ -269,13 +270,15 @@ def test_engine_run_extrapolates_rare_aep_and_records_it(api_response_1990):
     # 0.5% AEP is rarer than the burst/storm loss tables' rarest (1%) column - the
     # engine should still assemble the event (rather than raising or silently reusing
     # the 1% column's raw value), and record it in extrapolated_loss_table alongside
-    # any short-duration extrapolations.
+    # any short-duration extrapolations. The storm initial loss holds NewStormLosses'
+    # own rarest (1%) row constant (20.0), rather than falling back to the
+    # non-AEP-specific 'StormLosses' scalar.
     config = make_config(events={'aep': ['0.5%'], 'duration': [1440], 'output_notation': 'ari'})
     engine = ArrEngine(config, api_response_1990)
     results = engine.run()
     assert len(results) == 1
     r = results[0]
-    assert r.initial_loss == pytest.approx(66.0 - 0.359 * 325.0)
+    assert r.initial_loss == pytest.approx(20.0 - 0.359 * 325.0)
     table = engine.extrapolated_loss_table[None]
     assert list(table.index) == [1440.0]
     assert 0.5 in table.columns
@@ -286,17 +289,43 @@ def test_engine_run_extrapolates_frequent_aep_and_records_it(api_response_1990):
     # 63.2% AEP (1 EY) is more frequent than the burst/storm loss tables' most frequent
     # (50%) column - mirroring the rare-AEP side, the engine should still assemble the
     # event via the preburst-ratio formula (rather than silently reusing the 50%
-    # column's raw value unchanged), and record it in extrapolated_loss_table.
+    # column's raw value unchanged), and record it in extrapolated_loss_table. The
+    # storm initial loss holds NewStormLosses' own most frequent (50%) row constant
+    # (20.0), rather than falling back to the non-AEP-specific 'StormLosses' scalar.
     config = make_config(events={'aep': ['1EY'], 'duration': [1440], 'output_notation': 'ari'})
     engine = ArrEngine(config, api_response_1990)
     results = engine.run()
     assert len(results) == 1
     r = results[0]
-    assert r.initial_loss == pytest.approx(66.0 - 0.048 * 85.2)
+    assert r.initial_loss == pytest.approx(20.0 - 0.048 * 85.2)
     table = engine.extrapolated_loss_table[None]
     assert list(table.index) == [1440.0]
     assert 63.21 in table.columns
     assert table.loc[1440.0, 63.21] == pytest.approx(r.initial_loss)
+
+
+def test_storm_initial_loss_datahub_holds_edge_row_constant_not_generic_fallback(api_response_1990):
+    # give NewStormLosses' rows distinct (non-flat) values so the edge-row-held-
+    # constant behaviour is unambiguously distinguishable from the generic
+    # 'StormLosses' scalar fallback.
+    new_losses = api_response_1990.layer('NewStormLosses')
+    values = {'1%': 15.0, '2%': 16.0, '5%': 17.0, '10%': 18.0, '20%': 19.0, '50%': 20.0}
+    for row in new_losses['losses']:
+        row['Storm Initial Loss (mm)'] = values[row['AEP']]
+    engine = ArrEngine(
+        make_config(events={'aep': ['1%'], 'duration': [1440], 'output_notation': 'ari'}),
+        api_response_1990,
+    )
+    # rarer than NewStormLosses' rarest (1%) row -> holds the 1% row (15.0) constant
+    assert engine._storm_initial_loss_pct_datahub(0.5) == pytest.approx(15.0)
+    # more frequent than NewStormLosses' most frequent (50%) row -> holds the 50% row
+    # (20.0) constant
+    assert engine._storm_initial_loss_pct_datahub(63.21) == pytest.approx(20.0)
+    # an exact match is still used directly, regardless of the edge logic
+    assert engine._storm_initial_loss_pct_datahub(5.0) == pytest.approx(17.0)
+    # an AEP strictly within NewStormLosses' own range but not one of its rows (an
+    # interior gap, not an edge) still falls back to the generic 'StormLosses' scalar
+    assert engine._storm_initial_loss_pct_datahub(3.0) == pytest.approx(66.0)
 
 
 def test_engine_applies_climate_change_loss_factors(api_response_1990, monkeypatch):
