@@ -798,3 +798,55 @@ def test_engine_seq_percentile_recommended_falls_back_to_50_percent(api_response
     expected = _preburst_ratio(api_response_seq, '50%', 60, 1.0)
     assert ratio == pytest.approx(expected)
     assert any('RecPreburst' in rec.message for rec in caplog.records)
+
+
+def test_interp_table_uses_true_log_log_interpolation():
+    # a synthetic table with values that are an exact power-law function of duration
+    # and AEP (i.e. linear in log10(duration)/log10(aep)/log10(value) space) should be
+    # interpolated exactly by true log-log interpolation - a plain log-x/linear-y
+    # (semi-log) interpolation of the same table would NOT reproduce these values
+    # exactly, so this also guards against regressing to the old semi-log behaviour.
+    import pandas as pd
+
+    from pytuflow.arr.engine import _interp_table
+
+    durations = [60.0, 180.0, 360.0]
+    aeps = [1.0, 10.0]
+    # value = duration ** -0.3 * aep ** 0.5 (a pure power-law surface)
+    data = [[d ** -0.3 * a ** 0.5 for a in aeps] for d in durations]
+    df = pd.DataFrame(data, index=durations, columns=aeps)
+
+    # interpolate at a duration/AEP not on the grid, in the interior of both axes
+    out = _interp_table(df, [120.0], [3.0])
+    expected = 120.0 ** -0.3 * 3.0 ** 0.5
+    assert float(out.iloc[0, 0]) == pytest.approx(expected, rel=1e-9)
+
+    # an exact grid match should return the literal table value, bypassing interpolation
+    out_exact = _interp_table(df, [180.0], [10.0])
+    assert float(out_exact.iloc[0, 0]) == pytest.approx(df.loc[180.0, 10.0], rel=1e-12)
+
+
+def test_interp_table_handles_zero_values_without_error():
+    # a table containing a literal 0.0 (e.g. a preburst ratio table's long-duration
+    # entries) must not raise/produce nan/inf, and an exact match on the zero cell
+    # itself must return exactly 0.0 (not the internal log-floor value).
+    import numpy as np
+    import pandas as pd
+
+    from pytuflow.arr.engine import _interp_table
+
+    durations = [60.0, 180.0, 360.0]
+    aeps = [1.0, 10.0]
+    df = pd.DataFrame(
+        [[0.9, 0.5], [0.6, 0.3], [0.0, 0.1]], index=durations, columns=aeps
+    )
+
+    # exact match on the zero cell
+    out_exact = _interp_table(df, [360.0], [1.0])
+    assert float(out_exact.iloc[0, 0]) == 0.0
+
+    # interpolating near the zero cell should be finite and small, not nan/inf
+    out_interp = _interp_table(df, [270.0], [1.0])
+    value = float(out_interp.iloc[0, 0])
+    assert np.isfinite(value)
+    assert 0 <= value < 0.6

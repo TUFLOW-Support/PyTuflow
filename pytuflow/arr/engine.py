@@ -63,15 +63,32 @@ def _table_to_frame(table: dict) -> pd.DataFrame:
     return df.sort_index().sort_index(axis=1)
 
 
+#: Values <= 0 in a duration x AEP table (e.g. a preburst ratio table's genuinely zero
+#: entries for very long durations) can't be log-transformed - they're floored to this
+#: tiny positive constant before taking log10, so log-log interpolation stays well
+#: defined; the interpolated result for a bracket next to such an entry ends up
+#: extremely small (practically negligible) rather than exactly zero. Exact (Duration,
+#: AEP) grid matches are restored to their literal table value afterwards regardless
+#: (see below), so a requested duration/AEP that lands exactly on a zero table entry
+#: still returns exactly ``0.0``, not this floor value.
+_LOG_INTERP_FLOOR = 1e-6
+
+
 def _interp_table(df: pd.DataFrame, durations: list, aep_pcts: list) -> pd.DataFrame:
     """Log-log interpolates a duration x AEP table onto the requested durations/AEPs -
-    both the duration and AEP axes are transformed to log10 first, then linearly
-    interpolated (i.e. ``np.interp`` against log10(duration) and log10(aep) axes),
-    matching the legacy script's log-log interpolation of IFD depths. Used for both
-    IFD/rainfall depth tables and preburst ratio tables (see
-    :func:`pytuflow.arr.complete_storm._preburst_ratio`), so interpolating either the
-    preburst ratio or the preburst depth directly (ratio x point depth) for the same
-    duration/AEP gives the same result.
+    both the duration/AEP axes *and* the table's values are transformed to log10
+    first, then linearly interpolated (i.e. ``np.interp`` against log10(duration)/
+    log10(aep) axes and log10(value)), and the result is transformed back
+    (``10 ** result``) - matching true log-log (power-law) interpolation, as used for
+    ARR IFD depth tables. Used for both IFD/rainfall depth tables and preburst ratio
+    tables (see :func:`pytuflow.arr.complete_storm._preburst_ratio`), so interpolating
+    either the preburst ratio or the preburst depth directly (ratio x point depth) for
+    the same duration/AEP gives the same result.
+
+    An exact (Duration, AEP) match in the table (including a value of exactly ``0.0``,
+    which can't be log-transformed - see :data:`_LOG_INTERP_FLOOR`) is always returned
+    as its literal table value, bypassing interpolation (and the log/``10**`` round
+    trip) entirely.
 
     Values outside the range of the table are clamped to the nearest edge value (no
     extrapolation) - callers needing extrapolation (e.g. short-duration losses) must
@@ -82,16 +99,36 @@ def _interp_table(df: pd.DataFrame, durations: list, aep_pcts: list) -> pd.DataF
     target_log_dur = np.log10(np.array(durations, dtype=float))
     target_log_aep = np.log10(np.array(aep_pcts, dtype=float))
 
+    values = df.values.astype(float)
+    log_values = np.log10(np.where(values > 0, values, _LOG_INTERP_FLOOR))
+
     # interpolate across AEP for every known duration row first
     aep_interp = np.empty((df.shape[0], len(aep_pcts)))
     for i in range(df.shape[0]):
-        row = df.iloc[i].values.astype(float)
+        row = log_values[i, :]
         aep_interp[i, :] = np.interp(target_log_aep, log_aep, row)
 
     # then interpolate across duration for every requested aep column
-    out = np.empty((len(durations), len(aep_pcts)))
+    out_log = np.empty((len(durations), len(aep_pcts)))
     for j in range(len(aep_pcts)):
-        out[:, j] = np.interp(target_log_dur, log_dur, aep_interp[:, j])
+        out_log[:, j] = np.interp(target_log_dur, log_dur, aep_interp[:, j])
+
+    out = 10 ** out_log
+
+    # restore exact (Duration, AEP) grid matches to their literal table value, bypassing
+    # the log/10** round trip (this also correctly restores a literal 0.0 table value,
+    # which was floored to _LOG_INTERP_FLOOR above purely for the log transform).
+    dur_index = df.index.values.astype(float)
+    aep_columns = df.columns.values.astype(float)
+    for oi, dur in enumerate(durations):
+        dur_matches = np.nonzero(np.isclose(dur_index, float(dur)))[0]
+        if not len(dur_matches):
+            continue
+        for oj, aep in enumerate(aep_pcts):
+            aep_matches = np.nonzero(np.isclose(aep_columns, float(aep)))[0]
+            if not len(aep_matches):
+                continue
+            out[oi, oj] = values[dur_matches[0], aep_matches[0]]
 
     return pd.DataFrame(out, index=durations, columns=[str(a) for a in aep_pcts])
 
