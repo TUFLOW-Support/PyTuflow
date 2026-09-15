@@ -299,7 +299,7 @@ class ArrEngine:
             burst_il = storm_il - preburst_ratio(percentile, duration, aep) * point_depth(ifd.baseline_year)
 
         matching the same preburst-based derivation used elsewhere (see
-        :meth:`_fill_placeholder_adjacent_gaps`, :meth:`_extrapolate_rare_aep_loss`). If
+        :meth:`_fill_placeholder_adjacent_gaps`, :meth:`_extrapolate_edge_aep_loss`). If
         the recalculated value would be negative (the preburst rainfall alone exceeds
         the storm initial loss), the cell is set to the ``"Use PB TP"`` placeholder
         instead, forcing complete storm assembly for that cell - matching the Data
@@ -542,7 +542,7 @@ class ArrEngine:
           would not make sense for a gap bracketed by (or adjacent to) a
           ``"Use PB TP"`` placeholder cell - every missing duration/AEP cell is instead
           derived directly via :meth:`_derive_burst_loss_via_ratio`, the same way as
-          :meth:`_recompute_burst_losses_for_ifd_year`/:meth:`_extrapolate_rare_aep_loss`,
+          :meth:`_recompute_burst_losses_for_ifd_year`/:meth:`_extrapolate_edge_aep_loss`,
           never interpolating the burst loss table's own values. Applied uniformly
           regardless of whether the bracketing/neighbouring cells are numeric or already
           ``"Use PB TP"`` placeholders.
@@ -582,12 +582,13 @@ class ArrEngine:
         return result.sort_index()
 
 
-    def _extrapolate_rare_aep_loss(self, burst_losses: pd.DataFrame, duration: float, aep_pct: float,
+    def _extrapolate_edge_aep_loss(self, burst_losses: pd.DataFrame, duration: float, aep_pct: float,
                                     durations: list) -> float:
-        """Computes the burst initial loss for an AEP rarer than the Data Hub's burst
-        initial loss table's rarest column (e.g. rarer than the 1% AEP that
-        ``BurstLossesNew``/``BurstIL``/``NewStormLosses`` are limited to). Dispatches on
-        ``losses.method``:
+        """Computes the burst initial loss for an AEP outside the Data Hub's burst
+        initial loss table's AEP column range - either rarer than its rarest (smallest
+        %) column, or more frequent than its most frequent (largest %) column, e.g.
+        63.2% AEP (1 EY) when ``BurstLossesNew``/``BurstIL``/``NewStormLosses`` only
+        extend from 50% down to 1% AEP. Dispatches on ``losses.method``:
 
         * ``"recommended"`` (``BurstLossesNew``) - holds the preburst ratio constant
           beyond that edge and applies it against the actual (not clamped) point design
@@ -599,20 +600,24 @@ class ArrEngine:
           for these AEPs and ultimately falls back to a burst initial loss of 0), the
           preburst ratio table (``Preburst<percentile>``/``RecPreburst``) is looked up
           via :func:`complete_storm._preburst_ratio`, which log-log interpolates and
-          clamps to the nearest edge value beyond the table's rarest AEP column -
-          i.e. it naturally "holds the ratio constant" without any extra code here.
-          The point design depth, however, is *not* clamped - the Data Hub's IFD table
-          extends to much rarer AEPs (e.g. 0.05%) than the loss tables do, so the actual
-          (log-log interpolated) point depth at the requested AEP is used.
+          clamps to the nearest edge value beyond the table's rarest/most-frequent AEP
+          column - i.e. it naturally "holds the ratio constant" without any extra code
+          here. The point design depth, however, is *not* clamped - the Data Hub's IFD
+          table extends to both rarer (e.g. 0.05%) and more frequent AEPs than the loss
+          tables do, so the actual (log-log interpolated) point depth at the requested
+          AEP is used.
         * ``"probability_neutral"`` (``BurstIL``) - unlike ``BurstLossesNew``, this
           table is not derived from preburst depths/ratios at all (see
           :meth:`_burst_loss_frame`), so there is no principled preburst-based way to
-          extrapolate it. Instead, the nearest (rarest) available AEP column's own raw
-          loss value is held constant (at the requested duration, gap-filled via
+          extrapolate it. Instead, the nearest (rarest, or most frequent, matching
+          which edge was exceeded) available AEP column's own raw loss value is held
+          constant (at the requested duration, gap-filled via
           :meth:`_derive_missing_duration_burst_losses` if needed, clamped to the
           nearest available duration if the requested duration falls outside the
           table's own duration range entirely).
         """
+        available_aeps = [float(c) for c in burst_losses.columns]
+        is_rare_edge = aep_pct < min(available_aeps)
         if self.config.losses.method == 'probability_neutral':
             filled = self._derive_missing_duration_burst_losses(burst_losses, durations)
             if duration in filled.index:
@@ -622,8 +627,8 @@ class ArrEngine:
                 # (handled separately by `losses.extrapolation_method`) - clamp to the
                 # nearest available duration rather than attempting to extrapolate here.
                 row_duration = min(filled.index, key=lambda d: abs(float(d) - duration))
-            nearest_aep_col = min(filled.columns, key=lambda c: float(c))
-            return float(filled.loc[row_duration, nearest_aep_col])
+            edge_aep_col = (min if is_rare_edge else max)(filled.columns, key=lambda c: float(c))
+            return float(filled.loc[row_duration, edge_aep_col])
         from .complete_storm import _preburst_ratio
         percentile = self.config.preburst.percentile
         ratio = _preburst_ratio(self.response, percentile, duration, aep_pct)
@@ -656,16 +661,17 @@ class ArrEngine:
                 'initial_loss': value,
             })
             return value
-        # AEPs rarer than the burst loss table's rarest (smallest %) column have no
-        # burst/storm initial loss data at all in the Data Hub (the loss tables are
-        # limited to 50%-1% AEP, unlike the IFD depth table, which extends much
-        # further) - hold the preburst ratio constant beyond that edge (or, for
-        # 'probability_neutral', the nearest AEP column's raw loss value - see
-        # _extrapolate_rare_aep_loss) instead of silently reusing the 1% AEP column's
-        # raw loss value unchanged.
+        # AEPs outside the burst loss table's AEP column range - either rarer than its
+        # rarest (smallest %), or more frequent than its most frequent (largest %,
+        # typically 50%, e.g. 63.2% AEP/1 EY) - have no burst/storm initial loss data
+        # at all in the Data Hub (the loss tables are limited to 50%-1% AEP, unlike the
+        # IFD depth table, which extends much further in both directions) - hold the
+        # preburst ratio constant beyond that edge (or, for 'probability_neutral', the
+        # nearest AEP column's raw loss value - see _extrapolate_edge_aep_loss) instead
+        # of silently reusing the nearest column's raw loss value unchanged.
         available_aeps = [float(c) for c in burst_losses.columns]
-        if available_aeps and aep_pct < min(available_aeps):
-            value = self._extrapolate_rare_aep_loss(burst_losses, duration, aep_pct, durations)
+        if available_aeps and (aep_pct < min(available_aeps) or aep_pct > max(available_aeps)):
+            value = self._extrapolate_edge_aep_loss(burst_losses, duration, aep_pct, durations)
             self._extrapolated_loss_records.append({
                 'cc_scenario': scenario_label,
                 'duration': duration,

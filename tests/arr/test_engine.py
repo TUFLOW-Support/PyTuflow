@@ -282,6 +282,23 @@ def test_engine_run_extrapolates_rare_aep_and_records_it(api_response_1990):
     assert table.loc[1440.0, 0.5] == pytest.approx(r.initial_loss)
 
 
+def test_engine_run_extrapolates_frequent_aep_and_records_it(api_response_1990):
+    # 63.2% AEP (1 EY) is more frequent than the burst/storm loss tables' most frequent
+    # (50%) column - mirroring the rare-AEP side, the engine should still assemble the
+    # event via the preburst-ratio formula (rather than silently reusing the 50%
+    # column's raw value unchanged), and record it in extrapolated_loss_table.
+    config = make_config(events={'aep': ['1EY'], 'duration': [1440], 'output_notation': 'ari'})
+    engine = ArrEngine(config, api_response_1990)
+    results = engine.run()
+    assert len(results) == 1
+    r = results[0]
+    assert r.initial_loss == pytest.approx(66.0 - 0.048 * 85.2)
+    table = engine.extrapolated_loss_table[None]
+    assert list(table.index) == [1440.0]
+    assert 63.21 in table.columns
+    assert table.loc[1440.0, 63.21] == pytest.approx(r.initial_loss)
+
+
 def test_engine_applies_climate_change_loss_factors(api_response_1990, monkeypatch):
     """Climate change scenario events should have their initial/continuing loss scaled
     by the Data Hub's 'ClimateChange' loss adjustment factors, relative to the base
@@ -512,7 +529,7 @@ def test_engine_probability_neutral_uses_plain_linear_interpolation_for_missing_
 def test_engine_probability_neutral_extrapolation_holds_nearest_aep_column_constant(api_response_1990):
     # AEPs rarer than BurstIL's rarest (1%) column should hold that column's raw loss
     # value constant, rather than extrapolating via preburst ratio (which is
-    # meaningless for BurstIL - see _burst_loss_frame/_extrapolate_rare_aep_loss).
+    # meaningless for BurstIL - see _burst_loss_frame/_extrapolate_edge_aep_loss).
     config = make_config(
         events={'aep': ['0.5%'], 'duration': [1440], 'output_notation': 'ari'},
         ifd={'baseline_year': 2030},
@@ -522,6 +539,21 @@ def test_engine_probability_neutral_extrapolation_holds_nearest_aep_column_const
     results = engine.run()
     assert len(results) == 1
     expected = api_response_1990.layer('BurstIL')['data'][7][-1]  # duration 1440, aep '1.0'
+    assert results[0].initial_loss == pytest.approx(expected)
+
+
+def test_engine_probability_neutral_extrapolation_holds_most_frequent_aep_column_constant(api_response_1990):
+    # mirroring the rare-AEP side, an AEP more frequent than BurstIL's most frequent
+    # (50%) column should hold that column's raw loss value constant.
+    config = make_config(
+        events={'aep': ['1EY'], 'duration': [1440], 'output_notation': 'ari'},
+        ifd={'baseline_year': 2030},
+        losses={'method': 'probability_neutral'},
+    )
+    engine = ArrEngine(config, api_response_1990)
+    results = engine.run()
+    assert len(results) == 1
+    expected = api_response_1990.layer('BurstIL')['data'][7][0]  # duration 1440, aep '50.0'
     assert results[0].initial_loss == pytest.approx(expected)
 
 
