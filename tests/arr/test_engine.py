@@ -84,11 +84,15 @@ def test_engine_drops_negligible_preburst_and_falls_back_to_burst(api_response_1
 
 def test_engine_drops_negligible_preburst_for_placeholder_cell_uses_storm_il(api_response_1990):
     # 20%/1440min is a 'Use PB TP' placeholder cell (no fixed burst initial loss) - if
-    # its preburst ratio (from the Preburst50 table) is also negligible, the engine
-    # should fall back to the full storm initial loss (since no burst initial loss is
-    # available to fall back to). preburst.percentile is pinned to '50%' here (rather
-    # than relying on the 'recommended' default) so the Preburst50 monkeypatch below is
-    # actually used to derive the ratio.
+    # its preburst ratio (from the Preburst50 table) is also negligible, the burst
+    # initial loss recalculated from the preburst ratio (storm_il - ratio * point_depth)
+    # should be very close to (but not necessarily bit-for-bit equal to) the full storm
+    # initial loss. preburst.percentile is pinned to '50%' here (rather than relying on
+    # the 'recommended' default) so the Preburst50 monkeypatch below is actually used to
+    # derive the ratio.
+    from pytuflow.arr.complete_storm import _preburst_ratio
+    from pytuflow.arr.engine import _interp_table, _table_to_frame
+
     layer = api_response_1990.layer('Preburst50')
     idx = layer['index'].index(1440)
     col = layer['columns'].index(20.0)
@@ -100,7 +104,14 @@ def test_engine_drops_negligible_preburst_for_placeholder_cell_uses_storm_il(api
     assert len(results) == 1
     r = results[0]
     assert r.preburst is None
-    assert r.initial_loss == pytest.approx(engine._storm_initial_loss('20%'))
+
+    baseline_ifd = engine._ifd_frame(1990, None)
+    point_depth = float(_interp_table(baseline_ifd, [1440.0], [20.0]).iloc[0, 0])
+    ratio = _preburst_ratio(api_response_1990, '50%', 1440.0, 20.0)
+    storm_il = engine._storm_initial_loss('20%')
+    expected = storm_il - ratio * point_depth
+    assert expected == pytest.approx(storm_il, abs=5e-3)  # negligible ratio -> nearly the full storm IL
+    assert r.initial_loss == pytest.approx(expected)
 
 
 def test_initial_loss_extrapolates_for_aep_rarer_than_table(api_response_1990):

@@ -265,10 +265,11 @@ class ArrEngine:
         Hub's own convention, but now based on the *configured* preburst ratio rather
         than the Data Hub's own recommended one, so switching ``preburst.percentile``
         can change whether a given cell triggers complete storm assembly, as expected.
-        ``"Use PB TP"`` placeholder cells (already flagged as such by the Data Hub) are
-        left untouched (they already trigger complete storm assembly, which derives its
-        own preburst depth against the correct ``ifd.baseline_year`` baseline - see
-        :func:`complete_storm.build_preburst`).
+        This is applied uniformly to every cell in the table's domain, including cells
+        the Data Hub itself already flagged as ``"Use PB TP"`` - that flag is only ever
+        valid for the Data Hub's own recommended percentile, so it must be
+        recalculated (and may become numeric instead) for a different configured
+        ``preburst.percentile`` just like any other cell.
         """
         from .complete_storm import _preburst_ratio
         baseline_ifd = self._ifd_frame(self.config.ifd.baseline_year, None)
@@ -280,9 +281,6 @@ class ArrEngine:
         for dur in burst_losses.index:
             duration = float(dur)
             for col in burst_losses.columns:
-                value = burst_losses.loc[dur, col]
-                if not (isinstance(value, (int, float)) and not pd.isna(value)):
-                    continue  # "Use PB TP" placeholder - left untouched
                 aep_pct = float(col)
                 point_depth = float(_interp_table(baseline_ifd, [duration], [aep_pct]).iloc[0, 0])
                 ratio = _preburst_ratio(self.response, percentile, duration, aep_pct)
