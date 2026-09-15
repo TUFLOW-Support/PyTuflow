@@ -64,10 +64,14 @@ def _table_to_frame(table: dict) -> pd.DataFrame:
 
 
 def _interp_table(df: pd.DataFrame, durations: list, aep_pcts: list) -> pd.DataFrame:
-    """Log-linearly interpolates (in duration) and linearly interpolates (in AEP, on a
-    log scale) a duration x AEP table onto the requested durations/AEPs. Uses numpy's
-    ``interp`` against log10(duration) and log10(aep) axes, matching the legacy script's
-    log-log interpolation of IFD depths.
+    """Log-log interpolates a duration x AEP table onto the requested durations/AEPs -
+    both the duration and AEP axes are transformed to log10 first, then linearly
+    interpolated (i.e. ``np.interp`` against log10(duration) and log10(aep) axes),
+    matching the legacy script's log-log interpolation of IFD depths. Used for both
+    IFD/rainfall depth tables and preburst ratio tables (see
+    :func:`pytuflow.arr.complete_storm._preburst_ratio`), so interpolating either the
+    preburst ratio or the preburst depth directly (ratio x point depth) for the same
+    duration/AEP gives the same result.
 
     Values outside the range of the table are clamped to the nearest edge value (no
     extrapolation) - callers needing extrapolation (e.g. short-duration losses) must
