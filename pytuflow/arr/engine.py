@@ -287,7 +287,7 @@ class ArrEngine:
                 storm_il = self._storm_initial_loss_pct_datahub(aep_pct)
                 recalculated = storm_il - ratio * point_depth
                 if recalculated < 0:
-                    logger.info(
+                    logger.debug(
                         "Duration %s min, AEP %s%%: recalculated burst initial loss for ifd.baseline_year=%s (storm "
                         "initial loss %.3f mm - preburst depth %.3f mm = %.3f mm) is negative - treating this "
                         "cell as 'Use PB TP' (complete storm assembly required).", dur, aep_pct,
