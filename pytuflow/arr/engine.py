@@ -519,7 +519,7 @@ class ArrEngine:
         storm_il = self._storm_initial_loss_pct_datahub(aep_pct)
         implied_burst_loss = storm_il - ratio * point_depth
         if implied_burst_loss < 0:
-            logger.info(
+            logger.debug(
                 "Duration %s min, AEP %s%%: implied burst initial loss (storm initial loss %.3f mm - "
                 "preburst depth %.3f mm = %.3f mm) is negative - treating this cell as 'Use PB TP' "
                 "(complete storm assembly required).", duration, aep_pct, storm_il, ratio * point_depth,
