@@ -670,12 +670,25 @@ class ArrEngine:
                     f"NSW-only), and the derived burst initial loss for {aep_name}/{duration}min would be "
                     f"negative (the preburst rainfall alone exceeds the storm initial loss)."
                 )
-            self._extrapolated_loss_records.append({
-                'cc_scenario': scenario_label,
-                'duration': duration,
-                'aep_pct': aep_pct,
-                'initial_loss': value,
-            })
+            # only record this cell as "extrapolated" if the requested duration/AEP is
+            # actually outside the underlying preburst ratio table's own range (rarer/
+            # more frequent than its AEP columns, or shorter/longer than its duration
+            # rows) - otherwise every cell would be flagged, since there's no
+            # BurstLossesNew/BurstIL table to compare against at all for this location,
+            # even though most cells here are a plain in-range lookup, not a genuine
+            # edge-case extrapolation.
+            from .complete_storm import _preburst_ratio_frame
+            ratio_table = _preburst_ratio_frame(self.response, self.config.preburst.percentile)
+            table_durations = [float(d) for d in ratio_table.index]
+            table_aeps = [float(c) for c in ratio_table.columns]
+            if (duration < min(table_durations) or duration > max(table_durations)
+                    or aep_pct < min(table_aeps) or aep_pct > max(table_aeps)):
+                self._extrapolated_loss_records.append({
+                    'cc_scenario': scenario_label,
+                    'duration': duration,
+                    'aep_pct': aep_pct,
+                    'initial_loss': value,
+                })
             return value
         # AEPs outside the burst loss table's AEP column range - either rarer than its
         # rarest (smallest %), or more frequent than its most frequent (largest %,

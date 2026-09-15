@@ -820,6 +820,35 @@ def test_engine_seq_missing_burst_loss_table_does_not_crash(api_response_seq):
     assert r.initial_loss > 0
 
 
+def test_engine_seq_missing_burst_loss_table_only_records_genuinely_extrapolated_cells(api_response_seq):
+    # with no 'BurstLossesNew' table at all, every cell is derived directly from the
+    # preburst ratio (see _derive_burst_loss_via_ratio) - but only durations/AEPs
+    # actually outside the underlying 'Preburst50' ratio table's own range (30-4320min,
+    # 1%-50% AEP) should be recorded as "extrapolated"; in-range cells are a plain
+    # lookup/interpolation, not an extrapolation, even though there's no raw
+    # BurstLossesNew table to compare them against.
+    config = make_config_seq(
+        events={'aep': ['1%', '50%', '63.2%'], 'duration': [10, 60, 4320], 'output_notation': 'ari'},
+    )
+    engine = ArrEngine(config, api_response_seq)
+    engine.run()
+    import pandas as pd
+
+    table = engine.extrapolated_loss_table[None]
+    # duration=10 (shorter than the table's 30min minimum) is extrapolated for every AEP
+    assert set(table.loc[10.0].dropna().index) == {1.0, 50.0, 63.2}
+    # AEP=63.2% (rarer... more frequent than the table's 50% maximum) is extrapolated
+    # for every duration, including in-range durations
+    assert table[63.2].notna().all()
+    # duration=60/AEP=1% and duration=60/AEP=50% are both fully in-range - not extrapolated
+    assert pd.isna(table.loc[60.0, 1.0])
+    assert pd.isna(table.loc[60.0, 50.0])
+    # duration=4320/AEP=1% and duration=4320/AEP=50% are both fully in-range (the
+    # table's own longest duration) - not extrapolated
+    assert pd.isna(table.loc[4320.0, 1.0])
+    assert pd.isna(table.loc[4320.0, 50.0])
+
+
 def test_engine_seq_pattern_method_none_zeroes_burst_loss_instead_of_crashing(api_response_seq, caplog):
     config = make_config_seq(
         events={'aep': ['1%'], 'duration': [1440], 'output_notation': 'ari'},

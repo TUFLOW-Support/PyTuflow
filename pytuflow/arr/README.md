@@ -296,7 +296,13 @@ control files:
   - rarer than the rarest, or more frequent than the most frequent (e.g. 63.2% AEP/1
   EY, typically more frequent than the tables' 50% AEP column) - provided column
   (always, regardless of `losses.extrapolation_method`) - for easy visual
-  comparison against the full burst initial loss table. One file per climate change
+  comparison against the full burst initial loss table. For a location with no
+  `BurstLossesNew`/`BurstIL` table at all (see `method` above), every cell is derived
+  directly from the preburst ratio, but only durations/AEPs outside the underlying
+  `Preburst<percentile>`/`RecPreburst` ratio table's own range are recorded here - a
+  duration/AEP within that table's range is a plain lookup/interpolation, not a genuine
+  extrapolation, even though `<site>_burst_initial_loss...csv` is empty in this case
+  (there's no raw Data Hub table to write). One file per climate change
   scenario (if enabled); a scenario's file is omitted entirely if nothing was
   extrapolated for it.
 * `<site>_PointTP_Increments.csv` / `<site>_ArealTP_Increments.csv` - the raw temporal

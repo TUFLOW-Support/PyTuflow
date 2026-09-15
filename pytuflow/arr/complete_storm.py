@@ -259,6 +259,22 @@ def recommended_preburst(response: ArrApiResponse, duration: float, aep_name: st
 
 
 
+def _preburst_ratio_frame(response: ArrApiResponse, percentile: str) -> pd.DataFrame:
+    """Returns the raw duration x AEP preburst ratio table (``Preburst<percentile>``,
+    or ``RecPreburst`` if ``percentile == 'recommended'`` and available - see
+    :func:`_preburst_ratio`) as a :class:`pandas.DataFrame`, without interpolating -
+    used to check whether a given duration/AEP falls inside or outside the table's own
+    range (see :meth:`pytuflow.arr.engine.ArrEngine._initial_loss`)."""
+    from .engine import _table_to_frame  # local import - avoids a cycle
+    key = 'RecPreburst' if percentile == 'recommended' else f'Preburst{percentile.strip("%")}'
+    table = response.layer(key)
+    if table is None and key == 'RecPreburst':
+        table = response.layer('Preburst50', required=True)
+    elif table is None:
+        raise ArrError(f"ARR Data Hub response is missing the '{key}' preburst ratio layer.")
+    return _table_to_frame(table)
+
+
 def _preburst_ratio(response: ArrApiResponse, percentile: str, duration: float, aep_pct: float) -> float:
     """Interpolates the preburst ratio (fraction of point burst depth) from the
     ``Preburst<percentile>`` layer (or, if ``percentile == 'recommended'``, the
