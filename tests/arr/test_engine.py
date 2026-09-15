@@ -550,26 +550,38 @@ def test_engine_additional_tp_merges_other_region_patterns(api_response_1990, mo
 
 
 def test_engine_user_initial_loss_scales_burst_losses(api_response_1990):
-    # Data Hub burst initial loss for 50%/1440min is 14.8mm; Data Hub storm initial
-    # loss for 50% is 20mm - user_initial_loss=10 halves the storm loss, so the burst
-    # loss should also be halved (7.4mm), preserving the relative reduction shape.
+    # Burst initial loss for 50%/1440min is always recalculated from the preburst
+    # ratio (storm_il - preburst_ratio * point_depth), regardless of baseline year -
+    # Data Hub storm initial loss for 50% is 20mm - user_initial_loss=10 halves the
+    # storm loss, so the (recalculated) burst loss should also be halved, preserving
+    # the relative reduction shape.
+    from pytuflow.arr.complete_storm import _preburst_ratio
+    from pytuflow.arr.engine import _interp_table, _table_to_frame
+
     config = make_config(
         events={'aep': ['50%'], 'duration': [1440], 'output_notation': 'ari'},
-        ifd={'baseline_year': 2030},  # avoid the ifd.baseline_year != 2030 burst loss recalculation
+        ifd={'baseline_year': 2030},
         losses={'user_initial_loss': 10.0},
     )
     engine = ArrEngine(config, api_response_1990)
     results = engine.run()
     assert len(results) == 1
-    assert results[0].initial_loss == pytest.approx(7.4)
+
+    baseline_ifd = _table_to_frame(api_response_1990.ifd_table(2030))
+    point_depth = float(_interp_table(baseline_ifd, [1440.0], [50.0]).iloc[0, 0])
+    ratio = _preburst_ratio(api_response_1990, '50%', 1440.0, 50.0)
+    storm_il = 20.0  # Data Hub storm initial loss for 50% AEP
+    expected_full_burst_il = storm_il - ratio * point_depth
+    assert results[0].initial_loss == pytest.approx(expected_full_burst_il / 2)
 
 
 def test_engine_recalculates_burst_losses_for_non_2030_ifd_year(api_response_1990):
-    # BurstLossesNew/BurstIL are only ever provided by the Data Hub against the 2030
-    # ("current") baseline - when a different `ifd.baseline_year` is selected, every numeric
-    # burst initial loss cell should instead be recalculated as
+    # BurstLossesNew/BurstIL are only ever computed by the Data Hub against its own
+    # recommended preburst percentile and the 2030 ("current") baseline - every numeric
+    # burst initial loss cell is always recalculated as
     # storm_il - preburst_ratio(percentile, duration, aep) * point_depth(ifd.baseline_year),
-    # rather than the raw (2030-based) BurstLossesNew value being used unmodified.
+    # using the configured percentile/baseline year, rather than the Data Hub's raw
+    # value being used unmodified. This test exercises a non-2030 baseline year.
     from pytuflow.arr.complete_storm import _preburst_ratio
     from pytuflow.arr.engine import _interp_table, _table_to_frame
 
@@ -589,6 +601,46 @@ def test_engine_recalculates_burst_losses_for_non_2030_ifd_year(api_response_199
     # sanity check: differs from the raw (2030-based) BurstLossesNew value of 14.8mm
     assert expected != pytest.approx(14.8)
     assert results[0].initial_loss == pytest.approx(expected)
+
+
+def test_engine_burst_loss_recalculated_at_2030_baseline_for_configured_percentile(api_response_1990):
+    # Even at the default `ifd.baseline_year=2030`, `BurstLossesNew`'s raw numeric
+    # value (14.8mm for 50%/1440min) is only ever consistent with the Data Hub's own
+    # *recommended* preburst percentile - it must always be recalculated against the
+    # *configured* `preburst.percentile`, so different percentiles give different
+    # results (and neither necessarily matches the raw 14.8mm value), and the
+    # complete-storm trigger stays consistent with whichever percentile is chosen.
+    from pytuflow.arr.complete_storm import _preburst_ratio
+    from pytuflow.arr.engine import _interp_table, _table_to_frame
+
+    baseline_ifd = _table_to_frame(api_response_1990.ifd_table(2030))
+    point_depth = float(_interp_table(baseline_ifd, [1440.0], [50.0]).iloc[0, 0])
+    storm_il = 20.0  # Data Hub storm initial loss for 50% AEP
+
+    results_by_percentile = {}
+    for percentile in ('10%', '50%', '90%'):
+        config = make_config(
+            events={'aep': ['50%'], 'duration': [1440], 'output_notation': 'ari'},
+            ifd={'baseline_year': 2030},
+            preburst={'percentile': percentile},
+        )
+        engine = ArrEngine(config, api_response_1990)
+        results = engine.run()
+        assert len(results) == 1
+        ratio = _preburst_ratio(api_response_1990, percentile, 1440.0, 50.0)
+        expected = storm_il - ratio * point_depth
+        if expected < 0:
+            # negative recalculated burst loss -> 'Use PB TP' placeholder -> complete
+            # storm assembly triggered -> full (unreduced) storm initial loss used
+            expected = storm_il
+        assert results[0].initial_loss == pytest.approx(expected)
+        results_by_percentile[percentile] = results[0].initial_loss
+
+    # different percentiles must give different results here: 50% recalculates to a
+    # positive numeric burst loss, while 90% (a much larger preburst ratio) pushes the
+    # recalculated value negative, triggering complete storm assembly (full storm IL)
+    assert results_by_percentile['50%'] != pytest.approx(results_by_percentile['90%'])
+    assert results_by_percentile['50%'] != pytest.approx(14.8)  # raw BurstLossesNew value
 
 
 def test_engine_user_initial_loss_used_directly_for_complete_storm(api_response_1990):

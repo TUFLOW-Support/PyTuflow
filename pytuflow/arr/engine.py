@@ -188,15 +188,26 @@ class ArrEngine:
         ``losses.method``:
 
         * ``"recommended"`` - the Data Hub's newer burst initial loss table
-          (``BurstLossesNew``). Derived by the Data Hub (as storm initial loss minus
-          preburst depth) against the 2030 ("current") baseline IFD depths, regardless
-          of ``ifd.baseline_year`` - if a different baseline year has been selected, every
-          numeric cell is recalculated against that baseline's own point depths
-          instead - see :meth:`_recompute_burst_losses_for_ifd_year`. ``BurstLossesNew``
-          is NSW-only - for other locations, an empty table is returned instead of
-          raising, signalling to :meth:`_initial_loss` that every duration/AEP cell must
-          instead be derived directly from the preburst ratio and storm initial loss
-          (equivalent to every cell being a ``"Use PB TP"`` placeholder).
+          (``BurstLossesNew``) supplies the duration/AEP *grid* (which cells exist,
+          and which of those are the ``"Use PB TP"`` placeholder in the Data Hub's own
+          data), but every numeric cell's *value* - and therefore also whether it ends
+          up negative and so gets converted to the ``"Use PB TP"`` placeholder instead,
+          forcing complete storm assembly - is always recalculated directly from
+          ``storm initial loss - preburst.percentile ratio * point design depth``
+          (against the configured ``ifd.baseline_year``), rather than trusting the Data
+          Hub's own raw value - see :meth:`_recompute_burst_losses_for_ifd_year`. This
+          is necessary for consistency: the Data Hub's raw ``BurstLossesNew`` values
+          (and its own ``"Use PB TP"`` designation) are only ever computed against its
+          own recommended preburst percentile and the 2030 baseline - if
+          ``preburst.percentile`` or ``ifd.baseline_year`` is set differently, the raw
+          value/placeholder would be inconsistent with the configured preburst ratio,
+          and in particular whether complete storm assembly is triggered for a given
+          cell could silently disagree with what the configured percentile actually
+          implies. ``BurstLossesNew`` is NSW-only - for other locations, an empty table
+          is returned instead of raising, signalling to :meth:`_initial_loss` that every
+          duration/AEP cell must instead be derived directly from the preburst ratio and
+          storm initial loss (equivalent to every cell being a ``"Use PB TP"``
+          placeholder).
         * ``"probability_neutral"`` - the legacy (NSW-only) probability-neutral burst
           initial loss table (``BurstIL``). Raises :class:`ArrError` if the Data Hub
           hasn't provided this layer for the queried location (i.e. it's not in NSW) -
@@ -226,19 +237,23 @@ class ArrEngine:
             # exactly as it already does for individual 'Use PB TP' placeholder cells.
             return pd.DataFrame()
         burst_losses = _table_to_frame(table)
-        if self.config.ifd.baseline_year != 2030:
-            burst_losses = self._recompute_burst_losses_for_ifd_year(burst_losses)
-        return burst_losses
+        # always recalculate every numeric cell from the preburst ratio - see the
+        # docstring above and :meth:`_recompute_burst_losses_for_ifd_year` - not just
+        # when `ifd.baseline_year != 2030`, so the result stays consistent with
+        # whatever `preburst.percentile` is configured, regardless of baseline year.
+        return self._recompute_burst_losses_for_ifd_year(burst_losses)
 
     def _recompute_burst_losses_for_ifd_year(self, burst_losses: pd.DataFrame) -> pd.DataFrame:
         """The Data Hub's burst initial loss table (``BurstLossesNew``/``BurstIL``) is
-        only provided against the 2030 ("current") baseline IFD depths - it is derived
+        only computed by the Data Hub itself against its own recommended preburst
+        percentile and the 2030 ("current") baseline IFD depths - it is derived
         as the (duration-independent) storm initial loss minus a preburst depth, where
-        that preburst depth is itself the ``preburst.percentile`` ratio multiplied by
-        the 2030 baseline's point design depth. When a different ``ifd.baseline_year`` baseline
-        has been selected instead (e.g. 1990), that fixed 2030-based value no longer
-        applies, so every numeric cell is recalculated the same way but against the
-        chosen baseline's own point depths:
+        that preburst depth is itself a preburst ratio multiplied by the 2030
+        baseline's point design depth. Every numeric cell is always recalculated the
+        same way, but against the *configured* ``preburst.percentile`` and
+        ``ifd.baseline_year`` (rather than trusting the Data Hub's own raw value,
+        which is only ever consistent with its own recommended percentile and the
+        2030 baseline):
 
             burst_il = storm_il - preburst_ratio(percentile, duration, aep) * point_depth(ifd.baseline_year)
 
@@ -247,9 +262,13 @@ class ArrEngine:
         the recalculated value would be negative (the preburst rainfall alone exceeds
         the storm initial loss), the cell is set to the ``"Use PB TP"`` placeholder
         instead, forcing complete storm assembly for that cell - matching the Data
-        Hub's own convention. ``"Use PB TP"`` placeholder cells are left untouched (they
-        already trigger complete storm assembly, which derives its own preburst depth
-        against the correct ``ifd.baseline_year`` baseline - see :func:`complete_storm.build_preburst`).
+        Hub's own convention, but now based on the *configured* preburst ratio rather
+        than the Data Hub's own recommended one, so switching ``preburst.percentile``
+        can change whether a given cell triggers complete storm assembly, as expected.
+        ``"Use PB TP"`` placeholder cells (already flagged as such by the Data Hub) are
+        left untouched (they already trigger complete storm assembly, which derives its
+        own preburst depth against the correct ``ifd.baseline_year`` baseline - see
+        :func:`complete_storm.build_preburst`).
         """
         from .complete_storm import _preburst_ratio
         baseline_ifd = self._ifd_frame(self.config.ifd.baseline_year, None)
@@ -477,10 +496,10 @@ class ArrEngine:
         only has rows at 180 and 360 min. Dispatches on ``losses.method``:
 
         * ``"recommended"`` (``BurstLossesNew``) - rather than linearly interpolating
-          the table's raw (2030-baseline-derived) loss *values* between the two
+          the table's raw loss *values* between the two
           bracketing duration rows - which would be inconsistent with
-          :meth:`_recompute_burst_losses_for_ifd_year` (which recalculates every
-          numeric cell from the preburst ratio table when ``ifd.baseline_year != 2030``) and
+          :meth:`_recompute_burst_losses_for_ifd_year` (which always recalculates every
+          numeric cell from the preburst ratio table) and
           would not make sense for a gap bracketed by (or adjacent to) a
           ``"Use PB TP"`` placeholder cell - every missing duration/AEP cell is instead
           derived directly via :meth:`_derive_burst_loss_via_ratio`, the same way as
