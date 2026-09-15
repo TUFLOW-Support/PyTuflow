@@ -144,7 +144,6 @@ def constant_reference_loss(duration: Iterable[float], ref_value: float) -> np.n
     return np.full(d.shape, float(ref_value))
 
 
-
 def constant_preburst_ratio_loss(duration: Iterable[float], ratio: float, point_depths: Iterable[float],
                                   ils: float) -> np.ndarray:
     """Holds the implied *preburst ratio* (preburst depth / point design burst depth) at
