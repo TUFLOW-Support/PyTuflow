@@ -890,6 +890,62 @@ def test_engine_seq_percentile_recommended_falls_back_to_50_percent(api_response
     assert any('RecPreburst' in rec.message for rec in caplog.records)
 
 
+def test_engine_seq_extrapolation_method_applies_below_preburst_table_minimum_duration(api_response_seq):
+    # for a non-NSW location (no 'BurstLossesNew' table at all), durations shorter than
+    # the 'Preburst50' ratio table's own shortest duration (30 min) must still be
+    # extrapolated using `losses.extrapolation_method`, not silently derived directly
+    # from the preburst ratio (which has no data that short) - different extrapolation
+    # methods should therefore produce genuinely different results for the same
+    # short duration.
+    def loss_at_10min(method):
+        config = make_config_seq(
+            events={'aep': ['1%'], 'duration': [10, 30], 'output_notation': 'ari'},
+            losses={'extrapolation_method': method},
+        )
+        engine = ArrEngine(config, api_response_seq)
+        results = {r.duration: r for r in engine.run()}
+        return results[10.0].initial_loss, results[30.0].initial_loss
+
+    constant_10min, constant_30min = loss_at_10min('constant')
+    interp_10min, interp_30min = loss_at_10min('interpolate')
+    ratio_10min, ratio_30min = loss_at_10min('constant_preburst_ratio')
+
+    # the reference (30min) value is identical regardless of method (it's always
+    # derived directly from the preburst ratio, since it's in-range)
+    assert constant_30min == pytest.approx(interp_30min)
+    assert constant_30min == pytest.approx(ratio_30min)
+    # 'constant' holds the 30min value flat
+    assert constant_10min == pytest.approx(constant_30min)
+    # 'interpolate' and 'constant_preburst_ratio' both differ from the flat value, and
+    # from each other
+    assert interp_10min != pytest.approx(constant_30min)
+    assert ratio_10min != pytest.approx(constant_30min)
+    assert interp_10min != pytest.approx(ratio_10min)
+
+
+def test_engine_seq_extrapolation_method_none_raises_below_preburst_table_minimum(api_response_seq):
+    config = make_config_seq(
+        events={'aep': ['1%'], 'duration': [10], 'output_notation': 'ari'},
+        losses={'extrapolation_method': 'none'},
+    )
+    engine = ArrEngine(config, api_response_seq)
+    with pytest.raises(ArrError, match='extrapolate below'):
+        engine.run()
+
+
+def test_engine_seq_extrapolated_losses_recorded_below_preburst_table_minimum(api_response_seq):
+    config = make_config_seq(
+        events={'aep': ['1%'], 'duration': [10, 30], 'output_notation': 'ari'},
+        losses={'extrapolation_method': 'interpolate'},
+    )
+    engine = ArrEngine(config, api_response_seq)
+    results = {r.duration: r for r in engine.run()}
+    table = engine.extrapolated_loss_table[None]
+    # only duration=10 (shorter than the ratio table's 30min minimum) is recorded
+    assert list(table.index) == [10.0]
+    assert table.loc[10.0, 1.0] == pytest.approx(results[10.0].initial_loss)
+
+
 def test_interp_table_uses_true_log_log_interpolation():
     # a synthetic table with values that are an exact power-law function of duration
     # and AEP (i.e. linear in log10(duration)/log10(aep)/log10(value) space) should be

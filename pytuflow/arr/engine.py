@@ -667,35 +667,95 @@ class ArrEngine:
         if burst_losses.empty:
             # no per-duration/AEP burst initial loss table exists at all for this
             # location/method (e.g. 'BurstLossesNew' is NSW-only, and is missing
-            # entirely for other locations - see _burst_loss_frame) - derive this cell
-            # directly from the preburst ratio and storm initial loss, exactly as for an
-            # individual 'Use PB TP' placeholder cell in an existing table.
-            value = self._derive_burst_loss_via_ratio(duration, aep_pct)
-            if value == 'Use PB TP':
-                raise _NeedsCompleteStorm(
-                    f"No burst initial loss table is available for this location (e.g. 'BurstLossesNew' is "
-                    f"NSW-only), and the derived burst initial loss for {aep_name}/{duration}min would be "
-                    f"negative (the preburst rainfall alone exceeds the storm initial loss)."
-                )
-            # only record this cell as "extrapolated" if the requested duration/AEP is
-            # actually outside the underlying preburst ratio table's own range (rarer/
-            # more frequent than its AEP columns, or shorter/longer than its duration
-            # rows) - otherwise every cell would be flagged, since there's no
-            # BurstLossesNew/BurstIL table to compare against at all for this location,
-            # even though most cells here are a plain in-range lookup, not a genuine
-            # edge-case extrapolation.
+            # entirely for other locations - see _burst_loss_frame). Every duration
+            # within the underlying preburst ratio table's own duration range is still
+            # derived directly from the preburst ratio and storm initial loss, exactly
+            # as for an individual 'Use PB TP' placeholder cell in an existing table -
+            # but a duration *shorter* than the ratio table's own shortest duration (no
+            # preburst ratio data exists that short - typically 30 min) must instead be
+            # handled by `losses.extrapolation_method`, exactly as for a genuine
+            # BurstLossesNew/BurstIL table (see below) - it previously fell through to
+            # the same direct ratio-based derivation as in-range durations, silently
+            # ignoring `losses.extrapolation_method` entirely for non-NSW locations.
             from .complete_storm import _preburst_ratio_frame
             ratio_table = _preburst_ratio_frame(self.response, self.config.preburst.percentile)
             table_durations = [float(d) for d in ratio_table.index]
             table_aeps = [float(c) for c in ratio_table.columns]
-            if (duration < min(table_durations) or duration > max(table_durations)
-                    or aep_pct < min(table_aeps) or aep_pct > max(table_aeps)):
-                self._extrapolated_loss_records.append({
-                    'cc_scenario': scenario_label,
-                    'duration': duration,
-                    'aep_pct': aep_pct,
-                    'initial_loss': value,
-                })
+            threshold = min(table_durations)
+            aep_is_extrapolated = aep_pct < min(table_aeps) or aep_pct > max(table_aeps)
+
+            if duration >= threshold:
+                value = self._derive_burst_loss_via_ratio(duration, aep_pct)
+                if value == 'Use PB TP':
+                    raise _NeedsCompleteStorm(
+                        f"No burst initial loss table is available for this location (e.g. 'BurstLossesNew' is "
+                        f"NSW-only), and the derived burst initial loss for {aep_name}/{duration}min would be "
+                        f"negative (the preburst rainfall alone exceeds the storm initial loss)."
+                    )
+                # only record this cell as "extrapolated" if the requested AEP is
+                # actually outside the underlying preburst ratio table's own AEP column
+                # range - otherwise every cell would be flagged, since there's no
+                # BurstLossesNew/BurstIL table to compare against at all for this
+                # location, even though most cells here are a plain in-range lookup,
+                # not a genuine edge-case extrapolation.
+                if aep_is_extrapolated:
+                    self._extrapolated_loss_records.append({
+                        'cc_scenario': scenario_label,
+                        'duration': duration,
+                        'aep_pct': aep_pct,
+                        'initial_loss': value,
+                    })
+                return value
+
+            # duration shorter than the preburst ratio table's own shortest duration -
+            # no preburst ratio data exists this short, so fall back to
+            # `losses.extrapolation_method` (matching how a genuine BurstLossesNew/
+            # BurstIL table handles durations shorter than its own shortest duration),
+            # using the ratio-derived value at `threshold` as the extrapolation's single
+            # reference row/point.
+            losses_cfg = self.config.losses
+            if losses_cfg.extrapolation_method == 'none':
+                raise ArrError(
+                    f"No burst initial loss available for duration {duration} min - "
+                    f"set losses.extrapolation_method to extrapolate below {threshold} min."
+                )
+            ref_value = self._derive_burst_loss_via_ratio(threshold, aep_pct)
+            if ref_value == 'Use PB TP':
+                raise _NeedsCompleteStorm(
+                    f"No burst initial loss table is available for this location (e.g. 'BurstLossesNew' is "
+                    f"NSW-only), and the reference burst initial loss at the preburst ratio table's shortest "
+                    f"duration ({threshold} min) for {aep_name} would be negative (the preburst rainfall alone "
+                    f"exceeds the storm initial loss) - cannot extrapolate below {threshold} min from it."
+                )
+            col = aep_pct
+            known_losses = pd.DataFrame({col: [ref_value]}, index=[threshold])
+            ils = None
+            if losses_cfg.extrapolation_method in ('rahman', 'hill', 'interpolate_preburst',
+                                                     'log_interpolate_preburst', 'constant_preburst_ratio'):
+                ils = self._storm_initial_loss_pct_datahub(aep_pct)
+            point_depths = None
+            if losses_cfg.extrapolation_method == 'constant_preburst_ratio':
+                point_depths = self._point_depths_for_preburst_ratio([duration], threshold, [col])
+            extended = extrapolate_short_duration_losses(
+                known_losses, [duration], method=losses_cfg.extrapolation_method,
+                ils=ils, mar=losses_cfg.mar,
+                static_loss_value=losses_cfg.static_loss,
+                point_depths=point_depths,
+            )
+            value = extended.loc[duration, col]
+            try:
+                value = float(value)
+            except (TypeError, ValueError):
+                raise ArrError(
+                    f"Could not extrapolate the burst initial loss for {aep_name}/{duration}min using "
+                    f"losses.extrapolation_method == '{losses_cfg.extrapolation_method}' (see warnings above)."
+                )
+            self._extrapolated_loss_records.append({
+                'cc_scenario': scenario_label,
+                'duration': duration,
+                'aep_pct': aep_pct,
+                'initial_loss': value,
+            })
             return value
         # AEPs outside the burst loss table's AEP column range - either rarer than its
         # rarest (smallest %), or more frequent than its most frequent (largest %,
