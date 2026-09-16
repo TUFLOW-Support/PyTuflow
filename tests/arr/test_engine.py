@@ -940,3 +940,36 @@ def test_interp_table_handles_zero_values_without_error():
     value = float(out_interp.iloc[0, 0])
     assert np.isfinite(value)
     assert 0 <= value < 0.6
+
+
+def test_interp_table_log_values_false_uses_log_linear_interpolation():
+    # preburst ratio interpolation (log_values=False) log-interpolates the
+    # duration/AEP axes, but linearly interpolates the values themselves - a value
+    # that's an exact linear function of log10(duration) (at a fixed AEP) should be
+    # reproduced exactly, unlike true log-log interpolation which would not.
+    import numpy as np
+    import pandas as pd
+
+    from pytuflow.arr.engine import _interp_table
+
+    durations = [60.0, 180.0, 360.0]
+    aeps = [1.0, 10.0]
+    # value = 0.5 - 0.1 * log10(duration) (linear in log10(duration), fixed across AEP)
+    data = [[0.5 - 0.1 * np.log10(d) for _ in aeps] for d in durations]
+    df = pd.DataFrame(data, index=durations, columns=aeps)
+
+    out = _interp_table(df, [120.0], [1.0], log_values=False)
+    expected = 0.5 - 0.1 * np.log10(120.0)
+    assert float(out.iloc[0, 0]) == pytest.approx(expected, rel=1e-9)
+
+    # a genuinely zero value must interpolate cleanly without any log-floor artefact
+    df_zero = pd.DataFrame(
+        [[0.2, 0.2], [0.1, 0.1], [0.0, 0.0]], index=durations, columns=aeps
+    )
+    out_zero = _interp_table(df_zero, [270.0], [1.0], log_values=False)
+    value = float(out_zero.iloc[0, 0])
+    assert np.isfinite(value)
+    assert 0 <= value < 0.1
+    # exact zero grid match still returns exactly 0.0
+    out_exact_zero = _interp_table(df_zero, [360.0], [1.0], log_values=False)
+    assert float(out_exact_zero.iloc[0, 0]) == 0.0

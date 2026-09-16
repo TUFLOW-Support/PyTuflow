@@ -61,8 +61,10 @@ config):
 
 For the first three methods, the preburst depth is derived from the appropriate
 percentile preburst ratio table (``Preburst10``/``25``/``50``/``75``/``90``, selected by
-``preburst.percentile``), log-log interpolated (in duration and AEP, matching the IFD
-depth interpolation) and multiplied by the point (pre-ARF) design burst depth -
+``preburst.percentile``), log-linear interpolated (duration and AEP axes are
+log-interpolated, but the ratio values themselves are interpolated linearly, since a
+ratio can be exactly 0.0 - see :func:`_preburst_ratio`) and multiplied by the point
+(pre-ARF) design burst depth -
 matching the legacy script's use of ``PreBurst.get_depths()``. If
 ``preburst.percentile == "recommended"``, the Data Hub's ``RecPreburst`` layer (its
 preferred/recommended preburst ratio) is used instead - this is not necessarily the
@@ -199,7 +201,7 @@ def recommended_preburst(response: ArrApiResponse, duration: float, aep_name: st
     own ``"Preburst Depth"``/``"Preburst Ratio"`` fields are not used, since the Data
     Hub's ``"Preburst Depth"`` field is not actually a preburst depth. Instead, as with
     the ``"constant"``/``"temporal_pattern"`` methods, the depth is derived from the
-    ``percentile`` ratio table (log-log interpolated - see :func:`_preburst_ratio`)
+    ``percentile`` ratio table (log-linear interpolated - see :func:`_preburst_ratio`)
     multiplied by ``point_depth`` (the point design burst depth), which is therefore
     required.
     """
@@ -280,7 +282,8 @@ def _preburst_ratio(response: ArrApiResponse, percentile: str, duration: float, 
     ``Preburst<percentile>`` layer (or, if ``percentile == 'recommended'``, the
     ``RecPreburst`` layer - the Data Hub's preferred/recommended preburst ratio, which
     is not necessarily the same as the exact 50th percentile) for the given
-    duration/AEP, using the same log-log interpolation as the IFD depth tables.
+    duration/AEP, using log-linear interpolation (log10-transformed duration/AEP axes,
+    but linear ratio values - see `_interp_table`'s `log_values` parameter).
 
     ``RecPreburst`` is an NSW-only layer - for other locations (where it's absent),
     ``percentile == 'recommended'`` automatically falls back to the ``Preburst50``
@@ -298,7 +301,10 @@ def _preburst_ratio(response: ArrApiResponse, percentile: str, duration: float, 
     elif table is None:
         raise ArrError(f"ARR Data Hub response is missing the '{key}' preburst ratio layer.")
     df = _table_to_frame(table)
-    return float(_interp_table(df, [duration], [aep_pct]).iloc[0, 0])
+    # Log-linear (not log-log): duration and AEP axes are log-interpolated, but the
+    # ratio values themselves are interpolated linearly, since a preburst ratio can be
+    # exactly 0.0 (which can't be log-transformed). See `_interp_table`.
+    return float(_interp_table(df, [duration], [aep_pct], log_values=False).iloc[0, 0])
 
 
 def _figure_out_pb_duration(target_duration: float, pattern_duration: float, duration_proportional: bool,

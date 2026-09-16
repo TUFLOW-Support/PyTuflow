@@ -74,21 +74,24 @@ def _table_to_frame(table: dict) -> pd.DataFrame:
 _LOG_INTERP_FLOOR = 1e-6
 
 
-def _interp_table(df: pd.DataFrame, durations: list, aep_pcts: list) -> pd.DataFrame:
-    """Log-log interpolates a duration x AEP table onto the requested durations/AEPs -
-    both the duration/AEP axes *and* the table's values are transformed to log10
-    first, then linearly interpolated (i.e. ``np.interp`` against log10(duration)/
-    log10(aep) axes and log10(value)), and the result is transformed back
+def _interp_table(df: pd.DataFrame, durations: list, aep_pcts: list, log_values: bool = True) -> pd.DataFrame:
+    """Interpolates a duration x AEP table onto the requested durations/AEPs, using
+    log10-transformed duration/AEP axes (i.e. ``np.interp`` against log10(duration)/
+    log10(aep) axes) in both cases.
+
+    When ``log_values`` is ``True`` (the default), the table's values are *also*
+    log10-transformed before interpolating and the result is transformed back
     (``10 ** result``) - matching true log-log (power-law) interpolation, as used for
-    ARR IFD depth tables. Used for both IFD/rainfall depth tables and preburst ratio
-    tables (see :func:`pytuflow.arr.complete_storm._preburst_ratio`), so interpolating
-    either the preburst ratio or the preburst depth directly (ratio x point depth) for
-    the same duration/AEP gives the same result.
+    ARR IFD depth tables. When ``log_values`` is ``False``, the values are
+    interpolated linearly (on the log-log axes) without any log/``10**`` transform of
+    the values themselves - "log-linear" interpolation, used for preburst ratio tables
+    (see :func:`pytuflow.arr.complete_storm._preburst_ratio`), since a preburst ratio
+    can be exactly ``0.0`` (which can't be log-transformed without an arbitrary floor).
 
     An exact (Duration, AEP) match in the table (including a value of exactly ``0.0``,
-    which can't be log-transformed - see :data:`_LOG_INTERP_FLOOR`) is always returned
-    as its literal table value, bypassing interpolation (and the log/``10**`` round
-    trip) entirely.
+    which can't be log-transformed when ``log_values`` is ``True`` - see
+    :data:`_LOG_INTERP_FLOOR`) is always returned as its literal table value, bypassing
+    interpolation (and the log/``10**`` round trip, if applicable) entirely.
 
     Values outside the range of the table are clamped to the nearest edge value (no
     extrapolation) - callers needing extrapolation (e.g. short-duration losses) must
@@ -100,20 +103,23 @@ def _interp_table(df: pd.DataFrame, durations: list, aep_pcts: list) -> pd.DataF
     target_log_aep = np.log10(np.array(aep_pcts, dtype=float))
 
     values = df.values.astype(float)
-    log_values = np.log10(np.where(values > 0, values, _LOG_INTERP_FLOOR))
+    if log_values:
+        interp_values = np.log10(np.where(values > 0, values, _LOG_INTERP_FLOOR))
+    else:
+        interp_values = values
 
     # interpolate across AEP for every known duration row first
     aep_interp = np.empty((df.shape[0], len(aep_pcts)))
     for i in range(df.shape[0]):
-        row = log_values[i, :]
+        row = interp_values[i, :]
         aep_interp[i, :] = np.interp(target_log_aep, log_aep, row)
 
     # then interpolate across duration for every requested aep column
-    out_log = np.empty((len(durations), len(aep_pcts)))
+    out_interp = np.empty((len(durations), len(aep_pcts)))
     for j in range(len(aep_pcts)):
-        out_log[:, j] = np.interp(target_log_dur, log_dur, aep_interp[:, j])
+        out_interp[:, j] = np.interp(target_log_dur, log_dur, aep_interp[:, j])
 
-    out = 10 ** out_log
+    out = 10 ** out_interp if log_values else out_interp
 
     # restore exact (Duration, AEP) grid matches to their literal table value, bypassing
     # the log/10** round trip (this also correctly restores a literal 0.0 table value,
@@ -615,11 +621,12 @@ class ArrEngine:
           Unlike the legacy script (which has no burst/storm initial loss data at all
           for these AEPs and ultimately falls back to a burst initial loss of 0), the
           preburst ratio table (``Preburst<percentile>``/``RecPreburst``) is looked up
-          via :func:`complete_storm._preburst_ratio`, which log-log interpolates and
-          clamps to the nearest edge value beyond the table's rarest/most-frequent AEP
-          column - i.e. it naturally "holds the ratio constant" without any extra code
-          here. The point design depth, however, is *not* clamped - the Data Hub's IFD
-          table extends to both rarer (e.g. 0.05%) and more frequent AEPs than the loss
+          via :func:`complete_storm._preburst_ratio`, which log-linear interpolates
+          (log-transformed duration/AEP axes, linear ratio values) and clamps to the
+          nearest edge value beyond the table's rarest/most-frequent AEP column - i.e.
+          it naturally "holds the ratio constant" without any extra code here. The
+          point design depth, however, is *not* clamped - the Data Hub's IFD table
+          extends to both rarer (e.g. 0.05%) and more frequent AEPs than the loss
           tables do, so the actual (log-log interpolated) point depth at the requested
           AEP is used.
         * ``"probability_neutral"`` (``BurstIL``) - unlike ``BurstLossesNew``, this
@@ -710,9 +717,10 @@ class ArrEngine:
             return value
         # gap-fill any requested duration that falls within the table's duration range
         # but isn't itself one of its rows (e.g. 270 min, between rows at 180 and
-        # 360 min) - derived directly from the preburst ratio/point depth (log-log
-        # interpolated), never by interpolating the burst loss table's raw values -
-        # see _derive_missing_duration_burst_losses.
+        # 360 min) - derived directly from the preburst ratio/point depth (preburst
+        # ratio is log-linear interpolated; point depth is log-log interpolated),
+        # never by interpolating the burst loss table's raw values - see
+        # _derive_missing_duration_burst_losses.
         burst_losses = self._derive_missing_duration_burst_losses(burst_losses, durations)
         losses_cfg = self.config.losses
         threshold = float(burst_losses.index.min()) if not burst_losses.empty else None
