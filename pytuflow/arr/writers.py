@@ -160,8 +160,8 @@ def _tp_label(p, patterns: list) -> str:
     * ``temporal_patterns.all_point_tp`` selects patterns from more than one AEP band -
       each pattern's own band is appended, e.g. ``TP01_frequent``.
     * ``temporal_patterns.add_areal_tp`` adds extra sets of areal temporal patterns from
-      further area buckets - each additional set is suffixed with its 1-based index,
-      e.g. ``TP01_add1``.
+      further area buckets - each additional set is suffixed with its area,
+      e.g. ``TP01_area200``.
     * ``temporal_patterns.additional_tp`` adds patterns from other named TP regions -
       every pattern's own region is appended, including the site's own native region
       (not just the additional ones), whenever more than one region is actually
