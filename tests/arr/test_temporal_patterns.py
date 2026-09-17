@@ -130,8 +130,8 @@ def test_add_areal_tp_adds_next_closest_area_buckets(point_tp_csv, areal_tp_csv)
     assert len(default_patterns) == 10
     patterns = tps.patterns(720, '1%', add_areal_tp=1)
     assert len(patterns) == 20
-    assert {p.group for p in patterns} == {0, 1}
-    added = [p for p in patterns if p.group == 1]
+    assert {p.group for p in patterns} == {0, 100}
+    added = [p for p in patterns if p.group == 100]
     assert len(added) == 10
     # the added set should come from the next closest (500km2) area bucket, not the
     # catchment's own (200km2) bucket
@@ -144,7 +144,7 @@ def test_add_areal_tp_two_sets(point_tp_csv, areal_tp_csv):
     tps = TemporalPatternSet(point_df, areal_df, catchment_area=150)
     patterns = tps.patterns(720, '1%', add_areal_tp=2)
     assert len(patterns) == 30
-    assert sorted({p.group for p in patterns}) == [0, 1, 2]
+    assert sorted({p.group for p in patterns}) == [0, 100, 500]
 
 
 def test_add_areal_tp_limits_when_out_of_area_buckets(point_tp_csv, areal_tp_csv, caplog):
@@ -153,10 +153,10 @@ def test_add_areal_tp_limits_when_out_of_area_buckets(point_tp_csv, areal_tp_csv
     areal_df = parse_areal_tp_csv(areal_tp_csv)
     # catchment area maps to the largest (40,000km2) bucket - there is no larger bucket
     # to borrow additional patterns from.
-    tps = TemporalPatternSet(point_df, areal_df, catchment_area=40000)
+    tps = TemporalPatternSet(point_df, areal_df, catchment_area=150)
     with caplog.at_level(logging.WARNING):
-        patterns = tps.patterns(720, '1%', add_areal_tp=1)
-    assert len(patterns) == 10
+        patterns = tps.patterns(720, '1%', add_areal_tp=9)
+    assert len(patterns) == 90
     assert 'Limiting number of additional areal temporal patterns' in caplog.text
 
 

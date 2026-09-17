@@ -340,6 +340,7 @@ class TemporalPatternSet:
                  areal_tp_csv: Optional[str] = None) -> None:
         self.point_tp = point_tp
         self.areal_tp = areal_tp
+        self.catchment_area = catchment_area
         self.tp_area = nearest_areal_tp_area(catchment_area) if catchment_area is not None else None
         #: region name(s) present in the catchment's own (native) point temporal
         #: patterns, captured before any :meth:`add_region_patterns` calls - used to
@@ -415,7 +416,7 @@ class TemporalPatternSet:
         df = self.areal_tp[(self.areal_tp['area'] == area) & (self.areal_tp['duration'] == duration)]
         return df
 
-    def _additional_areal_patterns(self, duration: int, n: int) -> list:
+    def _additional_areal_patterns(self, catchment_area: float, duration: int, n: int) -> list:
         """Adds ``n`` additional sets of areal temporal patterns from the next ``n``
         closest (larger) catchment area buckets beyond the one actually used for this
         catchment (``temporal_patterns.add_areal_tp``) - e.g. ``n=1`` adds one extra set
@@ -425,16 +426,26 @@ class TemporalPatternSet:
         if self.tp_area is None or self.areal_tp is None:
             return results
         start = _AREAL_TP_AREAS.index(self.tp_area)
+        used_indexes = {start}
+        if n > len(_AREAL_TP_AREAS) - 1:
+            n = min(n, len(_AREAL_TP_AREAS) - 1)
+            logger.warning(
+                "Limiting number of additional areal temporal patterns to %d.", n
+            )
         added = 0
         for i in range(1, n + 1):
-            idx = start + i
-            if idx >= len(_AREAL_TP_AREAS):
-                logger.warning(
-                    "Limiting number of additional areal temporal patterns to %d (ran out of larger area "
-                    "buckets beyond %s km2).", added, self.tp_area,
-                )
-                break
+            # get unused areal tps
+            areal_tp_areas = [(i, x) for i, x in enumerate(_AREAL_TP_AREAS) if i not in used_indexes]
+            # take the difference and get the next closest
+            sorted_areas = sorted([(i, abs(catchment_area - x)) for i, x in areal_tp_areas], key=lambda x: x[0])
+            # if the area is an equidistance between 2 areal tps, use the larger
+            if len(sorted_areas) > 1 and sorted_areas[0][1] == sorted_areas[1][1]:
+                idx = sorted_areas[1][0]
+            else:
+                idx = sorted_areas[0][0]
+            used_indexes.add(idx)
             next_area = _AREAL_TP_AREAS[idx]
+
             candidates = self._areal_candidates(duration, next_area)
             if candidates.empty:
                 logger.warning(
@@ -445,7 +456,7 @@ class TemporalPatternSet:
             for r in candidates.sort_values('tp_number').itertuples():
                 results.append(TemporalPattern(
                     int(r.event_id), int(r.tp_number), float(r.timestep), r.increments, 'areal',
-                    region=r.region, group=i,
+                    region=r.region, group=_AREAL_TP_AREAS[idx],
                 ))
             added += 1
         return results
@@ -499,7 +510,7 @@ class TemporalPatternSet:
                 # native region) - matching the point pattern sort order below.
                 results.sort(key=lambda p: (p.region not in self._native_areal_regions, p.region, p.tp_number))
                 if add_areal_tp:
-                    results.extend(self._additional_areal_patterns(duration, add_areal_tp))
+                    results.extend(self._additional_areal_patterns(self.catchment_area, duration, add_areal_tp))
                 return results
             logger.warning(
                 "No areal temporal pattern available for duration %s min (area bucket %s km2) - "

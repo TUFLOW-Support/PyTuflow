@@ -175,7 +175,7 @@ def _tp_label(p, patterns: list) -> str:
     if len({q.band for q in patterns if q.band is not None}) > 1 and p.band:
         label += f'_{p.band}'
     if p.group:
-        label += f'_add{p.group}'
+        label += f'_area{p.group}'
     regions = {q.region for q in patterns if q.region is not None}
     if len(regions) > 1 and p.region:
         token = ''.join(ch for ch in p.region if ch.isalnum())

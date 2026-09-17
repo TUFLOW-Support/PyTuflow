@@ -599,7 +599,7 @@ def test_engine_add_areal_tp_adds_extra_patterns(api_response_1990):
     results = engine.run()
     assert len(results) == 1
     assert len(results[0].patterns) == 20
-    assert {p.group for p in results[0].patterns} == {0, 1}
+    assert {p.group for p in results[0].patterns} == {0, 100}
 
 
 def test_engine_additional_tp_merges_other_region_patterns(api_response_1990, monkeypatch, point_tp_csv):
