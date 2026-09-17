@@ -913,10 +913,14 @@ class ArrEngine:
 
                     preburst = None
                     needs_complete_storm = self.config.complete_storm
-                    il = None
-                    if not needs_complete_storm:
+                    il = 0.
+                    cl_factor = 1.
+                    if not needs_complete_storm and (ssp is None or self.config.losses.climate_change_method == 'burst'):
                         try:
                             il = self._initial_loss(duration, aep_name, durations, scenario_label=scenario_label)
+                            if ssp is not None:
+                                il_factor, cl_factor = self._cc_loss_factors(baseline_year, ssp)
+                                il = il * il_factor
                         except _NeedsCompleteStorm as e:
                             if (self.config.preburst.pattern_method or '').lower() == 'none':
                                 # 'none' disables auto complete storm assembly entirely -
@@ -933,6 +937,33 @@ class ArrEngine:
                                 logger.info(
                                     "%s/%smin requires complete storm assembly (%s) - automatically switching to "
                                     "complete storm for this event.", aep_name, duration, e
+                                )
+                                needs_complete_storm = True
+
+                    if not needs_complete_storm and ssp is not None and self.config.losses.climate_change_method == 'storm':
+                        from .complete_storm import _preburst_ratio
+                        il_factor, cl_factor = self._cc_loss_factors(baseline_year, ssp)
+                        storm_il_cc = self._storm_initial_loss_pct(aep_pct) * il_factor
+                        preburst_ratio = _preburst_ratio(self.response, self.config.preburst.percentile,
+                                                         duration, aep_pct)
+                        cc_preburst = depth_point * preburst_ratio
+                        il = storm_il_cc - cc_preburst
+                        if il < 0:
+                            if (self.config.preburst.pattern_method or '').lower() == 'none':
+                                # 'none' disables auto complete storm assembly entirely -
+                                # just set the burst initial loss to 0 for this cell
+                                # instead of building any preburst pattern.
+                                logger.warning(
+                                    "%s/%smin (%s) requires complete storm assembly, but "
+                                    "preburst.pattern_method == 'none' - setting the burst initial loss to 0 "
+                                    "for this event instead of assembling a complete storm.",
+                                    aep_name, duration, scenario_label
+                                )
+                                il = 0.0
+                            else:
+                                logger.info(
+                                    "%s/%smin (%s) requires complete storm assembly - automatically switching to "
+                                    "complete storm for this event.", aep_name, duration, scenario_label
                                 )
                                 needs_complete_storm = True
 
@@ -964,26 +995,11 @@ class ArrEngine:
                         else:
                             il = self._storm_initial_loss(aep_name)
 
-                    if ssp is not None:
-                        # apply the Data Hub's climate-change loss adjustment factors -
-                        # continuing loss is always simply factored. Initial loss
-                        # follows `losses.climate_change_method`: complete storm events
-                        # (which already use the full, unreduced storm initial loss)
-                        # and the "burst" method both just factor `il` directly; the
-                        # "storm" method instead re-derives the burst initial loss from
-                        # the climate-change-scaled storm initial loss minus a
-                        # climate-change preburst depth.
-                        il_factor, cl_factor = self._cc_loss_factors(baseline_year, ssp)
-                        cl = cl * cl_factor
-                        if needs_complete_storm or self.config.losses.climate_change_method == 'burst':
+                        if ssp is not None:
+                            il_factor, cl_factor = self._cc_loss_factors(baseline_year, ssp)
                             il = il * il_factor
-                        else:
-                            from .complete_storm import _preburst_ratio
-                            storm_il_cc = self._storm_initial_loss_pct(aep_pct) * il_factor
-                            preburst_ratio = _preburst_ratio(self.response, self.config.preburst.percentile,
-                                                              duration, aep_pct)
-                            cc_preburst = depth_point * preburst_ratio
-                            il = storm_il_cc - cc_preburst
+
+                    cl = cl * cl_factor
 
                     results.append(EventResult(
                         aep_name=aep_name, duration=duration, depth_point=depth_point,
