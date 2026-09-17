@@ -453,7 +453,7 @@ class TemporalPatternSet:
                     "(%s km2) - skipping additional areal temporal pattern set %d.", duration, next_area, i,
                 )
                 continue
-            for r in candidates.sort_values('tp_number').itertuples():
+            for r in candidates.itertuples():
                 results.append(TemporalPattern(
                     int(r.event_id), int(r.tp_number), float(r.timestep), r.increments, 'areal',
                     region=r.region, group=_AREAL_TP_AREAS[idx],
@@ -510,7 +510,9 @@ class TemporalPatternSet:
                 # native region) - matching the point pattern sort order below.
                 results.sort(key=lambda p: (p.region not in self._native_areal_regions, p.region, p.tp_number))
                 if add_areal_tp:
-                    results.extend(self._additional_areal_patterns(self.catchment_area, duration, add_areal_tp))
+                    add_tps = self._additional_areal_patterns(self.catchment_area, duration, add_areal_tp)
+                    add_tps.sort(key=lambda p: (p.region not in self._native_areal_regions, p.region, p.tp_number))
+                    results.extend(add_tps)
                 return results
             logger.warning(
                 "No areal temporal pattern available for duration %s min (area bucket %s km2) - "
