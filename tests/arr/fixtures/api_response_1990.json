@@ -77,7 +77,7 @@
             "url": "http://192.168.70.14:5000/static/temporal_patterns/Areal/Areal_ECsouth.zip"
         },
         "RecIFD": {
-            "Recommended Current (2030) Baseline": {
+            "Default Current (2030) Baseline": {
                 "index": [
                     5,
                     10,
@@ -498,7 +498,7 @@
                     ]
                 ]
             },
-            "Recommended Historical (1961-1990) Baseline": {
+            "Default Historical (1961-1990) Baseline": {
                 "index": [
                     5,
                     10,
@@ -919,7 +919,7 @@
                     ]
                 ]
             },
-            "Recommended Native Baseline": {
+            "Default Native Baseline": {
                 "index": [
                     5,
                     10,

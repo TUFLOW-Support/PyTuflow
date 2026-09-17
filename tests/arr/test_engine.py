@@ -335,7 +335,7 @@ def test_engine_applies_climate_change_loss_factors(api_response_1990, monkeypat
     'storm' method - now the default - is covered separately by
     test_engine_climate_change_storm_loss_method)."""
     rec_ifd = api_response_1990.layer('RecIFD')
-    base_table = rec_ifd['Recommended Historical (1961-1990) Baseline']
+    base_table = rec_ifd['Default Historical (1961-1990) Baseline']
     api_response_1990.layers['CCAdjIFDDatasets'] = {
         'BoM IFD Depths (2090 Baseline - SSP2)': base_table,
     }
@@ -375,7 +375,7 @@ def test_engine_climate_change_storm_loss_method(api_response_1990):
     than simply scaling the (baseline) burst initial loss by the climate change
     factor."""
     rec_ifd = api_response_1990.layer('RecIFD')
-    base_table = rec_ifd['Recommended Historical (1961-1990) Baseline']
+    base_table = rec_ifd['Default Historical (1961-1990) Baseline']
     api_response_1990.layers['CCAdjIFDDatasets'] = {
         'BoM IFD Depths (2090 Baseline - SSP2)': base_table,
     }
@@ -448,7 +448,7 @@ def test_engine_placeholder_adjacent_gap_positive_uses_derived_burst_loss(api_re
     from pytuflow.arr.complete_storm import _preburst_ratio
     from pytuflow.arr.engine import _interp_table, _table_to_frame
     rec_ifd = api_response_1990.layer('RecIFD')
-    ifd_df = _table_to_frame(rec_ifd['Recommended Historical (1961-1990) Baseline'])
+    ifd_df = _table_to_frame(rec_ifd['Default Historical (1961-1990) Baseline'])
     point_depth = float(_interp_table(ifd_df, [120], [50.0]).iloc[0, 0])
     ratio = _preburst_ratio(api_response_1990, '50%', 120, 50.0)
     expected = 20.0 - ratio * point_depth
