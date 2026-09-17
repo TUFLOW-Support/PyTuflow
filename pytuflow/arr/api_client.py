@@ -68,8 +68,8 @@ class ArrApiResponse:
         it (e.g. BoM, or LIMB for South East Queensland) is determined server-side."""
         rec_ifd = self.layer('RecIFD', required=True)
         key = {
-            1990: 'Recommended Historical (1961-1990) Baseline',
-            2030: 'Recommended Current (2030) Baseline',
+            1990: 'Default Historical (1961-1990) Baseline',
+            2030: 'Default Current (2030) Baseline',
         }.get(year)
         if key is None or key not in rec_ifd:
             raise ArrApiError(
