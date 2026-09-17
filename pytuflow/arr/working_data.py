@@ -110,3 +110,9 @@ def write_working_data(config: ArrConfig, response: ArrApiResponse, engine: ArrE
         path.write_text(info['csv'], encoding='utf-8', newline='')
         logger.info("Wrote additional temporal pattern region '%s' point temporal pattern increments to '%s'",
                     region_name, path)
+        areal_csv = info.get('areal_csv')
+        if areal_csv:
+            areal_path = out_path / f'{site}_ArealTP_Increments_{region_token}.csv'
+            areal_path.write_text(areal_csv, encoding='utf-8', newline='')
+            logger.info("Wrote additional temporal pattern region '%s' areal temporal pattern increments to '%s'",
+                        region_name, areal_path)

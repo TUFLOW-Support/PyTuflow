@@ -606,7 +606,7 @@ def test_engine_additional_tp_merges_other_region_patterns(api_response_1990, mo
     from pytuflow.arr import api_client as api_client_module
 
     def fake_fetch_point_tp_for_coords(self, lat, lon):
-        return {'url': 'https://example.invalid/wet_tropics_point_tp.zip'}, {'title': 'fake wet tropics response'}
+        return {'url': 'https://example.invalid/wet_tropics_point_tp.zip'}, None, {'title': 'fake wet tropics response'}
     monkeypatch.setattr(api_client_module.ArrApiClient, 'fetch_point_tp_for_coords', fake_fetch_point_tp_for_coords)
 
     config = make_config(
@@ -619,6 +619,40 @@ def test_engine_additional_tp_merges_other_region_patterns(api_response_1990, mo
     assert len(results[0].patterns) == 20
     regions = {p.region for p in results[0].patterns}
     assert 'Wet Tropics' in regions
+
+
+def test_engine_additional_tp_also_merges_into_areal_sourced_durations(api_response_1990, monkeypatch):
+    # previously, 'additional_tp' had no effect at all for durations where the site's
+    # own catchment triggers areal (not point) temporal patterns, since only the
+    # additional region's point patterns were ever fetched/merged - fetch_point_tp_for_
+    # coords now also returns an 'ArealTP' layer (if available), which should be merged
+    # into the areal side too, so 'additional_tp' still takes effect here.
+    from pytuflow.arr import api_client as api_client_module
+
+    def fake_fetch_point_tp_for_coords(self, lat, lon):
+        return (
+            {'url': 'https://example.invalid/wet_tropics_point_tp.zip'},
+            {'url': 'https://example.invalid/wet_tropics_Areal_tp.zip'},
+            {'title': 'fake wet tropics response'},
+        )
+    monkeypatch.setattr(api_client_module.ArrApiClient, 'fetch_point_tp_for_coords', fake_fetch_point_tp_for_coords)
+
+    # catchment_area=150 -> areal TP area bucket 200km2 is used; duration 720min has
+    # areal temporal patterns available in the fixture data (see
+    # test_engine_add_areal_tp_adds_extra_patterns).
+    config = make_config(
+        site={'name': '1', 'latitude': -33.9347, 'longitude': 150.8372, 'catchment_area': 150},
+        events={'aep': ['1%'], 'duration': [720], 'output_notation': 'ari'},
+        temporal_patterns={'additional_tp': ['Wet Tropics']},
+    )
+    engine = ArrEngine(config, api_response_1990)
+    results = engine.run()
+    assert len(results) == 1
+    patterns = results[0].patterns
+    assert all(p.source == 'areal' for p in patterns)
+    regions = {p.region for p in patterns}
+    assert 'Wet Tropics' in regions
+    assert len(regions) > 1  # native region(s) plus 'Wet Tropics'
 
 
 def test_engine_user_initial_loss_scales_burst_losses(api_response_1990):

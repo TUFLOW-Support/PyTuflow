@@ -222,16 +222,22 @@ class ArrApiClient:
 
 
     def fetch_point_tp_for_coords(self, lat: float, lon: float) -> tuple:
-        """Requests just the ``PointTP`` layer for arbitrary coordinates, used to fetch
-        an "additional" temporal pattern region's own point temporal patterns (see
-        ``temporal_patterns.additional_tp`` / :func:`pytuflow.arr.temporal_patterns.fetch_additional_region_point_tp`).
-        Returns a ``(point_tp_layer, raw_response)`` tuple: the raw ``PointTP`` layer
-        dict (with its download ``url``), and the full raw JSON response dict (kept
-        for optional verbose working-data output, see :mod:`pytuflow.arr.working_data`)."""
-        params = {'lat_coord': lat, 'lon_coord': lon, 'type': 'json', 'TemporalPatterns': 1}
+        """Requests the ``PointTP`` and ``ArealTP`` layers for arbitrary coordinates,
+        used to fetch an "additional" temporal pattern region's own point (and, if
+        available, areal) temporal patterns (see ``temporal_patterns.additional_tp`` /
+        :func:`pytuflow.arr.temporal_patterns.fetch_additional_region_point_tp`).
+        Returns a ``(point_tp_layer, areal_tp_layer, raw_response)`` tuple: the raw
+        ``PointTP`` layer dict (with its download ``url``), the raw ``ArealTP`` layer
+        dict likewise (``None`` if the Data Hub doesn't provide one for these
+        coordinates), and the full raw JSON response dict (kept for optional verbose
+        working-data output, see :mod:`pytuflow.arr.working_data`)."""
+        params = {
+            'lat_coord': lat, 'lon_coord': lon, 'type': 'json',
+            'TemporalPatterns': 1, 'ArealTemporalPatterns': 1,
+        }
         query = '&'.join(f'{k}={v}' for k, v in params.items())
         url = f'{self.base_url}?{query}'
-        logger.info('Requesting ARR Data Hub PointTP data for additional temporal pattern region: %s', url)
+        logger.info('Requesting ARR Data Hub PointTP/ArealTP data for additional temporal pattern region: %s', url)
         downloader = Downloader(url)
         downloader.download()
         if not downloader.ok():
@@ -244,4 +250,5 @@ class ArrApiClient:
         except json.JSONDecodeError as e:
             raise ArrApiError(f"ARR Data Hub response is not valid JSON: {e}") from e
         response = ArrApiResponse(data)
-        return response.layer('PointTP', required=True), data
+        return response.layer('PointTP', required=True), response.layer('ArealTP'), data
+

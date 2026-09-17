@@ -182,6 +182,51 @@ def test_add_region_patterns_merges_into_point_tp(point_tp_csv):
     assert 'Wet Tropics' in regions
 
 
+def test_add_region_patterns_merges_into_areal_tp(point_tp_csv, areal_tp_csv):
+    # additional_tp should also take effect for areal-sourced durations (previously it
+    # had no effect at all in that case, since only point patterns were ever merged).
+    point_df = parse_point_tp_csv(point_tp_csv)
+    areal_df = parse_areal_tp_csv(areal_tp_csv)
+    tp_area = nearest_areal_tp_area(150)
+    tps = TemporalPatternSet(point_df, areal_tp=areal_df, catchment_area=150)
+    duration = int(areal_df[areal_df['area'] == tp_area]['duration'].min())
+    default_patterns = tps.patterns(duration, '50%')
+    assert default_patterns
+    assert all(p.source == 'areal' for p in default_patterns)
+    native_count = len(default_patterns)
+    native_regions = {p.region for p in default_patterns}
+
+    other_region_areal_df = areal_df[
+        (areal_df['area'] == tp_area) & (areal_df['duration'] == duration)
+    ].copy()
+    other_region_areal_df['region'] = 'Wet Tropics'
+    other_region_point_df = point_df[point_df['duration'] == duration].copy()
+    other_region_point_df['region'] = 'Wet Tropics'
+    tps.add_region_patterns(other_region_point_df, other_region_areal_df)
+
+    combined_patterns = tps.patterns(duration, '50%')
+    assert all(p.source == 'areal' for p in combined_patterns)
+    assert len(combined_patterns) == native_count + len(other_region_areal_df)
+    regions = {p.region for p in combined_patterns}
+    assert 'Wet Tropics' in regions
+    assert native_regions <= regions
+    # native region patterns are listed first
+    assert combined_patterns[0].region in native_regions
+
+
+def test_add_region_patterns_areal_none_does_not_affect_areal_tp(point_tp_csv, areal_tp_csv):
+    # a region_areal_tp of None (e.g. a local CSV file additional_tp entry, which only
+    # ever supplies point patterns) must leave the existing areal_tp table untouched.
+    point_df = parse_point_tp_csv(point_tp_csv)
+    areal_df = parse_areal_tp_csv(areal_tp_csv)
+    tps = TemporalPatternSet(point_df, areal_tp=areal_df, catchment_area=150)
+    before = tps.areal_tp.copy()
+    other_region_df = point_df[point_df['duration'] == int(point_df['duration'].min())].copy()
+    other_region_df['region'] = 'Wet Tropics'
+    tps.add_region_patterns(other_region_df, None)
+    assert tps.areal_tp.equals(before)
+
+
 def test_temporal_pattern_set_from_files(tmp_path, point_tp_csv, areal_tp_csv):
     point_path = tmp_path / 'point.csv'
     point_path.write_text(point_tp_csv, encoding='utf-8', newline='')

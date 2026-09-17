@@ -392,8 +392,11 @@ class ArrEngine:
                     result = fetch_additional_region_point_tp(entry)
                 else:
                     result = load_additional_region_point_tp_csv(entry)
-                tp_set.add_region_patterns(result.dataframe)
-                self.additional_tp_responses[result.region] = {'raw': result.raw_response, 'csv': result.csv_text}
+                tp_set.add_region_patterns(result.dataframe, result.areal_dataframe)
+                self.additional_tp_responses[result.region] = {
+                    'raw': result.raw_response, 'csv': result.csv_text,
+                    'areal_csv': result.areal_csv_text,
+                }
             self._tp_set = tp_set
         return self._tp_set
 

@@ -239,20 +239,32 @@ class AdditionalRegionTP:
     the parsed point temporal pattern rows for the additional region, plus the raw ARR
     Data Hub JSON response (``None`` if loaded from a local CSV file rather than
     fetched from the Data Hub) and increments CSV text, kept for optional verbose
-    working-data output (see :mod:`pytuflow.arr.working_data`)."""
+    working-data output (see :mod:`pytuflow.arr.working_data`). ``areal_dataframe``/
+    ``areal_csv_text`` are likewise populated when the Data Hub provides an ``ArealTP``
+    layer for the additional region's representative coordinates (``None`` if not, or
+    if loaded from a local CSV file, which only supplies point patterns) - see
+    :meth:`TemporalPatternSet.add_region_patterns`."""
     region: str
     dataframe: pd.DataFrame
     csv_text: str
     raw_response: Optional[dict] = None
+    areal_dataframe: Optional[pd.DataFrame] = None
+    areal_csv_text: Optional[str] = None
 
 
 def fetch_additional_region_point_tp(region_name: str, base_url: Optional[str] = None) -> AdditionalRegionTP:
-    """Fetches and parses the point temporal patterns for a named additional TP region
-    (``temporal_patterns.additional_tp``), by issuing a separate ARR Data Hub API
-    request for that region's representative coordinates (see
-    :data:`TP_REGION_COORDS`). The resulting rows' ``region`` column is overwritten
-    with the title-cased ``region_name`` so they can be distinguished from the site's
-    own patterns downstream (see :meth:`TemporalPatternSet.add_region_patterns`)."""
+    """Fetches and parses the point (and, if available, areal) temporal patterns for a
+    named additional TP region (``temporal_patterns.additional_tp``), by issuing a
+    separate ARR Data Hub API request for that region's representative coordinates
+    (see :data:`TP_REGION_COORDS`). The resulting rows' ``region`` column is
+    overwritten with the title-cased ``region_name`` so they can be distinguished from
+    the site's own patterns downstream (see
+    :meth:`TemporalPatternSet.add_region_patterns`).
+
+    Areal patterns are included so that ``additional_tp`` also takes effect for
+    durations where the *site's own* catchment triggers areal (rather than point)
+    temporal patterns - previously, ``additional_tp`` had no effect at all for such
+    durations, since only point patterns were ever fetched for the additional region."""
     key = region_name.strip().lower()
     if key not in TP_REGION_COORDS:
         raise ArrError(
@@ -263,13 +275,23 @@ def fetch_additional_region_point_tp(region_name: str, base_url: Optional[str] =
     from .api_client import ArrApiClient
     client = ArrApiClient(base_url) if base_url else ArrApiClient()
     logger.info("Fetching additional temporal patterns for region '%s' (%s, %s).", region_name, lat, lon)
-    point_tp_layer, raw_response = client.fetch_point_tp_for_coords(lat, lon)
+    point_tp_layer, areal_tp_layer, raw_response = client.fetch_point_tp_for_coords(lat, lon)
     csv_text = _download_increments_csv(point_tp_layer['url'])
     df = parse_point_tp_csv(csv_text)
     df = df.copy()
     region_title = region_name.strip().title()
     df['region'] = region_title
-    return AdditionalRegionTP(region=region_title, dataframe=df, raw_response=raw_response, csv_text=csv_text)
+    areal_csv_text = None
+    areal_df = None
+    if areal_tp_layer is not None:
+        areal_csv_text = _download_increments_csv(areal_tp_layer['url'])
+        areal_df = parse_areal_tp_csv(areal_csv_text)
+        areal_df = areal_df.copy()
+        areal_df['region'] = region_title
+    return AdditionalRegionTP(
+        region=region_title, dataframe=df, raw_response=raw_response, csv_text=csv_text,
+        areal_dataframe=areal_df, areal_csv_text=areal_csv_text,
+    )
 
 
 def load_additional_region_point_tp_csv(csv_path: str) -> AdditionalRegionTP:
@@ -280,7 +302,11 @@ def load_additional_region_point_tp_csv(csv_path: str) -> AdditionalRegionTP:
     working-data output, or any other file in the same ARR Data Hub increments CSV
     format. Unlike :func:`fetch_additional_region_point_tp`, the region label is taken
     directly from the CSV's own ``Region`` column rather than overwritten, since the
-    file may already contain a meaningful region name (or several, if hand-assembled)."""
+    file may already contain a meaningful region name (or several, if hand-assembled).
+
+    This only ever supplies point patterns (``areal_dataframe`` is always ``None``) -
+    there is no local-file equivalent for areal patterns from this entry point; use
+    ``temporal_patterns.areal_tp_csv`` for the site's own areal patterns instead."""
     path = Path(csv_path)
     if not path.is_file():
         raise ArrError(f"Additional temporal pattern CSV file not found: '{csv_path}'")
@@ -320,6 +346,9 @@ class TemporalPatternSet:
         #: ensure native patterns are always sorted/output before any additional
         #: ``additional_tp`` region patterns (see :meth:`patterns`).
         self._native_point_regions = set(point_tp['region'].unique()) if point_tp is not None and not point_tp.empty else set()
+        #: as `_native_point_regions`, but for the catchment's own (native) areal
+        #: temporal patterns - used the same way, for areal-sourced durations.
+        self._native_areal_regions = set(areal_tp['region'].unique()) if areal_tp is not None and not areal_tp.empty else set()
         #: raw downloaded increments CSV text, kept only for optional verbose working-data
         #: output (see :mod:`pytuflow.arr.working_data`) - not otherwise used.
         self.point_tp_csv = point_tp_csv
@@ -363,14 +392,21 @@ class TemporalPatternSet:
                     f" and areal temporal patterns from '{areal_tp_path}'" if areal_tp_path else "")
         return cls(point_tp, areal_tp, catchment_area, point_tp_csv=point_csv, areal_tp_csv=areal_csv)
 
-    def add_region_patterns(self, region_point_tp: pd.DataFrame) -> None:
-        """Appends additional point temporal pattern rows (e.g. from
-        :func:`fetch_additional_region_point_tp`) to this set's point temporal
-        patterns - they are included alongside the site's own patterns for any
-        matching duration/AEP band (see :meth:`patterns`), each tagged with their own
-        ``region`` value so they can be told apart downstream (see
-        :mod:`pytuflow.arr.writers`)."""
+    def add_region_patterns(self, region_point_tp: pd.DataFrame, region_areal_tp: Optional[pd.DataFrame] = None) -> None:
+        """Appends additional point (and, if given, areal) temporal pattern rows (e.g.
+        from :func:`fetch_additional_region_point_tp`) to this set's patterns - they
+        are included alongside the site's own patterns for any matching duration/AEP
+        band (point) or area/duration (areal) - see :meth:`patterns` - each tagged with
+        their own ``region`` value so they can be told apart downstream (see
+        :mod:`pytuflow.arr.writers`). ``region_areal_tp`` is ``None`` if the additional
+        region has no ``ArealTP`` data available (or wasn't fetched, e.g. a local CSV
+        file entry) - the additional region then only ever contributes point patterns."""
         self.point_tp = pd.concat([self.point_tp, region_point_tp], ignore_index=True)
+        if region_areal_tp is not None and not region_areal_tp.empty:
+            if self.areal_tp is None:
+                self.areal_tp = region_areal_tp
+            else:
+                self.areal_tp = pd.concat([self.areal_tp, region_areal_tp], ignore_index=True)
 
     def _areal_candidates(self, duration: int, area: Optional[int] = None) -> pd.DataFrame:
         area = self.tp_area if area is None else area
@@ -455,8 +491,13 @@ class TemporalPatternSet:
                 results = [
                     TemporalPattern(int(r.event_id), int(r.tp_number), float(r.timestep), r.increments, 'areal',
                                     region=r.region)
-                    for r in candidates.sort_values('tp_number').itertuples()
+                    for r in candidates.itertuples()
                 ]
+                # ensure the catchment's own (native) region patterns are listed first,
+                # ahead of any additional `additional_tp` region patterns (which would
+                # otherwise sort alphabetically by region name and could sort before the
+                # native region) - matching the point pattern sort order below.
+                results.sort(key=lambda p: (p.region not in self._native_areal_regions, p.region, p.tp_number))
                 if add_areal_tp:
                     results.extend(self._additional_areal_patterns(duration, add_areal_tp))
                 return results
