@@ -428,6 +428,70 @@ def test_engine_climate_change_storm_is_default(api_response_1990):
     assert config.losses.climate_change_method == 'storm'
 
 
+def test_engine_cc_triggers_complete_storm_independently_when_base_is_burst_only(api_response_1990, tmp_path):
+    """When losses.climate_change_method == 'storm', a climate change scenario can
+    require a complete storm even though the base (non-CC) event for the same
+    AEP/duration is a plain burst event - the inverse of the (already supported)
+    case where the base event needs a complete storm but the CC scenario does not.
+
+    This should not raise, and writing the combined rf_inflow output for the
+    base + CC results should still succeed, inserting zeros for the base event's
+    (non-existent) preburst period so both scenarios share a common time index."""
+    import copy
+
+    rec_ifd = api_response_1990.layer('RecIFD')
+    base_table = rec_ifd['Default Historical (1961-1990) Baseline']
+    # inflate the CC rainfall depths so the CC preburst depth (rainfall x ratio)
+    # exceeds the CC-scaled storm initial loss, forcing a negative burst IL and
+    # therefore a complete storm - independently of the (unaffected) base event.
+    inflated = copy.deepcopy(base_table)
+    inflated['data'] = [[v * 10 for v in row] for row in inflated['data']]
+    api_response_1990.layers['CCAdjIFDDatasets'] = {
+        'BoM IFD Depths (2090 Baseline - SSP2)': inflated,
+    }
+    api_response_1990.layers['ClimateChange'] = {
+        'label': 'Climate Change Factors',
+        'loss_factors': {
+            'Initial_Loss': {
+                'columns': ['Losses SSP1-2.6', 'Losses SSP2-4.5', 'Losses SSP3-7.0', 'Losses SSP5-8.5'],
+                'index': [2090],
+                'data': [[1.03, 1.05, 1.07, 1.08]],
+            },
+            'Continuing_Loss': {
+                'columns': ['Losses SSP1-2.6', 'Losses SSP2-4.5', 'Losses SSP3-7.0', 'Losses SSP5-8.5'],
+                'index': [2090],
+                'data': [[1.06, 1.09, 1.13, 1.16]],
+            },
+        },
+    }
+    config = make_config(
+        events={'aep': ['50%'], 'duration': [1440], 'output_notation': 'ari'},
+        climate_change={'enabled': True, 'scenarios': [{'baseline_year': 2090, 'ssp': 'SSP2'}]},
+        losses={'climate_change_method': 'storm'},
+    )
+    engine = ArrEngine(config, api_response_1990)
+    results = engine.run()
+
+    base = next(r for r in results if r.cc_scenario is None)
+    cc = next(r for r in results if r.cc_scenario == '2090_SSP2')
+    # base event is unaffected - still a plain burst event
+    assert base.preburst is None
+    # CC scenario independently needed a complete storm
+    assert cc.preburst is not None
+
+    from pytuflow.arr.writers import write_rf_inflow
+    path = write_rf_inflow(tmp_path, config, results)
+    lines = path.read_text().splitlines()
+    header = lines[2].split(',')
+    base_cols = [i for i, h in enumerate(header) if h.startswith('TP') and '2090_SSP2' not in h]
+    cc_cols = [i for i, h in enumerate(header) if '2090_SSP2' in h]
+    # during the preburst period (rows before the design burst starts), the base
+    # event's columns should be zero-filled while the CC columns are non-zero.
+    pb_row = lines[4].split(',')
+    assert all(float(pb_row[i]) == 0.0 for i in base_cols)
+    assert any(float(pb_row[i]) != 0.0 for i in cc_cols)
+
+
 def _patch_burst_losses_new(api_response_1990, columns, index, data):
     api_response_1990.layers['BurstLossesNew'] = {'columns': columns, 'index': index, 'data': data}
 
