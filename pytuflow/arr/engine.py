@@ -467,27 +467,52 @@ class ArrEngine:
         raise ArrError("ARR Data Hub response is missing storm initial loss data "
                         "('NewStormLosses'/'StormLossesNonNSW'/'StormLosses' layers).")
 
+    def _storm_initial_loss_superseded(self) -> float:
+        """Returns the Data Hub's flat (not AEP-dependent) *superseded* storm initial
+        loss (mm) - the older ARR estimate that ``BurstIL`` (``losses.method ==
+        "probability_neutral"``) was itself calibrated against - from the
+        ``StormLosses`` layer (falling back to ``StormLossesNonNSW`` if
+        ``StormLosses`` isn't present, though ``BurstIL``/probability-neutral losses
+        are only ever available for NSW locations in practice, which always have
+        ``StormLosses``). Used as the reference value when proportionally scaling
+        ``BurstIL`` to a user-supplied storm initial loss (see
+        :meth:`_scale_burst_losses_to_user_il`) - unlike
+        :meth:`_storm_initial_loss_pct_datahub`'s AEP-dependent ``NewStormLosses``
+        value (the *current*, non-superseded ARR storm initial loss dataset), which
+        ``BurstIL`` was not calibrated against."""
+        storm_losses = self.response.layer('StormLosses')
+        if storm_losses and 'Storm Initial Losses (mm)' in storm_losses:
+            return float(storm_losses['Storm Initial Losses (mm)'])
+        non_nsw_losses = self.response.layer('StormLossesNonNSW')
+        if non_nsw_losses and 'Storm Initial Losses (mm)' in non_nsw_losses:
+            return float(non_nsw_losses['Storm Initial Losses (mm)'])
+        raise ArrError(
+            "ARR Data Hub response is missing the 'StormLosses'/'StormLossesNonNSW' layer, needed to scale "
+            "'probability_neutral' burst initial losses to a user-supplied storm initial loss "
+            "(losses.user_initial_loss)."
+        )
+
     def _scale_burst_losses_to_user_il(self, burst_losses: pd.DataFrame) -> pd.DataFrame:
-        """Proportionally scales every numeric cell of a duration x AEP% burst initial
-        loss table so that the (per-AEP) storm initial loss matches
-        ``losses.user_initial_loss``, preserving the Data Hub's relative
-        duration/AEP reduction shape - i.e. ``scaled = burst_il * (user_il /
-        storm_il_datahub(aep))`` - matching the legacy script's ``applyUserInitialLoss``
-        scaling. Non-numeric placeholder cells (e.g. ``"Use PB TP"``) are left
-        untouched. Logs a warning and leaves a column unscaled if the Data Hub's storm
-        initial loss for that AEP is zero (cannot derive a scale factor)."""
+        """Proportionally scales every numeric cell of the ``BurstIL``
+        (``losses.method == "probability_neutral"``) duration x AEP% burst initial
+        loss table so that it matches ``losses.user_initial_loss`` -
+        ``burst_il = user_il * pn_burst_il / superseded_storm_il`` - i.e. scaled
+        relative to the older (*superseded*) flat storm initial loss that ``BurstIL``
+        was itself calibrated against (see :meth:`_storm_initial_loss_superseded`),
+        not the current, AEP-dependent ``NewStormLosses`` value - preserving
+        ``BurstIL``'s own relative duration/AEP reduction shape. Non-numeric
+        placeholder cells (e.g. ``"Use PB TP"``) are left untouched."""
         user_il = float(self.config.losses.user_initial_loss)
+        storm_il = self._storm_initial_loss_superseded()
+        if storm_il == 0:
+            logger.warning(
+                "Cannot scale burst initial losses to the user-supplied storm initial loss - the Data Hub's "
+                "superseded storm initial loss ('StormLosses'/'StormLossesNonNSW') is zero."
+            )
+            return burst_losses.copy()
+        ratio = user_il / storm_il
         scaled = burst_losses.copy()
         for col in scaled.columns:
-            aep_pct = float(col)
-            storm_il = self._storm_initial_loss_pct_datahub(aep_pct)
-            if storm_il == 0:
-                logger.warning(
-                    "Cannot scale burst initial losses to the user-supplied storm initial loss for AEP %s%% - "
-                    "the Data Hub's storm initial loss is zero.", aep_pct,
-                )
-                continue
-            ratio = user_il / storm_il
             scaled[col] = scaled[col].map(lambda v: v * ratio if isinstance(v, (int, float)) else v)
         return scaled
 

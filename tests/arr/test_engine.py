@@ -826,10 +826,12 @@ def test_engine_user_initial_loss_still_proportionally_scales_probability_neutra
     table, not derived from preburst ratios/storm initial loss at all - unlike the
     'recommended' method (BurstLossesNew), a user-supplied storm initial loss cannot
     be directly substituted into a formula for it. It should instead continue to
-    proportionally scale every cell of the raw BurstIL table so its (per-AEP) storm
-    initial loss matches losses.user_initial_loss, preserving the Data Hub's relative
-    duration/AEP reduction shape - exactly as it did before losses.user_initial_loss
-    started also affecting whether a 'recommended'-method cell needs complete storm."""
+    proportionally scale every cell of the raw BurstIL table:
+    burst_il = user_initial_loss * pn_burst_il / superseded_storm_il - relative to
+    the older ('superseded') flat storm initial loss ('StormLosses' layer) that
+    BurstIL was itself calibrated against, not the current AEP-dependent
+    'NewStormLosses' value - preserving BurstIL's own relative duration/AEP
+    reduction shape."""
     config_no_user = make_config(
         events={'aep': ['1%'], 'duration': [60], 'output_notation': 'ari'},
         losses={'method': 'probability_neutral'},
@@ -845,9 +847,16 @@ def test_engine_user_initial_loss_still_proportionally_scales_probability_neutra
     results = engine_user.run()
     assert len(results) == 1
 
-    storm_il_datahub = engine_no_user._storm_initial_loss_pct_datahub(1.0)
-    expected = il_no_user * (30.0 / storm_il_datahub)
+    superseded_storm_il = engine_no_user._storm_initial_loss_superseded()
+    expected = il_no_user * (30.0 / superseded_storm_il)
     assert results[0].initial_loss == pytest.approx(expected)
+    # sanity check: differs from (and is much smaller than) scaling against the
+    # current, AEP-dependent 'NewStormLosses' value - confirms the superseded
+    # ('StormLosses') reference is actually being used, not 'NewStormLosses'.
+    datahub_storm_il = engine_no_user._storm_initial_loss_pct_datahub(1.0)
+    assert superseded_storm_il != pytest.approx(datahub_storm_il)
+    wrong_expected = il_no_user * (30.0 / datahub_storm_il)
+    assert results[0].initial_loss != pytest.approx(wrong_expected)
 
 
 def test_engine_user_continuing_loss_overrides_storm_continuing_loss(api_response_1990):
