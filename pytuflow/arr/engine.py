@@ -531,9 +531,18 @@ class ArrEngine:
 
         Non-numeric placeholder cells (e.g. ``"Use PB TP"``) are left untouched either
         way.
+
+        ``losses.method == "probability_neutral"`` (``BurstIL``) always uses the
+        ``"burst"`` approach above regardless of ``climate_change_method`` - ``BurstIL``
+        is an independently-calibrated legacy table, not derived from preburst ratios/
+        storm initial loss at all (see :meth:`_burst_loss_frame`), so there is no
+        principled way to re-derive it from a climate-change-adjusted storm initial
+        loss/preburst depth the way ``"storm"`` does for ``"recommended"``
+        (``BurstLossesNew``) - simply scaling every cell by the climate-change initial
+        loss factor is the only approach that makes sense for it.
         """
         il_factor, _ = self._cc_loss_factors(baseline_year, ssp)
-        if self.config.losses.climate_change_method == 'burst':
+        if self.config.losses.climate_change_method == 'burst' or self.config.losses.method == 'probability_neutral':
             return base_burst_loss.map(lambda v: v * il_factor if isinstance(v, (int, float)) else v)
 
         from .complete_storm import _preburst_ratio
@@ -977,7 +986,13 @@ class ArrEngine:
                     needs_complete_storm = self.config.complete_storm
                     il = 0.
                     cl_factor = 1.
-                    if not needs_complete_storm and (ssp is None or self.config.losses.climate_change_method == 'burst'):
+                    # 'probability_neutral' (BurstIL) always uses the 'burst'-style
+                    # approach (scale the burst il by the climate-change factor)
+                    # regardless of climate_change_method - see _cc_burst_loss_table.
+                    pn_method = self.config.losses.method == 'probability_neutral'
+                    if not needs_complete_storm and (
+                        ssp is None or self.config.losses.climate_change_method == 'burst' or pn_method
+                    ):
                         try:
                             il = self._initial_loss(duration, aep_name, durations, scenario_label=scenario_label)
                             if ssp is not None:
@@ -1007,7 +1022,8 @@ class ArrEngine:
                                 )
                                 needs_complete_storm = True
 
-                    if not needs_complete_storm and ssp is not None and self.config.losses.climate_change_method == 'storm':
+                    if not needs_complete_storm and ssp is not None and self.config.losses.climate_change_method == 'storm' \
+                            and not pn_method:
                         from .complete_storm import _preburst_ratio
                         il_factor, cl_factor = self._cc_loss_factors(baseline_year, ssp)
                         storm_il_cc = self._storm_initial_loss_pct(aep_pct) * il_factor

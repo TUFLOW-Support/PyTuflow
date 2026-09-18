@@ -859,6 +859,56 @@ def test_engine_user_initial_loss_still_proportionally_scales_probability_neutra
     assert results[0].initial_loss != pytest.approx(wrong_expected)
 
 
+def test_engine_probability_neutral_climate_change_always_scales_burst_il_by_factor(api_response_1990):
+    """losses.method == 'probability_neutral' (BurstIL) is an independently-calibrated
+    legacy table, not derived from preburst ratios/storm initial loss at all - unlike
+    'recommended' (BurstLossesNew), there is no principled way to re-derive it from a
+    climate-change-adjusted storm initial loss/preburst depth, so
+    losses.climate_change_method == 'storm' (the default) must have no effect for it:
+    the climate-change burst initial loss must always simply be the (possibly
+    user_initial_loss-scaled) base burst initial loss multiplied by the Data Hub's
+    climate-change initial loss factor - the same as climate_change_method == 'burst'
+    - for every combination of user_initial_loss/climate_change_method."""
+    rec_ifd = api_response_1990.layer('RecIFD')
+    base_table = rec_ifd['Default Historical (1961-1990) Baseline']
+    api_response_1990.layers['CCAdjIFDDatasets'] = {
+        'BoM IFD Depths (2090 Baseline - SSP2)': base_table,
+    }
+    api_response_1990.layers['ClimateChange'] = {
+        'label': 'Climate Change Factors',
+        'loss_factors': {
+            'Initial_Loss': {
+                'columns': ['Losses SSP1-2.6', 'Losses SSP2-4.5', 'Losses SSP3-7.0', 'Losses SSP5-8.5'],
+                'index': [2090],
+                'data': [[1.03, 1.05, 1.07, 1.08]],
+            },
+            'Continuing_Loss': {
+                'columns': ['Losses SSP1-2.6', 'Losses SSP2-4.5', 'Losses SSP3-7.0', 'Losses SSP5-8.5'],
+                'index': [2090],
+                'data': [[1.06, 1.09, 1.13, 1.16]],
+            },
+        },
+    }
+    for climate_change_method in ('burst', 'storm'):
+        for user_initial_loss in (None, 30.0):
+            losses = {'method': 'probability_neutral', 'climate_change_method': climate_change_method}
+            if user_initial_loss is not None:
+                losses['user_initial_loss'] = user_initial_loss
+            config = make_config(
+                events={'aep': ['1%'], 'duration': [60], 'output_notation': 'ari'},
+                climate_change={'enabled': True, 'scenarios': [{'baseline_year': 2090, 'ssp': 'SSP2'}]},
+                losses=losses,
+            )
+            engine = ArrEngine(config, api_response_1990)
+            results = engine.run()
+            base = next(r for r in results if r.cc_scenario is None)
+            cc = next(r for r in results if r.cc_scenario == '2090_SSP2')
+            il_factor, _ = engine._cc_loss_factors(2090, 'SSP2')
+            assert cc.initial_loss == pytest.approx(base.initial_loss * il_factor), (
+                climate_change_method, user_initial_loss
+            )
+
+
 def test_engine_user_continuing_loss_overrides_storm_continuing_loss(api_response_1990):
     config = make_config(
         events={'aep': ['50%'], 'duration': [1440], 'output_notation': 'ari'},
