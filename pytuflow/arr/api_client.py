@@ -43,6 +43,12 @@ _BASE_LAYERS = (
 )
 
 
+_CC_IFD_TABLE_KEY_ORDER = (
+    'LIMB 2020 IFD Depths - High Resolution ({baseline_year} Baseline - {ssp})'.format,
+    'BoM IFD Depths ({baseline_year} Baseline - {ssp})'.format
+)
+
+
 class ArrApiResponse:
     """Thin wrapper around the parsed JSON response from the ARR Data Hub API, providing
     convenience accessors for the layers used by :mod:`pytuflow.arr`.
@@ -82,13 +88,14 @@ class ArrApiResponse:
         """Returns a climate-change-adjusted IFD table (``CCAdjIFDDatasets`` layer) for the
         given baseline year (2030, 2050, or 2090) and SSP scenario (SSP1/SSP2/SSP3/SSP5)."""
         cc_adj = self.layer('CCAdjIFDDatasets', required=True)
-        key = f'BoM IFD Depths ({baseline_year} Baseline - {ssp})'
-        if key not in cc_adj:
-            raise ArrApiError(
-                f"ARR Data Hub response does not contain a climate-change-adjusted IFD table "
-                f"for '{key}' (available: {list(cc_adj)})"
-            )
-        return cc_adj[key]
+        for key in _CC_IFD_TABLE_KEY_ORDER:
+            key = key(baseline_year=baseline_year, ssp=ssp)
+            if key in cc_adj:
+                return cc_adj[key]
+        raise ArrApiError(
+            f"ARR Data Hub response does not contain a climate-change-adjusted IFD table "
+            f"for '{key}' (available: {list(cc_adj)})"
+        )
 
     def climate_change_loss_factors(self, baseline_year: int, ssp: str) -> tuple:
         """Returns ``(initial_loss_factor, continuing_loss_factor)`` from the

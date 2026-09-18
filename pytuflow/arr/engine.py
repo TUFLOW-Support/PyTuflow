@@ -436,6 +436,10 @@ class ArrEngine:
         back to the non-AEP-specific ``StormLossesNonNSW``/``StormLosses`` layers,
         which aren't NSW's per-AEP storm initial loss dataset.
         """
+        # return user initial loss if provided
+        if self.config.losses.user_initial_loss is not None:
+            return self.config.losses.user_initial_loss
+        
         new_losses = self.response.layer('NewStormLosses')
         if new_losses and 'losses' in new_losses:
             rows = new_losses['losses']
@@ -667,7 +671,7 @@ class ArrEngine:
                        scenario_label: Optional[str] = None) -> float:
         aep_pct = aep_name_to_pct(aep_name)
         burst_losses = self._burst_loss_frame()
-        if burst_losses.empty:
+        if burst_losses.empty or self.config.losses.user_initial_loss is not None:
             # no per-duration/AEP burst initial loss table exists at all for this
             # location/method (e.g. 'BurstLossesNew' is NSW-only, and is missing
             # entirely for other locations - see _burst_loss_frame). Every duration

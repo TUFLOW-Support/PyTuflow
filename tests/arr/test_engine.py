@@ -720,11 +720,6 @@ def test_engine_additional_tp_also_merges_into_areal_sourced_durations(api_respo
 
 
 def test_engine_user_initial_loss_scales_burst_losses(api_response_1990):
-    # Burst initial loss for 50%/1440min is always recalculated from the preburst
-    # ratio (storm_il - preburst_ratio * point_depth), regardless of baseline year -
-    # Data Hub storm initial loss for 50% is 20mm - user_initial_loss=10 halves the
-    # storm loss, so the (recalculated) burst loss should also be halved, preserving
-    # the relative reduction shape.
     from pytuflow.arr.complete_storm import _preburst_ratio
     from pytuflow.arr.engine import _interp_table, _table_to_frame
 
@@ -740,9 +735,8 @@ def test_engine_user_initial_loss_scales_burst_losses(api_response_1990):
     baseline_ifd = _table_to_frame(api_response_1990.ifd_table(2030))
     point_depth = float(_interp_table(baseline_ifd, [1440.0], [50.0]).iloc[0, 0])
     ratio = _preburst_ratio(api_response_1990, '50%', 1440.0, 50.0)
-    storm_il = 20.0  # Data Hub storm initial loss for 50% AEP
-    expected_full_burst_il = storm_il - ratio * point_depth
-    assert results[0].initial_loss == pytest.approx(expected_full_burst_il / 2)
+    expected_burst_il = config.losses.user_initial_loss - ratio * point_depth
+    assert results[0].initial_loss == pytest.approx(expected_burst_il)
 
 
 def test_engine_recalculates_burst_losses_for_non_2030_ifd_year(api_response_1990):
@@ -819,12 +813,12 @@ def test_engine_user_initial_loss_used_directly_for_complete_storm(api_response_
     # that should be the user value directly, not a Data Hub value.
     config = make_config(
         events={'aep': ['20%'], 'duration': [1440], 'output_notation': 'ari'},
-        losses={'user_initial_loss': 99.0},
+        losses={'user_initial_loss': 10},
     )
     engine = ArrEngine(config, api_response_1990)
     results = engine.run()
     assert len(results) == 1
-    assert results[0].initial_loss == pytest.approx(99.0)
+    assert results[0].initial_loss == pytest.approx(10)
 
 
 def test_engine_user_continuing_loss_overrides_storm_continuing_loss(api_response_1990):
