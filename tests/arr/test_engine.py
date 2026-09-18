@@ -859,16 +859,20 @@ def test_engine_user_initial_loss_still_proportionally_scales_probability_neutra
     assert results[0].initial_loss != pytest.approx(wrong_expected)
 
 
-def test_engine_probability_neutral_climate_change_always_scales_burst_il_by_factor(api_response_1990):
+def test_engine_probability_neutral_climate_change_storm_leaves_burst_il_unchanged(api_response_1990):
     """losses.method == 'probability_neutral' (BurstIL) is an independently-calibrated
-    legacy table, not derived from preburst ratios/storm initial loss at all - unlike
-    'recommended' (BurstLossesNew), there is no principled way to re-derive it from a
-    climate-change-adjusted storm initial loss/preburst depth, so
-    losses.climate_change_method == 'storm' (the default) must have no effect for it:
-    the climate-change burst initial loss must always simply be the (possibly
-    user_initial_loss-scaled) base burst initial loss multiplied by the Data Hub's
-    climate-change initial loss factor - the same as climate_change_method == 'burst'
-    - for every combination of user_initial_loss/climate_change_method."""
+    legacy table, not derived from preburst ratios/storm initial loss at all. Its
+    climate-change handling depends on losses.climate_change_method:
+
+    * "burst" - the (possibly user_initial_loss-scaled) base burst initial loss is
+      multiplied directly by the Data Hub's climate-change initial loss factor.
+    * "storm" (the default) - the burst initial loss is unchanged from the base
+      (non-CC) event: every cell is conceptually `user_storm_il * pn_burst_il /
+      superseded_storm_il`, and since both the user-supplied storm initial loss and
+      the reference storm initial loss are themselves storm-level quantities, scaling
+      both by the same climate-change factor cancels out of the ratio - unlike
+      'recommended' (BurstLossesNew), whose "storm" formula also subtracts a
+      climate-change-adjusted preburst depth term that does not cancel."""
     rec_ifd = api_response_1990.layer('RecIFD')
     base_table = rec_ifd['Default Historical (1961-1990) Baseline']
     api_response_1990.layers['CCAdjIFDDatasets'] = {
@@ -889,24 +893,38 @@ def test_engine_probability_neutral_climate_change_always_scales_burst_il_by_fac
             },
         },
     }
-    for climate_change_method in ('burst', 'storm'):
-        for user_initial_loss in (None, 30.0):
-            losses = {'method': 'probability_neutral', 'climate_change_method': climate_change_method}
-            if user_initial_loss is not None:
-                losses['user_initial_loss'] = user_initial_loss
-            config = make_config(
-                events={'aep': ['1%'], 'duration': [60], 'output_notation': 'ari'},
-                climate_change={'enabled': True, 'scenarios': [{'baseline_year': 2090, 'ssp': 'SSP2'}]},
-                losses=losses,
-            )
-            engine = ArrEngine(config, api_response_1990)
-            results = engine.run()
-            base = next(r for r in results if r.cc_scenario is None)
-            cc = next(r for r in results if r.cc_scenario == '2090_SSP2')
-            il_factor, _ = engine._cc_loss_factors(2090, 'SSP2')
-            assert cc.initial_loss == pytest.approx(base.initial_loss * il_factor), (
-                climate_change_method, user_initial_loss
-            )
+    for user_initial_loss in (None, 30.0):
+        losses = {'method': 'probability_neutral', 'climate_change_method': 'burst'}
+        if user_initial_loss is not None:
+            losses['user_initial_loss'] = user_initial_loss
+        config = make_config(
+            events={'aep': ['1%'], 'duration': [60], 'output_notation': 'ari'},
+            climate_change={'enabled': True, 'scenarios': [{'baseline_year': 2090, 'ssp': 'SSP2'}]},
+            losses=losses,
+        )
+        engine = ArrEngine(config, api_response_1990)
+        results = engine.run()
+        base = next(r for r in results if r.cc_scenario is None)
+        cc = next(r for r in results if r.cc_scenario == '2090_SSP2')
+        il_factor, _ = engine._cc_loss_factors(2090, 'SSP2')
+        # 'burst' still scales the burst il directly by the climate-change factor.
+        assert cc.initial_loss == pytest.approx(base.initial_loss * il_factor), user_initial_loss
+
+        losses = {**losses, 'climate_change_method': 'storm'}
+        config = make_config(
+            events={'aep': ['1%'], 'duration': [60], 'output_notation': 'ari'},
+            climate_change={'enabled': True, 'scenarios': [{'baseline_year': 2090, 'ssp': 'SSP2'}]},
+            losses=losses,
+        )
+        engine = ArrEngine(config, api_response_1990)
+        results = engine.run()
+        base = next(r for r in results if r.cc_scenario is None)
+        cc = next(r for r in results if r.cc_scenario == '2090_SSP2')
+        # 'storm' (the default) leaves the burst il unchanged - the climate-change
+        # factor cancels out of the user_storm_il/superseded_storm_il ratio.
+        assert cc.initial_loss == pytest.approx(base.initial_loss), user_initial_loss
+        # sanity check: differs from (and would be larger than) the 'burst' approach.
+        assert cc.initial_loss != pytest.approx(base.initial_loss * il_factor), user_initial_loss
 
 
 def test_engine_user_continuing_loss_overrides_storm_continuing_loss(api_response_1990):

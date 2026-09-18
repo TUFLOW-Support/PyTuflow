@@ -532,17 +532,28 @@ class ArrEngine:
         Non-numeric placeholder cells (e.g. ``"Use PB TP"``) are left untouched either
         way.
 
-        ``losses.method == "probability_neutral"`` (``BurstIL``) always uses the
-        ``"burst"`` approach above regardless of ``climate_change_method`` - ``BurstIL``
-        is an independently-calibrated legacy table, not derived from preburst ratios/
-        storm initial loss at all (see :meth:`_burst_loss_frame`), so there is no
-        principled way to re-derive it from a climate-change-adjusted storm initial
-        loss/preburst depth the way ``"storm"`` does for ``"recommended"``
-        (``BurstLossesNew``) - simply scaling every cell by the climate-change initial
-        loss factor is the only approach that makes sense for it.
+        ``losses.method == "probability_neutral"`` (``BurstIL``) is handled specially,
+        since it's an independently-calibrated legacy table, not derived from preburst
+        ratios/storm initial loss at all (see :meth:`_burst_loss_frame`):
+
+        * ``"burst"`` - still simply scales every cell by the climate-change initial
+          loss factor, same as above.
+        * ``"storm"`` - the burst initial loss is unchanged from the base (non-CC)
+          value. Every cell is (conceptually) ``user_storm_il * pn_burst_il /
+          superseded_storm_il`` (see :meth:`_scale_burst_losses_to_user_il`) - both the
+          user-supplied storm initial loss and the reference storm initial loss are
+          themselves storm-level quantities, so scaling both by the same
+          climate-change factor (as ``"storm"`` does) cancels out and leaves the burst
+          initial loss unchanged, unlike ``"recommended"`` (``BurstLossesNew``), whose
+          ``"storm"`` formula also subtracts a climate-change-adjusted preburst depth
+          term that does not cancel.
         """
         il_factor, _ = self._cc_loss_factors(baseline_year, ssp)
-        if self.config.losses.climate_change_method == 'burst' or self.config.losses.method == 'probability_neutral':
+        if self.config.losses.method == 'probability_neutral':
+            if self.config.losses.climate_change_method == 'burst':
+                return base_burst_loss.map(lambda v: v * il_factor if isinstance(v, (int, float)) else v)
+            return base_burst_loss.copy()
+        if self.config.losses.climate_change_method == 'burst':
             return base_burst_loss.map(lambda v: v * il_factor if isinstance(v, (int, float)) else v)
 
         from .complete_storm import _preburst_ratio
@@ -986,18 +997,24 @@ class ArrEngine:
                     needs_complete_storm = self.config.complete_storm
                     il = 0.
                     cl_factor = 1.
-                    # 'probability_neutral' (BurstIL) always uses the 'burst'-style
-                    # approach (scale the burst il by the climate-change factor)
-                    # regardless of climate_change_method - see _cc_burst_loss_table.
+                    # 'probability_neutral' (BurstIL) is handled specially for climate
+                    # change - see _cc_burst_loss_table: 'burst' still scales the burst
+                    # il by the climate-change factor (handled by this branch, same as
+                    # the default 'recommended' behaviour); 'storm' leaves the burst il
+                    # unchanged (the climate-change factor cancels out of the
+                    # user_storm_il/superseded_storm_il ratio) - so this branch must
+                    # also catch that case, but skip the `il_factor` multiplication.
                     pn_method = self.config.losses.method == 'probability_neutral'
+                    pn_storm_unchanged = pn_method and self.config.losses.climate_change_method == 'storm'
                     if not needs_complete_storm and (
-                        ssp is None or self.config.losses.climate_change_method == 'burst' or pn_method
+                        ssp is None or self.config.losses.climate_change_method == 'burst' or pn_storm_unchanged
                     ):
                         try:
                             il = self._initial_loss(duration, aep_name, durations, scenario_label=scenario_label)
                             if ssp is not None:
                                 il_factor, cl_factor = self._cc_loss_factors(baseline_year, ssp)
-                                il = il * il_factor
+                                if not pn_storm_unchanged:
+                                    il = il * il_factor
                         except _NeedsCompleteStorm as e:
                             if (self.config.preburst.pattern_method or '').lower() == 'none':
                                 # 'none' disables auto complete storm assembly entirely -
