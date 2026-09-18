@@ -74,3 +74,39 @@ def test_run_end_to_end_with_local_response_json(tmp_path, api_response_1990, mo
     assert exit_code == 0
     assert (tmp_path / 'Event_File.tef').exists()
     assert (tmp_path / 'bc_dbase.csv').exists()
+
+
+def test_run_multiple_configs_only_site_overridden(tmp_path, api_response_1990, monkeypatch, caplog):
+    """When multiple config files are given, only 'site' may differ between them -
+    every other setting (including response_json) comes from the first config file,
+    regardless of what a later file specifies for those keys."""
+    response_path = tmp_path / 'response.json'
+    with open(response_path, 'w', encoding='utf-8') as f:
+        json.dump(api_response_1990.raw, f)
+
+    config_a = make_config_dict(tmp_path, response_path)
+    path_a = tmp_path / 'a.json'
+    with open(path_a, 'w', encoding='utf-8') as f:
+        json.dump(config_a, f)
+
+    # 'site' differs (a second catchment); 'losses' is also set here but should be
+    # ignored (with a warning) since only 'site' can differ between config files.
+    config_b = {
+        'site': {'name': '2', 'latitude': -27.389, 'longitude': 152.858, 'catchment_area': 5.0},
+        'losses': {'method': 'probability_neutral'},
+    }
+    path_b = tmp_path / 'b.json'
+    with open(path_b, 'w', encoding='utf-8') as f:
+        json.dump(config_b, f)
+
+    def fail_fetch(self, config):
+        raise AssertionError('client.fetch should not be called when response_json is set')
+    monkeypatch.setattr(ArrApiClient, 'fetch', fail_fetch)
+
+    with caplog.at_level('WARNING'):
+        exit_code = run([str(path_a), str(path_b)])
+    assert exit_code == 0
+    assert (tmp_path / 'Event_File.tef').exists()
+    assert (tmp_path / 'bc_dbase.csv').exists()
+    # config b's 'losses' override was ignored - a warning was logged about it
+    assert any('losses' in r.message for r in caplog.records)

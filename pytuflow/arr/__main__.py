@@ -8,6 +8,13 @@ the repository root for the schema). When multiple config files are given, they 
 processed in order and their TUFLOW outputs (event file, bc_dbase, rainfall loss trd,
 etc) are appended into a single set of output files rather than being overwritten by
 each subsequent config.
+
+Only the ``site`` section may differ between the config files - every other setting
+(events, losses, climate change, temporal patterns, output, etc) is taken from the
+*first* config file regardless of what any later file contains (see
+:meth:`pytuflow.arr.config.ArrConfig.from_files`), matching the legacy script's
+multi-catchment (``catch_no``) batching: one shared set of run options applied across
+multiple catchments/sites.
 """
 
 from __future__ import annotations
@@ -56,15 +63,19 @@ def _load_response(client: ArrApiClient, config: ArrConfig) -> ArrApiResponse:
 
 
 def run(config_paths: Sequence[str]) -> int:
-    """Loads and processes each config file in turn, returning a process exit code."""
+    """Loads and processes each config file in turn, returning a process exit code.
+
+    Only ``site`` may differ between multiple config files - every other setting comes
+    from the first ("primary") config file, regardless of what any later file contains
+    (see :meth:`ArrConfig.from_files`)."""
     client = ArrApiClient()
-    for i, config_path in enumerate(config_paths):
+    try:
+        configs = ArrConfig.from_files(config_paths)
+    except ArrError as e:
+        logger.error("Failed to load config(s): %s", e)
+        return 1
+    for i, (config_path, config) in enumerate(zip(config_paths, configs)):
         append = i > 0
-        try:
-            config = ArrConfig.from_file(config_path)
-        except ArrError as e:
-            logger.error("Failed to load config '%s': %s", config_path, e)
-            return 1
         logger.info("Processing site '%s' from '%s' (append=%s)", config.site.name, config_path, append)
         try:
             response = _load_response(client, config)

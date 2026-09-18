@@ -7,11 +7,14 @@ rationale behind each section.
 from __future__ import annotations
 
 import json
+import logging
 from dataclasses import dataclass, field, fields
 from pathlib import Path
-from typing import Any, Optional, Union
+from typing import Any, Optional, Sequence, Union
 
 from .exceptions import ArrConfigError
+
+logger = logging.getLogger('pytuflow.arr')
 
 #: Burst initial loss lookup methods. ``"recommended"`` uses the Data Hub's newer burst
 #: initial loss table (``BurstLossesNew``); ``"probability_neutral"`` uses the legacy
@@ -405,15 +408,58 @@ class ArrConfig:
 
     @classmethod
     def from_file(cls, path: Union[str, Path]) -> 'ArrConfig':
+        data = cls._read_json_file(path)
+        return cls.from_dict(data, source_path=Path(path))
+
+    @staticmethod
+    def _read_json_file(path: Union[str, Path]) -> dict:
         path = Path(path)
         if not path.exists():
             raise ArrConfigError(f"Config file not found: {path}")
         try:
             with open(path, encoding='utf-8') as f:
-                data = json.load(f)
+                return json.load(f)
         except json.JSONDecodeError as e:
             raise ArrConfigError(f"Invalid JSON in config file '{path}': {e}") from e
-        return cls.from_dict(data, source_path=path)
+
+    @classmethod
+    def from_files(cls, paths: Sequence[Union[str, Path]]) -> list['ArrConfig']:
+        """Loads a batch of JSON config files where only ``site`` may differ between
+        files - every other setting is taken from the *first* config file (the
+        "primary"/base config) regardless of what any later file contains, matching
+        the legacy script's multi-catchment (``catch_no``) batching: one shared set of
+        run options (events, losses, climate change, temporal patterns, output, etc),
+        applied across multiple catchments/sites.
+
+        Every file after the first must still contain a ``site`` section, but any
+        other top-level key it contains is ignored (with a warning) rather than being
+        merged in or validated against the base config - this keeps the override rule
+        simple and unambiguous (silently-differing settings between "batched" sites
+        would otherwise be easy to miss).
+        """
+        if not paths:
+            raise ArrConfigError("At least one config file must be given.")
+        paths = [Path(p) for p in paths]
+        base_data = cls._read_json_file(paths[0])
+        configs = [cls.from_dict(base_data, source_path=paths[0])]
+        for path in paths[1:]:
+            raw = cls._read_json_file(path)
+            if 'site' not in raw:
+                raise ArrConfigError(
+                    f"Config '{path}' must specify a 'site' section - when multiple config files are given, "
+                    f"only 'site' may differ between them (see the first config file, '{paths[0]}', for every "
+                    f"other setting)."
+                )
+            extra_keys = sorted(set(raw) - {'site'})
+            if extra_keys:
+                logger.warning(
+                    "Config '%s' specifies %s in addition to 'site' - only 'site' can differ between multiple "
+                    "config files, so these will be ignored and the first config file's ('%s') values used "
+                    "instead.", path, extra_keys, paths[0],
+                )
+            merged = {**base_data, 'site': raw['site']}
+            configs.append(cls.from_dict(merged, source_path=path))
+        return configs
 
     def validate(self) -> list[str]:
         errors = []

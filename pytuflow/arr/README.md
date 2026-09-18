@@ -24,6 +24,13 @@ sites) rather than overwritten by each subsequent config - equivalent to the leg
 script's multi-catchment (`catch_no`) batching, but driven by multiple config files
 instead of a single config with batch arguments.
 
+Only the `site` section may differ between the config files - every other setting
+(`events`, `losses`, `climate_change`, `temporal_patterns`, `output`, etc) is taken from
+the *first* config file regardless of what any later file contains. Every file after the
+first must still include a `site` section, but any other top-level key it contains is
+ignored (with a warning) rather than being merged in or validated against the first
+file's settings - this keeps the override rule simple and unambiguous.
+
 Add `-v`/`--verbose` for debug-level logging.
 
 ## QGIS usage

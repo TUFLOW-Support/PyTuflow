@@ -177,6 +177,57 @@ def test_from_file_bad_json_raises(tmp_path):
         ArrConfig.from_file(config_path)
 
 
+def test_from_files_only_site_differs(tmp_path):
+    config_a = json.loads(json.dumps(VALID_CONFIG))
+    config_a['losses'] = {'method': 'probability_neutral'}
+    path_a = tmp_path / 'a.json'
+    path_a.write_text(json.dumps(config_a))
+
+    path_b = tmp_path / 'b.json'
+    path_b.write_text(json.dumps({
+        'site': {'name': '2', 'latitude': -27.389, 'longitude': 152.858, 'catchment_area': 5.0},
+    }))
+
+    configs = ArrConfig.from_files([path_a, path_b])
+    assert len(configs) == 2
+    assert configs[0].site.name == '1'
+    assert configs[1].site.name == '2'
+    # every other setting comes from the first ("primary") config, not just defaults
+    assert configs[1].losses.method == 'probability_neutral'
+    assert configs[1].output.path == configs[0].output.path
+    assert configs[1].events.aep == configs[0].events.aep
+
+
+def test_from_files_ignores_non_site_keys_in_later_configs(tmp_path, caplog):
+    path_a = tmp_path / 'a.json'
+    path_a.write_text(json.dumps(VALID_CONFIG))
+
+    other = json.loads(json.dumps(VALID_CONFIG))
+    other['site'] = {'name': '2', 'latitude': -27.389, 'longitude': 152.858, 'catchment_area': 5.0}
+    other['losses'] = {'method': 'probability_neutral'}  # should be ignored
+    path_b = tmp_path / 'b.json'
+    path_b.write_text(json.dumps(other))
+
+    with caplog.at_level('WARNING'):
+        configs = ArrConfig.from_files([path_a, path_b])
+    assert configs[1].losses.method == 'recommended'  # from config a, not 'probability_neutral'
+    assert any('losses' in r.message for r in caplog.records)
+
+
+def test_from_files_requires_site_section_in_later_configs(tmp_path):
+    path_a = tmp_path / 'a.json'
+    path_a.write_text(json.dumps(VALID_CONFIG))
+    path_b = tmp_path / 'b.json'
+    path_b.write_text(json.dumps({'losses': {'method': 'probability_neutral'}}))
+    with pytest.raises(ArrConfigError, match="must specify a 'site' section"):
+        ArrConfig.from_files([path_a, path_b])
+
+
+def test_from_files_requires_at_least_one_path():
+    with pytest.raises(ArrConfigError, match='At least one config file'):
+        ArrConfig.from_files([])
+
+
 def test_urban_losses_must_be_set_together():
     bad = json.loads(json.dumps(VALID_CONFIG))
     bad['losses'] = {'urban_initial_loss': 10.0}
