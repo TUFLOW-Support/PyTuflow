@@ -821,6 +821,35 @@ def test_engine_user_initial_loss_used_directly_for_complete_storm(api_response_
     assert results[0].initial_loss == pytest.approx(10)
 
 
+def test_engine_user_initial_loss_still_proportionally_scales_probability_neutral_burst_losses(api_response_1990):
+    """losses.method == 'probability_neutral' (BurstIL) is an independently-calibrated
+    table, not derived from preburst ratios/storm initial loss at all - unlike the
+    'recommended' method (BurstLossesNew), a user-supplied storm initial loss cannot
+    be directly substituted into a formula for it. It should instead continue to
+    proportionally scale every cell of the raw BurstIL table so its (per-AEP) storm
+    initial loss matches losses.user_initial_loss, preserving the Data Hub's relative
+    duration/AEP reduction shape - exactly as it did before losses.user_initial_loss
+    started also affecting whether a 'recommended'-method cell needs complete storm."""
+    config_no_user = make_config(
+        events={'aep': ['1%'], 'duration': [60], 'output_notation': 'ari'},
+        losses={'method': 'probability_neutral'},
+    )
+    engine_no_user = ArrEngine(config_no_user, api_response_1990)
+    il_no_user = engine_no_user.run()[0].initial_loss
+
+    config_user = make_config(
+        events={'aep': ['1%'], 'duration': [60], 'output_notation': 'ari'},
+        losses={'method': 'probability_neutral', 'user_initial_loss': 30.0},
+    )
+    engine_user = ArrEngine(config_user, api_response_1990)
+    results = engine_user.run()
+    assert len(results) == 1
+
+    storm_il_datahub = engine_no_user._storm_initial_loss_pct_datahub(1.0)
+    expected = il_no_user * (30.0 / storm_il_datahub)
+    assert results[0].initial_loss == pytest.approx(expected)
+
+
 def test_engine_user_continuing_loss_overrides_storm_continuing_loss(api_response_1990):
     config = make_config(
         events={'aep': ['50%'], 'duration': [1440], 'output_notation': 'ari'},

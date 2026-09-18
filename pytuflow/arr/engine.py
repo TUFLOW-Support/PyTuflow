@@ -331,7 +331,14 @@ class ArrEngine:
                 aep_pct = float(col)
                 point_depth = float(_interp_table(baseline_ifd, [duration], [aep_pct]).iloc[0, 0])
                 ratio = _preburst_ratio(self.response, percentile, duration, aep_pct)
-                storm_il = self._storm_initial_loss_pct_datahub(aep_pct)
+                # use the *effective* storm initial loss (substitutes
+                # `losses.user_initial_loss` directly if set) rather than the raw Data
+                # Hub value - this recompute is only ever applied to `BurstLossesNew`
+                # ('recommended' method - see `_burst_loss_frame`), so a user-supplied
+                # storm initial loss can correctly flip whether a cell needs complete
+                # storm assembly (a "Use PB TP" placeholder), not just scale an
+                # already-decided numeric value.
+                storm_il = self._storm_initial_loss_pct(aep_pct)
                 recalculated = storm_il - ratio * point_depth
                 if recalculated < 0:
                     logger.debug(
@@ -436,9 +443,6 @@ class ArrEngine:
         back to the non-AEP-specific ``StormLossesNonNSW``/``StormLosses`` layers,
         which aren't NSW's per-AEP storm initial loss dataset.
         """
-        # return user initial loss if provided
-        if self.config.losses.user_initial_loss is not None:
-            return self.config.losses.user_initial_loss
         
         new_losses = self.response.layer('NewStormLosses')
         if new_losses and 'losses' in new_losses:
@@ -539,13 +543,18 @@ class ArrEngine:
         duration cells within an existing ``BurstLossesNew`` table (see
         :meth:`_derive_missing_duration_burst_losses`) and to derive every cell when no
         ``BurstLossesNew`` table exists at all for this location (see
-        :meth:`_initial_loss`)."""
+        :meth:`_initial_loss`). Only ever used for the ``'recommended'`` losses method
+        (``BurstLossesNew``) - ``'probability_neutral'`` (``BurstIL``) is not derived
+        from preburst ratios at all, so never reaches this method. Uses the *effective*
+        storm initial loss (:meth:`_storm_initial_loss_pct`, which substitutes
+        ``losses.user_initial_loss`` directly if set), so a user-supplied storm initial
+        loss can correctly flip whether a cell needs complete storm assembly."""
         from .complete_storm import _preburst_ratio
         baseline_ifd = self._ifd_frame(self.config.ifd.baseline_year, None)
         percentile = self.config.preburst.percentile
         point_depth = float(_interp_table(baseline_ifd, [duration], [aep_pct]).iloc[0, 0])
         ratio = _preburst_ratio(self.response, percentile, duration, aep_pct)
-        storm_il = self._storm_initial_loss_pct_datahub(aep_pct)
+        storm_il = self._storm_initial_loss_pct(aep_pct)
         implied_burst_loss = storm_il - ratio * point_depth
         if implied_burst_loss < 0:
             logger.debug(
@@ -671,7 +680,7 @@ class ArrEngine:
                        scenario_label: Optional[str] = None) -> float:
         aep_pct = aep_name_to_pct(aep_name)
         burst_losses = self._burst_loss_frame()
-        if burst_losses.empty or self.config.losses.user_initial_loss is not None:
+        if burst_losses.empty:
             # no per-duration/AEP burst initial loss table exists at all for this
             # location/method (e.g. 'BurstLossesNew' is NSW-only, and is missing
             # entirely for other locations - see _burst_loss_frame). Every duration
@@ -739,7 +748,12 @@ class ArrEngine:
             ils = None
             if losses_cfg.extrapolation_method in ('rahman', 'hill', 'interpolate_preburst',
                                                      'log_interpolate_preburst', 'constant_preburst_ratio'):
-                ils = self._storm_initial_loss_pct_datahub(aep_pct)
+                # this branch is only ever reached for the 'recommended' method - see
+                # `_burst_loss_frame` ('probability_neutral' raises ArrError earlier
+                # instead of returning an empty table) - so `known_losses` (built via
+                # `_derive_burst_loss_via_ratio` above) is already in "effective"
+                # (user_initial_loss-substituted, if set) space; `ils` must match.
+                ils = self._storm_initial_loss_pct(aep_pct)
             point_depths = None
             if losses_cfg.extrapolation_method == 'constant_preburst_ratio':
                 point_depths = self._point_depths_for_preburst_ratio([duration], threshold, [col])
@@ -792,15 +806,23 @@ class ArrEngine:
         losses_cfg = self.config.losses
         threshold = float(burst_losses.index.min()) if not burst_losses.empty else None
         if losses_cfg.extrapolation_method != 'none':
-            # always extrapolate using the Data Hub's own (unscaled) storm initial
-            # loss here, not `losses.user_initial_loss` - the whole table (including
+            # for the 'recommended' method (BurstLossesNew), `burst_losses` here is
+            # already in "effective" (user_initial_loss-substituted, if set) space -
+            # see `_recompute_burst_losses_for_ifd_year`/`_derive_burst_loss_via_ratio`
+            # - so the reference storm initial loss used for extrapolation must match
+            # that same space. For 'probability_neutral' (BurstIL), `burst_losses` is
+            # still in raw Data Hub space at this point - the whole table (including
             # any extrapolated short-duration rows) is scaled to the user-supplied
             # value in one consistent step below, once everything is in "Data Hub
-            # space" (avoids double-scaling the extrapolated rows).
+            # space" (avoids double-scaling the extrapolated rows), so the raw
+            # (unscaled) storm initial loss must be used here instead.
             ils = None
             if losses_cfg.extrapolation_method in ('rahman', 'hill', 'interpolate_preburst',
                                                      'log_interpolate_preburst', 'constant_preburst_ratio'):
-                ils = self._storm_initial_loss_pct_datahub(aep_pct)
+                if losses_cfg.method == 'probability_neutral':
+                    ils = self._storm_initial_loss_pct_datahub(aep_pct)
+                else:
+                    ils = self._storm_initial_loss_pct(aep_pct)
             point_depths = None
             if losses_cfg.extrapolation_method == 'constant_preburst_ratio':
                 # point (unARF'd) design burst depths at the reference (threshold) and
@@ -814,11 +836,17 @@ class ArrEngine:
                 point_depths=point_depths,
             )
             burst_losses = extended
-        if losses_cfg.user_initial_loss is not None:
+        if losses_cfg.user_initial_loss is not None and losses_cfg.method == 'probability_neutral':
             # scale the whole burst initial loss table proportionally so the design
             # storm initial loss matches the user-supplied value, preserving the Data
             # Hub's relative duration/AEP reduction shape - matches the legacy script's
             # `applyUserInitialLoss` scaling (`ilb_complete * (ils_user / ils)`).
+            # Only applies to 'probability_neutral' (BurstIL) - the 'recommended'
+            # method (BurstLossesNew) already directly substitutes
+            # `losses.user_initial_loss` for the storm initial loss wherever it's
+            # recomputed/derived (see `_recompute_burst_losses_for_ifd_year`/
+            # `_derive_burst_loss_via_ratio`), so scaling it again here would
+            # double-apply the user-supplied value.
             burst_losses = self._scale_burst_losses_to_user_il(burst_losses)
         # nearest available AEP column (exact match expected in practice)
         col = min(burst_losses.columns, key=lambda c: abs(float(c) - aep_pct))
@@ -875,7 +903,12 @@ class ArrEngine:
         self._extrapolated_loss_records = []
         try:
             base_burst_loss = self._burst_loss_frame()
-            if self.config.losses.user_initial_loss is not None:
+            if self.config.losses.user_initial_loss is not None and self.config.losses.method == 'probability_neutral':
+                # 'recommended' (BurstLossesNew) already directly substitutes
+                # losses.user_initial_loss wherever `_burst_loss_frame()` recomputes
+                # cells - see `_recompute_burst_losses_for_ifd_year` - so only
+                # 'probability_neutral' (BurstIL, not preburst-derived) still needs
+                # this separate proportional-scaling step.
                 base_burst_loss = self._scale_burst_losses_to_user_il(base_burst_loss)
         except ArrError:
             base_burst_loss = None
