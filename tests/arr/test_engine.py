@@ -962,6 +962,50 @@ def test_engine_seq_pattern_method_none_zeroes_burst_loss_instead_of_crashing(ap
     assert any("pattern_method == 'none'" in rec.message for rec in caplog.records)
 
 
+def test_engine_seq_pattern_method_none_still_scales_cc_continuing_loss(api_response_seq):
+    """When preburst.pattern_method == 'none' short-circuits complete storm assembly
+    (burst initial loss forced to 0) for a climate change scenario using
+    losses.climate_change_method == 'burst', the climate-change continuing loss
+    factor should still be applied - this cell bypasses the normal `il`-scaling
+    branch (which also captures `cl_factor`), so `cl_factor` must be derived
+    independently here rather than silently defaulting to 1.0."""
+    rec_ifd = api_response_seq.layer('RecIFD')
+    base_table = rec_ifd[next(iter(rec_ifd))]
+    api_response_seq.layers['CCAdjIFDDatasets'] = {
+        'BoM IFD Depths (2090 Baseline - SSP2)': base_table,
+    }
+    api_response_seq.layers['ClimateChange'] = {
+        'label': 'Climate Change Factors',
+        'loss_factors': {
+            'Initial_Loss': {
+                'columns': ['Losses SSP1-2.6', 'Losses SSP2-4.5', 'Losses SSP3-7.0', 'Losses SSP5-8.5'],
+                'index': [2090],
+                'data': [[1.03, 1.05, 1.07, 1.08]],
+            },
+            'Continuing_Loss': {
+                'columns': ['Losses SSP1-2.6', 'Losses SSP2-4.5', 'Losses SSP3-7.0', 'Losses SSP5-8.5'],
+                'index': [2090],
+                'data': [[1.06, 1.09, 1.13, 1.16]],
+            },
+        },
+    }
+    config = make_config_seq(
+        events={'aep': ['1%'], 'duration': [1440], 'output_notation': 'ari'},
+        preburst={'pattern_method': 'none'},
+        climate_change={'enabled': True, 'scenarios': [{'baseline_year': 2090, 'ssp': 'SSP2'}]},
+        losses={'climate_change_method': 'burst'},
+    )
+    engine = ArrEngine(config, api_response_seq)
+    results = engine.run()
+    base = next(r for r in results if r.cc_scenario is None)
+    cc = next(r for r in results if r.cc_scenario == '2090_SSP2')
+    assert base.initial_loss == 0.0
+    assert cc.initial_loss == 0.0
+    _, cl_factor = engine._cc_loss_factors(2090, 'SSP2')
+    assert cc.continuing_loss == pytest.approx(base.continuing_loss * cl_factor)
+    assert cc.continuing_loss != pytest.approx(base.continuing_loss)
+
+
 def test_engine_seq_recommended_fallback_uses_pattern_duration_defaults(api_response_seq):
     # 'RecPreburstTP' is absent entirely (NSW-only) - build_preburst should fall back to
     # the (defaulted) pattern_duration=2/pattern_tp='TP01'/duration_proportional=True

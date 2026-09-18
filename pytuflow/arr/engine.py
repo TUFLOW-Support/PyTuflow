@@ -925,7 +925,12 @@ class ArrEngine:
                             if (self.config.preburst.pattern_method or '').lower() == 'none':
                                 # 'none' disables auto complete storm assembly entirely -
                                 # just set the burst initial loss to 0 for this cell
-                                # instead of building any preburst pattern.
+                                # instead of building any preburst pattern. Continuing
+                                # loss still needs its climate-change factor applied
+                                # here since we're bypassing the normal `il`-scaling
+                                # branch above (which also captures `cl_factor`).
+                                if ssp is not None:
+                                    _, cl_factor = self._cc_loss_factors(baseline_year, ssp)
                                 logger.warning(
                                     "%s/%smin requires complete storm assembly (%s), but "
                                     "preburst.pattern_method == 'none' - setting the burst initial loss to 0 "
