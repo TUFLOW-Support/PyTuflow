@@ -1,5 +1,6 @@
 import re
 from datetime import timezone
+import sqlite3
 from typing import Union, TYPE_CHECKING
 from collections import OrderedDict
 from packaging.version import Version
@@ -584,10 +585,15 @@ class GPKG1D(GPKGBase, INFO):
         return df
 
     def _load_region_info(self, cur: 'Cursor'):
-        columns = ['id', 'type', 'source', 'rain_gage', 'outlet', 'area', 'pctimperv',
-                   'width', 'pctslope', 'curblen', 'snowpack']
-        type_map = [str, str, str, str, str, float, float, float, float, float, str]
-        if self._is_swmm:
+        columns = ['id', 'type', 'source', 'rain_gage', 'outlet', 'area', 'total_precip',
+                   'total_runon', 'total_evap', 'total_infil', 'total_runoff', 'peak_runoff']
+        type_map = [str, str, str, str, str, float, float, float, float, float, float, float]
+        if not self._is_swmm:
+            # Only SWMM has region information for now
+            self._polygon_info = pd.DataFrame([], columns=columns)
+            return
+        
+        try:
             cur.execute(
                 'SELECT '
                 'ID as id, '
@@ -597,15 +603,18 @@ class GPKG1D(GPKGBase, INFO):
                 'Rain_Gage as "rain_gage", '
                 'Outlet as "outlet", '
                 'Area as "area", '
-                'Width as "width", '
-                'PctSlope as "pctslope", '
-                'CurbLen as "curblen", '
-                'Snowpack as "snowpack" '
+                'Total_Precip as "total_precip", '
+                'Total_Runon as "total_runon", '
+                'Total_Evap as "total_evap", '
+                'Total_Infil as "total_infil", '
+                'Total_Runoff as "total_runoff", '
+                'Peak_Runoff as "peak_runoff" '
                 'FROM Polygons_R;'
             )
-        else:
-            # Should not get here??
-            raise RuntimeError("Region info should not be loaded for non-SWMM cases.")
+        # If there is an error executing the SQL query, it means there were no subcatchments to write
+        except sqlite3.Error:
+            self._polygon_info = pd.DataFrame([], columns=columns)
+            return
 
         ret = cur.fetchall()
         if ret:

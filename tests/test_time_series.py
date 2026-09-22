@@ -751,6 +751,27 @@ class Test_TPC_GPKG(TestCase):
         df = res.time_series('Underdrain', 'q')
         self.assertEqual((286, 1), df.shape)
 
+    def test_tpc_gpkg_swmm_ids_polygon(self):
+        p = './tests/swmm_subcatchment/TS03_5m_001.tpc'
+        res = TPC(p)
+        ids = res.ids('polygon')
+        self.assertEqual(14, len(ids))
+        ids = res.ids('subcatchment')
+        self.assertEqual(14, len(ids))
+
+    def test_tpc_gpkg_swmm_maximums_polygon(self):
+        p = './tests/swmm_subcatchment/TS03_5m_001.tpc'
+        res = TPC(p)
+        df = res.maximum('SPit2', 'Rainfall')
+        self.assertEqual((1, 2), df.shape)
+
+    def test_tpc_gpkg_swmm_time_series_polygon(self):
+        p = './tests/swmm_subcatchment/TS03_5m_001.tpc'
+        res = TPC(p)
+        df = res.time_series('SPit2', 'Rainfall')
+        self.assertEqual((181, 1), df.shape)
+    
+
     def test_tpc_gpkg_swmm_section(self):
         p = './tests/tpc_gpkg/basin_HPC-2m_SWMM_____2016_8_12.tpc'
         res = TPC(p)
@@ -762,7 +783,6 @@ class Test_TPC_GPKG(TestCase):
         res = TPC(p)
         df = res.section('Underdrain', ['Bed Level', 'water level', 'pits'], 1)
         self.assertEqual((6, 7), df.shape)
-
 
 class Test_TPC_Frankenmodel(TestCase):
 
