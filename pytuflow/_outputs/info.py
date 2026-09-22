@@ -79,7 +79,7 @@ class INFO(TimeSeries):
     """
 
     DOMAIN_TYPES = {'1d': ['1d']}
-    GEOMETRY_TYPES = {'point': ['node', 'point'], 'line': ['channel', 'line', 'link']}
+    GEOMETRY_TYPES = {'point': ['node', 'point'], 'line': ['channel', 'line', 'link'], 'polygon':['polygon', 'subcatchment']}
     ATTRIBUTE_TYPES = {}
     ID_COLUMNS = ['id']
 
@@ -115,6 +115,12 @@ class INFO(TimeSeries):
                      'lbus_obvert', 'rbus_obvert', 'lbds_obvert', 'rbds_obvert']
         )
 
+        #: pd.DataFrame: Polygon information. Column headers are :code:`[id, type, source, rain_gage, outlet, area, pctimperv, width, pctslope, curblen, snowpack]`
+        self._polygon_info = pd.DataFrame(
+            index=['id'],
+            columns=['type', 'source', 'rain_gage', 'outlet', 'area', 'pctimperv', 'width', 'pctslope', 'curblen', 'snowpack']
+        )
+
         #: pd.DataFrame: Information on all 1D output objects. Column headers are :code:`[id, data_type, geometry, start, end, dt]`
         self.oned_objs = pd.DataFrame(columns=['id', 'data_type', 'geometry', 'start', 'end', 'dt'])
 
@@ -124,11 +130,15 @@ class INFO(TimeSeries):
         #: int: Number of channels
         self.channel_count = 0
 
+        #: int: Number of polygons
+        self.poly_count = 0
+
         # private properties
         self._tpc_reader = self._init_tpc_reader()
         self._time_series_data = AppendDict()
         self._maximum_data = AppendDict()
         self._nd_res_types = []
+        self._poly_res_types = []
         self._lp = None
         self._section_geom = 'channel'
 
@@ -174,6 +184,7 @@ class INFO(TimeSeries):
         * :code:`1d`
         * :code:`node`: returns only node times
         * :code:`channel`: returns only channel times
+        * :code:`polygon`: returns only polygon times
         * :code:`[id]`: returns only data types for the given ID.
         * :code:`[data_type]`: returns only times for the given data type.
 
@@ -210,6 +221,7 @@ class INFO(TimeSeries):
         * :code:`1d`: same as :code:`None` as class only contains 1D data
         * :code:`node`
         * :code:`channel`
+        * :code:`polygon`
         * :code:`timeseries`: returns only IDs that have time series data.
         * :code:`section`: returns only IDs that have section data (i.e. long plot data).
         * :code:`[data_type]`: returns only IDs for the given data type. Shorthand data type names can be used.
@@ -260,6 +272,7 @@ class INFO(TimeSeries):
         * :code:`1d`: same as :code:`None` as class only contains 1D data
         * :code:`node`
         * :code:`channel`
+        * :code:`polygon`
         * :code:`timeseries`: returns only IDs that have time series data.
         * :code:`section`: returns only IDs that have section data (i.e. long plot data).
         * :code:`[id]`: returns only data types for the given ID.
@@ -305,6 +318,8 @@ class INFO(TimeSeries):
             invalid_section_geom = ['node', 'point']
         elif self._section_geom == 'node':
             invalid_section_geom = ['channel', 'line']
+        elif self._section_geom == 'polygon':
+            invalid_section_geom = ['line', 'channel', 'node', 'point']
         else:
             invalid_section_geom = []
         if filter_by and 'section' in filter_by:
@@ -356,6 +371,7 @@ class INFO(TimeSeries):
         * :code:`1d`: returns all maximum values (same as passing in None for locations)
         * :code:`node`
         * :code:`channel`
+        * :code:`polygon`
 
         The returned DataFrame will have an index column corresponding to the location IDs, and the columns
         will be in the format :code:`obj/data_type/[max|tmax]`,
@@ -425,6 +441,7 @@ class INFO(TimeSeries):
         * :code:`1d`: returns all locations (same as passing in None for locations)
         * :code:`node`
         * :code:`channel`
+        * :code:`polygon`
 
         The returned column names will be in the format :code:`obj/data_type/location`
         e.g. :code:`channel/flow/FC01.1_R`. The :code:`data_type` name in the column heading will be identical to the
@@ -509,6 +526,7 @@ class INFO(TimeSeries):
         * :code:`branch_id`: The branch ID. If more than 2 pipes are provided, or the channels diverge at an intersection,
           then multiple branches will be returned. The same channel could be in multiple branches. The branch id
           starts at zero for the first branch, and increments by one for each additional branch.
+        * :code:`polygon`: The polygon ID.
         * :code:`channel`: The channel ID.
         * :code:`node`: The node ID.
         * :code:`offset`: The offset along the long plot
@@ -733,7 +751,7 @@ class INFO(TimeSeries):
                 for col in df1.columns:
                     info['id'].append(col)
                     info['data_type'].append(dtype)
-                    info['geometry'].append('point' if dtype in self._nd_res_types else 'line')
+                    info['geometry'].append('point' if dtype in self._nd_res_types else 'polygon' if dtype in self._poly_res_types else 'line')
                     info['start'].append(start)
                     info['end'].append(end)
                     info['dt'].append(dt)
@@ -787,7 +805,7 @@ class INFO(TimeSeries):
                 self._maximum_data[data_type] = pd.DataFrame({'max': max_, 'tmax': tmax})
 
     def _prepend_1d_type_to_column_name(self, columns: pd.Index) -> pd.Index:
-        """Prepend 'node' or 'channel' to the column names.
+        """Prepend 'node', 'channel', or 'polygon' to the column names.
         Requires all results to be 1D (no mixed in in po or rl results).
         """
         def col_names(x):
@@ -795,7 +813,12 @@ class INFO(TimeSeries):
             t = len(x1) > 2  # is time column
             dtype = x1[1] if t else x1[0]
             dtype = self._get_standard_data_type_name(dtype)
-            c = 'node' if dtype in self._nd_res_types else 'channel'
+            if dtype in self._nd_res_types:
+                c = 'node'
+            elif dtype in self._poly_res_types:
+                c = 'polygon'
+            else:
+                c = 'channel'
             return f'{x1[0]}/{c}/{x1[1]}/{x1[2]}' if t else f'{c}/{x1[0]}/{x1[1]}'
 
         return columns.to_series().apply(col_names)

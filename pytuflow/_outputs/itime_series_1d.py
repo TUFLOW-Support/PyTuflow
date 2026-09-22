@@ -34,6 +34,12 @@ class ITimeSeries1D(ABC):
                      'lbus_obvert', 'rbus_obvert', 'lbds_obvert', 'rbds_obvert']
         )
 
+        #: pd.DataFrame: Polygon information. Column headers are :code:`[id, type, source, rain_gage, outlet, area, pctimperv, width, pctslope, curblen, snowpack]`
+        self._polygon_info = pd.DataFrame(
+            index=['id'],
+            columns=['type', 'source', 'rain_gage', 'outlet', 'area', 'pctimperv', 'width', 'pctslope', 'curblen', 'snowpack']
+        )
+
         #: pd.DataFrame: Information on all 1D output objects. Column headers are :code:`[id, data_type, geometry, start, end, dt]`
         self.oned_objs = pd.DataFrame(columns=['id', 'data_type', 'geometry', 'start', 'end', 'dt'])
 
@@ -42,6 +48,9 @@ class ITimeSeries1D(ABC):
 
         #: int: Number of channels
         self.channel_count = 0
+
+        #: int: Number of polygons
+        self.poly_count = 0
 
         # private
         self._lp = None
