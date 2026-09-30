@@ -6,7 +6,7 @@ now serves both current and climate-change-adjusted IFD tables directly, so ther
 need for the new module to talk to BOM at all, nor calculate climate-change-adjusted
 rainfall/losses itself.
 
-See https://data-dev.arr-software.org/about for the full list of available API layers.
+See https://data.arr-software.org/about for the full list of available API layers.
 """
 
 from __future__ import annotations
@@ -26,8 +26,8 @@ logger = logging.getLogger('pytuflow.arr')
 #: Default (dev) base URL for the ARR Data Hub API. Point queries (``site.latitude``/
 #: ``site.longitude``) are simple GET requests; catchment-boundary queries
 #: (``site.catchment_boundary`` - GeoJSON/Shapefile/KML) are ``multipart/form-data`` POST
-#: requests instead - see https://data-dev.arr-software.org/about.
-DEFAULT_BASE_URL = 'https://data-dev.arr-software.org/'
+#: requests instead - see https://data.arr-software.org/about.
+DEFAULT_BASE_URL = 'https://data.arr-software.org/'
 
 #: Data layers requested for every query, matching the "Command Line Name" column in the
 #: ARR Data Hub "Advanced Use" API docs.
@@ -177,7 +177,7 @@ class ArrApiClient:
         boundary upload. For a ``.shp`` path, also attaches its required
         ``.shx``/``.dbf`` siblings (and ``.prj``, if present) alongside it, matching the
         ARR Data Hub API's shapefile upload contract (see
-        https://data-dev.arr-software.org/about)."""
+        https://data.arr-software.org/about)."""
         path = Path(catchment_boundary)
         paths = [path]
         if path.suffix.lower() == '.shp':
