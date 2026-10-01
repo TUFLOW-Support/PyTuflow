@@ -128,4 +128,112 @@ The json example below shows all the available keys and is not necessarily valid
         }
     }
 
+Parameter descriptions
+^^^^^^^^^^^^^^^^^^^^^^
 
+**site (required)**
+
+.. list-table::
+   :widths: 15 10 10 65
+   :header-rows: 1
+
+   * - Key
+     - Type
+     - Default
+     - Description
+   * - name
+     - ``string``
+     - ``-``
+     - Site/catchment identifier - used as a prefix for output file names (e.g. <name>_RF_...) and as the TUFLOW IL_<name>/CL_<name> loss variable suffix. **Required**.
+   * - latitude / longitude
+     - ``number``
+     - ``null``
+     - Site (catchment centroid) coordinates, decimal degrees. **Required**, unless catchment_boundary is set (mutually exclusive with it), or unless the top-level response_json key is set (see below), in which case they are not used and may be omitted.
+   * - catchment_boundary
+     - ``string``
+     - ``null``
+     - Path to a catchment boundary polygon file to upload to the ARR Data Hub instead of a single lat/lon point - GeoJSON (.geojson/.json), KML (.kml), or Shapefile (.shp - its .shx/.dbf/.prj sibling files alongside it are also uploaded automatically). Mutually exclusive with latitude/longitude. **Required**, unless a lat/lon is provided (this takes precedence), or the top-level response_json key is set (see below), in which case this is not used and may be ommitted.
+   * - outlet_latitude / outlet_longitude
+     - ``number``
+     - ``null``
+     - Optional catchment outlet coordinates, decimal degrees. Used by the ARR datahub for jurisdiction guidance.
+   * - catchment_area
+     - ``number``
+     - ``null``
+     - Catchment area in km\ :sup:`2`. Catchment area is not extracted from the polygon geometry and it must be provided if it is to be considered.
+
+**events (required)**
+
+.. list-table::
+   :widths: 15 10 10 65 
+   :header-rows: 1
+
+   * - Key
+     - Type
+     - Default
+     - Description
+   * - aep
+     - ``list[string | number]``
+     - ``[]``
+     - AEP/ARI magnitude labels to assemble events for. For example, "1%" or "1 in 100". If a number is provided, it is assumed to be "% AEP". **Requried**.
+   * - duration
+     - ``list[number]``
+     - ``[]``
+     - Storm durations in minutes. E.g. ``[60, 120, 360]``. **Required**.
+   * - output_notation
+     - ``string``
+     - ``"aep"``
+     - "aep" (default) or "ari" - controls the name of the events in the output.
+
+**response_json (top-level, optional)**
+
+.. list-table::
+   :widths: 15 10 10 65 
+   :header-rows: 1
+
+   * - Key
+     - Type
+     - Default
+     - Description
+   * - response_json
+     - ``string``
+     - ``null``
+     - Path to a previously saved ARR datahub response json file (e.g. a prior run's ``working_data/<site>_ARR_response.json`` output). Useful if needing to re-run the tool again on a previous response (this ensures the same processing output if the datahub has had subsequent updates - as long as the pytuflow version is the same as run previously).
+
+**ifd (optional)**
+
+.. list-table::
+   :widths: 15 10 10 65 
+   :header-rows: 1
+
+   * - Key
+     - Type
+     - Default
+     - Description
+   * - baseline_year
+     - ``int``
+     - ``2030``
+     - The IFD baseline year to use. For example, ``1990`` will provide similar rainfall IFD curves as the previous tool when extracting data from the BOM (with the exception of catchments that might use other datasets like LIMB rainfall data). The options will depend on the catchment.
+
+**temporal_patterns (optional)**
+
+.. list-table::
+   :widths: 15 10 10 65 
+   :header-rows: 1
+
+   * - Key
+     - Type
+     - Default
+     - Description
+   * - point_tp_csv
+     - ``string``
+     - ``null``
+     - Path to a previously saved or downloaded point temporal pattern CSV to use instead of downloading the data from the datahub. The file must be in the same format as the ``*_Increments.csv`` file from the datahub.
+   * - areal_tp_csv
+     - ``string``
+     - ``null``
+     - Same as the ``point_tp_csv`` above but for areal temporal patterns.
+   * - additional_tp
+     - ``list[str]``
+     - ``[]``
+     - Names of ARR temporal pattern regions to include. Regions listed here are in addition to the automatically determined region from catchment location. The list can also be paths to previously saved temporal pattern increments (both point and areal should be provided). Regions include: ``rangelands``, ``rangelands west``, ``wet tropics``, ``monsoonal north``, ``central slopes``, ``murray basin``, ``east coast north``, ``east coast south``, ``southern slopes mainland``, ``southern slopes tasmania``, ``east flatlands``, ``west flatlands``.
