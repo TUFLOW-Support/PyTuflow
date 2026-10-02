@@ -428,6 +428,10 @@ class Test_TPC_2016(TestCase):
         res = TPC(p)
         self.assertEqual('EG14_001', res.name)
 
+    def test_tpc_2d_only(self):
+        p = './tests/tpc_2d_only/EG03_007.tpc'
+        self.assertFalse(TPC._looks_empty(p))
+
 
 class Test_TPC_NC(TestCase):
 

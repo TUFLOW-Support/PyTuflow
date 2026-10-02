@@ -1,6 +1,13 @@
 Changelog for 1.2
 =================
 
+1.2.3
+-----
+
+Release date: XX October 2026
+
+- Fixed a bug where TPC files that were created from a 2D only model (no 1d or hidden 1d nodes) caused the :class:`~pytuflow.TPC0` to throw an error stating that the result looks empty.
+
 1.2.2
 -----
 
