@@ -423,6 +423,21 @@ class Test_TPC_2016(TestCase):
             except ValueError:
                 self.assertEqual(1, custom_logger.msg_count)
 
+    def test_long_plot_limit_branch(self):
+        p = './tests/2016/EG14_001.tpc'
+        res = TPC(p)
+        df = res.section('FC01.36', 'bed level', -1)
+        self.assertEqual(4, df['branch_id'].nunique())
+        df = res.section('FC01.36', 'bed level', -1, branch_limit=1)
+        self.assertEqual(1, df['branch_id'].nunique())
+        df = res.section('FC01.36', 'bed level', -1, branch_limit=2)
+        self.assertEqual(2, df['branch_id'].nunique())
+
+        df1 = res.section('FC01.36', 'bed level', -1, branch_limit=1)
+        res._lp = None
+        df2 = res.section('FC01.36', 'bed level', -1, branch_limit=1)
+        self.assertTrue((df2 == df1).all().all())
+
     def test_tpc_encoding(self):
         p = './tests/tpc_encoding_error/EG14_001.tpc'
         res = TPC(p)

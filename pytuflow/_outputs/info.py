@@ -582,7 +582,7 @@ class INFO(TimeSeries):
         dfconn = self._connectivity(locations, branch_limit)
 
         # init long plot DataFrame
-        df = self._init_lp(dfconn)
+        df = self._init_lp(dfconn, branch_limit)
 
         # loop through data types and add them to the data frame
         for dtype in data_types:
@@ -849,13 +849,16 @@ class INFO(TimeSeries):
         pd.DataFrame
             The connectivity information.
         """
-        lp = LP1D(ids, self._node_info, self._channel_info)
+        lp = LP1D(ids, self._node_info, self._channel_info, branch_limit)
         if self._lp is not None and lp == self._lp:
-            return self._lp.df
+            if branch_limit == 0:
+                return self._lp.df
+            else:
+                return self._lp.df[self._lp.df['branch_id'] < branch_limit]
 
-        lp.connectivity(branch_limit)
+        lp.connectivity()
         self._lp = lp
         return self._lp.df
 
-    def _init_lp(self, dfconn: pd.DataFrame) -> pd.DataFrame:
-        return self._lp.init_lp(dfconn)
+    def _init_lp(self, dfconn: pd.DataFrame, branch_limit: int) -> pd.DataFrame:
+        return self._lp.init_lp(dfconn, branch_limit)

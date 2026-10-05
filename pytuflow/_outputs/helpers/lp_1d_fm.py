@@ -13,11 +13,11 @@ class LP1DFM(LP1D):
     long profiles because the start and end locations will be nodes and not channels.
     """
 
-    def connectivity(self, branch_limit: int) -> None:
+    def connectivity(self) -> None:
         # docstring inherited
         branches = []
         if len(self.ids) == 1:
-            conn = ConnectivityFM(self.chan_info, self.node_info, self.ids[0], None, branch_limit)
+            conn = ConnectivityFM(self.chan_info, self.node_info, self.ids[0], None, self.branch_limit)
             branches.extend(conn.branches)
         else:
             # more than 1 id - find a connection
@@ -26,7 +26,7 @@ class LP1DFM(LP1D):
                 for id2 in self.ids:
                     if id1 == id2:
                         continue
-                    conn = ConnectivityFM(self.chan_info, self.node_info, id1, id2, branch_limit)
+                    conn = ConnectivityFM(self.chan_info, self.node_info, id1, id2, self.branch_limit)
                     if conn.connected:
                         ds_id = conn.id2
                         break
@@ -41,7 +41,7 @@ class LP1DFM(LP1D):
             for id_ in self.ids:
                 if id_ == ds_id:
                     continue
-                conn = ConnectivityFM(self.chan_info, self.node_info, id_, ds_id, branch_limit)
+                conn = ConnectivityFM(self.chan_info, self.node_info, id_, ds_id, self.branch_limit)
                 if conn.connected:
                     branches.extend(conn.branches)
 

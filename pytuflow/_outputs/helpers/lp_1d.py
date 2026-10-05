@@ -11,7 +11,7 @@ from packaging.version import Version
 class LP1D:
     """Class for generating long profiles for 1D channels."""
 
-    def __init__(self, ids: list[str], node_info: pd.DataFrame, chan_info: pd.DataFrame) -> None:
+    def __init__(self, ids: list[str], node_info: pd.DataFrame, chan_info: pd.DataFrame, branch_limit: int) -> None:
         # private
         self._columns = ['us_node', 'ds_node', 'ispipe', 'length', 'us_invert', 'ds_invert', 'lbus_obvert', 'lbds_obvert']
         self._static_types = []
@@ -32,6 +32,8 @@ class LP1D:
         self.df_static = pd.DataFrame(columns=['offset'])
         #: pd.DataFrame: The temporal data.
         self.df_temp = pd.DataFrame()
+        #: int: Branch limit when connecting a downstream path
+        self.branch_limit = branch_limit
 
     def __repr__(self) -> str:
         if hasattr(self, 'ids'):
@@ -40,7 +42,7 @@ class LP1D:
 
     def __eq__(self, other: typing.Any) -> bool:
         """Override the equality operator so that it checks against the ids it's connecting."""
-        return sorted([x.lower() for x in self.ids]) == sorted([x.lower() for x in other.ids])
+        return sorted([x.lower() for x in self.ids]) == sorted([x.lower() for x in other.ids]) and (other.branch_limit == 0 or (self.branch_limit <= other.branch_limit and self.branch_limit != 0))
 
     def _merge_branches(self, branches: list[list[str]]) -> pd.DataFrame:
         df = pd.DataFrame([], columns=['channel'] + self._columns + ['branch_id'])
@@ -53,13 +55,13 @@ class LP1D:
             df = pd.concat([df, df_], ignore_index=True, axis=0) if not df.empty else df_
         return df
 
-    def connectivity(self, branch_limit: int) -> None:
+    def connectivity(self) -> None:
         """Calculate connectivity between channels. More than one ID is allowed, but all channels
         must connect to a common downstream channel.
         """
         branches = []
         if len(self.ids) == 1:
-            conn = Connectivity(self.chan_info, self.node_info, self.ids[0], None, branch_limit)
+            conn = Connectivity(self.chan_info, self.node_info, self.ids[0], None, self.branch_limit)
             branches.extend(conn.branches)
         else:
             # more than 1 id - find a connection
@@ -68,7 +70,7 @@ class LP1D:
                 for id2 in self.ids:
                     if id1 == id2:
                         continue
-                    conn = Connectivity(self.chan_info, self.node_info, id1, id2, branch_limit)
+                    conn = Connectivity(self.chan_info, self.node_info, id1, id2, self.branch_limit)
                     if conn.connected:
                         ds_id = conn.id2
                         break
@@ -83,13 +85,13 @@ class LP1D:
             for id_ in self.ids:
                 if id_ == ds_id:
                     continue
-                conn = Connectivity(self.chan_info, self.node_info, id_, ds_id, branch_limit)
+                conn = Connectivity(self.chan_info, self.node_info, id_, ds_id, self.branch_limit)
                 if conn.connected:
                     branches.extend(conn.branches)
 
         self.df = self._merge_branches(branches)
 
-    def init_lp(self, conn_df: pd.DataFrame) -> pd.DataFrame:
+    def init_lp(self, conn_df: pd.DataFrame, branch_limit: int) -> pd.DataFrame:
         """Initialise the long plot DataFrame. The initialised DataFrame will contain data on
         the channels, connected nodes, and offsets.
 
@@ -110,6 +112,8 @@ class LP1D:
         offsets = []
         branch_id = 0
         for _, row in self.df[['length', 'branch_id']].iterrows():
+            if branch_limit > 0 and row['branch_id'] >= branch_limit:
+                break
             if row['branch_id'] != branch_id:
                 offset = 0.
                 branch_id = row['branch_id']

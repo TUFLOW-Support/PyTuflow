@@ -532,11 +532,11 @@ class FMTS(INFO):
 
     def _connectivity(self, ids: Union[str, list[str]], branch_limit: int) -> pd.DataFrame:
         # docstring inherited
-        lp = LP1DFM(ids, self._node_info, self._channel_info)
+        lp = LP1DFM(ids, self._node_info, self._channel_info, branch_limit)
         if self._lp is not None and lp == self._lp:
             return self._lp.df
 
-        lp.connectivity(branch_limit)
+        lp.connectivity()
         self._lp = lp
         return self._lp.df
 
@@ -772,8 +772,8 @@ class FMTS(INFO):
         self._channel_info = pd.DataFrame(d)
         self._channel_info.set_index('id', inplace=True)
 
-    def _init_lp(self, dfconn: pd.DataFrame) -> pd.DataFrame:
-        df = self._lp.init_lp(dfconn)
+    def _init_lp(self, dfconn: pd.DataFrame, branch_limit) -> pd.DataFrame:
+        df = self._lp.init_lp(dfconn, branch_limit)
         df['node'] = df['node'].str.split('_', n=2).str[-1]
         return df
 
