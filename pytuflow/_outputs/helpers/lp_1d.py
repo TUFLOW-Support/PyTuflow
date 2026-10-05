@@ -53,13 +53,13 @@ class LP1D:
             df = pd.concat([df, df_], ignore_index=True, axis=0) if not df.empty else df_
         return df
 
-    def connectivity(self) -> None:
+    def connectivity(self, branch_limit: int) -> None:
         """Calculate connectivity between channels. More than one ID is allowed, but all channels
         must connect to a common downstream channel.
         """
         branches = []
         if len(self.ids) == 1:
-            conn = Connectivity(self.chan_info, self.node_info, self.ids[0], None)
+            conn = Connectivity(self.chan_info, self.node_info, self.ids[0], None, branch_limit)
             branches.extend(conn.branches)
         else:
             # more than 1 id - find a connection
@@ -68,7 +68,7 @@ class LP1D:
                 for id2 in self.ids:
                     if id1 == id2:
                         continue
-                    conn = Connectivity(self.chan_info, self.node_info, id1, id2)
+                    conn = Connectivity(self.chan_info, self.node_info, id1, id2, branch_limit)
                     if conn.connected:
                         ds_id = conn.id2
                         break
@@ -83,7 +83,7 @@ class LP1D:
             for id_ in self.ids:
                 if id_ == ds_id:
                     continue
-                conn = Connectivity(self.chan_info, self.node_info, id_, ds_id)
+                conn = Connectivity(self.chan_info, self.node_info, id_, ds_id, branch_limit)
                 if conn.connected:
                     branches.extend(conn.branches)
 
@@ -145,7 +145,7 @@ class LP1D:
 class Connectivity:
     """Class to help calculate connectivity between channels."""
 
-    def __init__(self, chan_info: pd.DataFrame, node_info: pd.DataFrame, id1: str, id2: Union[str, None]) -> None:
+    def __init__(self, chan_info: pd.DataFrame, node_info: pd.DataFrame, id1: str, id2: Union[str, None], branch_limit: int) -> None:
         #: :pd.DataFrame: chan_info
         self.chan_info = chan_info
         #: :pd.DataFrame: node_info
@@ -154,6 +154,8 @@ class Connectivity:
         self.id1 = id1
         #: str: Downstream channel ID
         self.id2 = id2
+        #: int: The branch limit
+        self.branch_limit = branch_limit
         #: list[list[str]]: List of branches
         self.branches = []
         #: bool: True if connected
@@ -200,8 +202,11 @@ class Connectivity:
                 if id_ not in branch:
                     branch.append(id_)
                 self.branches.append(branch)
+                finished = finished or (self.branch_limit > 0 and len(self.branches) >= self.branch_limit)
             if not finished:
                 finished = self._connect(id_, id2, branch.copy())
+                if finished and self.branch_limit > 0 and len(self.branches) >= self.branch_limit:
+                    break
 
         if not one_connection and id2 is None:
             finished = True
