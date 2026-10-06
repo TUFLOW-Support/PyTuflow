@@ -181,11 +181,11 @@ class TPC(INFO, ITimeSeries2D):
                 return False
             if tpc_reader.property_count() < target_line_count:
                 return True
-            node_count = tpc_reader.get_property('Number 1D Nodes')
-            channel_count = tpc_reader.get_property('Number 1D Channels')
-            rlp_count = tpc_reader.get_property('Number Reporting Location Points')
-            rll_count = tpc_reader.get_property('Number Reporting Location Lines')
-            rlr_count = tpc_reader.get_property('Number Reporting Location Regions')
+            node_count = tpc_reader.get_property('Number 1D Nodes') or 0
+            channel_count = tpc_reader.get_property('Number 1D Channels') or 0
+            rlp_count = tpc_reader.get_property('Number Reporting Location Points') or 0
+            rll_count = tpc_reader.get_property('Number Reporting Location Lines') or 0
+            rlr_count = tpc_reader.get_property('Number Reporting Location Regions') or 0
             po_count = 0
             for _, _ in tpc_reader.iter_properties(r'^2D', regex=True):
                 po_count += 1

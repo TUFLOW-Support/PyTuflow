@@ -1,5 +1,5 @@
 import unittest
-from datetime import datetime
+from datetime import datetime, timezone
 
 import numpy as np
 import pandas as pd
@@ -518,6 +518,16 @@ class TestNCMesh(unittest.TestCase):
         self.assertEqual((5, 1), df.shape)
         df = res.flux('./tests/nc_mesh/fv_estuary_flux_line.shp', 'sal')
         self.assertEqual((5, 1), df.shape)
+
+    def test_extract_from_2d_result(self):
+        p = './tests/nc_mesh/FMA2_SED_001.nc'
+        res = NCMesh(p)
+
+        df = res.time_series((4443, 16248), 'velocity')
+        self.assertFalse(df.isna().any().loc['pnt1/velocity'])
+
+        df = res.section([(4443, 16248), (4791, 15471)], 'velocity', datetime(2010, 1, 1, 15, tzinfo=timezone.utc))
+        self.assertFalse(df.isna().any().loc[('line1', 'velocity')])
 
 
 class TestCATCHJson(unittest.TestCase):

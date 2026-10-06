@@ -17,7 +17,7 @@ class LP1DFM(LP1D):
         # docstring inherited
         branches = []
         if len(self.ids) == 1:
-            conn = ConnectivityFM(self.chan_info, self.node_info, self.ids[0], None)
+            conn = ConnectivityFM(self.chan_info, self.node_info, self.ids[0], None, self.branch_limit)
             branches.extend(conn.branches)
         else:
             # more than 1 id - find a connection
@@ -26,7 +26,7 @@ class LP1DFM(LP1D):
                 for id2 in self.ids:
                     if id1 == id2:
                         continue
-                    conn = ConnectivityFM(self.chan_info, self.node_info, id1, id2)
+                    conn = ConnectivityFM(self.chan_info, self.node_info, id1, id2, self.branch_limit)
                     if conn.connected:
                         ds_id = conn.id2
                         break
@@ -41,7 +41,7 @@ class LP1DFM(LP1D):
             for id_ in self.ids:
                 if id_ == ds_id:
                     continue
-                conn = ConnectivityFM(self.chan_info, self.node_info, id_, ds_id)
+                conn = ConnectivityFM(self.chan_info, self.node_info, id_, ds_id, self.branch_limit)
                 if conn.connected:
                     branches.extend(conn.branches)
 
@@ -77,8 +77,11 @@ class ConnectivityFM(Connectivity):
                 if id_ not in branch:
                     branch.append(id_)
                 self.branches.append(branch)
+                finished = finished or (self.branch_limit > 0 and len(self.branches) >= self.branch_limit)
             if not finished:
                 finished = self._connect(nd, id2, branch.copy(), id_)
+                if finished and self.branch_limit > 0 and len(self.branches) >= self.branch_limit:
+                    break
 
         if not one_connection and id2 is None:
             finished = True

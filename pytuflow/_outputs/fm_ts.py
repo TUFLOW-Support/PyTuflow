@@ -421,7 +421,7 @@ class FMTS(INFO):
         return super().time_series(locations, data_types, time_fmt)
 
     def section(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
-                time: TimeLike, *args, **kwargs) -> pd.DataFrame:
+                time: TimeLike, branch_limit: int = 0, *args, **kwargs) -> pd.DataFrame:
         """Returns a long plot for the given location and data types at the given time. If one location is given,
         the long plot will connect the given location down to the outlet. If 2 locations are given, then the
         long plot will connect the two locations (they must be connectable).
@@ -453,6 +453,8 @@ class FMTS(INFO):
             The data type to extract the section data for. If None is passed in, all node data types will be returned.
         time : TimeLike
             The time to extract the section data for.
+        branch_limit : int, optional
+            Limits the number of branches the long plot will collect. A value of zero turns off any limit.
 
         Returns
         -------
@@ -516,7 +518,7 @@ class FMTS(INFO):
         if not locs:
             raise ValueError('No valid locations provided.')
 
-        return super().section(locs, data_types, time, filter_by='node', **kwargs)
+        return super().section(locs, data_types, time, branch_limit=branch_limit, filter_by='node', **kwargs)
 
     def curtain(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
                 time: TimeLike) -> pd.DataFrame:
@@ -528,9 +530,9 @@ class FMTS(INFO):
         """Not supported for ``FMTS`` results. Raises a :code:`NotImplementedError`."""
         return super().profile(locations, data_types, time)
 
-    def _connectivity(self, ids: Union[str, list[str]]) -> pd.DataFrame:
+    def _connectivity(self, ids: Union[str, list[str]], branch_limit: int) -> pd.DataFrame:
         # docstring inherited
-        lp = LP1DFM(ids, self._node_info, self._channel_info)
+        lp = LP1DFM(ids, self._node_info, self._channel_info, branch_limit)
         if self._lp is not None and lp == self._lp:
             return self._lp.df
 
@@ -770,8 +772,8 @@ class FMTS(INFO):
         self._channel_info = pd.DataFrame(d)
         self._channel_info.set_index('id', inplace=True)
 
-    def _init_lp(self, dfconn: pd.DataFrame) -> pd.DataFrame:
-        df = self._lp.init_lp(dfconn)
+    def _init_lp(self, dfconn: pd.DataFrame, branch_limit) -> pd.DataFrame:
+        df = self._lp.init_lp(dfconn, branch_limit)
         df['node'] = df['node'].str.split('_', n=2).str[-1]
         return df
 

@@ -492,7 +492,7 @@ class INFO(TimeSeries):
         return df
 
     def section(self, locations: Union[str, list[str]], data_types: Union[str, list[str]],
-                time: TimeLike, *args, **kwargs) -> pd.DataFrame:
+                time: TimeLike, branch_limit: int = 0, *args, **kwargs) -> pd.DataFrame:
         """Returns a long plot for the given location and data types at the given time. If one location is given,
         the long plot will connect the given location down to the outlet. If 2 locations are given, then the
         long plot will connect the two locations (they must be connectable). If more than 2 locations are given,
@@ -522,6 +522,8 @@ class INFO(TimeSeries):
             The data type to extract the section data for. If None is passed in, all node data types will be returned.
         time : TimeLike
             The time to extract the section data for.
+        branch_limit : int, optional
+            Limits the number of branches the long plot will collect. A value of zero turns off any limit.
 
         Returns
         -------
@@ -577,10 +579,10 @@ class INFO(TimeSeries):
         timeidx = self._closest_time_index(times, time)
 
         # get connectivity
-        dfconn = self._connectivity(locations)
+        dfconn = self._connectivity(locations, branch_limit)
 
         # init long plot DataFrame
-        df = self._init_lp(dfconn)
+        df = self._init_lp(dfconn, branch_limit)
 
         # loop through data types and add them to the data frame
         for dtype in data_types:
@@ -828,7 +830,7 @@ class INFO(TimeSeries):
 
         return np.array(y)
 
-    def _connectivity(self, ids: Union[str, list[str]]) -> pd.DataFrame:
+    def _connectivity(self, ids: Union[str, list[str]], branch_limit: int) -> pd.DataFrame:
         """Return a DataFrame describing the connectivity between the :code:`ids`.
 
         :code:`ids` can be a single ID, or a list of IDs. The connectivity for a single ID will trace downstream
@@ -839,19 +841,24 @@ class INFO(TimeSeries):
         ----------
         ids : str | list[str]
             The IDs to trace the connectivity for.
+        branch_limit : int
+            The number of branches to limit collect when connecting the long section.
 
         Returns
         -------
         pd.DataFrame
             The connectivity information.
         """
-        lp = LP1D(ids, self._node_info, self._channel_info)
+        lp = LP1D(ids, self._node_info, self._channel_info, branch_limit)
         if self._lp is not None and lp == self._lp:
-            return self._lp.df
+            if branch_limit == 0:
+                return self._lp.df
+            else:
+                return self._lp.df[self._lp.df['branch_id'] < branch_limit]
 
         lp.connectivity()
         self._lp = lp
         return self._lp.df
 
-    def _init_lp(self, dfconn: pd.DataFrame) -> pd.DataFrame:
-        return self._lp.init_lp(dfconn)
+    def _init_lp(self, dfconn: pd.DataFrame, branch_limit: int) -> pd.DataFrame:
+        return self._lp.init_lp(dfconn, branch_limit)

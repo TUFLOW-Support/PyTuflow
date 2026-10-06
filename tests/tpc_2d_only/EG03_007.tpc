@@ -1,0 +1,15 @@
+Format Version == 2
+Units == METRIC
+Simulation ID == EG03_007
+Time Series Output Format == CSV 
+
+GIS Plot Layer Points == .\gis\EG03_007_PLOT_P.shp
+GIS Plot Layer Lines == .\gis\EG03_007_PLOT_L.shp
+GIS Plot Layer Regions == .\gis\EG03_007_PLOT_R.shp
+GIS Plot Objects == .\gis\EG03_007_PLOT.csv
+
+NetCDF Time Series == NONE
+
+
+2D Point Water Level [2] == .\csv\EG03_007_2d_H.csv
+2D Point Velocity [2] == .\csv\EG03_007_2d_V.csv

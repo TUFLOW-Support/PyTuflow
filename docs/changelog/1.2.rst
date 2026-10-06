@@ -1,6 +1,16 @@
 Changelog for 1.2
 =================
 
+1.2.3
+-----
+
+Release date: 06 October 2026
+
+- Fixed a bug where TPC files that were created from a 2D only model (no 1d or hidden 1d nodes) caused the :class:`~pytuflow.TPC` to throw an error stating that the result looks empty.
+- Added a branch limit argument to the :meth:`~pytuflow.TPC.section` method signature to prevent the method from hanging due to millions of (legitimate) paths being found and processed. The number of paths can balloon due to many parallel channels in the section (e.g. culvert / weir combinations). The number of paths follows a power relationship to the number of parallel channels instances and as a consequence can become exceedingly large.
+- Fixed a bug that occurred when extracting results that are typically 3D results (such as velocity) from a 2D result file for the :class:`~pytuflow.NCMesh` results. Previously, the :meth:`~PyTuflow.NCMesh.time_series` or :meth:`~pytuflow.NCMesh.section` methods incorrectly returned ``NaN`` values.
+- Version name extraction from a folder name is now more robust, allowing for version searching among other text e.g. ``TUFLOW.2011-09-AE`` will now correctly find the version name. Previously, the ``TUFLOW.`` at before the version caused an error extracting the version.
+
 1.2.2
 -----
 
