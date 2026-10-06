@@ -190,6 +190,8 @@ class TuflowBinaries:
                     version = re.sub(rf'{cls.NAME}[-_]', '', version, flags=re.IGNORECASE)
                 match = re.match(r'.*(\d{4}[-\.]\d+[-\.][A-Z]{2}).*', version) or re.match(r'.*(\d{4}[-\.]\d+[-\.](?:\d+)?).*', version)
                 if not match:
+                    if os.name == 'nt':
+                        continue
                     version = cls.tuflow_version_query(str(f))
                 version = match.group(1)
                 d[version] = str(f)
