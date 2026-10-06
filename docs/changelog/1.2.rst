@@ -1,7 +1,7 @@
 Changelog for 1.2
 =================
 
-1.2.3
+1.2.4
 -----
 
 Release date: 06 October 2026
