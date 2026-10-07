@@ -5,7 +5,7 @@ aiohttp==3.13.5
 aiosignal==1.4.0
 alabaster==1.0.0
 annotated-types==0.7.0
-anyio==4.13.0
+anyio==4.14.2
 argon2-cffi==25.1.0
 argon2-cffi-bindings==25.1.0
 arrow==1.4.0
