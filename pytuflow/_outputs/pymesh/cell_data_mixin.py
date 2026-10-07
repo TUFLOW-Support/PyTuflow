@@ -208,7 +208,7 @@ class CellDataMixin:
 
         wd = self.wd_flag(data_type[0], (slice(None), cell_id)).flatten().astype(bool)
 
-        if is_3d:
+        if is_3d and nlevels > 1:
             zlevels = self.zlevels(slice(None), nlevels, cell_id, cell_idx)
             values_avg = []
             for val in values:
@@ -256,7 +256,7 @@ class CellDataMixin:
             a = self.data(dtype, (time_index, idx))
             extracted = [a[:,0], a[:,1]] if a.ndim == 2 else [a]
             for a in extracted:
-                if is_3d:
+                if is_3d and max_nlevels > 1:
                     zlevels = self.zlevels(time_index, nlevels, cells, cell_idx)
                     a_padded = np.full((cell_idx.shape[0], max_nlevels), np.nan)
                     b_padded = np.full((cell_idx.shape[0], max_nlevels + 1), np.nan)

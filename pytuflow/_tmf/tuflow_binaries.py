@@ -188,9 +188,13 @@ class TuflowBinaries:
                     version = f.parents[1].name
                 if os.name != 'nt':
                     version = re.sub(rf'{cls.NAME}[-_]', '', version, flags=re.IGNORECASE)
-                match = re.match(r'\d{4}[-\.]\d+[-\.](?:\d+)?', version) or re.match(r'\d{4}[-\.]\d+[-\.][A-Z]{2}', version)
+                match = re.match(r'.*(\d{4}[-\.]\d+[-\.][A-Z]{2}).*', version) or re.match(r'.*(\d{4}[-\.]\d+[-\.](?:\d+)?).*', version)
                 if not match:
+                    if os.name == 'nt':
+                        continue
                     version = cls.tuflow_version_query(str(f))
+                elif len(match.groups()) >= 1:
+                    version = match[1]
                 d[version] = str(f)
         return d
 
@@ -199,7 +203,10 @@ class TuflowBinaries:
         """Only tested post 2026."""
         import subprocess
         try:
-            output = subprocess.check_output([bin_path, '-version'], text=True, errors='ignore')  # nosec B603
+            kwargs = {}
+            if os.name == 'nt':
+                kwargs = {'creationflags': subprocess.CREATE_NO_WINDOW}
+            output = subprocess.check_output([bin_path, '-version', '-nc', '-nmb'], text=True, errors='ignore', **kwargs)  # nosec B603
             version_text = [x for x in output.splitlines() if x.startswith('TUFLOW Build:')]
             if not version_text:
                 return None
@@ -210,7 +217,7 @@ class TuflowBinaries:
             if '-iDP' in v:
                 v = v.split('-iDP')[0]
             return v
-        except (subprocess.CalledProcessError, FileNotFoundError):
+        except (subprocess.CalledProcessError, FileNotFoundError, TypeError):
             return None
 
     @staticmethod
