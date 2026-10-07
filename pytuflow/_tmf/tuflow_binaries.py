@@ -193,7 +193,8 @@ class TuflowBinaries:
                     if os.name == 'nt':
                         continue
                     version = cls.tuflow_version_query(str(f))
-                version = match.group(1)
+                elif len(match.groups()) >= 1:
+                    version = match[1]
                 d[version] = str(f)
         return d
 
