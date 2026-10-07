@@ -151,7 +151,7 @@ rpds-py==0.30.0
 scalene==2.2.1
 scooby==0.11.2
 send2trash==2.1.0
-setuptools==82.0.1
+setuptools==83.0.0
 shapely==2.1.2
 simpervisor==1.0.0
 six==1.17.0
