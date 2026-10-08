@@ -433,11 +433,51 @@ The available loss extrapolation methods are detailed below. The default method 
 Complete storm assembly
 -----------------------
 
-something
+A "complete storm" prepends a preburst rainfall period ahead of the ARR design burst, so the full storm initial loss can be used rather than a burst initial loss.
+
+The tool will automatically switch to using a complete storm for events where the burst initial loss is calculated to be less than zero. For some regions, the datahub provides a table of burst initial loss and explicitly recommends using a preburst temporal pattern (i.e. a complete storm), in these cases the tool will also automatically switch to using a complete storm for those events. The exception to this is if the preburst ``pattern_method`` parameter is set to ``"none"``. The complete storm can be turned on for every event by setting the ``complete_storm`` parameter to ``true``.
+
+The available preburst ``pattern_methods`` are described below:
+
+- ``"recommended"`` - Uses the recommended preburst temporal pattern referenced for the catchment on the datahub. A recommended temporal pattern is not always provided (currently only available for NSW catchments), in these instances the ``recommended`` approach falls back to the ``temporal_pattern`` method.
+- ``"temporal_pattern"`` - Uses an existing point temporal pattern from the same catchment. The chosen temporal pattern is based on the settings within the ``preburst`` settings. For example, the default is to use ``"TP01"`` for a duration that is 2x the burst duration (capped to 6 hrs i.e.. durations longer than 6 hrs will use the 6 hr temporal pattern). The chosen temporal pattern rarity band for the preburst temporal pattern will use the same as the design AEP rarity band.
+- ``"constant"`` - Uses a constant rainfall intensity over the preburst duration. The preburst duration is determined by the other settings with the ``preburst`` settings.
+- ``"none"`` - Disables the complete storm assembly (set to ``"none"`` to turn off the automatic switching to complete storms).
+
+**Negligible preburst assumption:** if the resulting preburst depth turns out to be less than 1% of the point design burst depth (implied preburst ratio < 0.01), the preburst period is dropped entirely and the event falls back to a standard burst-only event (using the ordinary burst initial loss, or - for "Use PB TP" placeholder cells with no fixed burst initial loss available - the full storm initial loss as a proxy, since the preburst contribution is negligible either way).
+
+**Requested durations between a "Use PB TP" cell and a fixed-value cell:** if a requested duration falls between two rows of the burst initial loss table where one is numeric and the other is the "Use PB TP" placeholder (for the same AEP), a straight linear interpolation between them wouldn't make sense (a placeholder isn't a loss value). Instead, the tool derives an implied burst initial loss for that cell from the (interpolated) preburst depth and the storm initial loss: storm initial loss - preburst depth, where the preburst depth is preburst.percentile ratio × point design burst depth at that duration. If the result is positive, it's used directly (no complete storm needed); if it would be negative (the preburst rainfall alone exceeds the storm initial loss), the cell is itself treated as "Use PB TP", automatically triggering complete storm assembly for that specific AEP/duration. A duration bracketed by two "Use PB TP" cells is likewise treated as "Use PB TP" (no numeric neighbour exists to derive anything from).
 
 .. _working_data:
 
 Working data
 ------------
 
-something
+Alongside the standard TUFLOW output files, a working_data subdirectory is used to save data useful for reviewing/QA'ing what the tool requested and calculated. The standard output working data is listed below:
+
+- ``<site>_ARR_response.json`` - the raw JSON response from the ARR Data Hub, exactly as received. Always saved, so a run can always be fully reproduced/inspected later without needing to re-query the datahub.
+- ``<site>_ARR_response_<region>.json`` - one per additional temporal pattern region configured (if any) - the raw JSON response from the separate ARR datahub request made for that region's representative coordinates. Always saved, same as the site's own response, for the same reason. <region> is the region name with spaces removed (e.g. ``WetTropics``).
+
+The following are only saved when the ``output`` "verbose" parameter is true, since they are purely for debugging/QA and are otherwise redundant with the always-written rf_inflow/loss control files:
+
+- ``<site>_IFD_after_ARF[_<cc_scenario>].csv`` - the areal (post-ARF) design rainfall
+  depth (mm) for every requested duration x AEP, one file per climate change scenario
+  (if enabled).
+- ``<site>_ARF.csv`` - the Areal Reduction Factor applied for every
+  requested duration x AEP.
+- ``<site>_burst_initial_loss[_<cc_scenario>].csv`` - the burst initial loss (mm) table
+  used, for every duration x AEP, one file per
+  climate change scenario (if enabled) - climate change scenario files have the datahub's climate-change initial loss adjustment factor applied.
+- ``<site>_extrapolated_losses[_<cc_scenario>].csv`` - the extrapolated burst initial
+  loss (mm) values, in the same duration (index) x AEP% (columns) table format as
+  ``<site>_burst_initial_loss...csv``, but containing **only** the cells that were
+  actually extrapolated.
+- ``<site>_PointTP_Increments.csv`` / ``<site>_ArealTP_Increments.csv`` - the raw temporal
+  pattern increment CSVs downloaded from the Data Hub (before selection/filtering to the
+  specific patterns used for each event).
+- ``<site>_PointTP_Increments_<region>.csv`` / ``<site>_ArealTP_Increments_<region>.csv`` - one per additional temporal pattern
+  region configured (if any) - that region's own raw point temporal pattern increments
+  CSV, downloaded from its own separate ARR Data Hub request. ``<region>`` is the region
+  name with spaces removed (e.g. ``WetTropics``), matching the ``_<region>`` suffix used in
+  ``rf_inflow`` column labels.
+
