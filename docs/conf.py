@@ -244,9 +244,19 @@ def skip_member(app, what, name, obj, skip, options):
     return skip  # fallback to default behavior
 
 
+def build_interactive_plots(app, exception):
+    scripts = Path(__file__).parent / 'assets' / 'scripts'
+    sys.path.append(str(scripts))
+    from pytuflow_arr_example_1_rf_inflow import make_plot_1p60min, make_plot_1p120min
+    make_plot_1p60min()
+    make_plot_1p120min()
+    sys.path.pop()
+
+
 def setup(app: Sphinx):
     app.add_directive("autosummary", CustomAutosummary, override=True)
     app.add_directive("offlineviewer", DirHTMLOfflineViewerDirective, override=True)
     app.connect("autodoc-skip-member", skip_member)
     app.connect('doctree-resolved', strip_redundant_fragments)
+    app.connect("write-started", build_interactive_plots)
     app.add_domain(CustomPythonDomain, override=True)

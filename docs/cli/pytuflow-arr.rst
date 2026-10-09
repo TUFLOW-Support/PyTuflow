@@ -93,6 +93,63 @@ This example demonstrates a configuration file using catchment shapefile (CRS mu
    :width: 100%
    :alt: CatchmentA catchment boundary
 
+Outputs
+"""""""
+
+.. note::
+
+  It is important to check for any warnings printed to the console.
+
+.. note::
+
+  The TUFLOW output format from the tool remains consistent with the legacy QGIS plugin tool. For an example on how to use the outputs in a TUFLOW model setup, please refer to the following TUFLOW wiki page: `wiki.tuflow.com/QGIS_ARR_to_TUFLOW_Example <https://wiki.tuflow.com/QGIS_ARR_to_TUFLOW_Example#TUFLOW_Setup>`_
+
+.. rubric:: Rainfall output
+
+Most of the outputs for the TUFLOW model can be found in the root output directory with the exception of the rainfall input files which are located in the ``rf_inflow`` subdirectory. 
+
+The below plot is the 1% AEP / 60 min storm event that was output from the above example. The rainfall is output in depth (mm) for TUFLOW but has been converted to mm/hr for the plot.
+
+.. raw:: html
+
+   <iframe
+     src="../../_static/interactive_plots/pytuflow-arr-example-1-rf-inflow-1p60min-interactive-plot.html"
+     width="100%"
+     height="500"
+     style="border:none;">
+   </iframe>
+
+.. rubric:: Complete storm / initial loss table
+
+The above storm event (1%/60 min) is a design burst, however other requested storms have switched automatically to using a complete storm approach. This is done by prepending a preburst temporal pattern to the design burst.
+
+The ``working_data/<..>_burst_initial_loss.csv`` will list the calculated burst losses. Where the burst initial loss is calculated to be less than zero, the table will use ``"Use PB TP"``. This indicates that a preburst temporal pattern has been used (i.e. a complete storm has been created for those events). Some regions (i.e. NSW) have this information provided in the datahub response, otherwise it is calculated by the tool (and the same convention, ``"Use PB TP"``, is used).
+
+.. note::
+  
+  The ``output`` ``verbose`` option needs to be set to ``true`` to get the burst initial loss table to be written.
+
+.. csv-table:: SEQ_CatchmentA_burst_initial_loss.csv
+    :file: ../assets/tables/SEQ_CatchmentA_burst_initial_loss.csv
+    :header-rows: 1
+
+The default method for generating a preburst temporal pattern is to use the pattern explicitly referenced in the datahub response. Unforunately, this is only supported in some regions (i.e. NSW) and the tool will fallback to using the following defaults (see :ref:`complete_storm_assembly` for more information):
+
+- An existing point temporal pattern downloaded as part of the request is used
+- The temporal pattern duration that is 2x the event duration (up to 6 hrs) is chosen. For example, for the 2 hr event a preburst duration of 4 hrs is used, or the closest available temporal pattern i.e. 4.5 hrs.
+- The chosen rarity band is matched to the event rarity
+- TP01 is used
+
+The below plot shows the 1% AEP / 120 min event which contains a 4.5 hr preburst then a 2 hr design burst.
+
+.. raw:: html
+
+   <iframe
+     src="../../_static/interactive_plots/pytuflow-arr-example-1-rf-inflow-1p120min-interactive-plot.html"
+     width="100%"
+     height="500"
+     style="border:none;">
+   </iframe>
 
 JSON Config File
 ----------------

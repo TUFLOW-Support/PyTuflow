@@ -24,3 +24,4 @@ tests/fm_lib/integration_tests/outputs_tmp*
 tuflowfv.log
 arr.md
 arr_config_schema.md
+docs/_static/interactive_plots*
