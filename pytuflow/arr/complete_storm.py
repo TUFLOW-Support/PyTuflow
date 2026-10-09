@@ -213,7 +213,7 @@ def recommended_preburst(response: ArrApiResponse, duration: float, aep_name: st
     if row is None:
         row = _closest_duration_same_aep_row(rows, duration, aep_pct)
         if row is not None:
-            logger.warning(
+            logger.info(
                 "No recommended preburst temporal pattern available for %s/%smin - falling back to the "
                 "preburst pattern for %s%% AEP/%smin (closest available duration, same AEP).",
                 aep_name, duration, row['AEP'], row['Duration'],
@@ -221,7 +221,7 @@ def recommended_preburst(response: ArrApiResponse, duration: float, aep_name: st
     if row is None:
         row = _same_duration_and_band_row(rows, duration, aep_name, aep_pct, output_notation)
         if row is not None:
-            logger.warning(
+            logger.info(
                 "No recommended preburst temporal pattern available for %s/%smin - falling back to the "
                 "preburst pattern for %s%% AEP/%smin (same duration, same event rarity).",
                 aep_name, duration, row['AEP'], row['Duration'],
@@ -229,7 +229,7 @@ def recommended_preburst(response: ArrApiResponse, duration: float, aep_name: st
     if row is None:
         closest = _closest_duration_and_band_row(rows, duration, aep_name, output_notation)
         if closest is not None:
-            logger.warning(
+            logger.info(
                 "No recommended preburst temporal pattern available for %s/%smin at all - falling back to the "
                 "preburst pattern for %s%% AEP/%smin (closest available duration, same event rarity).",
                 aep_name, duration, closest['AEP'], closest['Duration'],
@@ -292,7 +292,7 @@ def _preburst_ratio(response: ArrApiResponse, percentile: str, duration: float, 
     key = 'RecPreburst' if percentile == 'recommended' else f'Preburst{percentile.strip("%")}'
     table = response.layer(key)
     if table is None and key == 'RecPreburst':
-        logger.warning(
+        logger.info(
             "preburst.percentile == 'recommended' was requested, but the ARR Data Hub response does not "
             "contain a 'RecPreburst' layer for this location (it's NSW-only) - falling back to the 50%% "
             "percentile ('Preburst50' layer) instead."
@@ -456,7 +456,7 @@ def build_preburst(response: ArrApiResponse, config: ArrConfig, tp_set: Temporal
                 except ArrError:
                     pattern = None
                 else:
-                    logger.warning(
+                    logger.info(
                         "No recommended preburst temporal pattern available for %s/%smin at all ('RecPreburstTP' "
                         "layer has no data for this location/event rarity) - falling back to "
                         "preburst.pattern_duration=%s (duration_proportional=%s) / pattern_tp=%s as the preburst "

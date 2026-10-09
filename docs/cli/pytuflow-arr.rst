@@ -11,6 +11,10 @@ This tool is a clean rewrite of the ``ARR to TUFLOW`` script from the QGIS TUFLO
 Key Differences to the Legacy QGIS Plugin Tool
 ----------------------------------------------
 
+.. note::
+
+  The TUFLOW output format from the tool remains consistent with the legacy QGIS plugin tool. For an example on how to use the outputs in a TUFLOW model setup, please refer to the following TUFLOW wiki page: `wiki.tuflow.com/QGIS_ARR_to_TUFLOW_Example <https://wiki.tuflow.com/QGIS_ARR_to_TUFLOW_Example#TUFLOW_Setup>`_
+
 - Defaults have changed where appropriate for the 2026 v1 update. For example, the "current" 2030 rainfall is default. Other regional/jurisdication specifics such as using the new NSW storm losses (as opposed the the probability neutral losses) is now also the default.
 - The datahub API now supports uploading catchment files. Previously, this was not possible and the catchment centroid was used. Now the catchment will be uploaded directly if a GIS file is provided.
 
@@ -51,6 +55,44 @@ ignored (with a warning) rather than being merged in or validated against the fi
 file's settings - this keeps the override rule simple and unambiguous. The site name for each config should be unique, otherwise subsequent configs will overwrite previous config's outputs.
 
 Add ``-v`` / ``--verbose`` for debug-level logging.
+
+Examples
+--------
+
+Example 1 - Basic Usage
+^^^^^^^^^^^^^^^^^^^^^^^
+
+This example demonstrates a configuration file using catchment shapefile (CRS must be in WGS 84 lat/lon) and extracting events for common duration/AEP event combinations. The catchment shapefile is not required to have any specific attributes, and only the geometry is used. Note, catchment area is not derived from the geometry and is required to be input by the user.
+
+.. code-block:: text
+  :caption: bash/cmd prompt to run tool for "SEQ_cathcmentA_config.json"
+
+  pytuflow-arr SEQ_cathcmentA_config.json
+
+.. code-block:: json
+  :caption: SEQ_catchmentA_config.json
+  :linenos:
+
+  {
+    "site": {
+      "name": "SEQ_CatchmentA",
+      "catchment_boundary": "./gis/SEQ_catchmentA_boundary.shp",
+      "catchment_area": 31.39
+    },
+    "events": {
+      "aep": [1, 2, 5, 10, 20],
+      "duration": [30, 60, 90, 120, 180, 360, 540, 720]
+    },
+    "output": {
+      "path": "./output",
+      "verbose": true
+    }
+  }
+
+.. image:: ../assets/images/pytuflow-arr-example-1-catchment-boundary.png
+   :width: 100%
+   :alt: CatchmentA catchment boundary
+
 
 JSON Config File
 ----------------
@@ -480,4 +522,3 @@ The following are only saved when the ``output`` "verbose" parameter is true, si
   CSV, downloaded from its own separate ARR Data Hub request. ``<region>`` is the region
   name with spaces removed (e.g. ``WetTropics``), matching the ``_<region>`` suffix used in
   ``rf_inflow`` column labels.
-
