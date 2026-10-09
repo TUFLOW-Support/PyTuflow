@@ -71,7 +71,7 @@ def write_working_data(config: ArrConfig, response: ArrApiResponse, engine: ArrE
         logger.info("Wrote ARF table to '%s'", path)
 
     for scenario_label, table in engine.burst_loss_table.items():
-        if table is None:
+        if table is None or table.empty:
             continue
         suffix = f'_{scenario_label}' if scenario_label else ''
         path = out_path / f'{site}_burst_initial_loss{suffix}.csv'

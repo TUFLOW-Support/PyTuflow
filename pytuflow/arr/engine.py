@@ -958,6 +958,13 @@ class ArrEngine:
         except ArrError:
             base_burst_loss = None
         self.burst_loss_table[None] = base_burst_loss
+        # no Data Hub burst initial loss table for this location (e.g. 'BurstLossesNew'
+        # is NSW-only) - every event's burst initial loss is calculated instead, so
+        # record the values actually used to build an equivalent table for QA output.
+        record_calculated_burst_loss = (
+            base_burst_loss is not None and base_burst_loss.empty and not self.config.complete_storm
+        )
+        calculated_burst_loss_records = []
 
         for scenario_label, baseline_year, ssp in scenarios:
             if scenario_label is not None and base_burst_loss is not None:
@@ -1101,6 +1108,14 @@ class ArrEngine:
 
                     cl = cl * cl_factor
 
+                    if record_calculated_burst_loss:
+                        calculated_burst_loss_records.append({
+                            'cc_scenario': scenario_label,
+                            'duration': duration,
+                            'aep_pct': aep_pct,
+                            'initial_loss': il if preburst is None else 'Use PB TP',
+                        })
+
                     results.append(EventResult(
                         aep_name=aep_name, duration=duration, depth_point=depth_point,
                         arf=arf_value, depth_areal=depth_areal, initial_loss=il,
@@ -1118,6 +1133,17 @@ class ArrEngine:
             table = pd.DataFrame(rows).pivot_table(
                 index='duration', columns='aep_pct', values='initial_loss', aggfunc='first')
             self.extrapolated_loss_table[scenario_label] = table.sort_index()
+
+        if record_calculated_burst_loss:
+            for scenario_label, _, _ in scenarios:
+                rows = [r for r in calculated_burst_loss_records if r['cc_scenario'] == scenario_label]
+                if not rows:
+                    continue
+                # `pivot` (not `pivot_table`) - cells may hold the non-numeric
+                # "Use PB TP" placeholder, which `pivot_table` aggregation would drop.
+                table = pd.DataFrame(rows).pivot(index='duration', columns='aep_pct', values='initial_loss')
+                table.columns.name = None
+                self.burst_loss_table[scenario_label] = table.sort_index()
         return results
 
 

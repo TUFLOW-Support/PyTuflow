@@ -7,6 +7,7 @@ from __future__ import annotations
 import pytest
 
 from pytuflow.arr import temporal_patterns as tp_module
+from pytuflow.arr.arf import aep_name_to_pct
 from pytuflow.arr.config import ArrConfig
 from pytuflow.arr.engine import ArrEngine
 from pytuflow.arr.exceptions import ArrError
@@ -1045,6 +1046,36 @@ def test_engine_seq_missing_burst_loss_table_only_records_genuinely_extrapolated
     # table's own longest duration) - not extrapolated
     assert pd.isna(table.loc[4320.0, 1.0])
     assert pd.isna(table.loc[4320.0, 50.0])
+
+
+def test_engine_seq_missing_burst_loss_table_records_calculated_burst_losses(api_response_seq):
+    # with no 'BurstLossesNew' table, the burst initial losses actually calculated for
+    # each event are captured in `burst_loss_table` instead (for working data output),
+    # with "Use PB TP" for events that switched to complete storm assembly.
+    config = make_config_seq(
+        events={'aep': ['1%', '50%'], 'duration': [60, 1440], 'output_notation': 'ari'},
+    )
+    engine = ArrEngine(config, api_response_seq)
+    results = engine.run()
+    table = engine.burst_loss_table[None]
+    assert list(table.index) == [60.0, 1440.0]
+    assert list(table.columns) == [1.0, 50.0]
+    for r in results:
+        value = table.loc[r.duration, aep_name_to_pct(r.aep_name)]
+        if r.preburst is None:
+            assert value == pytest.approx(r.initial_loss)
+        else:
+            assert value == 'Use PB TP'
+
+
+def test_engine_seq_complete_storm_does_not_record_calculated_burst_losses(api_response_seq):
+    config = make_config_seq(
+        events={'aep': ['1%'], 'duration': [60], 'output_notation': 'ari'},
+        complete_storm=True,
+    )
+    engine = ArrEngine(config, api_response_seq)
+    engine.run()
+    assert engine.burst_loss_table[None].empty
 
 
 def test_engine_seq_pattern_method_none_zeroes_burst_loss_instead_of_crashing(api_response_seq, caplog):
