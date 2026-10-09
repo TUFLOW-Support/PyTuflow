@@ -114,7 +114,7 @@ def test_recommended_preburst_falls_back_to_same_duration_and_band(api_response_
     layer = api_response_1990.layer('RecPreburstTP')
     rows = [r for r in layer['selected_patterns'] if r['AEP'] != 1.0]
     monkeypatch.setitem(api_response_1990.layers['RecPreburstTP'], 'selected_patterns', rows)
-    with caplog.at_level('WARNING'):
+    with caplog.at_level('INFO'):
         pattern = recommended_preburst(api_response_1990, 30, '1%', 1.0, point_depth=100.0)
     assert pattern is not None
     assert 'falling back to the preburst pattern for 2.0% AEP/30min (same duration, same event rarity)' \

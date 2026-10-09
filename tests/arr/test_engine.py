@@ -1156,7 +1156,7 @@ def test_engine_seq_percentile_recommended_falls_back_to_50_percent(api_response
     # 'RecPreburst' is absent entirely (NSW-only) - preburst.percentile == 'recommended'
     # should automatically fall back to the 'Preburst50' layer instead of raising.
     from pytuflow.arr.complete_storm import _preburst_ratio
-    with caplog.at_level('WARNING'):
+    with caplog.at_level('INFO'):
         ratio = _preburst_ratio(api_response_seq, 'recommended', 60, 1.0)
     expected = _preburst_ratio(api_response_seq, '50%', 60, 1.0)
     assert ratio == pytest.approx(expected)
