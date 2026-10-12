@@ -521,7 +521,7 @@ class GPKG1D(GPKGBase, INFO):
     def _load_time_series(self, cur: 'Cursor'):
         # nodes
         cur.execute(
-            'SELECT Column_name FROM Timeseries_info WHERE Table_name = ?;',
+            'SELECT DISTINCT Column_name FROM Timeseries_info WHERE Table_name = ?;',
             (self._gis_layer_p_name,)
         )
         data_types = [x[0] for x in cur.fetchall()]
@@ -533,7 +533,7 @@ class GPKG1D(GPKGBase, INFO):
 
         # channels
         cur.execute(
-            'SELECT Column_name FROM Timeseries_info WHERE Table_name = ?;',
+            'SELECT DISTINCT Column_name FROM Timeseries_info WHERE Table_name = ?;',
             (self._gis_layer_l_name,)
         )
         data_types = [x[0] for x in cur.fetchall()]
