@@ -274,6 +274,61 @@ The example config below shows how to run the second example again, but using th
     }
   }
 
+Example 4 - Running multiple catchments
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The below example shows how to run multiple catchments in a single tool run. This is different from running the tool multiple times, as the outputs are combined together into a single set of TUFLOW files (e.g. the catchments are all referenced in a single ``bc_dbase.csv``).
+
+To keep this simple, the below example shows running the tool for two neighbouring catchments: ``CatchmentA`` and ``CatchmentB``. The second configuration file does not change the bulk of the settings, and the tool only uses the ``site`` data (location, name, area etc.). This example follows on from example 2.
+
+.. code-block:: text
+  :caption: bash/cmd prompt to run tool for "SEQ_cathcmentA_CC_config.json"
+
+  pytuflow-arr SEQ_cathcmentA_CC_config.json SEQ_cathcmentB_CC_config.json
+
+.. code-block:: json
+  :caption: SEQ_catchmentA_CC_config.json
+  :linenos:
+
+  {
+    "site": {
+      "name": "SEQ_CatchmentA",
+      "catchment_boundary": "./gis/SEQ_catchmentA_boundary.shp",
+      "catchment_area": 31.39
+    },
+    "events": {
+      "aep": [1, 2, 5, 10, 20],
+      "duration": [30, 60, 90, 120, 180, 360, 540, 720]
+    },
+    "climate_change": {
+      "enabled": true,
+      "scenarios" : [
+        {"baseline_year": 2050, "ssp": "SSP2"},
+        {"baseline_year": 2090, "ssp": "SSP2"}
+      ]
+    },
+    "output": {
+      "path": "./output",
+      "verbose": true
+    }
+  }
+
+.. code-block:: json
+  :caption: SEQ_catchmentB_CC_config.json
+  :linenos:
+
+  {
+    "site": {
+      "name": "SEQ_CatchmentB",
+      "catchment_boundary": "./gis/SEQ_catchmentB_boundary.shp",
+      "catchment_area": 310
+    }
+  }
+
+.. image:: ../assets/images/pytuflow-arr-example-3-catchment-boundary.png
+   :width: 100%
+   :alt: CatchmentA catchment boundary
+
 JSON Config File
 ----------------
 
