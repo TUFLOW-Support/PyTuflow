@@ -1,6 +1,14 @@
 Changelog for 1.2
 =================
 
+1.2.5
+-----
+
+Release date: 12 October 2026
+
+- Fixed a bug that could cause GPKG time series results to fail to plot :meth:`GPKG1D.time_series <pytuflow.GPKG1D.time_series>` results due to duplicate entries in the GPKG ``Timeseries_info`` table.
+- Improved GPKG time series loading times. Testing on a dataset with a lot of timesteps reduced the load time from about 8.5 sec down to 4 sec.
+
 1.2.4
 -----
 
