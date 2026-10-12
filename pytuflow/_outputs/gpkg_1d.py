@@ -519,28 +519,41 @@ class GPKG1D(GPKGBase, INFO):
         pass
 
     def _load_time_series(self, cur: 'Cursor'):
+        from time import perf_counter
         # nodes
+        start = perf_counter()
         cur.execute(
             'SELECT DISTINCT Column_name FROM Timeseries_info WHERE Table_name = ?;',
             (self._gis_layer_p_name,)
         )
         data_types = [x[0] for x in cur.fetchall()]
+        print('Select distinct nodes:', (perf_counter() -  start))
+        start = perf_counter()
         self._read_gpkg_table_to_memory(cur, data_types, self._gis_layer_p_name)
+        print('_read_gpkg_table_to_memory [nodes]:', (perf_counter() -  start))
+        start = perf_counter()
         for dtype in data_types:
             dtype1 = 'node flow regime' if dtype == 'Flow Regime' else self._get_standard_data_type_name(dtype)
             self._nd_res_types.append(dtype1)
             self._time_series_data[dtype1] = self._gpkg_time_series_extractor(cur, dtype, self._gis_layer_p_name)
+        print('load flow regime [nodes]:', (perf_counter() -  start))
 
         # channels
+        start = perf_counter()
         cur.execute(
             'SELECT DISTINCT Column_name FROM Timeseries_info WHERE Table_name = ?;',
             (self._gis_layer_l_name,)
         )
         data_types = [x[0] for x in cur.fetchall()]
+        print('Select distinct channels:', (perf_counter() -  start))
+        start = perf_counter()
         self._read_gpkg_table_to_memory(cur, data_types, self._gis_layer_l_name)
+        print('_read_gpkg_table_to_memory [channels]:', (perf_counter() -  start))
+        start = perf_counter()
         for dtype in data_types:
             dtype1 = 'channel flow regime' if dtype == 'Flow Regime' else self._get_standard_data_type_name(dtype)
             self._time_series_data[dtype1] = self._gpkg_time_series_extractor(cur, dtype, self._gis_layer_l_name)
+        print('load flow regime [channels]:', (perf_counter() -  start))
 
     @staticmethod
     def _sqlite_return_to_df(ret: list[tuple], columns: list[str], type_map: list[type]) -> pd.DataFrame:

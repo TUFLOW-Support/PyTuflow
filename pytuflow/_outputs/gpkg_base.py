@@ -55,18 +55,27 @@ class GPKGBase:
 
     def _read_gpkg_table_to_memory(self, cur: 'Cursor', data_types: list[str], table_name):
         """Read a table from a GPKG/sqlite3 database into memory in one I/O operation."""
+        from time import perf_counter
+        start = perf_counter()
         cols = ['ID', 'Time_relative'] + [f'"{x}"' for x in data_types]
         query = 'SELECT {0} FROM "{1}"'.format(','.join(cols), table_name)  # nosec B608
         df = pd.read_sql_query(query, cur.connection)  # nosec B608
         df = df.rename(columns={'Time_relative': 'time'})
+        print('_read_gpkg_table_to_memory - sql:', (perf_counter() - start))
 
         # do some post-processing to make the data easier to work with
+        start = perf_counter()
         df = df.sort_values(['ID', 'time'])
+        print('_read_gpkg_table_to_memory - sort_values:', (perf_counter() - start))
 
         # ensure there are no duplicated columns
+        start = perf_counter()
         df = df.loc[:, ~df.columns.duplicated()]
+        print('_read_gpkg_table_to_memory - remove dupliates:', (perf_counter() - start))
 
+        start = perf_counter()
         groupby = df.groupby('ID', sort=False)
+        print('_read_gpkg_table_to_memory - groupby:', (perf_counter() - start))
 
         # cache data
         self._cached[table_name] = df
