@@ -343,7 +343,7 @@ def test_constant_preburst_proportional_duration_capped_for_long_storms(api_resp
                   'duration_proportional': True},
     )
     pattern = constant_preburst(api_response_1990, config, 2160, '1%', 1.0, 74.5)
-    assert pattern.timestep == pytest.approx(360.0)  # capped at 6 hours -> 360 min
+    assert pattern.timestep == pytest.approx(1440.0)  # capped at 24 hours -> 1440 min
 
 
 def test_constant_preburst_proportional_duration_uncapped_when_max_is_none(api_response_1990):

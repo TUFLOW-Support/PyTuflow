@@ -418,7 +418,7 @@ Each scenario object:
      - Preburst pattern method: "recommended", "constant", "temporal_pattern", or "none" (see :ref:`complete_storm_assembly` below).
    * - pattern_duration
      - ``number``
-     - ``2``
+     - ``1.5``
      - Preburst duration in hours (or a proportion of the storm duration, if ``duration_proportional`` is true). Used by the "constant"/"temporal_pattern" pattern methods directly, and as the fallback method for the "recommended" option (see :ref:`complete_storm_assembly` below).
    * - pattern_tp
      - ``string``
@@ -430,7 +430,7 @@ Each scenario object:
      - If ``true``, pattern_duration is treated as a proportion of the storm duration rather than an absolute number of hours.
    * - pattern_duration_max
      - ``number`` | ``null``
-     - ``6``
+     - ``24``
      - Caps the computed preburst duration (hours) when duration_proportional is true - without this, a proportional pattern_duration (e.g. the default of 2x the storm duration) would produce an unrealistically long preburst period for long storm durations (e.g. a 72 hour storm would otherwise get a 144 hour preburst). Has no effect when duration_proportional is false (an absolute pattern_duration is always used as given, uncapped). Set to ``null`` to disable capping entirely.
 
 **losses (optional)**

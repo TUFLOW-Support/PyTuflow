@@ -73,7 +73,7 @@ def test_bad_ifd_year_raises():
 
 def test_preburst_pattern_duration_max_defaults_to_6_hours():
     config = ArrConfig.from_dict(VALID_CONFIG)
-    assert config.preburst.pattern_duration_max == 6
+    assert config.preburst.pattern_duration_max == 24
 
 
 def test_preburst_pattern_duration_max_zero_or_negative_raises():

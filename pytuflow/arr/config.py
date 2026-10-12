@@ -249,7 +249,7 @@ class PreburstConfig:
     #: Data Hub has no ``RecPreburstTP`` data at all for the requested event (see
     #: :func:`pytuflow.arr.complete_storm.build_preburst`). Defaults to twice the storm
     #: duration (``duration_proportional=True``).
-    pattern_duration: Optional[float] = 2
+    pattern_duration: Optional[float] = 1.5
     #: Existing point temporal pattern used to shape the preburst rainfall for the
     #: ``"temporal_pattern"`` pattern method (and the ``"recommended"`` method's
     #: no-``RecPreburstTP``-data fallback - see ``pattern_duration`` above). Defaults to
@@ -263,7 +263,7 @@ class PreburstConfig:
     #: preburst). Has no effect when ``duration_proportional`` is ``False`` (an
     #: absolute ``pattern_duration`` is always used as given). Set to ``None`` to
     #: disable capping entirely.
-    pattern_duration_max: Optional[float] = 6
+    pattern_duration_max: Optional[float] = 24
 
     def validate(self) -> list[str]:
         errors = []
