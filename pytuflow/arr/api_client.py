@@ -2,9 +2,9 @@
 
 Replaces the legacy ``ARR_WebRes.py`` (ARR Data Hub HTML/text scraping) and
 ``BOM_WebRes.py`` (BOM IFD web page scraping) modules. The upgraded ARR Data Hub API
-now serves both current and climate-change-adjusted IFD tables directly, so there is no
-need for the new module to talk to BOM at all, nor calculate climate-change-adjusted
-rainfall/losses itself.
+now serves current IFD tables and climate change factors directly, so there is no
+need for the new module to talk to BOM at all. Climate-change rainfall is derived from
+the Data Hub's climate change factors applied to the historical IFD depths.
 
 See https://data.arr-software.org/about for the full list of available API layers.
 """
@@ -14,6 +14,7 @@ from __future__ import annotations
 import json
 import logging
 import mimetypes
+import re
 from pathlib import Path
 from typing import Optional
 
@@ -42,11 +43,6 @@ _BASE_LAYERS = (
     'OtherPreburst',
 )
 
-
-_CC_IFD_TABLE_KEY_ORDER = (
-    'LIMB 2020 IFD Depths - High Resolution ({baseline_year} Baseline - {ssp})'.format,
-    'BoM IFD Depths ({baseline_year} Baseline - {ssp})'.format
-)
 
 
 class ArrApiResponse:
@@ -84,18 +80,37 @@ class ArrApiResponse:
             )
         return rec_ifd[key]
 
-    def cc_adj_ifd_table(self, baseline_year: int, ssp: str) -> dict:
-        """Returns a climate-change-adjusted IFD table (``CCAdjIFDDatasets`` layer) for the
-        given baseline year (2030, 2050, or 2090) and SSP scenario (SSP1/SSP2/SSP3/SSP5)."""
-        cc_adj = self.layer('CCAdjIFDDatasets', required=True)
-        for key in _CC_IFD_TABLE_KEY_ORDER:
-            key = key(baseline_year=baseline_year, ssp=ssp)
-            if key in cc_adj:
-                return cc_adj[key]
-        raise ArrApiError(
-            f"ARR Data Hub response does not contain a climate-change-adjusted IFD table "
-            f"for '{key}' (available: {list(cc_adj)})"
-        )
+    def climate_change_rainfall_factors(self, baseline_year: int, ssp: str) -> tuple:
+        """Returns ``(durations_hours, factors)`` from the ``ClimateChange`` layer's
+        ``rainfall_factors`` table for the given baseline year (2030-2100, in 10-year
+        increments) and SSP scenario (SSP1/SSP2/SSP3/SSP5). The factors multiply the
+        historical IFD depths. The table's duration columns are labelled e.g. ``"<1 hour"``
+        (1 hour), ``"1.5 Hours"``, ..., ``">24 Hours"`` (24 hours)."""
+        cc = self.layer('ClimateChange', required=True)
+        rf_tables = cc.get('rainfall_factors')
+        if not rf_tables:
+            raise ArrApiError("ARR Data Hub response is missing 'ClimateChange' 'rainfall_factors' tables.")
+        key = next((k for k in rf_tables if str(k).upper().startswith(ssp.upper())), None)
+        if key is None:
+            raise ArrApiError(
+                f"ARR Data Hub 'ClimateChange' rainfall factor tables do not contain SSP '{ssp}' "
+                f"(available: {list(rf_tables)})"
+            )
+        table = rf_tables[key]
+        years = [int(y) for y in table['index']]
+        if baseline_year not in years:
+            raise ArrApiError(
+                f"ARR Data Hub 'ClimateChange' rainfall factor table does not contain baseline year "
+                f"'{baseline_year}' (available: {years})"
+            )
+        row = table['data'][years.index(baseline_year)]
+        hours = []
+        for col in table['columns']:
+            m = re.search(r'\d+(?:\.\d+)?', str(col))
+            if m is None:
+                raise ArrApiError(f"Unrecognised 'ClimateChange' rainfall factor duration column '{col}'")
+            hours.append(float(m.group()))
+        return hours, [float(v) for v in row]
 
     def climate_change_loss_factors(self, baseline_year: int, ssp: str) -> tuple:
         """Returns ``(initial_loss_factor, continuing_loss_factor)`` from the
@@ -167,7 +182,6 @@ class ArrApiClient:
         for layer in _BASE_LAYERS:
             params[layer] = 1
         if config.climate_change.enabled:
-            params['CCAdjIFDDatasets'] = 1
             params['ClimateChange'] = 1
         return params
 

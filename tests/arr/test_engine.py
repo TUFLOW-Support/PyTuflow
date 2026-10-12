@@ -49,6 +49,17 @@ def make_config(**overrides) -> ArrConfig:
     return ArrConfig.from_dict(data)
 
 
+
+def _rainfall_factors(factor: float) -> dict:
+    """Builds a Data Hub 'ClimateChange' rainfall_factors layer with a flat factor."""
+    columns = ['<1 hour', '1.5 Hours', '2 Hours', '3 Hours', '4.5 Hours', '6 Hours', '9 Hours', '12 Hours',
+               '18 Hours', '>24 Hours']
+    return {
+        ssp: {'columns': columns, 'index': [2030, 2050, 2090], 'data': [[factor] * len(columns)] * 3}
+        for ssp in ('SSP1-2.6', 'SSP2-4.5', 'SSP3-7.0', 'SSP5-8.5')
+    }
+
+
 def test_engine_complete_storm_prepends_preburst(api_response_1990):
     config = make_config(complete_storm=True,
                           events={'aep': ['50%'], 'duration': [1440], 'output_notation': 'ari'})
@@ -337,11 +348,9 @@ def test_engine_applies_climate_change_loss_factors(api_response_1990, monkeypat
     test_engine_climate_change_storm_loss_method)."""
     rec_ifd = api_response_1990.layer('RecIFD')
     base_table = rec_ifd['Default Historical (1961-1990) Baseline']
-    api_response_1990.layers['CCAdjIFDDatasets'] = {
-        'BoM IFD Depths (2090 Baseline - SSP2)': base_table,
-    }
     api_response_1990.layers['ClimateChange'] = {
         'label': 'Climate Change Factors',
+        'rainfall_factors': _rainfall_factors(1.0),
         'loss_factors': {
             'Initial_Loss': {
                 'columns': ['Losses SSP1-2.6', 'Losses SSP2-4.5', 'Losses SSP3-7.0', 'Losses SSP5-8.5'],
@@ -377,11 +386,9 @@ def test_engine_climate_change_storm_loss_method(api_response_1990):
     factor."""
     rec_ifd = api_response_1990.layer('RecIFD')
     base_table = rec_ifd['Default Historical (1961-1990) Baseline']
-    api_response_1990.layers['CCAdjIFDDatasets'] = {
-        'BoM IFD Depths (2090 Baseline - SSP2)': base_table,
-    }
     api_response_1990.layers['ClimateChange'] = {
         'label': 'Climate Change Factors',
+        'rainfall_factors': _rainfall_factors(1.0),
         'loss_factors': {
             'Initial_Loss': {
                 'columns': ['Losses SSP1-2.6', 'Losses SSP2-4.5', 'Losses SSP3-7.0', 'Losses SSP5-8.5'],
@@ -447,11 +454,9 @@ def test_engine_cc_triggers_complete_storm_independently_when_base_is_burst_only
     # therefore a complete storm - independently of the (unaffected) base event.
     inflated = copy.deepcopy(base_table)
     inflated['data'] = [[v * 10 for v in row] for row in inflated['data']]
-    api_response_1990.layers['CCAdjIFDDatasets'] = {
-        'BoM IFD Depths (2090 Baseline - SSP2)': inflated,
-    }
     api_response_1990.layers['ClimateChange'] = {
         'label': 'Climate Change Factors',
+        'rainfall_factors': _rainfall_factors(10.0),
         'loss_factors': {
             'Initial_Loss': {
                 'columns': ['Losses SSP1-2.6', 'Losses SSP2-4.5', 'Losses SSP3-7.0', 'Losses SSP5-8.5'],
@@ -876,11 +881,9 @@ def test_engine_probability_neutral_climate_change_storm_leaves_burst_il_unchang
       climate-change-adjusted preburst depth term that does not cancel."""
     rec_ifd = api_response_1990.layer('RecIFD')
     base_table = rec_ifd['Default Historical (1961-1990) Baseline']
-    api_response_1990.layers['CCAdjIFDDatasets'] = {
-        'BoM IFD Depths (2090 Baseline - SSP2)': base_table,
-    }
     api_response_1990.layers['ClimateChange'] = {
         'label': 'Climate Change Factors',
+        'rainfall_factors': _rainfall_factors(1.0),
         'loss_factors': {
             'Initial_Loss': {
                 'columns': ['Losses SSP1-2.6', 'Losses SSP2-4.5', 'Losses SSP3-7.0', 'Losses SSP5-8.5'],
@@ -1102,11 +1105,9 @@ def test_engine_seq_pattern_method_none_still_scales_cc_continuing_loss(api_resp
     independently here rather than silently defaulting to 1.0."""
     rec_ifd = api_response_seq.layer('RecIFD')
     base_table = rec_ifd[next(iter(rec_ifd))]
-    api_response_seq.layers['CCAdjIFDDatasets'] = {
-        'BoM IFD Depths (2090 Baseline - SSP2)': base_table,
-    }
     api_response_seq.layers['ClimateChange'] = {
         'label': 'Climate Change Factors',
+        'rainfall_factors': _rainfall_factors(1.0),
         'loss_factors': {
             'Initial_Loss': {
                 'columns': ['Losses SSP1-2.6', 'Losses SSP2-4.5', 'Losses SSP3-7.0', 'Losses SSP5-8.5'],
@@ -1302,3 +1303,29 @@ def test_interp_table_log_values_false_uses_log_linear_interpolation():
     # exact zero grid match still returns exactly 0.0
     out_exact_zero = _interp_table(df_zero, [360.0], [1.0], log_values=False)
     assert float(out_exact_zero.iloc[0, 0]) == 0.0
+
+
+@pytest.mark.parametrize('baseline_year', [2030, 2050, 2090])
+@pytest.mark.parametrize('ssp', ['SSP1', 'SSP2', 'SSP3', 'SSP5'])
+def test_calculated_cc_ifd_matches_precalculated_bom_ifd(baseline_year, ssp):
+    """For a NSW site (BoM base rainfall), the climate change IFD derived from the
+    historical IFD x climate change factors should closely match the Data Hub's
+    pre-calculated climate change IFD tables. The small differences come from the
+    factors being rounded to 2 decimal places and interpolated between durations."""
+    import json
+    from pathlib import Path
+    from pytuflow.arr.api_client import ArrApiResponse
+    from pytuflow.arr.engine import _table_to_frame
+
+    with open(Path(__file__).parent / 'fixtures' / 'api_response_nsw_cc.json', encoding='utf-8') as f:
+        response = ArrApiResponse(json.load(f))
+    engine = ArrEngine(make_config(events={'aep': ['50%'], 'duration': [60]}), response)
+
+    calculated = engine._ifd_frame(baseline_year, ssp)
+    precalculated = _table_to_frame(
+        response.layer('CCAdjIFDDatasets')[f'BoM IFD Depths ({baseline_year} Baseline - {ssp})'])
+
+    assert calculated.shape == precalculated.shape
+    rel_diff = (calculated / precalculated - 1).abs()
+    assert rel_diff.max().max() < 0.025
+    assert rel_diff.mean().mean() < 0.01

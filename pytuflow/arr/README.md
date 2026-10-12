@@ -189,11 +189,15 @@ Each scenario object:
 
 | Key | Type | Allowed values |
 | --- | --- | --- |
-| `baseline_year` | int | `2030`, `2050`, `2090` |
+| `baseline_year` | int | `2030`, `2040`, ..., `2100` (10-year increments) |
 | `ssp` | string | `"SSP1"`, `"SSP2"`, `"SSP3"`, `"SSP5"` |
 
-Climate-change-adjusted IFD depths are requested directly from the Data Hub's
-`CCAdjIFDDatasets` layer for the given baseline year/SSP. Climate-change loss
+Climate-change-adjusted IFD depths are derived by multiplying the Data Hub's
+historical (1961-1990) IFD depths by the climate change rainfall factors from the
+Data Hub's `ClimateChange` layer (`rainfall_factors`) for the given baseline year/SSP,
+interpolated (log duration) onto each duration. The pre-calculated climate-change IFD
+tables are not used - they are BoM-based, so wouldn't align with non-BoM base rainfall
+(e.g. LIMB/QRA in SEQ). Climate-change loss
 adjustment factors (initial and continuing loss) are requested from the Data Hub's
 `ClimateChange` layer; continuing loss is always applied by multiplying the base (no
 climate-change) storm continuing loss by the factor, while initial loss is applied

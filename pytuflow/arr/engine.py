@@ -3,7 +3,7 @@
 For each requested AEP x duration combination, this module:
 
 1. Selects the design (or climate-change-adjusted) rainfall depth from the Data Hub's
-   IFD table and interpolates it onto the requested durations/AEPs.
+   IFD table (climate-change depths are the historical IFD x climate change factors) and interpolates it onto the requested durations/AEPs.
 2. Applies the Areal Reduction Factor (see :mod:`pytuflow.arr.arf`) to get an areal
    design burst depth.
 3. Selects the burst initial loss from the Data Hub's burst loss table
@@ -210,11 +210,17 @@ class ArrEngine:
         return aep_
 
     def _ifd_frame(self, baseline_year: int, ssp: Optional[str] = None) -> pd.DataFrame:
-        if ssp is not None:
-            table = self.response.cc_adj_ifd_table(baseline_year, ssp)
-        else:
-            table = self.response.ifd_table(baseline_year)
-        return _table_to_frame(table)
+        if ssp is None:
+            return _table_to_frame(self.response.ifd_table(baseline_year))
+        # climate change depths = historical IFD depths x Data Hub climate change factors
+        # (rather than the pre-calculated, BoM-based, climate change IFD tables, which
+        # don't align with non-BoM base rainfall, e.g. LIMB/QRA in SEQ)
+        df = _table_to_frame(self.response.ifd_table(1990))
+        hours, factors = self.response.climate_change_rainfall_factors(baseline_year, ssp)
+        order = np.argsort(hours)
+        log_hours = np.log10(np.array(hours)[order])
+        factor_by_dur = np.interp(np.log10(df.index.values / 60.0), log_hours, np.array(factors)[order])
+        return df.mul(factor_by_dur, axis=0)
 
     def _point_depths_for_preburst_ratio(self, durations: list, threshold: Optional[float],
                                           burst_loss_columns) -> pd.DataFrame:

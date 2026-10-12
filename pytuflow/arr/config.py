@@ -47,6 +47,9 @@ EXTRAPOLATION_METHODS = (
 #: events; complete storm events already scale the (unreduced) full storm initial loss
 #: directly, matching the ``"storm"`` approach.
 CC_LOSS_METHODS = ('burst', 'storm')
+
+#: Years for which the Data Hub provides climate change factors.
+CC_BASELINE_YEARS = tuple(range(2030, 2101, 10))
 OUTPUT_FORMATS = ('csv', 'ts1')
 OUTPUT_NOTATIONS = ('ari', 'aep')
 #: File extensions accepted for ``site.catchment_boundary`` (a catchment boundary
@@ -232,8 +235,8 @@ class ClimateChangeConfig:
         if self.enabled and not self.scenarios:
             errors.append("climate_change.scenarios must not be empty when climate_change.enabled is true")
         for s in self.scenarios:
-            if s.baseline_year not in (2030, 2050, 2090):
-                errors.append(f"climate_change scenario baseline_year must be one of (2030, 2050, 2090), got '{s.baseline_year}'")
+            if s.baseline_year not in CC_BASELINE_YEARS:
+                errors.append(f"climate_change scenario baseline_year must be one of {CC_BASELINE_YEARS}, got '{s.baseline_year}'")
             if s.ssp not in ('SSP1', 'SSP2', 'SSP3', 'SSP5'):
                 errors.append(f"climate_change scenario ssp must be one of (SSP1, SSP2, SSP3, SSP5), got '{s.ssp}'")
         return errors

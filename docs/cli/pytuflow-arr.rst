@@ -29,7 +29,7 @@ Key Differences to the Legacy QGIS Plugin Tool
 
     Preburst depths now go down to 30 minutes, therefore extrapolation only applies for durations < 30 minutes (not 60 minutes like the legacy datahub)
 
-- Climate change rainfall is now provided by the datahub and the option to modify the baseline temperature or the delta temperature value is not supported by the new tool. This also means that currently only the 2030, 2050, and 2090 baselines are available.
+- Climate change rainfall is now provided by the datahub and the option to modify the baseline temperature or the delta temperature value is not supported by the new tool. This also means that climate change rainfall is derived from the datahub climate change factors, and any year from 2030 to 2100 (10-year increments) is available.
 - By default, the tool will now automatically switch to using a complete storm if the preburst rainfall depth is greater than the storm initial loss (for those specific events), however this can also be turned off.
 - The "Use event independent continuing loss" option has been removed as some regions use AEP specific losses.
 - The "data" folder has been renamed "working data" and the outputs have been changed. Among other changes, plots are no longer included and the tool uses the ``json`` format when downloading data. The ``json`` format is more code friendly to parse (unfortunately less human readable than the text format).
@@ -454,7 +454,7 @@ Each scenario object:
    * - baseline_year
      - ``int``
      - ``-``
-     - Allowed values: ``2030``, ``2050``, ``2090``
+     - Allowed values: ``2030``, ``2040``, ..., ``2100`` (10-year increments)
    * - ssp
      - ``int``
      - ``-``

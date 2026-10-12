@@ -42,7 +42,7 @@ def test_build_params_includes_cc_layer_when_enabled():
     config = ArrConfig.from_dict(data)
     client = ArrApiClient()
     params = client.build_params(config)
-    assert params['CCAdjIFDDatasets'] == 1
+    assert 'CCAdjIFDDatasets' not in params
     assert params['ClimateChange'] == 1
 
 
@@ -56,9 +56,24 @@ def test_api_response_ifd_table_bad_year_raises(api_response_1990):
         api_response_1990.ifd_table(2050)
 
 
+def test_climate_change_rainfall_factors():
+    columns = ['<1 hour', '1.5 Hours', '2 Hours', '>24 Hours']
+    data = {'layers': {'ClimateChange': {'rainfall_factors': {
+        'SSP2-4.5': {'columns': columns, 'index': [2030, 2090],
+                     'data': [[1.18, 1.17, 1.16, 1.1], [1.3, 1.28, 1.26, 1.2]]},
+    }}}}
+    hours, factors = ArrApiResponse(data).climate_change_rainfall_factors(2090, 'SSP2')
+    assert hours == [1.0, 1.5, 2.0, 24.0]
+    assert factors == [1.3, 1.28, 1.26, 1.2]
+    with pytest.raises(ArrApiError, match='baseline year'):
+        ArrApiResponse(data).climate_change_rainfall_factors(2050, 'SSP2')
+    with pytest.raises(ArrApiError, match='SSP'):
+        ArrApiResponse(data).climate_change_rainfall_factors(2090, 'SSP5')
+
+
 def test_api_response_missing_layer_raises(api_response_1990):
-    with pytest.raises(ArrApiError, match='CCAdjIFDDatasets'):
-        api_response_1990.cc_adj_ifd_table(2090, 'SSP2')
+    with pytest.raises(ArrApiError, match='ClimateChange'):
+        api_response_1990.climate_change_rainfall_factors(2090, 'SSP2')
 
 
 def test_api_response_layer_optional_returns_none(api_response_1990):
