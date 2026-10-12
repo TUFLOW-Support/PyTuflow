@@ -29,7 +29,7 @@ Key Differences to the Legacy QGIS Plugin Tool
 
     Preburst depths now go down to 30 minutes, therefore extrapolation only applies for durations < 30 minutes (not 60 minutes like the legacy datahub)
 
-- The option to configure ΔT or modify the baseline temperature have been removed.
+- The climate change options to configure ΔT or modify the baseline temperature have been removed.
 - By default, the tool will now automatically switch to using a complete storm if the preburst rainfall depth is greater than the storm initial loss (for those specific events), however this can also be turned off.
 - The "Use event independent continuing loss" option has been removed as some regions use AEP specific losses.
 - The "data" folder has been renamed "working data" and the outputs have been changed. Among other changes, plots are no longer included and the tool uses the ``json`` format when downloading data. The ``json`` format is more code friendly to parse (unfortunately less human readable than the text format).
@@ -164,7 +164,7 @@ The following example follows on from example 1 and adds climate change to the c
 .. code-block:: json
   :caption: SEQ_catchmentA_CC_config.json
   :linenos:
-  :emphasize-lines: 11,12,13,14,15,16
+  :emphasize-lines: 11,12,13,14,15,16,17
 
   {
     "site": {
@@ -244,7 +244,7 @@ The example config below shows how to run the second example again, but using th
 .. code-block:: json
   :caption: SEQ_catchmentA_CC_config.json
   :linenos:
-  :emphasize-lines: 7,8,9,10
+  :emphasize-lines: 7,8,9,10,11
 
   {
     "site": {
@@ -325,7 +325,7 @@ To keep this simple, the below example shows running the tool for two neighbouri
     }
   }
 
-.. image:: ../assets/images/pytuflow-arr-example-3-catchment-boundary.png
+.. image:: ../assets/images/pytuflow-arr-example-4-catchment-boundary.png
    :width: 100%
    :alt: CatchmentA catchment boundary
 
