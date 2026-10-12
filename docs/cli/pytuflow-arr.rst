@@ -151,6 +151,68 @@ The below plot shows the 1% AEP / 120 min event which contains a 3 hr preburst t
      style="border:none;">
    </iframe>
 
+Example 2 - Climate change
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The following example follows on from example 1 and adds climate change to the configuration. Two design horizons have been chosen: ``2050`` and ``2090``, both using ``SSP2``.
+
+.. code-block:: text
+  :caption: bash/cmd prompt to run tool for "SEQ_cathcmentA_config.json"
+
+  pytuflow-arr SEQ_cathcmentA_CC_config.json
+
+.. code-block:: json
+  :caption: SEQ_catchmentA_CC_config.json
+  :linenos:
+
+  {
+    "site": {
+      "name": "SEQ_CatchmentA",
+      "catchment_boundary": "./gis/SEQ_catchmentA_boundary.shp",
+      "catchment_area": 31.39
+    },
+    "events": {
+      "aep": [1, 2, 5, 10, 20],
+      "duration": [30, 60, 90, 120, 180, 360, 540, 720]
+    },
+    "climate_change": {
+      "enabled": true,
+      "scenarios" : [
+        {"baseline_year": 2050, "ssp": "SSP2"},
+        {"baseline_year": 2090, "ssp": "SSP2"}
+      ]
+    },
+    "output": {
+      "path": "./output",
+      "verbose": true
+    }
+  }
+
+Outputs
+"""""""
+
+Additional outputs are written for each climate change scenario.
+
+- Additional working data IFD and burst loss tables are written
+- The climate change rainfall is included in the base rainfall CSV files (appended as new columns).
+- A climate change ``bc_dbase_CC.csv`` is written.
+- The rainfall loss read file (``.trd``) has additional logic to account for the climate change scenarios.
+
+As an example, the 1% / 60 min is compared below for temporal pattern 1 (``TP01``) between the base case and the climate change scenarios.
+
+.. note::
+
+  The ``2090-SSP2`` climate change scenario has triggered a complete storm event. The base and ``2050-SSP2`` scenarios are only the design burst.
+
+.. raw:: html
+
+   <iframe
+     src="../../_static/interactive_plots/pytuflow-arr-example-2-rf-inflow-1p60min-CC-interactive-plot.html"
+     width="100%"
+     height="500"
+     style="border:none;">
+   </iframe>
+
 JSON Config File
 ----------------
 

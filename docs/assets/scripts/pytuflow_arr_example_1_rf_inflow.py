@@ -3,9 +3,6 @@ import pandas as pd
 from pathlib import Path
 
 
-
-
-
 def make_plot_1p60min():
     rf_csv = Path(__file__).parents[1] / 'tables' / 'SEQ_CatchmentA_RF_01p60m.csv'
     output = Path(__file__).parents[2] / '_static' / 'interactive_plots' / 'pytuflow-arr-example-1-rf-inflow-1p60min-interactive-plot.html'
@@ -30,7 +27,6 @@ def make_plot_1p60min():
         yaxis_title='Rainfall rate (mm/hr)',
         title=dict(text='1% AEP / 60 min rainfall events TP01-TP10 (converted to mm/hr)', x=0.5, xanchor='center'),
         margin=dict(t=70)
-        
     )
 
     fig.update_xaxes(showgrid=True, gridcolor="lightgray", zerolinecolor="lightgray", range=[0,df.index[-2]])

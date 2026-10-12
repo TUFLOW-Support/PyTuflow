@@ -247,9 +247,16 @@ def skip_member(app, what, name, obj, skip, options):
 def build_interactive_plots(app, exception):
     scripts = Path(__file__).parent / 'assets' / 'scripts'
     sys.path.append(str(scripts))
+    
+    # pytuflow-arr example-1
     from pytuflow_arr_example_1_rf_inflow import make_plot_1p60min, make_plot_1p120min
     make_plot_1p60min()
     make_plot_1p120min()
+
+    # pytuflow-arr example-2
+    from pytuflow_arr_example_2_rf_inflow import make_plot_1p60min
+    make_plot_1p60min()
+
     sys.path.pop()
 
 
