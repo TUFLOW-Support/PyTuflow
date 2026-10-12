@@ -36,6 +36,8 @@ def make_plot_1p60min():
     fig.update_xaxes(showgrid=True, gridcolor="lightgray", zerolinecolor="lightgray", range=[0,df.index[-2]])
     fig.update_yaxes(showgrid=True, gridcolor="lightgray", zerolinecolor="lightgray")
 
+    if not output.parent.exists():
+        output.parent.mkdir(parents=True)
     fig.write_html(output)
 
 
@@ -69,4 +71,6 @@ def make_plot_1p120min():
     fig.update_xaxes(showgrid=True, gridcolor="lightgray", zerolinecolor="lightgray", range=[0,df.index[-2]])
     fig.update_yaxes(showgrid=True, gridcolor="lightgray", zerolinecolor="lightgray")
 
+    if not output.parent.exists():
+        output.parent.mkdir(parents=True)
     fig.write_html(output)

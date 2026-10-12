@@ -136,11 +136,11 @@ The ``working_data/<..>_burst_initial_loss.csv`` will list the calculated burst 
 The default method for generating a preburst temporal pattern is to use the pattern explicitly referenced in the datahub response. Unforunately, this is only supported in some regions (i.e. NSW) and the tool will fallback to using the following defaults (see :ref:`complete_storm_assembly` for more information):
 
 - An existing point temporal pattern downloaded as part of the request is used
-- The temporal pattern duration that is 2x the event duration (up to 6 hrs) is chosen. For example, for the 2 hr event a preburst duration of 4 hrs is used, or the closest available temporal pattern i.e. 4.5 hrs.
+- The temporal pattern duration that is 1.5x the event duration (up to 24 hrs) is chosen. For example, for the 2 hr event a preburst duration of 3 hrs is used (or rounded to the nearest closest available temporal pattern).
 - The chosen rarity band is matched to the event rarity
 - TP01 is used
 
-The below plot shows the 1% AEP / 120 min event which contains a 4.5 hr preburst then a 2 hr design burst.
+The below plot shows the 1% AEP / 120 min event which contains a 3 hr preburst then a 2 hr design burst.
 
 .. raw:: html
 
@@ -431,7 +431,7 @@ Each scenario object:
    * - pattern_duration_max
      - ``number`` | ``null``
      - ``24``
-     - Caps the computed preburst duration (hours) when duration_proportional is true - without this, a proportional pattern_duration (e.g. the default of 2x the storm duration) would produce an unrealistically long preburst period for long storm durations (e.g. a 72 hour storm would otherwise get a 144 hour preburst). Has no effect when duration_proportional is false (an absolute pattern_duration is always used as given, uncapped). Set to ``null`` to disable capping entirely.
+     - Caps the computed preburst duration (hours) when duration_proportional is true - without this, a proportional pattern_duration (e.g. the default of 1.5x the storm duration) would produce an unrealistically long preburst period for long storm durations (e.g. a 72 hour storm would otherwise get a 96 hour preburst and a total storm time of 10 days). Has no effect when duration_proportional is false (an absolute pattern_duration is always used as given, uncapped). Set to ``null`` to disable capping entirely.
 
 **losses (optional)**
 
