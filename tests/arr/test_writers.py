@@ -257,6 +257,61 @@ def test_write_outputs_append_mode_multi_site(tmp_path, api_response_1990):
     assert '2, ILCL, <<IL_B>>' in tsoilf
 
 
+def test_losses_trd_appended_into_existing_if_logic(tmp_path, api_response_1990):
+    events = {'aep': ['50%', '10%'], 'duration': [720, 1440], 'output_notation': 'ari'}
+    results = {}
+    for name, append in (('A', False), ('B', True)):
+        config = make_config(
+            tmp_path, events=events, losses={'extrapolation_method': 'interpolate', 'tuflow_loss_method': 'infiltration'})
+        config.site.name = name
+        results[name] = ArrEngine(config, api_response_1990).run()
+        write_outputs(config, results[name], append=append)
+
+    trd = (tmp_path / 'soil_infiltration.trd').read_text()
+    # the If logic is only written once
+    assert trd.count('\nElse\n') == 1
+    assert trd.count('End If') == 1 + 2
+    assert trd.count('Set Variable IL_A') == 4
+    assert trd.count('Set Variable IL_B') == 4
+    # B's lines directly follow A's within each branch
+    lines = [ln.strip() for ln in trd.splitlines()]
+    for i, ln in enumerate(lines):
+        if ln.startswith('Set Variable IL_A'):
+            assert lines[i + 1].startswith('Set Variable CL_A')
+            assert lines[i + 2].startswith('Set Variable IL_B')
+            assert lines[i + 3].startswith('Set Variable CL_B')
+
+
+def test_losses_trd_appended_with_climate_change(tmp_path, api_response_1990):
+    cols = ['<1 hour', '1.5 Hours', '2 Hours', '3 Hours', '4.5 Hours', '6 Hours', '9 Hours', '12 Hours',
+            '18 Hours', '>24 Hours']
+    api_response_1990.layers['ClimateChange'] = {
+        'rainfall_factors': {'SSP2-4.5': {'columns': cols, 'index': [2090], 'data': [[1.1] * len(cols)]}},
+        'loss_factors': {
+            'Initial_Loss': {'columns': ['Losses SSP2-4.5'], 'index': [2090], 'data': [[1.05]]},
+            'Continuing_Loss': {'columns': ['Losses SSP2-4.5'], 'index': [2090], 'data': [[1.09]]},
+        },
+    }
+    for name, append in (('A', False), ('B', True)):
+        config = make_config(
+            tmp_path, events={'aep': ['50%'], 'duration': [1440], 'output_notation': 'ari'},
+            losses={'extrapolation_method': 'interpolate'},
+            climate_change={'enabled': True, 'scenarios': [{'baseline_year': 2090, 'ssp': 'SSP2'}]})
+        config.site.name = name
+        write_outputs(config, ArrEngine(config, api_response_1990).run(), append=append)
+
+    trd = (tmp_path / 'soil_infiltration.trd').read_text()
+    assert trd.count('Else  ! no climate change') == 1
+    assert trd.count('If Event == 2090_SSP2') == 1
+    lines = trd.splitlines()
+    i = next(i for i, ln in enumerate(lines) if 'If Event == 2090_SSP2' in ln)
+    assert [ln.strip().split(' == ')[0] for ln in lines[i + 1:i + 5]] == [
+        'Set Variable IL_A', 'Set Variable CL_A', 'Set Variable IL_B', 'Set Variable CL_B']
+    j = next(i for i, ln in enumerate(lines) if 'no climate change' in ln)
+    assert [ln.strip().split(' == ')[0] for ln in lines[j + 1:j + 5]] == [
+        'Set Variable IL_A', 'Set Variable CL_A', 'Set Variable IL_B', 'Set Variable CL_B']
+
+
 def test_rf_inflow_preburst_and_design_burst_use_their_own_distinct_timesteps(tmp_path):
     # regression test: the preburst pattern's own timestep may be much finer (or
     # coarser) than the design burst's timestep (e.g. a short preburst prepended to a

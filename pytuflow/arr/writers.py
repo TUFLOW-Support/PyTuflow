@@ -17,15 +17,16 @@ Writes the standard TUFLOW ARR input files from a list of
 Multiple sites/catchments can be appended into the same output folder by calling
 :func:`write_outputs` repeatedly with ``append=True`` for the second and subsequent
 sites - matching the legacy script's ``catch_no`` multi-catchment behaviour, but
-simplified: this rewrite does not attempt to merge per-catchment IF-statement blocks in
-the ``.trd``/control files as compactly as legacy did; each site gets its own IF/ELSE IF
-branch keyed on its AEP/duration event names, appended sequentially.
+the loss ``.trd`` file's per-site ``Set Variable`` lines are inserted into the existing
+AEP/duration(/CC scenario) If/Else If branches (events and climate change scenarios are
+assumed identical across the configs) rather than duplicating the If logic per site.
 """
 
 from __future__ import annotations
 
 import csv as csv_module
 import logging
+import re
 from pathlib import Path
 from typing import Optional
 
@@ -299,6 +300,58 @@ def write_rf_inflow(folder: Path, config: ArrConfig, results: list) -> Path:
     return fpath
 
 
+_TRD_IF_EVENT = re.compile(r'^(\s*)(?:Else )?If Event == (\S+)\s*$', re.IGNORECASE)
+_TRD_ELSE_NO_CC = re.compile(r'^(\s*)Else\s+! no climate change', re.IGNORECASE)
+
+
+def _append_losses_to_trd(trd_path: Path, site: str, by_aep_dur: dict, out_notation: str) -> None:
+    """Adds a site's ``IL_<site>``/``CL_<site>`` ``Set Variable`` lines to an existing loss
+    ``.trd`` file, inside each existing AEP/duration(/CC scenario) branch, rather than
+    appending a second (identical) If/Else If block. The events/climate change scenarios
+    are the same for every config in a multi-config run, so the existing file's logic
+    already matches the new site's results."""
+    with open(trd_path, encoding='utf-8') as f:
+        lines = f.read().splitlines()
+
+    aep = dur = scenario = None
+    used = set()
+    out = []
+    for i, line in enumerate(lines):
+        out.append(line)
+        m = _TRD_IF_EVENT.match(line)
+        if m:
+            level = len(m.group(1).expandtabs(4)) // 4
+            if level == 0:
+                aep, dur, scenario = m.group(2), None, None
+            elif level == 1:
+                dur, scenario = m.group(2), None
+            else:
+                scenario = m.group(2)
+            continue
+        if _TRD_ELSE_NO_CC.match(line):
+            scenario = None
+            continue
+        if not line.strip().lower().startswith('set variable'):
+            continue
+        next_is_set = i + 1 < len(lines) and lines[i + 1].strip().lower().startswith('set variable')
+        if next_is_set:
+            continue
+        r = by_aep_dur.get((aep, dur), {}).get(scenario)
+        if r is None:
+            continue
+        indent = line[:len(line) - len(line.lstrip())]
+        out.append(f'{indent}Set Variable IL_{site} == {r.initial_loss:.1f}')
+        out.append(f'{indent}Set Variable CL_{site} == {r.continuing_loss:.1f}')
+        used.add((aep, dur, scenario))
+
+    expected = {(a, d, sc) for (a, d), m in by_aep_dur.items() for sc in m}
+    if expected - used:
+        logger.warning("Site '%s' has events not present in existing '%s' - these were not added: %s",
+                       site, trd_path.name, sorted(str(e) for e in expected - used))
+    with open(trd_path, 'w', encoding='utf-8') as f:
+        f.write('\n'.join(out) + '\n')
+
+
 def write_losses(path: Path, config: ArrConfig, results: list, append: bool = False) -> None:
     """Writes (or appends to) the loss control file: ``soils.tsoilf`` (an ``ILCL``
     scalar entry referencing ``<<IL_name>>``/``<<CL_name>>``, when
@@ -340,10 +393,11 @@ def write_losses(path: Path, config: ArrConfig, results: list, append: bool = Fa
         by_aep_dur.setdefault(key, {})[r.cc_scenario] = r
 
     trd_path = path.parent / ('soil_infiltration.trd' if losses_cfg.tuflow_loss_method == 'infiltration' else 'rainfall_losses.trd')
-    mode = 'a' if append and trd_path.exists() else 'w'
-    with open(trd_path, mode, encoding='utf-8') as f:
-        if mode == 'w':
-            f.write('! TUFLOW READ FILE - SET RAINFALL LOSS VARIABLES\n')
+    if append and trd_path.exists():
+        _append_losses_to_trd(trd_path, site, by_aep_dur, out_notation)
+        return
+    with open(trd_path, 'w', encoding='utf-8') as f:
+        f.write('! TUFLOW READ FILE - SET RAINFALL LOSS VARIABLES\n')
         aeps = sorted({k[0] for k in by_aep_dur})
         for ai, aep_token in enumerate(aeps):
             if1 = 'If' if ai == 0 else 'Else If'
