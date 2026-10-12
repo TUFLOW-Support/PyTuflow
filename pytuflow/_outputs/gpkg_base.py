@@ -26,6 +26,7 @@ class GPKGBase:
     def __init__(self, *args, **kwargs):
         self._cached = {}  # 'table_name': pd.DataFrame
         self._group_cached = {}  # 'table_name': df.groupby
+        self._wide = {}  # 'table_name': (time index, id index, [time, id, dtype] array, dtypes)
         super().__init__(*args, **kwargs)
 
     @staticmethod
@@ -70,9 +71,9 @@ class GPKGBase:
             return None
         return m.group(1), m.group(3), m.group(2), 'fid'
 
-    def _read_base_tables_fast(self, cur: 'Cursor', data_types: list[str], table_name: str) -> 'pd.DataFrame | None':
-        """Read the time series straight from the base tables into a numpy array, avoiding the slow
-        pandas row conversion. Returns None if this isn't possible (e.g. non-numeric or NULL data).
+    def _read_base_tables_fast(self, cur: 'Cursor', data_types: list[str], table_name: str) -> 'tuple | None':
+        """Read the time series straight from the base tables into a dense numpy array, avoiding the
+        slow pandas row conversion. Returns (time index, ID index, array) or None if this isn't possible (e.g. non-numeric or NULL data).
         """
         import itertools
         import numpy as np
@@ -91,22 +92,39 @@ class GPKGBase:
             times = pd.read_sql_query('SELECT TimeId, Time_relative FROM DatasetTimes;', cur.connection)
         except (TypeError, ValueError, KeyError, IndexError, ImportError, sqlite3.Error):
             return None
-        id_map = ids.set_index('fid')['ID']
-        time_map = times.set_index('TimeId')['Time_relative']
-        df = pd.DataFrame(arr[:, 2:], columns=list(data_types))
-        df.insert(0, 'time', time_map.reindex(arr[:, 1].astype(np.int64)).to_numpy())
-        df.insert(0, 'ID', id_map.reindex(arr[:, 0].astype(np.int64)).to_numpy())
-        return df
+        # build a dense [time, id, data type] array once so each data type is just a slice
+        try:
+            feat_idx = pd.Index(ids['fid']).get_indexer(arr[:, 0].astype(np.int64))
+            time_idx = pd.Index(times['TimeId']).get_indexer(arr[:, 1].astype(np.int64))
+            if (feat_idx < 0).any() or (time_idx < 0).any():
+                return None
+            uid, id_inv = np.unique(ids['ID'].to_numpy(dtype=object), return_inverse=True)
+            utime, time_inv = np.unique(times['Time_relative'].to_numpy(dtype=np.float64), return_inverse=True)
+            rows, cols = time_inv[time_idx], id_inv[feat_idx]
+            if len(utime) * len(uid) > 4 * max(n, 1):  # too ragged for a dense array
+                return None
+            flat = rows * len(uid) + cols
+            if len(np.unique(flat)) != n:  # duplicate (ID, time) pairs
+                return None
+            cube = np.full((len(utime), len(uid), len(data_types)), np.nan)
+            cube[rows, cols, :] = arr[:, 2:]
+        except (TypeError, ValueError):
+            return None
+        return pd.Index(utime, name='time'), pd.Index(uid), cube
 
     def _read_gpkg_table_to_memory(self, cur: 'Cursor', data_types: list[str], table_name):
         """Read a table from a GPKG/sqlite3 database into memory in one I/O operation."""
         data_types = list(dict.fromkeys(data_types))  # unique, order preserved
-        df = self._read_base_tables_fast(cur, data_types, table_name)
-        if df is None:  # fallback to the generic (slower) route
-            cols = ['ID', 'Time_relative'] + [_safe_identifier(x) for x in data_types]
-            query = 'SELECT {0} FROM {1}'.format(','.join(cols), _safe_identifier(table_name))  # nosec B608
-            df = pd.read_sql_query(query, cur.connection)  # nosec B608
-            df = df.rename(columns={'Time_relative': 'time'})
+        fast = self._read_base_tables_fast(cur, data_types, table_name)
+        if fast is not None:
+            self._wide[table_name] = (fast[0], fast[1], fast[2], data_types)
+            return
+
+        # fallback to the generic (slower) route
+        cols = ['ID', 'Time_relative'] + [_safe_identifier(x) for x in data_types]
+        query = 'SELECT {0} FROM {1}'.format(','.join(cols), _safe_identifier(table_name))  # nosec B608
+        df = pd.read_sql_query(query, cur.connection)  # nosec B608
+        df = df.rename(columns={'Time_relative': 'time'})
 
         # do some post-processing to make the data easier to work with
         df = df.sort_values(['ID', 'time'])
@@ -141,6 +159,10 @@ class GPKGBase:
             out = pd.concat(result, axis=1)
             out.columns = col_names
             return out
+
+        if table_name in self._wide and dtype_name in self._wide[table_name][3]:
+            times, ids, cube, dtypes = self._wide[table_name]
+            return pd.DataFrame(cube[:, :, dtypes.index(dtype_name)], index=times, columns=ids)
 
         if table_name in self._cached:
             df = self._cached[table_name][['ID', 'time', dtype_name]]
