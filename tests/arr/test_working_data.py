@@ -52,8 +52,11 @@ def test_json_always_saved_even_when_not_verbose(tmp_path, api_response_1990):
     assert not (working / '1_ARF.csv').exists()
     assert not (working / '1_IFD_after_ARF.csv').exists()
     assert not (working / '1_burst_initial_loss.csv').exists()
-    assert not (working / '1_PointTP_Increments.csv').exists()
     assert not (working / '1_extrapolated_losses.csv').exists()
+
+    # raw temporal pattern increments are always saved
+    assert (working / '1_PointTP_Increments.csv').exists()
+    assert (working / '1_ArealTP_Increments.csv').exists()
 
 
 def test_verbose_writes_all_working_data_files(tmp_path, api_response_1990):
@@ -156,8 +159,8 @@ def test_additional_tp_region_response_and_csv_written(tmp_path, api_response_19
         data = json.load(f)
     assert data == {'title': 'fake wet tropics response'}
 
-    # additional-region increments CSV is verbose-only, like the site's own
-    assert not (working / '1_PointTP_Increments_WetTropics.csv').exists()
+    # additional-region increments CSV is always saved, like the site's own
+    assert (working / '1_PointTP_Increments_WetTropics.csv').exists()
 
 
 def test_verbose_writes_additional_tp_region_increments_csv(tmp_path, api_response_1990, monkeypatch, point_tp_csv):

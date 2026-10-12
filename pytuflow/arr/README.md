@@ -268,7 +268,7 @@ returns its `"Use PB TP"` placeholder for that cell - see [Complete storm assemb
 | --- | --- | --- | --- |
 | `path` | string | - | Output folder for all TUFLOW files. **Required.** Created if it doesn't exist. |
 | `format` | string | `"csv"` | Rainfall hyetograph file format: `"csv"` (time in hours, with an `Event ID` header row) or `"ts1"` (TUFLOW's native ts1 format, time in minutes). |
-| `verbose` | bool | `false` | If `true`, also writes intermediate "working data" files (areal design IFD table, ARF table, burst initial loss table, extrapolated short-duration losses CSV, and raw point/areal temporal pattern increment CSVs) to a `working_data` subfolder - see [Working data](#working-data) below. |
+| `verbose` | bool | `false` | If `true`, also writes intermediate "working data" files (areal design IFD table, ARF table, burst initial loss table, and extrapolated short-duration losses CSV) to a `working_data` subfolder - see [Working data](#working-data) below. |
 
 ## Working data
 
@@ -283,6 +283,18 @@ is used to save data useful for reviewing/QA'ing what the tool requested and cal
   request made for that region's representative coordinates. **Always saved**, same as
   the site's own response, for the same reason. `<region>` is the region name with
   spaces removed (e.g. `WetTropics`).
+* `<site>_PointTP_Increments.csv` / `<site>_ArealTP_Increments.csv` - the raw temporal
+  pattern increment CSVs downloaded from the Data Hub (before selection/filtering to the
+  specific patterns used for each event). **Always saved**, regardless of `output.verbose`.
+* `<site>_PointTP_Increments_<region>.csv` - one per `temporal_patterns.additional_tp`
+  region configured (if any) - that region's own raw point temporal pattern increments
+  CSV, downloaded from its own separate ARR Data Hub request. `<region>` is the region
+  name with spaces removed (e.g. `WetTropics`), matching the `_<region>` suffix used in
+  `rf_inflow` column labels (see `additional_tp` above).
+* `<site>_ArealTP_Increments_<region>.csv` - as above, but that region's own raw areal
+  temporal pattern increments CSV - only written if the Data Hub provides an `ArealTP`
+  layer for that region's representative coordinates (a named-region `additional_tp`
+  entry only; a local file entry never has one - see `additional_tp` above).
 
 The following are only saved when `output.verbose` is `true`, since they are purely for
 debugging/QA and are otherwise redundant with the always-written `rf_inflow`/loss
@@ -316,18 +328,6 @@ control files:
   (there's no raw Data Hub table to write). One file per climate change
   scenario (if enabled); a scenario's file is omitted entirely if nothing was
   extrapolated for it.
-* `<site>_PointTP_Increments.csv` / `<site>_ArealTP_Increments.csv` - the raw temporal
-  pattern increment CSVs downloaded from the Data Hub (before selection/filtering to the
-  specific patterns used for each event).
-* `<site>_PointTP_Increments_<region>.csv` - one per `temporal_patterns.additional_tp`
-  region configured (if any) - that region's own raw point temporal pattern increments
-  CSV, downloaded from its own separate ARR Data Hub request. `<region>` is the region
-  name with spaces removed (e.g. `WetTropics`), matching the `_<region>` suffix used in
-  `rf_inflow` column labels (see `additional_tp` above).
-* `<site>_ArealTP_Increments_<region>.csv` - as above, but that region's own raw areal
-  temporal pattern increments CSV - only written if the Data Hub provides an `ArealTP`
-  layer for that region's representative coordinates (a named-region `additional_tp`
-  entry only; a local file entry never has one - see `additional_tp` above).
 
 ## Complete storm assembly
 
