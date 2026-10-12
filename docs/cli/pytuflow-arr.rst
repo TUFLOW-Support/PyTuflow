@@ -367,7 +367,7 @@ Parameter descriptions
    * - verbose
      - ``bool``
      - ``false``
-     - If true, also writes intermediate "working data" files (areal design IFD table, ARF table, burst initial loss table, extrapolated short-duration losses CSV, and raw point/areal temporal pattern increment CSVs) to a working_data subfolder - see :ref:`working_data` section below.
+     - If true, also writes intermediate "working data" files (areal design IFD table, ARF table, burst initial loss table, and extrapolated short-duration losses CSV) to a working_data subfolder - see :ref:`working_data` section below.
 
 **response_json (top-level, optional)**
 
@@ -618,6 +618,14 @@ Alongside the standard TUFLOW output files, a working_data subdirectory is used 
 
 - ``<site>_ARR_response.json`` - the raw JSON response from the ARR Data Hub, exactly as received. Always saved, so a run can always be fully reproduced/inspected later without needing to re-query the datahub.
 - ``<site>_ARR_response_<region>.json`` - one per additional temporal pattern region configured (if any) - the raw JSON response from the separate ARR datahub request made for that region's representative coordinates. Always saved, same as the site's own response, for the same reason. <region> is the region name with spaces removed (e.g. ``WetTropics``).
+- ``<site>_PointTP_Increments.csv`` / ``<site>_ArealTP_Increments.csv`` - the raw temporal
+  pattern increment CSVs downloaded from the Data Hub (before selection/filtering to the
+  specific patterns used for each event). Always saved.
+- ``<site>_PointTP_Increments_<region>.csv`` / ``<site>_ArealTP_Increments_<region>.csv`` - one per additional temporal pattern
+  region configured (if any) - that region's own raw point temporal pattern increments
+  CSV, downloaded from its own separate ARR Data Hub request. ``<region>`` is the region
+  name with spaces removed (e.g. ``WetTropics``), matching the ``_<region>`` suffix used in
+  ``rf_inflow`` column labels.
 
 The following are only saved when the ``output`` "verbose" parameter is true, since they are purely for debugging/QA and are otherwise redundant with the always-written rf_inflow/loss control files:
 
@@ -633,11 +641,3 @@ The following are only saved when the ``output`` "verbose" parameter is true, si
   loss (mm) values, in the same duration (index) x AEP% (columns) table format as
   ``<site>_burst_initial_loss...csv``, but containing **only** the cells that were
   actually extrapolated.
-- ``<site>_PointTP_Increments.csv`` / ``<site>_ArealTP_Increments.csv`` - the raw temporal
-  pattern increment CSVs downloaded from the Data Hub (before selection/filtering to the
-  specific patterns used for each event).
-- ``<site>_PointTP_Increments_<region>.csv`` / ``<site>_ArealTP_Increments_<region>.csv`` - one per additional temporal pattern
-  region configured (if any) - that region's own raw point temporal pattern increments
-  CSV, downloaded from its own separate ARR Data Hub request. ``<region>`` is the region
-  name with spaces removed (e.g. ``WetTropics``), matching the ``_<region>`` suffix used in
-  ``rf_inflow`` column labels.
