@@ -157,7 +157,7 @@ Example 2 - Climate change
 The following example follows on from example 1 and adds climate change to the configuration. Two design horizons have been chosen: ``2050`` and ``2090``, both using ``SSP2``.
 
 .. code-block:: text
-  :caption: bash/cmd prompt to run tool for "SEQ_cathcmentA_config.json"
+  :caption: bash/cmd prompt to run tool for "SEQ_cathcmentA_CC_config.json"
 
   pytuflow-arr SEQ_cathcmentA_CC_config.json
 
