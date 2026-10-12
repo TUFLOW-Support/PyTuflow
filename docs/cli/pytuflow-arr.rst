@@ -29,7 +29,7 @@ Key Differences to the Legacy QGIS Plugin Tool
 
     Preburst depths now go down to 30 minutes, therefore extrapolation only applies for durations < 30 minutes (not 60 minutes like the legacy datahub)
 
-- Climate change rainfall is now provided by the datahub and the option to modify the baseline temperature or the delta temperature value is not supported by the new tool. This also means that climate change rainfall is derived from the datahub climate change factors, and any year from 2030 to 2100 (10-year increments) is available.
+- The option to configure ΔT or modify the baseline temperature have been removed.
 - By default, the tool will now automatically switch to using a complete storm if the preburst rainfall depth is greater than the storm initial loss (for those specific events), however this can also be turned off.
 - The "Use event independent continuing loss" option has been removed as some regions use AEP specific losses.
 - The "data" folder has been renamed "working data" and the outputs have been changed. Among other changes, plots are no longer included and the tool uses the ``json`` format when downloading data. The ``json`` format is more code friendly to parse (unfortunately less human readable than the text format).
@@ -202,7 +202,7 @@ As an example, the 1% / 60 min is compared below for temporal pattern 1 (``TP01`
 
 .. note::
 
-  The ``2090-SSP2`` climate change scenario has triggered a complete storm event. The base and ``2050-SSP2`` scenarios are only the design burst.
+  The climate change scenarios have both triggered complete storm events. By default, the climate change burst initial loss is calculated by: :math:`IL_{burst\_CC} = IL_{storm} \times IL_{CC\_factor} - PB_{ratio} \times RF_{CC}`.
 
 .. raw:: html
 
@@ -435,7 +435,7 @@ Parameter descriptions
    * - enabled
      - ``bool``
      - ``false``
-     - If ``true``, an additional event is assembled for each scenario in scenarios, alongside the base (no climate-change) event.
+     - If ``true``, an additional event is assembled for each scenario in scenarios, alongside the base (no climate-change) event. The tool uses the climate change factors provided by the datahub, and not the pre-calculated IFD tables. This allows the baseline rainfall to be factored, which could be BOM, or another source like LIMB/QRA (pre-calculated tables appear to always use BOM rainfall). It also allows all climate change years to be used, whereas only several years are provided in the pre-calculated tables.
    * - scenarios
      - ``list[object]``
      - ``[]``
@@ -454,7 +454,7 @@ Each scenario object:
    * - baseline_year
      - ``int``
      - ``-``
-     - Allowed values: ``2030``, ``2040``, ..., ``2100`` (10-year increments)
+     - Allowed values: ``2030`` - ``2100`` (10-year increments)
    * - ssp
      - ``int``
      - ``-``
