@@ -62,7 +62,7 @@ Examples
 Example 1 - Basic Usage
 ^^^^^^^^^^^^^^^^^^^^^^^
 
-This example demonstrates a configuration file using catchment shapefile (CRS must be in WGS 84 lat/lon) and extracting events for common duration/AEP event combinations. The catchment shapefile is not required to have any specific attributes, and only the geometry is used. Note, catchment area is not derived from the geometry and is required to be input by the user.
+This example demonstrates a configuration file using a catchment shapefile (CRS must be in WGS 84 lat/lon) and extracting common duration/AEP event combinations. The catchment shapefile is not required to have any specific attributes, and only the geometry is used. Note, catchment area is not derived from the geometry and is required to be input by the user.
 
 .. code-block:: text
   :caption: bash/cmd prompt to run tool for "SEQ_cathcmentA_config.json"
@@ -121,9 +121,9 @@ The below plot is the 1% AEP / 60 min storm event that was output from the above
 
 .. rubric:: Complete storm / initial loss table
 
-The above storm event (1%/60 min) is a design burst, however other requested storms have switched automatically to using a complete storm approach. This is done by prepending a preburst temporal pattern to the design burst.
+The above storm event (1%/60 min) is a design burst, however other requested storms have switched automatically to using a complete storm approach due to the high preburst rainfall depth. This is done by prepending a preburst temporal pattern to the design burst.
 
-The ``working_data/<..>_burst_initial_loss.csv`` will list the calculated burst losses. Where the burst initial loss is calculated to be less than zero, the table will use ``"Use PB TP"``. This indicates that a preburst temporal pattern has been used (i.e. a complete storm has been created for those events). Some regions (i.e. NSW) have this information provided in the datahub response, otherwise it is calculated by the tool (and the same convention, ``"Use PB TP"``, is used).
+The ``working_data/<..>_burst_initial_loss.csv`` will list the calculated burst losses. Where the burst initial loss is calculated to be less than zero (i.e. preburst depth > storm initial loss), the table will use ``"Use PB TP"``. This indicates that a preburst temporal pattern has been used (i.e. a complete storm has been created for those events). Some regions (i.e. NSW) have this information provided in the datahub response, otherwise it is calculated by the tool (and the same convention, ``"Use PB TP"``, is used).
 
 .. note::
   
@@ -135,10 +135,10 @@ The ``working_data/<..>_burst_initial_loss.csv`` will list the calculated burst 
 
 The default method for generating a preburst temporal pattern is to use the pattern explicitly referenced in the datahub response. Unforunately, this is only supported in some regions (i.e. NSW) and the tool will fallback to using the following defaults (see :ref:`complete_storm_assembly` for more information):
 
-- An existing point temporal pattern downloaded as part of the request is used
-- The temporal pattern duration that is 1.5x the event duration (up to 24 hrs) is chosen. For example, for the 2 hr event a preburst duration of 3 hrs is used (or rounded to the nearest closest available temporal pattern).
-- The chosen rarity band is matched to the event rarity
-- TP01 is used
+- The tool will use an existing point temporal pattern downloaded as part of the request.
+- The tool will use a temporal pattern duration that is 1.5x the event duration (up to 24 hrs). For example, for the 2 hr event a preburst duration of 3 hrs will be used (or rounded to the nearest closest available temporal pattern).
+- The chosen rarity band will be matched to the design burst event rarity.
+- From the available temporal patterns, TP01 will be used.
 
 The below plot shows the 1% AEP / 120 min event which contains a 3 hr preburst then a 2 hr design burst.
 
