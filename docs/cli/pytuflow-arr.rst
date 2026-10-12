@@ -154,16 +154,17 @@ The below plot shows the 1% AEP / 120 min event which contains a 3 hr preburst t
 Example 2 - Climate change
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The following example follows on from example 1 and adds climate change to the configuration. Two design horizons have been chosen: ``2050`` and ``2090``, both using ``SSP2``.
+The following example follows on from example 1 and adds climate change to the configuration. Two design horizons have been chosen: ``2050`` and ``2090``, both using ``SSP2``. The additional climate change section is highlighted in the config file below for convenience.
 
 .. code-block:: text
-  :caption: bash/cmd prompt to run tool for "SEQ_cathcmentA_config.json"
+  :caption: bash/cmd prompt to run tool for "SEQ_cathcmentA_CC_config.json"
 
   pytuflow-arr SEQ_cathcmentA_CC_config.json
 
 .. code-block:: json
   :caption: SEQ_catchmentA_CC_config.json
   :linenos:
+  :emphasize-lines: 11,12,13,14,15,16
 
   {
     "site": {
@@ -212,6 +213,121 @@ As an example, the 1% / 60 min is compared below for temporal pattern 1 (``TP01`
      height="500"
      style="border:none;">
    </iframe>
+
+Example 3 - Rerunning datahub files from a previous run
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+It's possible to run the tool with the response json and temporal pattern CSVs that were downloaded/saved during a previous tool run. Not all the below files are required, although to run without the tool touching the datahub again, then at least these files are required. Additional files would be required if additional temporal pattern zones were previously requested.
+
+- ``<site_name>_response.json``
+- ``<site_name>_PointTP_Increments.csv``
+- ``<site_name>_ArealTP_Increments.csv``
+
+The example config below shows how to run the second example again, but using the previously downloaded response and temporal pattern data. The added lines are highlighted in the config file below for convenience.
+
+.. note::
+
+  It is recommended to run with the same settings as the previous run that generated the input files. Some setings, like climate change, affect
+  what is requested from the datahub and the contents of the ``response.json``. This means that adding climate change settings is not possible if
+  using a ``response.json`` from a previous tool run that did not include climate change.
+
+.. note::
+
+  It is strictly not required to include the ``catchment_boundary`` parameter, although it doesn't affect the output if it is kept in the configuration file. It is
+  generally recommended to keep it as it is good practice to keep the boundary for posterity and context.
+
+.. code-block:: text
+  :caption: bash/cmd prompt to run tool for "SEQ_cathcmentA_CC_config.json"
+
+  pytuflow-arr SEQ_cathcmentA_CC_config.json
+
+.. code-block:: json
+  :caption: SEQ_catchmentA_CC_config.json
+  :linenos:
+  :emphasize-lines: 7,8,9,10
+
+  {
+    "site": {
+      "name": "SEQ_CatchmentA",
+      "catchment_boundary": "./gis/SEQ_catchmentA_boundary.shp",
+      "catchment_area": 31.39
+    },
+    "response_json": "./output/working_data/SEQ_CatchmentA_ARR_response.json",
+    "temporal_patterns": {
+      "point_tp_csv": "./output/working_data/SEQ_CatchmentA_PointTP_Increments.csv",
+      "areal_tp_csv": "./output/working_data/SEQ_CatchmentA_ArealTP_Increments.csv"
+    },
+    "events": {
+      "aep": [1, 2, 5, 10, 20],
+      "duration": [30, 60, 90, 120, 180, 360, 540, 720]
+    },
+    "climate_change": {
+      "enabled": true,
+      "scenarios" : [
+        {"baseline_year": 2050, "ssp": "SSP2"},
+        {"baseline_year": 2090, "ssp": "SSP2"}
+      ]
+    },
+    "output": {
+      "path": "./output",
+      "verbose": true
+    }
+  }
+
+Example 4 - Running multiple catchments
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The below example shows how to run multiple catchments in a single tool run. This is different from running the tool multiple times, as the outputs are combined together into a single set of TUFLOW files (e.g. the catchments are all referenced in a single ``bc_dbase.csv``).
+
+To keep this simple, the below example shows running the tool for two neighbouring catchments: ``CatchmentA`` and ``CatchmentB``. The second configuration file does not change the bulk of the settings, and the tool only uses the ``site`` data (location, name, area etc.). This example follows on from example 2.
+
+.. code-block:: text
+  :caption: bash/cmd prompt to run tool for "SEQ_cathcmentA_CC_config.json"
+
+  pytuflow-arr SEQ_cathcmentA_CC_config.json SEQ_cathcmentB_CC_config.json
+
+.. code-block:: json
+  :caption: SEQ_catchmentA_CC_config.json
+  :linenos:
+
+  {
+    "site": {
+      "name": "SEQ_CatchmentA",
+      "catchment_boundary": "./gis/SEQ_catchmentA_boundary.shp",
+      "catchment_area": 31.39
+    },
+    "events": {
+      "aep": [1, 2, 5, 10, 20],
+      "duration": [30, 60, 90, 120, 180, 360, 540, 720]
+    },
+    "climate_change": {
+      "enabled": true,
+      "scenarios" : [
+        {"baseline_year": 2050, "ssp": "SSP2"},
+        {"baseline_year": 2090, "ssp": "SSP2"}
+      ]
+    },
+    "output": {
+      "path": "./output",
+      "verbose": true
+    }
+  }
+
+.. code-block:: json
+  :caption: SEQ_catchmentB_CC_config.json
+  :linenos:
+
+  {
+    "site": {
+      "name": "SEQ_CatchmentB",
+      "catchment_boundary": "./gis/SEQ_catchmentB_boundary.shp",
+      "catchment_area": 310
+    }
+  }
+
+.. image:: ../assets/images/pytuflow-arr-example-3-catchment-boundary.png
+   :width: 100%
+   :alt: CatchmentA catchment boundary
 
 JSON Config File
 ----------------
