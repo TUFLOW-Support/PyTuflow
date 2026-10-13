@@ -77,15 +77,20 @@ class ConnectivityFM(Connectivity):
                 if id_ not in branch:
                     branch.append(id_)
                 self.branches.append(branch)
+                self._processed_branches.append(branch)
                 finished = finished or (self.branch_limit > 0 and len(self.branches) >= self.branch_limit)
             if not finished:
                 finished = self._connect(nd, id2, branch.copy(), id_)
                 if finished and self.branch_limit > 0 and len(self.branches) >= self.branch_limit:
                     break
+                if len(self._processed_branches) >= self._process_branch_limit:
+                    return finished
 
         if not one_connection and id2 is None:
             finished = True
             self.branches.append(branch)
+        if not one_connection:
+            self._processed_branches.append(branch)
 
         return finished
 
