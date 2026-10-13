@@ -1,6 +1,13 @@
 Changelog for 1.2
 =================
 
+1.2.6
+-----
+
+Release date: 13 October 2026
+
+- Further optimised long plot connectivity when using the :meth:`~pytuflow.TPC.section` method for a time series result (e.g. :class:`~pytuflow.TPC`). The optimisation is related to when more than one ID is passed in; if the IDs are passed in in order from upstream to downstream, then this change has no effect (should already be quick). If the IDs are passed in from downstream to upstream, then previously this could cause the connectivity to be slow because it tries to connect the branches in the wrong order i.e. it won't find a connection and checks every branch (which can be slow if there are 1,000s of branches). Now it limits an initial search pass to the ``branch_limit`` parameter in both directions before moving onto a wider search if no connection is found.
+
 1.2.5
 -----
 

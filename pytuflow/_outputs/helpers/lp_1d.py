@@ -8,6 +8,9 @@ except ImportError:
 from packaging.version import Version
 
 
+BRANCH_LIMIT = 999
+
+
 class LP1D:
     """Class for generating long profiles for 1D channels."""
 
@@ -159,28 +162,52 @@ class Connectivity:
         #: str: Downstream channel ID
         self.id2 = id2
         #: int: The branch limit
-        self.branch_limit = branch_limit
+        self.branch_limit = branch_limit if branch_limit > 0 else BRANCH_LIMIT
         #: list[list[str]]: List of branches
         self.branches = []
         #: bool: True if connected
         self.connected = False
+
+        self._processed_branches = []  # keep track of processed branches even if they don't make it to the output
+        self._process_branch_limit = BRANCH_LIMIT  # allows short circuiting
+
         self.connect()
 
     def connect(self) -> None:
         """Calculate connectivity between channels given two IDS.
         If id2 is None, then connectivity will be calculated all the way to the outlet.
         """
+        # first check if the connection but limit the branches if the user has set a branch limit
+        self._process_branch_limit = self.branch_limit
         connected = self._connect(self.id1, self.id2, [])
         if connected:
             self.connected = True
             return
         if self.id2 is None:
             return
-        id1, id2 = self.id2, self.id1
-        connected = self._connect(id1, id2, [])
+
+        connected = self._connect(self.id2, self.id1, [])
         if connected:
             self.connected = True
-            self.id1, self.id2 = id1, id2
+            self.id1, self.id2 = self.id2, self.id1
+            return
+
+        if self.branch_limit >= BRANCH_LIMIT:
+            return  # no point doing the below since we have already checked using the upper branch limit
+
+        # if not connected - try expanding the processing branch limit
+        self._process_branch_limit = BRANCH_LIMIT
+        connected = self._connect(self.id1, self.id2, [])
+        if connected:
+            self.connected = True
+            return
+        if self.id2 is None:
+            return
+
+        connected = self._connect(self.id2, self.id1, [])
+        if connected:
+            self.connected = True
+            self.id1, self.id2 = self.id2, self.id1
 
     def _connect(self, id1: str, id2: Union[str, None], branch: list[str]) -> bool:
         """Private routine to calculate connectivity between 2 channels. Uses binary tree type search so that
@@ -206,15 +233,22 @@ class Connectivity:
                 if id_ not in branch:
                     branch.append(id_)
                 self.branches.append(branch)
+                self._processed_branches.append(branch)
                 finished = finished or (self.branch_limit > 0 and len(self.branches) >= self.branch_limit)
             if not finished:
+                if len(self.branches) >= self._process_branch_limit:  # hard-coded upper limit to stop it from taking way too long
+                    break
                 finished = self._connect(id_, id2, branch.copy())
                 if finished and self.branch_limit > 0 and len(self.branches) >= self.branch_limit:
                     break
+                if len(self._processed_branches) >= self._process_branch_limit:
+                    return finished
 
         if not one_connection and id2 is None:
             finished = True
             self.branches.append(branch)
+        if not one_connection:
+            self._processed_branches.append(branch)
 
         return finished
 
