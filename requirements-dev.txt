@@ -172,7 +172,7 @@ stack-data==0.6.3
 terminado==0.18.1
 tifffile==2026.5.2
 tinycss2==1.4.0
-tornado==6.5.5
+tornado==6.5.8
 traitlets==5.15.0
 trame==3.13.2
 trame-client==3.12.2
