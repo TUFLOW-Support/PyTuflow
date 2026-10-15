@@ -1,0 +1,6 @@
+DISCLAIMER
+
+The ARR PyTUFLOW tool is provided free of charge as a tool to automate the process of obtaining hydrologic data
+from the ARR datahub and BOM IFD. In no event will BMT Pty Ltd (the developer) be liable for the
+results of this plugin. The accuracy of this data, and any pre-processing done by this plugin is the
+responsibility of the user. Please cross check all results with the raw ARR datahub text files.

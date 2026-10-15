@@ -29,6 +29,7 @@ import logging
 import re
 from pathlib import Path
 from typing import Optional
+import shutil
 
 from .config import ArrConfig
 from .exceptions import ArrError
@@ -453,4 +454,11 @@ def write_outputs(config: ArrConfig, results: list, append: bool = False) -> Non
     for group in by_aep_dur.values():
         write_rf_inflow(rf_folder, config, group)
     write_losses(out_path / 'soils.tsoilf', config, results, append=append)
+    write_disclaimer(config.output.path)
     logger.info("Wrote TUFLOW ARR outputs for site '%s' to '%s'", config.site.name, out_path)
+
+
+def write_disclaimer(out_path):
+    """Writes the disclaimer.txt"""
+    src_path = Path(__file__).parent / 'DISCLAIMER.txt'
+    shutil.copy2(src_path, out_path)
