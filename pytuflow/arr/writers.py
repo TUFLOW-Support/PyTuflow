@@ -204,6 +204,8 @@ def write_rf_inflow(folder: Path, config: ArrConfig, results: list) -> Path:
     "design_burst"``, where each design burst temporal pattern column gets its own
     preburst shape of the same ``tp_number`` (see
     :attr:`~pytuflow.arr.complete_storm.PreburstPattern.per_tp_increments`)."""
+    from .. import __version__
+
     folder.mkdir(parents=True, exist_ok=True)
     out_form = config.output.format
     site = site_name_token(config.site.name)
@@ -253,7 +255,7 @@ def write_rf_inflow(folder: Path, config: ArrConfig, results: list) -> Path:
     pb_timestep = next((g['preburst'].timestep for g in col_groups if g['preburst'] is not None), timestep)
 
     with open(fpath, 'w', encoding='utf-8', newline='') as f:
-        f.write(f'! Written by pytuflow.arr based on {base.aep_band} temporal pattern\n')
+        f.write(f'! Written by pytuflow.arr v{__version__} based on {base.aep_band} temporal pattern\n')
         total_cols = sum(len(g['patterns']) for g in col_groups)
         total_steps = pb_n_steps + n_steps
         if out_form == 'ts1':
