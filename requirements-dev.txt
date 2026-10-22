@@ -96,7 +96,7 @@ msgpack==1.1.2
 multidict==6.7.1
 mypy-extensions==1.1.0
 nbclient==0.10.4
-nbconvert==7.17.1
+nbconvert==7.17.2
 nbformat==5.10.4
 nest-asyncio==1.6.0
 nest-asyncio2==1.7.2
