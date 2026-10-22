@@ -10,6 +10,7 @@ except ImportError:
 
 from .lp_base import LongProfileBase
 from .helpers.lp2d_provider import LP2DProvider
+from .helpers.lp_gis_driver import LongProfileGIS
 from .._pytuflow_types import PathLike, TimeLike, TuflowPath
 
 
@@ -19,9 +20,9 @@ class LP2D(LongProfileBase):
     distance value in the CSV, enabling :meth:`time_series()<pytuflow.LP2D.time_series>` extraction at
     specific chainage locations.
 
-    The output can be initialised with any number of ``2d_lp`` output files as long as they are for the same
-    location. That is, TUFLOW writes a CSV file for each location and for each data type. Each location must be in
-    its own instance, however data types can be grouped into a single instance.
+    The output can be initialised with any number of ``2d_lp`` output files, including files for multiple locations
+    (line labels) and data types. TUFLOW writes a CSV file for each location and for each data type. Additional CSV
+    files can be added after initialisation with :meth:`add_csv()<pytuflow.LP2D.add_csv>`.
 
     The GIS file (the ``2d_lp`` input that generated the output) can be optionally provided. In this case
     "Label" attribute field will be used, otherwise the file name excluding the result type will be used as the
@@ -30,8 +31,8 @@ class LP2D(LongProfileBase):
     Parameters
     ----------
     fpath : PathLike | Sequence[PathLike]
-        The CSV file path(s) to the 2d_lp output CSV file(s). Each file should be for the same location
-        (i.e. same line label) but can be for different data types. The data type and the line label
+        The CSV file path(s) to the 2d_lp output CSV file(s). Files can be for different locations
+        (line labels) and different data types. The data type and the line label
         will be determined from the file name.
     gis_fpath : PathLike, optional
         The file path to the GIS file that corresponds to the ``2d_lp`` output. This is optional, but if not
@@ -141,19 +142,51 @@ class LP2D(LongProfileBase):
     def __init__(self, fpath: PathLike | Sequence[PathLike], gis_fpath: PathLike = None):
         if isinstance(fpath, (str, Path)):
             fpath = [fpath]
+        fpath = [Path(x) for x in fpath]
         super().__init__(*fpath)
-        self._gis_fpath = TuflowPath(gis_fpath) if gis_fpath else None
-        self._lp = {}
+        # the GIS file is common to all CSVs - if not provided, defaults to the first CSV
+        self._has_gis = gis_fpath is not None
+        #: Path: Path to the GIS file common to all CSV files. Defaults to the first CSV file if no GIS file is given.
+        self.gis_fpath = TuflowPath(gis_fpath) if gis_fpath else TuflowPath(fpath[0])
+        self._gis_provider = None
+        self._lp = {}  # {label: {data_type: LP2DProvider}}
+        self._csv_fpaths = []
 
         for f in fpath:
-            if not Path(f).exists():
+            if not f.exists():
                 raise FileNotFoundError(f'File {f} does not exist.')
 
-        if gis_fpath is not None:
-            if not TuflowPath(gis_fpath).exists():
-                raise FileNotFoundError(f'Layer {gis_fpath} does not exist.')
+        if self._has_gis and not self.gis_fpath.exists():
+            raise FileNotFoundError(f'Layer {gis_fpath} does not exist.')
 
         self._load()
+
+    def add_csv(self, fpath: PathLike | Sequence[PathLike]) -> None:
+        """Dynamically add one or more ``2d_lp`` CSV files to the output. The files can be for new
+        locations (line labels) and/or new data types. If a file for the same location and data type has
+        already been loaded, it is replaced.
+
+        Parameters
+        ----------
+        fpath : PathLike | Sequence[PathLike]
+            The CSV file path(s) to add.
+
+        Examples
+        --------
+        >>> lp = LP2D('/path/to/model_LP_NAME_H.csv')
+        >>> lp.add_csv('/path/to/model_LP_NAME_V.csv')
+        >>> lp.data_types()
+        ['bed level', 'water level', 'velocity', 'max water level', 'max velocity']
+        """
+        if isinstance(fpath, (str, Path)):
+            fpath = [fpath]
+        fpath = [Path(x) for x in fpath]
+        for f in fpath:
+            if not f.exists():
+                raise FileNotFoundError(f'File {f} does not exist.')
+        for f in fpath:
+            self._add_provider(f)
+        self._rebuild()
 
     def times(self, filter_by: str = None, fmt: str = 'relative') -> list[TimeLike]:
         """Returns all the available times for the given filter.
@@ -420,53 +453,45 @@ class LP2D(LongProfileBase):
 
         data_types_copy = data_types.copy()
 
-        df = None
-        if 'bed level' in data_types:
-            provider = list(self._lp.values())[0]
-            a = provider.bed_level()
-            df = pd.DataFrame(
-                a[:,1],
-                index=a[:,0],
-                columns=['bed level']
-            )
-            df.index.name = 'offset'
-            while 'bed level' in data_types:
-                data_types.remove('bed level')
+        df_all = []
+        for i, label in enumerate(self._section_labels(locations)):
+            df = self._section_label(label, data_types, time)
+            if df is None or df.empty:
+                continue
+            df.reset_index(inplace=True)
+            df['branch_id'] = i
+            df['node_string'] = label
+            df_all.append(df[['offset', 'branch_id', 'node_string'] + [x for x in data_types_copy if x in df.columns]])
 
-        max_types = [x for x in data_types if 'max ' in x]
-        for dtype in max_types:
-            dtype_ = self._get_standard_data_type_name(dtype.replace('max ', ''))
-            provider = self._lp.get(dtype_)
-            if provider:
-                a = provider.maximum_section()
-                df1 = pd.DataFrame(
-                    a[:,1],
-                    index=a[:,0],
-                    columns=[dtype]
-                )
-                df1.index.name = 'offset'
-                if not df1.empty:
-                    df = pd.concat([df, df1], axis=1) if df is not None else df1
-            while dtype in data_types:
-                data_types.remove(dtype)
-
-        for dtype in data_types:
-            dtype_ = self._get_standard_data_type_name(dtype)
-            provider = self._lp.get(dtype_)
-            if provider:
-                a = provider.get_section('', time, False)
-                df1 = pd.DataFrame(a[:,1], index=a[:,0], columns=[dtype])
-                df1.index.name = 'offset'
-                if not df1.empty:
-                    df = pd.concat([df, df1], axis=1) if df is not None else df1
-
-        if df is None or df.empty:
+        if not df_all:
             return pd.DataFrame()
+        return pd.concat(df_all, axis=0, ignore_index=True)
 
-        df.reset_index(inplace=True)
-        df['branch_id'] = 0
-        df['node_string'] = self.name
-        return df[['offset', 'branch_id', 'node_string'] + data_types_copy]
+    def _section_labels(self, locations: list[str]) -> list[str]:
+        labels = {x.lower(): x for x in self._lp}
+        return [labels[x.lower()] for x in locations if x.lower() in labels]
+
+    def _section_label(self, label: str, data_types: list[str], time: TimeLike) -> pd.DataFrame | None:
+        providers = self._lp[label]
+        df = None
+        for dtype in data_types:
+            if dtype == 'bed level':
+                a = list(providers.values())[0].bed_level()
+            elif dtype.startswith('max '):
+                provider = providers.get(self._get_standard_data_type_name(dtype[4:]))
+                if not provider:
+                    continue
+                a = provider.maximum_section()
+            else:
+                provider = providers.get(self._get_standard_data_type_name(dtype))
+                if not provider:
+                    continue
+                a = provider.get_section('', time, False)
+            df1 = pd.DataFrame(a[:, 1], index=a[:, 0], columns=[dtype])
+            df1.index.name = 'offset'
+            if not df1.empty:
+                df = pd.concat([df, df1], axis=1) if df is not None else df1
+        return df
 
     def curtain(self, *args, **kwargs) -> pd.DataFrame:
         """no-doc"""
@@ -479,21 +504,42 @@ class LP2D(LongProfileBase):
     def _load(self):
         if self.objs is not None and not self.objs.empty:
             return
+        if self._has_gis:
+            self._gis_provider = LongProfileGIS(self.gis_fpath, id_col_name='Label')
         for fpath in self.fpath:
-            lp = LP2DProvider(fpath, self._gis_fpath)
-            data_type = self._data_type(lp.fpath.stem)
-            self._lp[data_type] = lp
-        self.name = list(self._lp.values())[0].name
+            self._add_provider(fpath)
+        self._rebuild()
+
+    def _add_provider(self, fpath: Path) -> None:
+        lp = LP2DProvider(fpath, self.gis_fpath if self._has_gis else None, self._gis_provider)
+        data_type = self._data_type(lp.fpath.stem)
+        label = lp.get_labels()[0]
+        self._lp.setdefault(label, {})[data_type] = lp
+        fpath = lp.fpath
+        if fpath not in self._csv_fpaths:
+            self._csv_fpaths.append(fpath)
+
+    def _rebuild(self) -> None:
+        self.name = next(iter(self._lp))
+        self._time_series_data.clear()
+        self._maximum_data.clear()
         self._load_time_series()
         self._load_maximums()
         self._load_obj_df()
+        self.node_string_count = len(self._lp)
+        self.node_count = int(self.objs['geometry'].value_counts().get('point', 0))
 
     def _data_type(self, filename: str):
         part = filename.split('_')[-1]
         return self._get_standard_data_type_name(part)
 
+    def _providers(self):
+        for label, providers in self._lp.items():
+            for data_type, provider in providers.items():
+                yield label, data_type, provider
+
     def _load_time_series(self):
-        for data_type, provider in self._lp.items():
+        for _, data_type, provider in self._providers():
             df = pd.DataFrame(
                provider.get_time_series_data_raw(''),
                index=provider.get_timesteps(),
@@ -504,7 +550,7 @@ class LP2D(LongProfileBase):
 
     def _load_maximums(self) -> None:
         """Load the result maximums."""
-        for data_type, provider in self._lp.items():
+        for _, data_type, provider in self._providers():
             df = pd.DataFrame(
                 provider.maximum(),
                 index=provider.pnt_labels,
@@ -514,30 +560,18 @@ class LP2D(LongProfileBase):
 
     def _load_obj_df(self):
         info = {'id': [], 'data_type': [], 'geometry': [], 'domain': [], 'start': [], 'end': [], 'dt': []}
-        for dtype, vals in self._time_series_data.items():
-            for df1 in vals:
-                if df1.empty:
-                    continue
-                dt = np.round((df1.index[1] - df1.index[0]) * 3600., decimals=2) if len(df1.index) > 1 else np.nan
-                start = df1.index[0]
-                end = df1.index[-1]
-                for col in df1.columns:
-                    info['id'].append(col)
-                    info['data_type'].append(dtype)
-                    info['geometry'].append('point')
-                    info['domain'].append('2d')
-                    info['start'].append(start)
-                    info['end'].append(end)
-                    info['dt'].append(dt)
-
-                provider = self._lp[dtype]
-                for label in provider.get_labels():
-                    info['id'].append(label)
-                    info['data_type'].append(dtype)
-                    info['geometry'].append('line')
-                    info['domain'].append('2d')
-                    info['start'].append(start)
-                    info['end'].append(end)
-                    info['dt'].append(dt)
+        for label, dtype, provider in self._providers():
+            times = provider.get_timesteps()
+            if len(times) == 0:
+                continue
+            dt = np.round((times[1] - times[0]) * 3600., decimals=2) if len(times) > 1 else np.nan
+            for id_, geom in [(x, 'point') for x in provider.pnt_labels] + [(label, 'line')]:
+                info['id'].append(id_)
+                info['data_type'].append(dtype)
+                info['geometry'].append(geom)
+                info['domain'].append('2d')
+                info['start'].append(times[0])
+                info['end'].append(times[-1])
+                info['dt'].append(dt)
 
         self.objs = pd.DataFrame(info)

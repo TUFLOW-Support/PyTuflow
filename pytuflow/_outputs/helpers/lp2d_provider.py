@@ -8,9 +8,11 @@ from ..._pytuflow_types import PathLike
 
 class LP2DProvider(LongProfileBaseProvider):
 
-    def __init__(self, fpath: PathLike, gis_fpath: PathLike | None):
+    def __init__(self, fpath: PathLike, gis_fpath: PathLike | None, gis_provider: LongProfileGIS = None):
         super().__init__(fpath, gis_fpath)
-        self.gis_provider = LongProfileGIS(gis_fpath, id_col_name='Label') if gis_fpath else None
+        if gis_provider is None and gis_fpath:
+            gis_provider = LongProfileGIS(gis_fpath, id_col_name='Label')
+        self.gis_provider = gis_provider
         self.provider = LP2DExtractor(fpath, self.gis_provider)
         self.name = self.provider.name
         self.display_name = self.fpath.name
