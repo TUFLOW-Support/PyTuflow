@@ -537,9 +537,9 @@ class LP2D(LongProfileBase):
             parts = filename.split('_')
             f = '_'.join(parts[:-1])
             s = len(label)
-            try:
+            if len(f) >= len(f) - s:
                 res_name = f[:len(f)-s][:-1]
-            except IndexError:
+            else:
                 res_name = f
             return res_name
         return ''
