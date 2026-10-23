@@ -48,6 +48,7 @@ class LongProfileGIS:
         self.crs = None
         self.geometry_type = None
         self._points = {}
+        self._labels = None
         self.load()
 
     def __repr__(self) -> str:
@@ -85,7 +86,9 @@ class LongProfileGIS:
         -------
         list[str]
         """
-        return list(self.feats.keys())
+        if self._labels is None:
+            self._labels = list(self.feats.keys())
+        return self._labels
 
     def get_ch_points(self, label: str, chainages: np.ndarray) -> np.ndarray:
         """Returns the chainage points for the given label.

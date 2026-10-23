@@ -154,10 +154,10 @@ class LP2D(LongProfileBase):
         self._has_gis = gis_fpath is not None
         #: Path: Path to the GIS file common to all CSV files. Defaults to the first CSV file if no GIS file is given.
         self.gis_fpath = TuflowPath(gis_fpath) if gis_fpath else TuflowPath(fpath[0])
+        #: int: Number of decimal places to round the calculated dt
         self.dt_decimal_places = dt_decimal_places
         self._gis_provider = None
         self._lp = {}  # {label: {data_type: LP2DProvider}}
-        
 
         for f in self._csv_fpaths:
             if not f.exists():
@@ -167,6 +167,10 @@ class LP2D(LongProfileBase):
             raise FileNotFoundError(f'Layer {gis_fpath} does not exist.')
 
         self._load()
+
+    @property
+    def labels(self) -> list[str]:
+        return list(self._lp.keys())
 
     def add_csv(self, fpath: PathLike | Sequence[PathLike]) -> None:
         """Dynamically add one or more ``2d_lp`` CSV files to the output. The files can be for new
@@ -191,7 +195,12 @@ class LP2D(LongProfileBase):
         for f in fpath:
             if not f.exists():
                 raise FileNotFoundError(f'File {f} does not exist.')
+        if self._gis_provider:
+            labels = sorted(self._gis_provider.get_labels(), key=lambda x: len(x), reverse=True)
         for f in fpath:
+            name = self.extract_result_name(f.stem, labels)
+            if name and name != self.name:
+                raise Exception('Result CSVs must from the same simulation to be added to the result')
             self._add_provider(f)
         self._rebuild()
 
@@ -508,16 +517,38 @@ class LP2D(LongProfileBase):
         """no-doc"""
         raise NotImplementedError(f'{__class__.__name__} does not support vertical profile plotting.')
 
+    @staticmethod
+    def extract_result_name(filename: str, labels: list[str]) -> str:
+        for label in labels:
+            if label not in filename:
+                continue
+            parts = filename.split('_')
+            f = '_'.join(parts[:-1])
+            s = len(label)
+            try:
+                res_name = f[:len(f)-s][:-1]
+            except IndexError:
+                res_name = f
+            return res_name
+        return ''
+
     def _load(self):
         if self.objs is not None and not self.objs.empty:
             return
+        labels = []
         if self._has_gis:
             self._gis_provider = LongProfileGIS(self.gis_fpath, id_col_name='Label')
+            labels = sorted(self._gis_provider.get_labels(), key=lambda x: len(x), reverse=True)
+            if self._csv_fpaths:
+                self.name = self.extract_result_name(self._csv_fpaths[0].stem, labels)
+            if not self.name:
+                self.name = self.gis_fpath.stem
         for fpath in self._csv_fpaths:
+            name = self.extract_result_name(fpath.stem, labels)
+            if name and name != self.name:
+                raise Exception('LP2D only supports loading results from the same simulation')
             self._add_provider(fpath)
-        if self._has_gis:
-            self.name = self.gis_fpath.stem
-        else:
+        if not self.name:
             self.name = next(iter(self._lp))
         self._rebuild()
 
