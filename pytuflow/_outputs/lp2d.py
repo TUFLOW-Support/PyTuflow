@@ -177,6 +177,7 @@ class LP2D(LongProfileBase):
 
     @property
     def labels(self) -> list[str]:
+        """list[str]: The line labels of the loaded results."""
         return list(self._lp.keys())
 
     def add_csv(self, fpath: PathLike | Sequence[PathLike]) -> None:
@@ -205,13 +206,20 @@ class LP2D(LongProfileBase):
         labels = []
         if self._gis_provider:
             labels = self._gis_provider.get_labels()
+        loaded = {x.resolve() for x in self._csv_fpaths}
+        new_fpaths = []
         for f in fpath:
-            if f in self._csv_fpaths:
+            if f.resolve() in loaded:
                 logger.warning(f'File already loaded: {f}... skipping')
                 continue
-            name = self.extract_result_name(f.stem, labels)
+            name = self._extract_result_name(f.stem, labels)
             if name and name != self.name:
-                raise Exception('Result CSVs must from the same simulation to be added to the result')
+                raise ValueError(f'Result CSVs must be from the same simulation: {f}')
+            loaded.add(f.resolve())
+            new_fpaths.append(f)
+        if not new_fpaths:
+            return
+        for f in new_fpaths:
             self._add_provider(f)
         self._rebuild()
 
@@ -529,19 +537,14 @@ class LP2D(LongProfileBase):
         raise NotImplementedError(f'{__class__.__name__} does not support vertical profile plotting.')
 
     @staticmethod
-    def extract_result_name(filename: str, labels: list[str]) -> str:
-        labels_ordered = sorted(labels, key=lambda x: len(x), reverse=True)
-        for label in labels_ordered:
-            if label not in filename:
-                continue
-            parts = filename.split('_')
-            f = '_'.join(parts[:-1])
-            s = len(label)
-            if len(f) >= len(f) - s:
-                res_name = f[:len(f)-s][:-1]
-            else:
-                res_name = f
-            return res_name
+    def _extract_result_name(filename: str, labels: list[str]) -> str:
+        """Returns the simulation name from a CSV file stem (``<sim_name>_<label>_<result type>``) or an empty
+        string if none of the labels match.
+        """
+        f = filename.rsplit('_', 1)[0]
+        for label in sorted(labels, key=len, reverse=True):
+            if f.endswith(f'_{label}'):
+                return f[:-len(label) - 1]
         return ''
 
     def _load(self):
@@ -552,13 +555,13 @@ class LP2D(LongProfileBase):
             self._gis_provider = LongProfileGIS(self.gis_fpath, id_col_name='Label')
             labels = self._gis_provider.get_labels()
             if self._csv_fpaths:
-                self.name = self.extract_result_name(self._csv_fpaths[0].stem, labels)
+                self.name = self._extract_result_name(self._csv_fpaths[0].stem, labels)
             if not self.name:
                 self.name = self.gis_fpath.stem
         for fpath in self._csv_fpaths:
-            name = self.extract_result_name(fpath.stem, labels)
+            name = self._extract_result_name(fpath.stem, labels)
             if name and name != self.name:
-                raise Exception('LP2D only supports loading results from the same simulation')
+                raise ValueError(f'LP2D only supports loading results from the same simulation: {fpath}')
             self._add_provider(fpath)
         if not self.name:
             self.name = next(iter(self._lp))

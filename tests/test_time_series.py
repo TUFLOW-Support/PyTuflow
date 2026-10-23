@@ -1901,3 +1901,39 @@ class Test_LP2D(unittest.TestCase):
         self.assertEqual((1, 2), df.shape)
         self.assertEqual(49.91, df.iloc[0, 0])
         self.assertEqual(0.95, df.iloc[0, 1])
+
+
+    def test_add_csv_multi_label(self):
+        import shutil
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmp:
+            src = './tests/lp2d/EG02_012_LP_01_H.csv'
+            h2 = os.path.join(tmp, 'EG02_012_LP_02_H.csv')
+            shutil.copy(src, h2)
+            res = LP2D(src)
+            res.add_csv(['./tests/lp2d/EG02_012_LP_01_V.csv', h2])
+            self.assertEqual(2, res.node_string_count)
+            self.assertEqual(20, len(res.ids()))
+            self.assertEqual(['bed level', 'water level', 'velocity', 'max water level', 'max velocity'],
+                             res.data_types())
+            df = res.section(['EG02_012_LP_01', 'EG02_012_LP_02'], 'h', 1.)
+            self.assertEqual((18, 4), df.shape)
+            self.assertEqual({0, 1}, set(df['branch_id']))
+            expected_msgs = [
+                r'File already loaded: tests/lp2d/EG02_012_LP_01_H.csv... skipping'
+            ]
+            with custom_log_handler.with_filter(expected_msgs) as custom_logger:
+                res.add_csv(src)  # already loaded - ignored
+            self.assertEqual(20, len(res.ids()))
+
+    def test_add_csv_different_simulation(self):
+        import shutil
+        import tempfile
+        gis = './tests/lp2d/2d_lp_EG02_012_L.shp'
+        with tempfile.TemporaryDirectory() as tmp:
+            other = os.path.join(tmp, 'OTHER_LP_01_V.csv')
+            shutil.copy('./tests/lp2d/EG02_012_LP_01_V.csv', other)
+            res = LP2D('./tests/lp2d/EG02_012_LP_01_H.csv', gis)
+            with self.assertRaises(ValueError):
+                res.add_csv(other)
+            self.assertEqual(['bed level', 'water level', 'max water level'], res.data_types())
