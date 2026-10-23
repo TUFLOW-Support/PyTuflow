@@ -93,7 +93,7 @@ mdurl==0.1.2
 mistune==3.2.1
 more-itertools==11.0.2
 msgpack==1.1.2
-multidict==6.7.1
+multidict==6.9.1
 mypy-extensions==1.1.0
 nbclient==0.10.4
 nbconvert==7.17.1
