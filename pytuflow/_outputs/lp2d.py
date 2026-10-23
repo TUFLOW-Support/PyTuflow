@@ -515,6 +515,10 @@ class LP2D(LongProfileBase):
             self._gis_provider = LongProfileGIS(self.gis_fpath, id_col_name='Label')
         for fpath in self._csv_fpaths:
             self._add_provider(fpath)
+        if self._has_gis:
+            self.name = self.gis_fpath.stem
+        else:
+            self.name = next(iter(self._lp))
         self._rebuild()
 
     def _add_provider(self, fpath: Path) -> None:
@@ -527,7 +531,6 @@ class LP2D(LongProfileBase):
             self._csv_fpaths.append(fpath)
 
     def _rebuild(self) -> None:
-        self.name = next(iter(self._lp))
         self._time_series_data.clear()
         self._maximum_data.clear()
         self._load_time_series()
