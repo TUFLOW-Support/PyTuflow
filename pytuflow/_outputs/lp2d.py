@@ -1,5 +1,6 @@
 from collections.abc import Sequence
 from pathlib import Path
+import logging
 
 import numpy as np
 
@@ -12,6 +13,9 @@ from .lp_base import LongProfileBase
 from .helpers.lp2d_provider import LP2DProvider
 from .helpers.lp_gis_driver import LongProfileGIS
 from .._pytuflow_types import PathLike, TimeLike, TuflowPath
+
+
+logger = logging.getLogger('pytuflow')
 
 
 class LP2D(LongProfileBase):
@@ -147,7 +151,10 @@ class LP2D(LongProfileBase):
         if isinstance(fpath, (str, Path)):
             fpath = [fpath]
         self._csv_fpaths = [Path(x) for x in fpath]
-        super().__init__(*self._csv_fpaths)
+        if gis_fpath:
+            super().__init__(gis_fpath)
+        else:
+            super().__init__(*self._csv_fpaths)
         self.fpath = TuflowPath(gis_fpath) if gis_fpath is not None else self._csv_fpaths[0]
 
         # the GIS file is common to all CSVs - if not provided, defaults to the first CSV
@@ -195,9 +202,13 @@ class LP2D(LongProfileBase):
         for f in fpath:
             if not f.exists():
                 raise FileNotFoundError(f'File {f} does not exist.')
+        labels = []
         if self._gis_provider:
-            labels = sorted(self._gis_provider.get_labels(), key=lambda x: len(x), reverse=True)
+            labels = self._gis_provider.get_labels()
         for f in fpath:
+            if f in self._csv_fpaths:
+                logger.warning(f'File already loaded: {f}... skipping')
+                continue
             name = self.extract_result_name(f.stem, labels)
             if name and name != self.name:
                 raise Exception('Result CSVs must from the same simulation to be added to the result')
@@ -519,7 +530,8 @@ class LP2D(LongProfileBase):
 
     @staticmethod
     def extract_result_name(filename: str, labels: list[str]) -> str:
-        for label in labels:
+        labels_ordered = sorted(labels, key=lambda x: len(x), reverse=True)
+        for label in labels_ordered:
             if label not in filename:
                 continue
             parts = filename.split('_')
@@ -538,7 +550,7 @@ class LP2D(LongProfileBase):
         labels = []
         if self._has_gis:
             self._gis_provider = LongProfileGIS(self.gis_fpath, id_col_name='Label')
-            labels = sorted(self._gis_provider.get_labels(), key=lambda x: len(x), reverse=True)
+            labels = self._gis_provider.get_labels()
             if self._csv_fpaths:
                 self.name = self.extract_result_name(self._csv_fpaths[0].stem, labels)
             if not self.name:
@@ -562,6 +574,8 @@ class LP2D(LongProfileBase):
             self._csv_fpaths.append(fpath)
 
     def _rebuild(self) -> None:
+        if not self._has_gis:
+            self.name = next(iter(self._lp))
         self._time_series_data.clear()
         self._maximum_data.clear()
         self._load_time_series()
