@@ -146,8 +146,10 @@ class LP2D(LongProfileBase):
     def __init__(self, fpath: PathLike | Sequence[PathLike], gis_fpath: PathLike = None, dt_decimal_places: int = 0):
         if isinstance(fpath, (str, Path)):
             fpath = [fpath]
-        fpath = [Path(x) for x in fpath]
-        super().__init__(*fpath)
+        self._csv_fpaths = [Path(x) for x in fpath]
+        super().__init__(*self._csv_fpaths)
+        self.fpath = TuflowPath(gis_fpath) if gis_fpath is not None else self._csv_fpaths[0]
+
         # the GIS file is common to all CSVs - if not provided, defaults to the first CSV
         self._has_gis = gis_fpath is not None
         #: Path: Path to the GIS file common to all CSV files. Defaults to the first CSV file if no GIS file is given.
@@ -155,9 +157,9 @@ class LP2D(LongProfileBase):
         self.dt_decimal_places = dt_decimal_places
         self._gis_provider = None
         self._lp = {}  # {label: {data_type: LP2DProvider}}
-        self._csv_fpaths = []
+        
 
-        for f in fpath:
+        for f in self._csv_fpaths:
             if not f.exists():
                 raise FileNotFoundError(f'File {f} does not exist.')
 
@@ -511,7 +513,7 @@ class LP2D(LongProfileBase):
             return
         if self._has_gis:
             self._gis_provider = LongProfileGIS(self.gis_fpath, id_col_name='Label')
-        for fpath in self.fpath:
+        for fpath in self._csv_fpaths:
             self._add_provider(fpath)
         self._rebuild()
 
