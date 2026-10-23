@@ -38,6 +38,10 @@ class LP2D(LongProfileBase):
         The file path to the GIS file that corresponds to the ``2d_lp`` output. This is optional, but if not
         provided the class won't be able to determine the line label from the CSV file. It can also provide
         a spatial location for the line and the created points.
+    dt_decimal_places : int, optional
+        Sets the number of decimal places the delta timestep (dt) is rounded to.
+        The (lack of) precision in the timesteps reported in the result CSV files can lead to incorrect dt 
+        being calculated by PyTUFLOW. This setting can counter dt miscalculation by rounding the result.
 
     Examples
     --------
@@ -139,7 +143,7 @@ class LP2D(LongProfileBase):
         :width: 720
     """
 
-    def __init__(self, fpath: PathLike | Sequence[PathLike], gis_fpath: PathLike = None):
+    def __init__(self, fpath: PathLike | Sequence[PathLike], gis_fpath: PathLike = None, dt_decimal_places: int = 0):
         if isinstance(fpath, (str, Path)):
             fpath = [fpath]
         fpath = [Path(x) for x in fpath]
@@ -148,6 +152,7 @@ class LP2D(LongProfileBase):
         self._has_gis = gis_fpath is not None
         #: Path: Path to the GIS file common to all CSV files. Defaults to the first CSV file if no GIS file is given.
         self.gis_fpath = TuflowPath(gis_fpath) if gis_fpath else TuflowPath(fpath[0])
+        self.dt_decimal_places = dt_decimal_places
         self._gis_provider = None
         self._lp = {}  # {label: {data_type: LP2DProvider}}
         self._csv_fpaths = []
@@ -564,7 +569,7 @@ class LP2D(LongProfileBase):
             times = provider.get_timesteps()
             if len(times) == 0:
                 continue
-            dt = np.round((times[1] - times[0]) * 3600., decimals=2) if len(times) > 1 else np.nan
+            dt = np.round((times[1] - times[0]) * 3600., decimals=self.dt_decimal_places) if len(times) > 1 else np.nan
             for id_, geom in [(x, 'point') for x in provider.pnt_labels] + [(label, 'line')]:
                 info['id'].append(id_)
                 info['data_type'].append(dtype)
