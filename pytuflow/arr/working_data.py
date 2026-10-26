@@ -96,7 +96,12 @@ def write_working_data(config: ArrConfig, response: ArrApiResponse, engine: ArrE
     for scenario_label, table in engine.arf_tables.items():
         suffix = f'_{scenario_label}' if scenario_label else ''
         path = out_path / f'{site}_ARF{suffix}.csv'
-        table.to_csv(path, index_label='Duration (min)')
+        override = config.arf.override_arf
+        with open(path, 'w', encoding='utf-8', newline='') as f:
+            if override is not None:
+                f.write(f"# NOTE: These calculated ARF values were NOT applied. "
+                        f"The override_arf value of {override} was used for all durations and AEPs instead.\n")
+            table.to_csv(f, index_label='Duration (min)')
         logger.info("Wrote ARF table to '%s'", path)
 
     for scenario_label, table in engine.burst_loss_table.items():

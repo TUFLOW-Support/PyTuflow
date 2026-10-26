@@ -985,12 +985,15 @@ class ArrEngine:
                 arf_frequent=self.config.arf.ignore_limits_for_frequent,
                 min_arf=self.config.arf.min_arf,
             )
+            self.arf_tables[scenario_label] = arf
+            if self.config.arf.override_arf is not None:
+                arf = arf.copy()
+                arf[:] = float(self.config.arf.override_arf)
             depth_areal_table = pd.DataFrame(
                 {aep_name: depths[str(aep_pct)].values * arf[aep_name].values
                  for aep_name, aep_pct in zip(aep_names, aep_pcts)},
                 index=durations,
             )
-            self.arf_tables[scenario_label] = arf
             self.depth_areal_tables[scenario_label] = depth_areal_table
 
             for aep_name, aep_pct in zip(aep_names, aep_pcts):

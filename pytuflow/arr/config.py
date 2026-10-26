@@ -336,9 +336,13 @@ class LossesConfig:
 class ArfConfig:
     ignore_limits_for_frequent: bool = False
     min_arf: float = 0
+    #: If set, this single ARF value is applied to all durations/AEPs instead of the calculated ARF.
+    override_arf: Optional[float] = None
 
     def validate(self) -> list[str]:
         errors = []
+        if self.override_arf is not None and not (0 < self.override_arf <= 1):
+            errors.append("arf.override_arf must be greater than 0 and less than or equal to 1")
         if not (0 <= self.min_arf <= 1):
             errors.append("arf.min_arf must be between 0 and 1")
         return errors

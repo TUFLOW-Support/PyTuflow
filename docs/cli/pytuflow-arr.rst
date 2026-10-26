@@ -672,6 +672,10 @@ Each scenario object:
      - ``number``
      - ``0``
      - Minimum allowed ARF value (0-1); calculated ARF values are clamped to this floor.
+   * - override_arf
+     - ``number``
+     - ``null``
+     - If set (greater than 0, up to 1), this single ARF value is applied to all durations and AEPs instead of the calculated ARF. The calculated ARF is still written to the working data folder when output verbose is on, with a comment at the top of the file noting that it was not applied.
 
 **complete_storm (top-level, optional)**
 
