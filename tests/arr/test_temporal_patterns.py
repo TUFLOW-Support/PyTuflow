@@ -34,7 +34,7 @@ def test_aep_band(aep_name, expected):
 
 def test_aep_band_very_rare_warns(caplog):
     import logging
-    with caplog.at_level(logging.WARNING):
+    with caplog.at_level(logging.INFO):
         band = aep_band('1 in 5000')
     assert band == 'rare'
     assert 'Very Rare' in caplog.text

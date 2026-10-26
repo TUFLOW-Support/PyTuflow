@@ -46,7 +46,7 @@ def aep_band(aep_name: str, output_notation: str = 'ari') -> str:
     if aep_name.endswith('EY'):
         return 'frequent'
     if aep_name.lower().startswith('1 in'):
-        logger.warning(
+        logger.info(
             "'%s' event is considered 'Very Rare'. Temporal patterns for 'Very Rare' events are not yet "
             "provided... using 'Rare' temporal patterns.", aep_name
         )
@@ -54,7 +54,7 @@ def aep_band(aep_name: str, output_notation: str = 'ari') -> str:
     if aep_name.endswith('%'):
         pct = float(aep_name[:-1])
         if pct < 1:
-            logger.warning(
+            logger.info(
                 "%s%% AEP event is considered 'Very Rare'. Temporal patterns for 'Very Rare' events are not "
                 "yet provided... using 'Rare' temporal patterns.", aep_name[:-1]
             )
