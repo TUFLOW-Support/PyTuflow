@@ -986,9 +986,9 @@ class ArrEngine:
                 min_arf=self.config.arf.min_arf,
             )
             self.arf_tables[scenario_label] = arf
-            if self.config.arf.override_arf is not None:
+            if self.config.arf.arf_override is not None:
                 arf = arf.copy()
-                arf[:] = float(self.config.arf.override_arf)
+                arf[:] = float(self.config.arf.arf_override)
             depth_areal_table = pd.DataFrame(
                 {aep_name: depths[str(aep_pct)].values * arf[aep_name].values
                  for aep_name, aep_pct in zip(aep_names, aep_pcts)},
