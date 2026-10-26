@@ -336,7 +336,7 @@ Every section below is optional unless stated otherwise - omitted sections use t
 documented defaults. Unknown keys (at any level) raise a validation error rather than
 being silently ignored, to catch typos early.
 
-The json example below shows all the available keys and is not necessarily valid (e.g. long/lat and catchment boundary keys are mutually exclusive).
+The json example below shows all the available keys and is not necessarily valid or the default (e.g. long/lat and catchment boundary keys are mutually exclusive).
 
 .. code-block:: json
 
@@ -394,8 +394,9 @@ The json example below shows all the available keys and is not necessarily valid
             "climate_change_method": "storm"
         },
         "arf": {
-            "ignore_limits_for_frequent": false,
-            "min_arf": 0.2
+            "ignore_limits_for_frequent": true,
+            "min_arf": 0.2,
+            "arf_override": 1.0
         },
         "complete_storm": false,
         "output": {
@@ -676,6 +677,10 @@ Each scenario object:
      - Type
      - Default
      - Description
+   * - ignore_limits_for_frequent
+     - ``bool``
+     - ``false``
+     - If ``true``, applies the Areal Reduction Factor equations even to frequent events outside ARR's recommended range.
    * - min_arf
      - ``number``
      - ``0``
