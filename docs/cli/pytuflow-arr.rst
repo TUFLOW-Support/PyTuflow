@@ -537,6 +537,14 @@ Parameter descriptions
      - ``list[str]``
      - ``[]``
      - Names of ARR temporal pattern regions to include. Regions listed here are in addition to the automatically determined region from catchment location. The list can also be paths to previously saved temporal pattern increments (both point and areal should be provided). Regions include: ``rangelands``, ``rangelands west``, ``wet tropics``, ``monsoonal north``, ``central slopes``, ``murray basin``, ``east coast north``, ``east coast south``, ``southern slopes mainland``, ``southern slopes tasmania``, ``east flatlands``, ``west flatlands``.
+   * - all_point_tp
+     - ``bool``
+     - ``false``
+     - If set to ``true``, all point temporal pattern rarity bands will be included (i.e. this will result in 30 temporal patterns rather than the usual 10). For example, if a 1% AEP event is selected, usually this would output 10 "rare" point temporal patterns. If this option is set to ``true``, the "frequent" and "intermediate" temporal patterns will also be included. This only affects outputs where the catchment and events use point temporal patterns and have not triggered the use of areal temporal patterns.
+   * - add_areal_tp
+     - ``int``
+     - ``0``
+     - This option adds additional temporal patterns from the next closest area band. For example, if the catchment is 100 km\ :sup:`2`, this would output the standard Area 100 areal temporal patterns. If ``add_areal_tp`` is set to ``1``, then the output will also include the Area 200 areal temporal patterns (this is in addition, resulting in 20 temporal patterns in total). If ``add_areal_tp`` is to to ``2`` then both the Area 200 and Area 500 temporal patterns will be added (resulting in 30 temporal patterns in total). This only affects outputs where the catchment and event trigger areal temporal patterns.
 
 **climate_change (optional)**
 
