@@ -56,6 +56,24 @@ file's settings - this keeps the override rule simple and unambiguous. The site 
 
 Add ``-v`` / ``--verbose`` for debug-level logging.
 
+Code
+^^^^
+
+For convenience, the equivalent code used in the CLI script, for a single site is given as an example below. The CLI is generally recommended unless there's
+a specific reason to write a custom script.
+
+.. code-block:: python
+
+    from pytuflow import ArrConfig, ArrApiClient, ArrEngine
+    from pytuflow.arr import write_outputs, write_working_data
+
+    config = ArrConfig.from_file('/path/to/config.json')
+    client = ArrApiClient()
+    response = client.fetch(config)
+    results = ArrEngine(config, response).run()
+    write_outputs(config, results, append=False)
+    write_working_data(config, response, results)
+
 Examples
 --------
 
