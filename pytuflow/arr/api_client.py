@@ -81,7 +81,12 @@ def _download_with_retry(url: str, max_retries: int, **kwargs) -> Downloader:
 
 class ArrApiResponse:
     """Thin wrapper around the parsed JSON response from the ARR Data Hub API, providing
-    convenience accessors for the layers used by :mod:`pytuflow.arr`.
+    convenience accessors for the layers used by ``arr`` module.
+
+    Parameters
+    ----------
+    data : dict
+        The parsed response JSON file as a Python dict.
     """
 
     def __init__(self, data: dict) -> None:

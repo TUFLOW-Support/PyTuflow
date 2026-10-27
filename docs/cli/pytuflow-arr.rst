@@ -338,6 +338,8 @@ To keep this simple, the below example shows running the tool for two neighbouri
 JSON Config File
 ----------------
 
+The below section describes in more detail each available parameter in the configuration file.
+
 Every section below is optional unless stated otherwise - omitted sections use the
 documented defaults. Unknown keys (at any level) raise a validation error rather than
 being silently ignored, to catch typos early.
