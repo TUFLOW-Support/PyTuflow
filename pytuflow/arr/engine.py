@@ -159,6 +159,13 @@ class EventResult:
 class ArrEngine:
     """Assembles ARR design events (standard or complete storm) for a single site
     config, using an already-fetched :class:`~pytuflow.arr.api_client.ArrApiResponse`.
+
+    Parameters
+    ----------
+    config : ArrConfig
+        The ARR configuration to assemble events for.
+    response : ArrApiResponse
+        The ARR Data Hub response for the config's site, e.g. from :meth:`ArrApiClient.fetch`.
     """
 
     config: ArrConfig
@@ -934,7 +941,18 @@ class ArrEngine:
 
     def run(self) -> list:
         """Assembles every requested AEP x duration event (and climate change scenario,
-        if enabled) and returns a list of :class:`EventResult`."""
+        if enabled) and returns a list of :class:`EventResult`.
+
+        Returns
+        -------
+        list[EventResult]
+            The assembled events. Pass these to :func:`arr_write_outputs`.
+
+        Raises
+        ------
+        ArrError
+            If the events cannot be assembled, e.g. required data is missing from the response.
+        """
         durations = self._durations()
         aep_names = self._aep_names()
         aep_pcts = [aep_name_to_pct(a) for a in aep_names]

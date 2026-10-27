@@ -197,7 +197,17 @@ def _lookup_loss_factor(table: dict, baseline_year: int, ssp: str) -> float:
 
 
 class ArrApiClient:
-    """Fetches data from the ARR Data Hub API for a single site (point) config."""
+    """Fetches data from the ARR Data Hub API for a single site (point or catchment boundary) config.
+
+    Failed requests (connection errors, timeouts, HTTP 429 and 5xx responses) are retried with exponential
+    backoff. The number of retries is set by :attr:`ArrConfig.max_retries`.
+
+    Parameters
+    ----------
+    base_url : str, optional
+        The base URL of the ARR Data Hub API. Defaults to the public ARR Data Hub API
+        (``https://data.arr-software.org/``).
+    """
 
     def __init__(self, base_url: str = DEFAULT_BASE_URL) -> None:
         self.base_url = base_url
@@ -206,7 +216,18 @@ class ArrApiClient:
         """Builds the query parameters for the API request, based on the config's site
         location (or catchment boundary) and which optional layers are required (e.g.
         climate change). Used both for GET point queries and as the form fields of a
-        POST catchment-boundary upload (see :meth:`fetch`)."""
+        POST catchment-boundary upload (see :meth:`fetch`).
+
+        Parameters
+        ----------
+        config : ArrConfig
+            The ARR configuration to build the request parameters from.
+
+        Returns
+        -------
+        dict
+            The query parameters (or form fields) for the request.
+        """
         params = {'type': 'json'}
         if config.site.catchment_boundary:
             # the centroid is derived from the uploaded boundary itself - no
@@ -251,7 +272,24 @@ class ArrApiClient:
     def fetch(self, config: ArrConfig) -> ArrApiResponse:
         """Requests data from the ARR Data Hub API for the given config's site (a
         lat/lon point, or an uploaded catchment boundary - see
-        ``site.catchment_boundary``), and returns the parsed response."""
+        ``site.catchment_boundary``), and returns the parsed response.
+
+        Parameters
+        ----------
+        config : ArrConfig
+            The ARR configuration to fetch data for. The site location (or catchment boundary) and
+            :attr:`ArrConfig.max_retries` are taken from this object.
+
+        Returns
+        -------
+        ArrApiResponse
+            The parsed ARR Data Hub response.
+
+        Raises
+        ------
+        ArrApiError
+            If the request fails (after exhausting any retries) or the response is not valid JSON.
+        """
         params = self.build_params(config)
         if config.site.catchment_boundary:
             logger.info(
@@ -289,7 +327,26 @@ class ArrApiClient:
         ``PointTP`` layer dict (with its download ``url``), the raw ``ArealTP`` layer
         dict likewise (``None`` if the Data Hub doesn't provide one for these
         coordinates), and the full raw JSON response dict (kept for optional verbose
-        working-data output, see :mod:`pytuflow.arr.working_data`)."""
+        working-data output, see :mod:`pytuflow.arr.working_data`).
+
+        Parameters
+        ----------
+        lat : float
+            Latitude of the additional temporal pattern region's representative location.
+        lon : float
+            Longitude of the additional temporal pattern region's representative location.
+
+        Returns
+        -------
+        tuple
+            ``(point_tp_layer, areal_tp_layer, raw_response)``: the ``PointTP`` layer dict, the ``ArealTP``
+            layer dict (``None`` if not available), and the full raw JSON response dict.
+
+        Raises
+        ------
+        ArrApiError
+            If the request fails, the response is not valid JSON, or the ``PointTP`` layer is missing.
+        """
         params = {
             'lat_coord': lat, 'lon_coord': lon, 'type': 'json',
             'TemporalPatterns': 1, 'ArealTemporalPatterns': 1,

@@ -34,6 +34,15 @@ def write_working_data(config: ArrConfig, response: ArrApiResponse, engine: ArrE
     ``config.output.verbose`` is set, the areal design IFD table, ARF table, burst
     initial loss table and extrapolated short-duration losses table (if any losses were
     extrapolated), into a ``working_data`` subfolder of ``config.output.path``.
+
+    Parameters
+    ----------
+    config : ArrConfig
+        The ARR configuration. Files are written to ``<config.output.path>/working_data``.
+    response : ArrApiResponse
+        The ARR Data Hub response used to build the events.
+    engine : ArrEngine
+        The engine that assembled the events. :meth:`ArrEngine.run` must have been called first.
     """
     site = str(config.site.name).strip()
     out_path = Path(config.output.path) / WORKING_DATA_FOLDER

@@ -441,7 +441,18 @@ def write_outputs(config: ArrConfig, results: list, append: bool = False) -> Non
     """Writes all standard TUFLOW output files for a single site/config's assembled
     events into ``config.output.path``. Pass ``append=True`` when processing multiple
     site configs into the same output folder (all files except the per-event
-    ``rf_inflow`` files, which are always written fresh, are appended to)."""
+    ``rf_inflow`` files, which are always written fresh, are appended to).
+
+    Parameters
+    ----------
+    config : ArrConfig
+        The ARR configuration. Files are written to ``config.output.path``.
+    results : list[EventResult]
+        The assembled events, from :meth:`ArrEngine.run`.
+    append : bool, optional
+        If ``True``, append to existing output files instead of overwriting them. Use for the second and
+        subsequent sites when writing multiple sites to the same output folder. Default is ``False``.
+    """
     out_path = Path(config.output.path)
     out_path.mkdir(parents=True, exist_ok=True)
 

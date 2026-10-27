@@ -365,7 +365,40 @@ class OutputConfig:
 
 @dataclass
 class ArrConfig:
-    """Top-level, fully parsed and validated ARR config, built from a single JSON config file."""
+    """Top-level, fully parsed and validated ARR config, usually built from a JSON config file using
+    :meth:`from_file`, :meth:`from_files` or :meth:`from_dict`.
+
+    Parameters
+    ----------
+    site : SiteConfig, optional
+        Site name, location (latitude/longitude or catchment boundary) and catchment area.
+    ifd : IFDConfig, optional
+        Design rainfall (IFD) settings, e.g. the baseline year.
+    events : EventsConfig, optional
+        The AEPs and durations to assemble events for, and the output event notation.
+    temporal_patterns : TemporalPatternsConfig, optional
+        Temporal pattern settings, including local pattern files and additional regions.
+    climate_change : ClimateChangeConfig, optional
+        Whether climate change events are included, and the scenarios (baseline year and SSP) to use.
+    preburst : PreburstConfig, optional
+        Preburst percentile and pattern settings.
+    losses : LossesConfig, optional
+        Initial/continuing loss method and settings.
+    arf : ArfConfig, optional
+        Areal reduction factor settings.
+    complete_storm : bool, optional
+        If ``True``, every event is assembled as a complete storm (preburst prepended to the design burst).
+        Default is ``False``.
+    output : OutputConfig, optional
+        Output folder, rainfall file format and whether verbose working data is written.
+    response_json : str, optional
+        Path to a previously saved ARR Data Hub response JSON file to use instead of a live request.
+    max_retries : int, optional
+        Number of times a failed ARR Data Hub request is retried with exponential backoff. Set to 0 to
+        disable retries.
+    source_path : Path, optional
+        The path the config was loaded from, used for error messages.
+    """
 
     site: SiteConfig = field(default_factory=SiteConfig)
     ifd: IFDConfig = field(default_factory=IFDConfig)
@@ -392,6 +425,25 @@ class ArrConfig:
 
     @classmethod
     def from_dict(cls, data: dict, source_path: Optional[Path] = None) -> 'ArrConfig':
+        """Builds and validates a config from a dictionary (the parsed contents of a JSON config file).
+
+        Parameters
+        ----------
+        data : dict
+            The config settings, keyed by top-level section name.
+        source_path : Path, optional
+            The path the config was loaded from, used in error messages.
+
+        Returns
+        -------
+        ArrConfig
+            The validated config.
+
+        Raises
+        ------
+        ArrConfigError
+            If ``data`` contains unknown top-level keys or fails validation.
+        """
         known = {f.name for f in fields(cls)} - {'source_path'}
         unknown = set(data) - known
         if unknown:
@@ -419,6 +471,23 @@ class ArrConfig:
 
     @classmethod
     def from_file(cls, path: Union[str, Path]) -> 'ArrConfig':
+        """Loads and validates a config from a JSON file.
+
+        Parameters
+        ----------
+        path : PathLike
+            Path to the JSON config file.
+
+        Returns
+        -------
+        ArrConfig
+            The validated config.
+
+        Raises
+        ------
+        ArrConfigError
+            If the file does not exist, is not valid JSON, or fails validation.
+        """
         data = cls._read_json_file(path)
         return cls.from_dict(data, source_path=Path(path))
 
@@ -447,6 +516,21 @@ class ArrConfig:
         merged in or validated against the base config - this keeps the override rule
         simple and unambiguous (silently-differing settings between "batched" sites
         would otherwise be easy to miss).
+
+        Parameters
+        ----------
+        paths : Sequence[PathLike]
+            Paths to the JSON config files. The first file is the primary config.
+
+        Returns
+        -------
+        list[ArrConfig]
+            One config per file, in the same order as ``paths``.
+
+        Raises
+        ------
+        ArrConfigError
+            If no paths are given, a file is missing or invalid, or a later file has no ``site`` section.
         """
         if not paths:
             raise ArrConfigError("At least one config file must be given.")
@@ -473,6 +557,13 @@ class ArrConfig:
         return configs
 
     def validate(self) -> list[str]:
+        """Checks the config for errors.
+
+        Returns
+        -------
+        list[str]
+            A description of each problem found. The list is empty if the config is valid.
+        """
         errors = []
         errors.extend(self.site.validate(require_coordinates=self.response_json is None))
         for section in (self.ifd, self.events, self.temporal_patterns,
