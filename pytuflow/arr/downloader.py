@@ -62,11 +62,27 @@ except (ImportError, AttributeError):
 try:
     from qgis.PyQt.QtNetwork import QNetworkRequest as _QNetworkRequest
     QT_NETWORK_REQUEST_HTTP_STATUS_CODE_ATTRIBUTE = _QNetworkRequest.Attribute.HttpStatusCodeAttribute
+    QT_NETWORK_REQUEST_CONTENT_DISPOSITION_HEADER = _QNetworkRequest.KnownHeaders.ContentDispositionHeader
+    QT_NETWORK_REQUEST_CONTENT_TYPE_HEADER = _QNetworkRequest.KnownHeaders.ContentTypeHeader
 except (ImportError, AttributeError):
     try:
         QT_NETWORK_REQUEST_HTTP_STATUS_CODE_ATTRIBUTE = QNetworkRequest.HttpStatusCodeAttribute
+        QT_NETWORK_REQUEST_CONTENT_DISPOSITION_HEADER = QNetworkRequest.ContentDispositionHeader
+        QT_NETWORK_REQUEST_CONTENT_TYPE_HEADER = QNetworkRequest.ContentTypeHeader
     except AttributeError:
         QT_NETWORK_REQUEST_HTTP_STATUS_CODE_ATTRIBUTE = None
+        QT_NETWORK_REQUEST_CONTENT_DISPOSITION_HEADER = None
+        QT_NETWORK_REQUEST_CONTENT_TYPE_HEADER = None
+
+try:
+    from qgis.PyQt.QtNetwork import QHttpMultiPart as _QHttpMultiPart
+    QT_HTTP_MULTI_PART_FORM_DATA_TYPE = _QHttpMultiPart.ContentType.FormDataType
+except (ImportError, AttributeError):
+    try:
+        QT_HTTP_MULTI_PART_FORM_DATA_TYPE = QHttpMultiPart.FormDataType
+    except AttributeError:
+        QT_HTTP_MULTI_PART_FORM_DATA_TYPE = None
+ 
 
 
 class Downloader:
