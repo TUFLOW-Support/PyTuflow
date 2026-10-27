@@ -207,7 +207,9 @@ As an example, the 1% / 60 min is compared below for temporal pattern 1 (``TP01`
 
 .. note::
 
-  The climate change scenarios have both triggered complete storm events. For complete storm events, the climate change IL is calculated by :math:`IL_{CC\_storm} = IL_{storm} * IL_{CC\_factor}`. Although not used in this example, the climate change burst initial loss is calculated by: :math:`IL_{burst\_CC} = IL_{storm} \times IL_{CC\_factor} - PB_{ratio} \times RF_{CC}` (this is the default method, there is an alternate method as well).
+  The climate change scenarios have both triggered complete storm events. For complete storm events, the climate change IL is calculated by :math:`IL_{CC\_storm} = IL_{storm} * IL_{CC\_factor}`.
+  
+  Although not used in this example, the climate change burst initial loss, by default, is calculated by: :math:`IL_{burst\_CC} = IL_{storm} \times IL_{CC\_factor} - PB_{ratio} \times RF_{CC}`.
 
 .. raw:: html
 
