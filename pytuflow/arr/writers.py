@@ -438,8 +438,9 @@ def write_losses(path: Path, config: ArrConfig, results: list, append: bool = Fa
 
 
 def write_outputs(config: ArrConfig, results: list, append: bool = False) -> None:
-    """Writes all standard TUFLOW output files for a single site/config's assembled
-    events into ``config.output.path``. Pass ``append=True`` when processing multiple
+    """Writes all standard TUFLOW output files for a single site.
+     
+    Pass ``append=True`` when processing multiple
     site configs into the same output folder (all files except the per-event
     ``rf_inflow`` files, which are always written fresh, are appended to).
 

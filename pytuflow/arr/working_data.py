@@ -28,7 +28,9 @@ WORKING_DATA_FOLDER = 'working_data'
 
 
 def write_working_data(config: ArrConfig, response: ArrApiResponse, engine: ArrEngine) -> None:
-    """Writes the ARR Data Hub JSON response (always, plus one per additional
+    """Writes working data files for a single site.
+    
+    Writes the ARR Data Hub JSON response (always, plus one per additional
     ``temporal_patterns.additional_tp`` region), the raw point/areal temporal pattern
     increment CSVs (including for any additional TP regions) and, if
     ``config.output.verbose`` is set, the areal design IFD table, ARF table, burst

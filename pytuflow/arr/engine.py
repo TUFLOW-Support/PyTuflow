@@ -157,8 +157,10 @@ class EventResult:
 
 @dataclass
 class ArrEngine:
-    """Assembles ARR design events (standard or complete storm) for a single site
-    config, using an already-fetched :class:`~pytuflow.arr.api_client.ArrApiResponse`.
+    """Assembles ARR design events (standard or complete storm) for a single site.
+
+    The site is defined in a config, 
+    uses an already-fetched :class:`~pytuflow.arr.api_client.ArrApiResponse`.
 
     Parameters
     ----------

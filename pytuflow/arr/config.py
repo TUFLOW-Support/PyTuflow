@@ -365,8 +365,7 @@ class OutputConfig:
 
 @dataclass
 class ArrConfig:
-    """Top-level, fully parsed and validated ARR config, usually built from a JSON config file using
-    :meth:`from_file`, :meth:`from_files` or :meth:`from_dict`.
+    """Top-level, fully parsed and validated ARR config.
 
     Parameters
     ----------
