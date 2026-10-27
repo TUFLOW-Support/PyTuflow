@@ -133,8 +133,16 @@ This page gives an overview of the public modules, classes, and functions within
    :nosignatures:
    :template: custom-class-template.rst
 
-   ArrApiResponse
    ArrApiClient
+   ArrConfig
+   ArrEngine
+
+.. autosummary::
+   :toctree: ./api
+   :nosignatures:
+
+   arr_write_outputs
+   arr_write_working_data
 
 .. rubric:: Utilities
 
