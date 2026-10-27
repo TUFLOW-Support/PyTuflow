@@ -504,7 +504,7 @@ Parameter descriptions
    * - response_json
      - ``int``
      - ``5``
-     - The maximum number of retries when getting fetching data from the datahub. The retry loop will exponentially back off starting at 1 second and up to a maximum of 30 seconds. Setting to zero will disable retries. Retries occur for connection errors, timeouts, HTTP 429, and any 5xx response. Other 4xx errors fail straight away (bypassing the retry loop).
+     - The maximum number of retries when fetching data from the datahub. The retry loop will exponentially back off, starting at 1 second and up to a maximum of 30 seconds. Retries occur for connection errors, timeouts, HTTP 429, and any 5xx response. Other 4xx errors fail straight away (bypassing the retry loop). Setting ``max_retries``` to zero will disable retries.
 
 **response_json (top-level, optional)**
 
