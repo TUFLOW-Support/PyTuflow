@@ -59,7 +59,7 @@ Add ``-v`` / ``--verbose`` for debug-level logging.
 Code
 ^^^^
 
-For convenience, the equivalent code used in the CLI script, for a single site is given as an example below. The CLI is generally recommended unless there's
+For convenience, the equivalent code used in the CLI script for a single site is given as an example below. The CLI is generally recommended unless there's
 a specific reason to write a custom script.
 
 .. code-block:: python
