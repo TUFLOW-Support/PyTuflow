@@ -219,3 +219,59 @@ def test_downloader_requests_post_passes_data_and_files(monkeypatch):
     assert captured['url'] == 'https://example.com'
     assert captured['data'] == {'type': 'json'}
     assert captured['files'] == [('shapeFile[]', ('c.geojson', b'{}', 'application/geo+json'))]
+
+
+def _retry_config(max_retries):
+    return ArrConfig.from_dict({
+        'site': {'name': 'S', 'latitude': -27.0, 'longitude': 153.0},
+        'events': {'aep': [1], 'duration': [60]},
+        'output': {'path': 'out'},
+        'max_retries': max_retries,
+    })
+
+
+def _fake_downloader(responses, calls):
+    class Fake(DownloaderRequests):
+        def __new__(cls, url):
+            return object.__new__(cls)
+
+        def download(self, **kwargs):
+            calls.append(1)
+            code = responses[min(len(calls), len(responses)) - 1]
+            if isinstance(code, Exception):
+                raise code
+            self.ret_code = code
+            self.data = '{}' if code == 200 else None
+            self.error_string = '' if code == 200 else 'err'
+    return Fake
+
+
+def test_fetch_retries_with_exponential_backoff(monkeypatch):
+    import requests
+    from pytuflow.arr import api_client
+    calls, sleeps = [], []
+    fake = _fake_downloader([500, requests.ConnectionError('boom'), 200], calls)
+    monkeypatch.setattr(api_client, 'Downloader', lambda url: fake(url))
+    monkeypatch.setattr(api_client.time, 'sleep', sleeps.append)
+    monkeypatch.setattr(api_client.random, 'uniform', lambda a, b: 1.0)
+    ArrApiClient().fetch(_retry_config(3))
+    assert len(calls) == 3
+    assert sleeps == [1.0, 2.0]
+
+
+def test_fetch_does_not_retry_client_errors_and_respects_max_retries(monkeypatch):
+    from pytuflow.arr import api_client
+    monkeypatch.setattr(api_client.time, 'sleep', lambda s: None)
+    calls = []
+    fake = _fake_downloader([404], calls)
+    monkeypatch.setattr(api_client, 'Downloader', lambda url: fake(url))
+    with pytest.raises(ArrApiError):
+        ArrApiClient().fetch(_retry_config(3))
+    assert len(calls) == 1
+
+    calls.clear()
+    fake = _fake_downloader([503], calls)
+    monkeypatch.setattr(api_client, 'Downloader', lambda url: fake(url))
+    with pytest.raises(ArrApiError):
+        ArrApiClient().fetch(_retry_config(2))
+    assert len(calls) == 3

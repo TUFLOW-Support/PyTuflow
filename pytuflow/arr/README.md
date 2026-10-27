@@ -123,7 +123,8 @@ being silently ignored, to catch typos early.
     "format": "csv",
     "verbose": false
   },
-  "response_json": null
+  "response_json": null,
+  "max_retries": 3
 }
 ```
 
@@ -261,6 +262,12 @@ Only used for **complete storm** events - see [Complete storm assembly](#complet
 Regardless of this setting, complete storm assembly is also triggered **automatically,
 per AEP/duration cell**, whenever the Data Hub's burst initial loss table (`BurstLossesNew`/`BurstIL`)
 returns its `"Use PB TP"` placeholder for that cell - see [Complete storm assembly](#complete-storm-assembly).
+
+### `max_retries`
+
+| Type | Default | Description |
+| --- | --- | --- |
+| int | `3` | Number of times a failed ARR Data Hub request is retried (connection errors, timeouts, HTTP 429 and 5xx only - other 4xx errors fail immediately). Retries back off exponentially (~1s, 2s, 4s, ... capped at 30s, with jitter). `0` disables retries. |
 
 ### `output` (required)
 

@@ -383,6 +383,9 @@ class ArrConfig:
     #: are not used to query the Data Hub (though they may still be required for other
     #: purposes, e.g. logging) - see ``pytuflow.arr.__main__.run``.
     response_json: Optional[str] = None
+    #: Number of times a failed (transient errors only: connection errors, timeouts, HTTP
+    #: 429/5xx) ARR Data Hub request is retried, with exponential backoff. 0 disables retries.
+    max_retries: int = 5
 
     #: path this config was loaded from, if any (used for error messages / relative paths)
     source_path: Optional[Path] = None
@@ -405,6 +408,7 @@ class ArrConfig:
             complete_storm=data.get('complete_storm', False),
             output=_from_dict(OutputConfig, data.get('output')),
             response_json=data.get('response_json'),
+            max_retries=data.get('max_retries', 3),
             source_path=source_path,
         )
         errors = config.validate()
@@ -474,6 +478,8 @@ class ArrConfig:
         for section in (self.ifd, self.events, self.temporal_patterns,
                          self.climate_change, self.preburst, self.losses, self.arf, self.output):
             errors.extend(section.validate())
+        if isinstance(self.max_retries, bool) or not isinstance(self.max_retries, int) or self.max_retries < 0:
+            errors.append("max_retries must be an integer greater than or equal to 0")
         if self.response_json and not Path(self.response_json).is_file():
             errors.append(f"response_json file not found: '{self.response_json}'")
         if (self.preburst.pattern_method or '').lower() == 'none' and self.complete_storm:

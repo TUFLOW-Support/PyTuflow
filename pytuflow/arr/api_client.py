@@ -14,7 +14,9 @@ from __future__ import annotations
 import json
 import logging
 import mimetypes
+import random
 import re
+import time
 from pathlib import Path
 from typing import Optional
 
@@ -43,6 +45,38 @@ _BASE_LAYERS = (
     'OtherPreburst',
 )
 
+#: Initial delay (seconds) before the first retry; doubles on each subsequent retry.
+RETRY_BASE_DELAY = 1.0
+#: Upper limit (seconds) on the delay between retries.
+RETRY_MAX_DELAY = 30.0
+
+
+def _is_retryable(downloader: Downloader) -> bool:
+    """Transient failures only: no response at all, rate limiting, or a server error."""
+    code = downloader.ret_code
+    return code is None or code == 429 or code >= 500
+
+
+def _download_with_retry(url: str, max_retries: int, **kwargs) -> Downloader:
+    """Runs ``Downloader(url).download(**kwargs)``, retrying up to ``max_retries`` times on
+    transient failures with exponential backoff (``RETRY_BASE_DELAY * 2 ** attempt``, capped
+    at ``RETRY_MAX_DELAY``, with random jitter). Returns the last downloader used."""
+    attempt = 0
+    while True:
+        downloader = Downloader(url)
+        try:
+            downloader.download(**kwargs)
+        except OSError as e:  # includes requests.RequestException (connection errors/timeouts)
+            downloader.ret_code = None
+            downloader.error_string = str(e)
+        if downloader.ok() or not _is_retryable(downloader) or attempt >= max_retries:
+            return downloader
+        delay = min(RETRY_BASE_DELAY * 2 ** attempt, RETRY_MAX_DELAY)
+        delay *= random.uniform(0.5, 1.0)
+        attempt += 1
+        logger.warning("ARR Data Hub request failed (HTTP %s: %s) - retrying in %.1fs (retry %d of %d)",
+                       downloader.ret_code, downloader.error_string, delay, attempt, max_retries)
+        time.sleep(delay)
 
 
 class ArrApiResponse:
@@ -219,8 +253,8 @@ class ArrApiClient:
                 "Requesting ARR Data Hub data for uploaded catchment boundary '%s'",
                 config.site.catchment_boundary,
             )
-            downloader = Downloader(self.base_url)
-            downloader.download(
+            downloader = _download_with_retry(
+                self.base_url, config.max_retries,
                 method='POST', data=params,
                 files=self._catchment_boundary_files(config.site.catchment_boundary),
             )
@@ -228,8 +262,7 @@ class ArrApiClient:
             query = '&'.join(f'{k}={v}' for k, v in params.items())
             url = f'{self.base_url}?{query}'
             logger.info('Requesting ARR Data Hub data: %s', url)
-            downloader = Downloader(url)
-            downloader.download()
+            downloader = _download_with_retry(url, config.max_retries)
         if not downloader.ok():
             raise ArrApiError(
                 f"ARR Data Hub request failed (using {downloader.type()} downloader): "

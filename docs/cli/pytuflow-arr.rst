@@ -350,6 +350,7 @@ The json example below shows all the available keys and is not necessarily valid
             "outlet_latitude": -33.9347,
             "outlet_longitude": "150.8372"
         },
+        "max_retries": 5,
         "response_json": "path/to/previously/saved/datahub.json",
         "ifd": {
             "baseline_year": 2030
@@ -485,6 +486,21 @@ Parameter descriptions
      - ``bool``
      - ``false``
      - If true, also writes intermediate "working data" files (areal design IFD table, ARF table, burst initial loss table, and extrapolated short-duration losses CSV) to a working_data subfolder - see :ref:`working_data` section below.
+
+**max_retries (top-level, optional)**
+
+.. list-table::
+   :widths: 15 10 10 65 
+   :header-rows: 1
+
+   * - Key
+     - Type
+     - Default
+     - Description
+   * - response_json
+     - ``int``
+     - ``5``
+     - The maximum number of retries when getting fetching data from the datahub. The retry loop will exponentially back off starting at 1 second and up to a maximum of 30 seconds. Setting to zero will disable retries. Retries occur for connection errors, timeouts, HTTP 429, and any 5xx response. Other 4xx errors fail straight away (bypassing the retry loop).
 
 **response_json (top-level, optional)**
 
