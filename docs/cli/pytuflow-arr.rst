@@ -62,7 +62,11 @@ Examples
 Example 1 - Basic Usage
 ^^^^^^^^^^^^^^^^^^^^^^^
 
-This example demonstrates a configuration file using a catchment shapefile (CRS must be in WGS 84 lat/lon) and extracting common duration/AEP event combinations. The catchment shapefile is not required to have any specific attributes, and only the geometry is used. Note, catchment area is not derived from the geometry and is required to be input by the user.
+This example demonstrates a configuration file using a catchment shapefile and extracting common duration/AEP event combinations. The catchment shapefile is not required to have any specific attributes, and only the geometry is used. Note, catchment area is not derived from the geometry and is required to be input by the user.
+
+.. note::
+
+  The catchment shapefile can be in lon/lat or in a projected coordinate system. The .prj must be available so that re-projection can take place if needed. Any re-projecting is handled by the datahub and not by PyTUFLOW.
 
 .. code-block:: text
   :caption: bash/cmd prompt to run tool for "SEQ_cathcmentA_config.json"
