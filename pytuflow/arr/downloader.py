@@ -142,19 +142,19 @@ class DownloaderQGIS(Downloader):
         file attachments (``files``, a list of :class:`FilePart` - multiple entries may
         share the same ``field_name`` to upload several files under one field, e.g.
         shapefile components under ``shapeFile[]``)."""
-        multi_part = QHttpMultiPart(QHttpMultiPart.FormDataType)
+        multi_part = QHttpMultiPart(QT_HTTP_MULTI_PART_FORM_DATA_TYPE)
         for key, value in (data or {}).items():
             part = QHttpPart()
-            part.setHeader(QNetworkRequest.ContentDispositionHeader, f'form-data; name="{key}"')
+            part.setHeader(QT_NETWORK_REQUEST_CONTENT_DISPOSITION_HEADER, f'form-data; name="{key}"')
             part.setBody(str(value).encode())
             multi_part.append(part)
         for file_part in (files or []):
             part = QHttpPart()
             part.setHeader(
-                QNetworkRequest.ContentDispositionHeader,
+                QT_NETWORK_REQUEST_CONTENT_DISPOSITION_HEADER,
                 f'form-data; name="{file_part.field_name}"; filename="{file_part.filename}"',
             )
-            part.setHeader(QNetworkRequest.ContentTypeHeader, file_part.content_type)
+            part.setHeader(QT_NETWORK_REQUEST_CONTENT_TYPE_HEADER, file_part.content_type)
             part.setBody(QByteArray(file_part.content))
             multi_part.append(part)
         return multi_part
