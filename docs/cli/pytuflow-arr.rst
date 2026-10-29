@@ -70,9 +70,10 @@ a specific reason to write a custom script.
     config = ArrConfig.from_file('/path/to/config.json')
     client = ArrApiClient()
     response = client.fetch(config)
-    results = ArrEngine(config, response).run()
+    engine = ArrEngine(config, response)
+    results = engine.run()
     write_outputs(config, results, append=False)
-    write_working_data(config, response, results)
+    write_working_data(config, response, engine)
 
 Examples
 --------
