@@ -159,7 +159,7 @@ class DownloaderQGIS(Downloader):
             multi_part.append(part)
         return multi_part
 
-    def download(self, retry_count: int = 5, retry_interval=range(5, 30, 5), validator=None,
+    def download(self, retry_count: int = -1, retry_interval=range(5, 30, 5), validator=None,
                  method: str = 'GET', data: Optional[dict] = None,
                  files: Optional[list['FilePart']] = None) -> None:
         old_user_agent = None
