@@ -129,15 +129,15 @@ The tables below summarise benchmarking results for the different drivers. The t
 \* Section() line cell count relates to the last table
 
 .. csv-table:: Load times (XMDF) - including loading mesh geometry and generating spatial indexing (seconds)
-  :file: assets/tables/v1.1_benchmarking_loading.csv
+  :file: ../assets/tables/v1.1_benchmarking_loading.csv
   :header-rows: 1
 
 .. csv-table:: Single data point extraction (seconds)
-  :file: assets/tables/v1.1_benchmarking_data_point.csv
+  :file: ../assets/tables/v1.1_benchmarking_data_point.csv
   :header-rows: 1
 
 .. csv-table:: Section extraction (seconds)
-  :file: assets/tables/v1.1_benchmarking_section.csv
+  :file: ../assets/tables/v1.1_benchmarking_section.csv
   :header-rows: 1
 
 \* Did not finish within 30 minutes.
