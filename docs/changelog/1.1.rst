@@ -123,7 +123,7 @@ The best drivers will be chosen automatically based on the available libraries i
 The tables below summarise benchmarking results for the different drivers. The table is for comparison purposes only and the actual times will depend on the model size, computer hardware, and Python environment.
 
 .. csv-table:: Benchmarking information
-  :file: assets/tables/v1.1_benchmarking_specs.csv
+  :file: ../assets/tables/v1.1_benchmarking_specs.csv
   :header-rows: 1
 
 \* Section() line cell count relates to the last table
