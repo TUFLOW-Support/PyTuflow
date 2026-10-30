@@ -123,21 +123,21 @@ The best drivers will be chosen automatically based on the available libraries i
 The tables below summarise benchmarking results for the different drivers. The table is for comparison purposes only and the actual times will depend on the model size, computer hardware, and Python environment.
 
 .. csv-table:: Benchmarking information
-  :file: assets/tables/v1.1_benchmarking_specs.csv
+  :file: ../assets/tables/v1.1_benchmarking_specs.csv
   :header-rows: 1
 
 \* Section() line cell count relates to the last table
 
 .. csv-table:: Load times (XMDF) - including loading mesh geometry and generating spatial indexing (seconds)
-  :file: assets/tables/v1.1_benchmarking_loading.csv
+  :file: ../assets/tables/v1.1_benchmarking_loading.csv
   :header-rows: 1
 
 .. csv-table:: Single data point extraction (seconds)
-  :file: assets/tables/v1.1_benchmarking_data_point.csv
+  :file: ../assets/tables/v1.1_benchmarking_data_point.csv
   :header-rows: 1
 
 .. csv-table:: Section extraction (seconds)
-  :file: assets/tables/v1.1_benchmarking_section.csv
+  :file: ../assets/tables/v1.1_benchmarking_section.csv
   :header-rows: 1
 
 \* Did not finish within 30 minutes.

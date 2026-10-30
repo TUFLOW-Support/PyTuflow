@@ -650,7 +650,7 @@ class TPC(INFO, ITimeSeries2D):
     def _filter(self, filter_by: str, filtered_something: bool = False, df: pd.DataFrame = None,
                 ignore_excess_filters: bool = False) -> tuple[pd.DataFrame, dict[str, bool]]:
         # docstring inherited
-        filter_by = self._replace_1d_aliases(filter_by)
+        filter_by = self._map_filter_tokens(filter_by, self._replace_1d_aliases)
         return super()._filter(filter_by, ignore_excess_filters=True)
 
     def _info_name_correction(self, name: str) -> str:

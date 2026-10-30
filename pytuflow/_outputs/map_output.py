@@ -357,8 +357,8 @@ class MapOutput(Output, ABC, PointMixin, LineStringMixin):
         # `filtered_something` and `df` parameters are intentionally not forwarded here
         # because map outputs use a different pre-filtering strategy (max/min, static,
         # 2d/3d) before delegating remaining tokens to the base _filter.
-        filter_by = self._replace_aliases(filter_by)
-        filter_by = [x.strip().lower() for x in filter_by.split('/')] if filter_by else []
+        filter_by = self._map_filter_tokens(filter_by, self._replace_aliases)
+        filter_by, ids = self._parse_filter_by(filter_by)
 
         filtered_something = False
         df = self._overview_dataframe()
@@ -386,7 +386,7 @@ class MapOutput(Output, ABC, PointMixin, LineStringMixin):
         if filtered_something_:
             filtered_something = True
 
-        filter_by = '/'.join(filter_by)
+        filter_by = '/'.join(filter_by) if ids is None else self._build_filter_by(filter_by, ids)
         return super()._filter(filter_by, filtered_something, df)
 
     def _figure_out_data_types(self, data_types: Union[str, list[str]], filter_by: str | None) -> list[str]:

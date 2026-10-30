@@ -4,6 +4,7 @@ import typing
 from abc import ABC, abstractmethod
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
+from urllib.parse import quote, unquote
 from typing import ClassVar, Union
 
 import numpy as np
@@ -263,9 +264,9 @@ class Output(ABC):
         dtype_filter = False
         id_filter = False
 
-        filter_by = [x.strip().lower() for x in filter_by.split('/') if x] if filter_by else []
+        filter_by, ids = self._parse_filter_by(filter_by)
         df = self._overview_dataframe() if df is None else df
-        if not filter_by:
+        if not filter_by and not ids:
             return df, {'domain': False, 'geometry': False, 'attribute': False, 'data_type': False, 'id': False}
 
         # domain
@@ -286,7 +287,11 @@ class Output(ABC):
         df, dtype_filter = self._filter_by_data_type(filter_by, df)
 
         # ids
-        df, id_filter = self._filter_by_id(self.ID_COLUMNS, filter_by, df)
+        if ids is None:
+            df, id_filter = self._filter_by_id(self.ID_COLUMNS, filter_by, df)
+        else:
+            df, id_filter = self._filter_by_id(self.ID_COLUMNS, ids, df)
+            filter_by = filter_by + ids
 
         filtered_something = filtered_something or domain_filter or geom_filter or attr_filter or dtype_filter or id_filter
         filtered = {
@@ -304,6 +309,56 @@ class Output(ABC):
             df = pd.DataFrame(columns=df.columns)
 
         return df, filtered
+
+    @staticmethod
+    def _parse_filter_by(filter_by: str | None) -> tuple[list[str], list[str] | None]:
+        """no-doc
+
+        Splits a filter string into ``(filter tokens, ids)``. The filter string is either the legacy format
+        ``'<token>/<token>'`` (ids is None, and ids are matched from the tokens) or a URI style string such as
+        ``'ids=<id1>/<id2>&resulttype=<type1>/<type2>&filter=<token>'``. Values are url-quoted so that ids can contain
+        reserved characters. In URI style, ``resulttype`` and ``filter`` tokens are never matched against ids, and
+        ``ids`` are never matched against the result types or other filters.
+        """
+        if not filter_by:
+            return [], None
+        if not re.match(r'^(?:ids|resulttype|filter)=', filter_by, re.IGNORECASE):
+            return [x.strip().lower() for x in filter_by.split('/') if x], None
+        tokens, ids = [], []
+        for part in filter_by.split('&'):
+            key, _, value = part.partition('=')
+            values = [unquote(x).strip().lower() for x in value.split('/') if x]
+            if key.strip().lower() == 'ids':
+                ids.extend(values)
+            else:
+                tokens.extend(values)
+        return tokens, ids
+
+    @staticmethod
+    def _build_filter_by(filter_tokens: list[str] | None = None, ids: list[str] | None = None,
+                         data_types: list[str] | None = None) -> str:
+        """no-doc
+
+        Builds a URI style filter string. See :meth:`_parse_filter_by`.
+        """
+        parts = []
+        for key, values in (('ids', ids), ('resulttype', data_types), ('filter', filter_tokens)):
+            if values:
+                parts.append(f'{key}=' + '/'.join(quote(x, safe='') for x in values))
+        return '&'.join(parts) if parts else 'ids='
+
+    @classmethod
+    def _map_filter_tokens(cls, filter_by: str | None, func) -> str | None:
+        """no-doc
+
+        Applies a str -> str function (e.g. alias replacement) to the filter tokens only (never the ids) and returns
+        the filter string in its original style.
+        """
+        tokens, ids = cls._parse_filter_by(filter_by)
+        if ids is None:
+            return func(filter_by)
+        tokens = [x for x in func('/'.join(tokens)).split('/') if x]
+        return cls._build_filter_by(tokens, ids)
 
     @staticmethod
     def _get_standard_data_type_name(name: str) -> str:

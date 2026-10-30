@@ -65,11 +65,24 @@ class TabularOutput(Output):
         self._load()
         locations, data_types = self._loc_data_types_to_list(locations, data_types)
         locations, data_types = self._figure_out_loc_and_data_types(locations, data_types)
-        filter_by = '/'.join(locations + data_types)
+        filter_by = self._build_time_series_filter_by(locations, data_types)
         df, filtered = self._filter(filter_by, ignore_excess_filters=True)
         if not (filtered['data_type'] or filtered['attribute']) or not filtered['id']:
             df = pd.DataFrame(columns=df.columns)
         return df, locations, data_types
+
+    def _build_time_series_filter_by(self, locations: list[str], data_types: list[str]) -> str:
+        """Builds a URI style filter so that location names are never mistaken for result types (and vice versa).
+        Each location is either an ID or an ID followed by '/' separated filters (e.g. 'ch1/1d').
+        """
+        known_ids = {x.lower() for x in self.ids()}
+        ids, filters = [], []
+        for loc in locations:
+            parts = loc.split('/')
+            n = next((i for i in range(len(parts), 0, -1) if '/'.join(parts[:i]).lower() in known_ids), 1)
+            ids.append('/'.join(parts[:n]))
+            filters.extend(parts[n:])
+        return self._build_filter_by(filters, ids, data_types)
 
     def _figure_out_loc_and_data_types(self, locations: str | list[str],
                                        data_types: str | list[str] | None) -> tuple[list[str], list[str]]:
@@ -81,15 +94,17 @@ class TabularOutput(Output):
         else:
             locations1 = []
             locations = [locations] if not isinstance(locations, list) else locations
+            known_ids = {x.lower() for x in self.ids()}
             for loc in locations:
-                if self._get_standard_data_type_name(loc) in valid_data_types:
+                if loc.lower() not in known_ids and self._get_standard_data_type_name(loc) in valid_data_types:
                     while loc in locations:
                         locations.remove(loc)
                     logger.warning(f'Location "{loc}" is a data type - removing.')
             # ids = {x.lower(): x for x in self.ids()}
             # locations_lower = [x.lower() for x in locations]
             for loc in locations:
-                ids = self.ids(loc)
+                # an exact ID match takes priority over any filter keyword (e.g. an ID called 'gauge')
+                ids = self.ids(self._build_filter_by(ids=[loc])) if loc.lower() in known_ids else self.ids(loc)
                 if not ids:
                     logger.warning(f'Location "{loc}" not found in the output or a valid location filter - removing.')
                 else:
