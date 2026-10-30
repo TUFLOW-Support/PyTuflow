@@ -438,6 +438,20 @@ class Test_TPC_2016(TestCase):
         df2 = res.section('FC01.36', 'bed level', -1, branch_limit=1)
         self.assertTrue((df2 == df1).all().all())
 
+    def test_connectivity_short_circuits_based_on_branch_limit(self):
+        from pytuflow._outputs.helpers.lp_1d import Connectivity
+        p = './tests/2016/EG14_001.tpc'
+        res = TPC(p)
+        res._load()
+        
+        conn = Connectivity(res._channel_info, res._node_info, 'FC01.32', 'FC01.36', branch_limit=999)
+        self.assertTrue(conn)
+        self.assertEqual(5, len(conn._processed_branches))
+
+        conn = Connectivity(res._channel_info, res._node_info, 'FC01.32', 'FC01.36', branch_limit=1)
+        self.assertTrue(conn)
+        self.assertEqual(2, len(conn._processed_branches))
+
     def test_tpc_encoding(self):
         p = './tests/tpc_encoding_error/EG14_001.tpc'
         res = TPC(p)
