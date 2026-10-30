@@ -6,7 +6,7 @@ pytuflow-arr
 The ``pytuflow-arr`` tool converts `Australian Rainfall and Runoff <http://arr.ga.gov.au/home>`_ rainfall and loss data from the `ARR Data Hub <https://data.arr-software.org/about>`_ into TUFLOW model input files (``Event_File.tef``, ``bc_dbase.csv``, ``rf_inflow/*.csv``,
 ``soils.tsoilf`` / ``*.trd``).
 
-This tool is a clean rewrite of the ``ARR to TUFLOW`` script from the QGIS TUFLOW plugin for the **2026 v1** ARR datahub major update. Consequently, it does not support legacy versions of the datahub. It provides many options for backward compatibility, however not every legacy option is supported and many of the defaults are new for the 2026 v1 ARR datahub update.
+This tool is a clean rewrite of the ``ARR to TUFLOW`` script from the QGIS TUFLOW plugin for the **2026 v1** ARR data hub major update. Consequently, it does not support legacy versions of the data hub. It provides many options for backward compatibility, however not every legacy option is supported and many of the defaults are new for the 2026 v1 ARR data hub update.
 
 Key Differences to the Legacy QGIS Plugin Tool
 ----------------------------------------------
@@ -15,24 +15,7 @@ Key Differences to the Legacy QGIS Plugin Tool
 
   The TUFLOW output format from the tool remains consistent with the legacy QGIS plugin tool. For an example on how to use the outputs in a TUFLOW model setup, please refer to the following TUFLOW wiki page: `wiki.tuflow.com/QGIS_ARR_to_TUFLOW_Example <https://wiki.tuflow.com/QGIS_ARR_to_TUFLOW_Example#TUFLOW_Setup>`_
 
-- Defaults have changed where appropriate for the 2026 v1 update. For example, the "current" 2030 rainfall is default. Other regional/jurisdication specifics such as using the new NSW storm losses (as opposed the the probability neutral losses) is now also the default.
-- The datahub API now supports uploading catchment files. Previously, this was not possible and the catchment centroid was used. Now the catchment will be uploaded directly if a GIS file is provided.
-
-.. warning::
-
-    It is the users responsibility to use a valid catchment. There could be circumstances where the polygon is rejected by the datahub e.g. if there are too many vertices.
-
-- The tool does not scrape the BOM website and relies on rainfall depths provided on the datahub. Currently, frequent rainfall depths are not provided and as such, frequent events are not yet supported.
-- Preburst rainfall extrapolation is done by a new method of holding the preburst ratio constant. Previous methods of extrapolating prebursts < 60 minutes are still supported however the new method is the default. Previously, preburst depths for events outside the AEP range were not extrapolated and the initial loss was set to zero. The new extrapolation method is used instead and it is not possible to use the legacy method.
-
-.. note::
-
-    Preburst depths now go down to 30 minutes, therefore extrapolation only applies for durations < 30 minutes (not 60 minutes like the legacy datahub)
-
-- The climate change options to configure ΔT or modify the baseline temperature have been removed.
-- By default, the tool will now automatically switch to using a complete storm if the preburst rainfall depth is greater than the storm initial loss (for those specific events), however this can also be turned off.
-- The "Use event independent continuing loss" option has been removed as some regions use AEP specific losses.
-- The "data" folder has been renamed "working data" and the outputs have been changed. Among other changes, plots are no longer included and the tool uses the ``json`` format when downloading data. The ``json`` format is more code friendly to parse (unfortunately less human readable than the text format).
+For a full list of differences to the legacy QGIS tool, visit the QGIS TUFLOW Plugin documentation: `docs.tuflow.com/qgis-tuflow-plugin/2026.2/arr/legacy-tool-differences/ <https://docs.tuflow.com/qgis-tuflow-plugin/2026.2/arr/legacy-tool-differences/>`_
 
 Usage
 -----
@@ -85,7 +68,7 @@ This example demonstrates a configuration file using a catchment shapefile and e
 
 .. note::
 
-  The catchment shapefile can be in lon/lat or in a projected coordinate system. The .prj must be available so that re-projection can take place if needed. Any re-projecting is handled by the datahub and not by PyTUFLOW.
+  The catchment shapefile can be in lon/lat or in a projected coordinate system. The .prj must be available so that re-projection can take place if needed. Any re-projecting is handled by the data hub and not by PyTUFLOW.
 
 .. code-block:: text
   :caption: bash/cmd prompt to run tool for "SEQ_cathcmentA_config.json"
@@ -146,7 +129,7 @@ The below plot is the 1% AEP / 60 min storm event that was output from the above
 
 The above storm event (1%/60 min) is a design burst, however other requested storms have switched automatically to using a complete storm approach due to the high preburst rainfall depth. This is done by prepending a preburst temporal pattern to the design burst.
 
-The ``working_data/<..>_burst_initial_loss.csv`` will list the calculated burst losses. Where the burst initial loss is calculated to be less than zero (i.e. preburst depth > storm initial loss), the table will use ``"Use PB TP"``. This indicates that a preburst temporal pattern has been used (i.e. a complete storm has been created for those events). Some regions (i.e. NSW) have this information provided in the datahub response, otherwise it is calculated by the tool (and the same convention, ``"Use PB TP"``, is used).
+The ``working_data/<..>_burst_initial_loss.csv`` will list the calculated burst losses. Where the burst initial loss is calculated to be less than zero (i.e. preburst depth > storm initial loss), the table will use ``"Use PB TP"``. This indicates that a preburst temporal pattern has been used (i.e. a complete storm has been created for those events). Some regions (i.e. NSW) have this information provided in the data hub response, otherwise it is calculated by the tool (and the same convention, ``"Use PB TP"``, is used).
 
 .. note::
   
@@ -156,7 +139,7 @@ The ``working_data/<..>_burst_initial_loss.csv`` will list the calculated burst 
     :file: ../assets/tables/SEQ_CatchmentA_burst_initial_loss.csv
     :header-rows: 1
 
-The default method for generating a preburst temporal pattern is to use the pattern explicitly referenced in the datahub response. Unforunately, this is only supported in some regions (i.e. NSW) and the tool will fallback to using the following defaults (see :ref:`complete_storm_assembly` for more information):
+The default method for generating a preburst temporal pattern is to use the pattern explicitly referenced in the data hub response. Unforunately, this is only supported in some regions (i.e. NSW) and the tool will fallback to using the following defaults (see :ref:`complete_storm_assembly` for more information):
 
 - The tool will use an existing point temporal pattern downloaded as part of the request.
 - The tool will use a temporal pattern duration that is 1.5x the event duration (up to 24 hrs). For example, for the 2 hr event a preburst duration of 3 hrs will be used (or rounded to the nearest closest available temporal pattern).
@@ -239,10 +222,10 @@ As an example, the 1% / 60 min is compared below for temporal pattern 1 (``TP01`
      style="border:none;">
    </iframe>
 
-Example 3 - Rerunning datahub files from a previous run
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Example 3 - Rerunning data hub files from a previous run
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-It's possible to run the tool with the response json and temporal pattern CSVs that were downloaded/saved during a previous tool run. Not all the below files are required, although to run without the tool touching the datahub again, then at least these files are required. Additional files would be required if additional temporal pattern zones were previously requested.
+It's possible to run the tool with the response json and temporal pattern CSVs that were downloaded/saved during a previous tool run. Not all the below files are required, although to run without the tool touching the data hub again, then at least these files are required. Additional files would be required if additional temporal pattern zones were previously requested.
 
 - ``<site_name>_response.json``
 - ``<site_name>_PointTP_Increments.csv``
@@ -253,7 +236,7 @@ The example config below shows how to run the second example again, but using th
 .. note::
 
   It is recommended to run with the same settings as the previous run that generated the input files. Some setings, like climate change, affect
-  what is requested from the datahub and the contents of the ``response.json``. This means that adding climate change settings is not possible if
+  what is requested from the data hub and the contents of the ``response.json``. This means that adding climate change settings is not possible if
   using a ``response.json`` from a previous tool run that did not include climate change.
 
 .. note::
@@ -462,7 +445,7 @@ Parameter descriptions
    * - outlet_latitude / outlet_longitude
      - ``number``
      - ``-``
-     - Optional catchment outlet coordinates, decimal degrees. Used by the ARR datahub for jurisdiction guidance.
+     - Optional catchment outlet coordinates, decimal degrees. Used by the ARR data hub for jurisdiction guidance.
    * - catchment_area
      - ``number``
      - ``-``
@@ -527,7 +510,7 @@ Parameter descriptions
    * - max_retries
      - ``int``
      - ``5``
-     - The maximum number of retries when fetching data from the datahub. The retry loop will exponentially back off, starting at 1 second and up to a maximum of 30 seconds. Retries occur for connection errors, timeouts, HTTP 429, and any 5xx response. Other 4xx errors fail straight away (bypassing the retry loop). Setting ``max_retries`` to zero will disable retries.
+     - The maximum number of retries when fetching data from the data hub. The retry loop will exponentially back off, starting at 1 second and up to a maximum of 30 seconds. Retries occur for connection errors, timeouts, HTTP 429, and any 5xx response. Other 4xx errors fail straight away (bypassing the retry loop). Setting ``max_retries`` to zero will disable retries.
 
 **response_json (top-level, optional)**
 
@@ -542,7 +525,7 @@ Parameter descriptions
    * - response_json
      - ``string``
      - ``-``
-     - Path to a previously saved ARR datahub response json file (e.g. a prior run's ``working_data/<site>_ARR_response.json`` output). Useful if needing to re-run the tool again on a previous response (this ensures the same processing output if the datahub has had subsequent updates - as long as the pytuflow version is the same as run previously).
+     - Path to a previously saved ARR data hub response json file (e.g. a prior run's ``working_data/<site>_ARR_response.json`` output). Useful if needing to re-run the tool again on a previous response (this ensures the same processing output if the data hub has had subsequent updates - as long as the pytuflow version is the same as run previously).
 
 **ifd (optional)**
 
@@ -572,7 +555,7 @@ Parameter descriptions
    * - point_tp_csv
      - ``string``
      - ``-``
-     - Path to a previously saved or downloaded point temporal pattern CSV to use instead of downloading the data from the datahub. The file must be in the same format as the ``*_Increments.csv`` file from the datahub.
+     - Path to a previously saved or downloaded point temporal pattern CSV to use instead of downloading the data from the data hub. The file must be in the same format as the ``*_Increments.csv`` file from the data hub.
    * - areal_tp_csv
      - ``string``
      - ``-``
@@ -603,7 +586,7 @@ Parameter descriptions
    * - enabled
      - ``bool``
      - ``false``
-     - If ``true``, an additional event is assembled for each scenario in scenarios, alongside the base (no climate-change) event. The tool uses the climate change factors provided by the datahub, and not the pre-calculated IFD tables. This allows the baseline rainfall to be factored, which could be BOM, or another source like LIMB/QRA (pre-calculated tables appear to always use BOM rainfall). It also allows all climate change years to be used, whereas only several years are provided in the pre-calculated tables.
+     - If ``true``, an additional event is assembled for each scenario in scenarios, alongside the base (no climate-change) event. The tool uses the climate change factors provided by the data hub, and not the pre-calculated IFD tables. This allows the baseline rainfall to be factored, which could be BOM, or another source like LIMB/QRA (pre-calculated tables appear to always use BOM rainfall). It also allows all climate change years to be used, whereas only several years are provided in the pre-calculated tables.
    * - scenarios
      - ``list[object]``
      - ``[]``
@@ -641,7 +624,7 @@ Each scenario object:
    * - percentile
      - ``string``
      - ``"recommended"``
-     - Preburst ratio percentile to use to derive the preburst depth: one of "10%", "25%", "50%", "75%", "90%", or "recommended". The "recommended" value falls back to "50%" for regions that don't explicitly have a datahub recommended table.
+     - Preburst ratio percentile to use to derive the preburst depth: one of "10%", "25%", "50%", "75%", "90%", or "recommended". The "recommended" value falls back to "50%" for regions that don't explicitly have a data hub recommended table.
    * - pattern_method
      - ``string``
      - ``"recommended"``
@@ -680,7 +663,7 @@ Each scenario object:
    * - extrapolation_method
      - ``string``
      - ``"constant_preburst_ratio"``
-     - How to extrapolate the burst initial loss for durations shorter than the datahub's shortest provided duration. The options are: ``constant_preburst_ratio``, ``interpolate``, ``log_interpolate``, ``interpolate_preburst``, ``log_interpolate_preburst``, ``rahman``, ``hill``, ``constant``, ``static``. See :ref:`loss_extrapolation` section below.
+     - How to extrapolate the burst initial loss for durations shorter than the data hub's shortest provided duration. The options are: ``constant_preburst_ratio``, ``interpolate``, ``log_interpolate``, ``interpolate_preburst``, ``log_interpolate_preburst``, ``rahman``, ``hill``, ``constant``, ``static``. See :ref:`loss_extrapolation` section below.
    * - mar
      - ``number``
      - ``-``
@@ -688,7 +671,7 @@ Each scenario object:
    * - static_loss
      - ``number``
      - ``-``
-     - User defined burst initial loss value for durations shorter than provided by the datahub. Required for the ``static`` extrapolation_method.
+     - User defined burst initial loss value for durations shorter than provided by the data hub. Required for the ``static`` extrapolation_method.
    * - tuflow_loss_method
      - ``string``
      - ``"infiltration"``
@@ -696,7 +679,7 @@ Each scenario object:
    * - user_initial_loss
      - ``number``
      - ``-``
-     - Overrides the storm initial loss value with a value provided by the user. If the user is also using probability neutral losses, the burst initial loss is calculated as ``burst_il = user_initial_loss * pn_burst_il / datahub_storm_initial_loss`` (where the datahub storm initial loss is the old flat storm loss).
+     - Overrides the storm initial loss value with a value provided by the user. If the user is also using probability neutral losses, the burst initial loss is calculated as ``burst_il = user_initial_loss * pn_burst_il / datahub_storm_initial_loss`` (where the data hub storm initial loss is the old flat storm loss).
    * - user_continuing_loss
      - ``number``
      - ``-``
@@ -708,7 +691,7 @@ Each scenario object:
    * - climate_change_method
      - ``string``
      - ``"storm"``
-     - How the datahub's initial loss climate change factor is applied to the initial loss. The options are ``storm`` and ``burst``. The ``storm`` method scales the storm initial loss and subtracts the climate change adjusted preburst rainfall (by using climate change rainfall the and the preburst ratio). The ``burst`` option scales the burst initial loss.
+     - How the data hub's initial loss climate change factor is applied to the initial loss. The options are ``storm`` and ``burst``. The ``storm`` method scales the storm initial loss and subtracts the climate change adjusted preburst rainfall (by using climate change rainfall the and the preburst ratio). The ``burst`` option scales the burst initial loss.
 
 **arf (optional)**
 
@@ -772,11 +755,11 @@ Complete storm assembly
 
 A "complete storm" prepends a preburst rainfall period ahead of the ARR design burst, so the full storm initial loss can be used rather than a burst initial loss.
 
-The tool will automatically switch to using a complete storm for events where the burst initial loss is calculated to be less than zero. For some regions, the datahub provides a table of burst initial loss and explicitly recommends using a preburst temporal pattern (i.e. a complete storm), in these cases the tool will also automatically switch to using a complete storm for those events. The exception to this is if the preburst ``pattern_method`` parameter is set to ``"none"``. The complete storm can be turned on for every event by setting the ``complete_storm`` parameter to ``true``.
+The tool will automatically switch to using a complete storm for events where the burst initial loss is calculated to be less than zero. For some regions, the data hub provides a table of burst initial loss and explicitly recommends using a preburst temporal pattern (i.e. a complete storm), in these cases the tool will also automatically switch to using a complete storm for those events. The exception to this is if the preburst ``pattern_method`` parameter is set to ``"none"``. The complete storm can be turned on for every event by setting the ``complete_storm`` parameter to ``true``.
 
 The available preburst ``pattern_methods`` are described below:
 
-- ``"recommended"`` - Uses the recommended preburst temporal pattern referenced for the catchment on the datahub. A recommended temporal pattern is not always provided (currently only available for NSW catchments), in these instances the ``recommended`` approach falls back to the ``temporal_pattern`` method.
+- ``"recommended"`` - Uses the recommended preburst temporal pattern referenced for the catchment on the data hub. A recommended temporal pattern is not always provided (currently only available for NSW catchments), in these instances the ``recommended`` approach falls back to the ``temporal_pattern`` method.
 - ``"temporal_pattern"`` - Uses an existing point temporal pattern from the same catchment. The chosen temporal pattern is based on the settings within the ``preburst`` settings. For example, the default is to use ``"TP01"`` for a duration that is 2x the burst duration (capped to 6 hrs i.e.. durations longer than 6 hrs will use the 6 hr temporal pattern). The chosen temporal pattern rarity band for the preburst temporal pattern will use the same as the design AEP rarity band.
 - ``"constant"`` - Uses a constant rainfall intensity over the preburst duration. The preburst duration is determined by the other settings with the ``preburst`` settings.
 - ``"none"`` - Disables the complete storm assembly (set to ``"none"`` to turn off the automatic switching to complete storms).
@@ -792,8 +775,8 @@ Working data
 
 Alongside the standard TUFLOW output files, a working_data subdirectory is used to save data useful for reviewing/QA'ing what the tool requested and calculated. The standard output working data is listed below:
 
-- ``<site>_ARR_response.json`` - the raw JSON response from the ARR Data Hub, exactly as received. Always saved, so a run can always be fully reproduced/inspected later without needing to re-query the datahub.
-- ``<site>_ARR_response_<region>.json`` - one per additional temporal pattern region configured (if any) - the raw JSON response from the separate ARR datahub request made for that region's representative coordinates. Always saved, same as the site's own response, for the same reason. <region> is the region name with spaces removed (e.g. ``WetTropics``).
+- ``<site>_ARR_response.json`` - the raw JSON response from the ARR Data Hub, exactly as received. Always saved, so a run can always be fully reproduced/inspected later without needing to re-query the data hub.
+- ``<site>_ARR_response_<region>.json`` - one per additional temporal pattern region configured (if any) - the raw JSON response from the separate ARR data hub request made for that region's representative coordinates. Always saved, same as the site's own response, for the same reason. <region> is the region name with spaces removed (e.g. ``WetTropics``).
 - ``<site>_PointTP_Increments.csv`` / ``<site>_ArealTP_Increments.csv`` - the raw temporal
   pattern increment CSVs downloaded from the Data Hub (before selection/filtering to the
   specific patterns used for each event). Always saved.
@@ -812,7 +795,7 @@ The following are only saved when the ``output`` "verbose" parameter is true, si
   requested duration x AEP.
 - ``<site>_burst_initial_loss[_<cc_scenario>].csv`` - the burst initial loss (mm) table
   used, for every duration x AEP, one file per
-  climate change scenario (if enabled) - climate change scenario files have the datahub's climate-change initial loss adjustment factor applied.
+  climate change scenario (if enabled) - climate change scenario files have the data hub's climate-change initial loss adjustment factor applied.
 - ``<site>_extrapolated_losses[_<cc_scenario>].csv`` - the extrapolated burst initial
   loss (mm) values, in the same duration (index) x AEP% (columns) table format as
   ``<site>_burst_initial_loss...csv``, but containing **only** the cells that were
