@@ -1,6 +1,13 @@
 Changelog for 1.2
 =================
 
+1.2.7
+-----
+
+Release date: 30 October 2026
+
+- Fixed a previously known issue, where labels that were the same as a result type name (e.g. giving a PO point a label ``"H"``) would cause issues when extracting data such as :meth:`~pytuflow.TPC.time_series`. It is still recommended to avoid these naming conflicts, however PyTUFLOW should be more robust at handling it.
+
 1.2.6
 -----
 
