@@ -1920,7 +1920,8 @@ class Test_LP2D(unittest.TestCase):
             self.assertEqual((18, 4), df.shape)
             self.assertEqual({0, 1}, set(df['branch_id']))
             expected_msgs = [
-                r'File already loaded: tests/lp2d/EG02_012_LP_01_H.csv... skipping'
+                r'File already loaded: tests/lp2d/EG02_012_LP_01_H.csv... skipping',
+                r'File already loaded: tests\lp2d\EG02_012_LP_01_H.csv... skipping'
             ]
             with custom_log_handler.with_filter(expected_msgs) as custom_logger:
                 res.add_csv(src)  # already loaded - ignored
@@ -1937,6 +1938,7 @@ class Test_LP2D(unittest.TestCase):
             with self.assertRaises(ValueError):
                 res.add_csv(other)
             self.assertEqual(['bed level', 'water level', 'max water level'], res.data_types())
+
 class Test_FilterBy(TestCase):
 
     def test_parse_and_build(self):
