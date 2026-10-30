@@ -1887,3 +1887,23 @@ class Test_LP2D(unittest.TestCase):
         self.assertEqual((1, 2), df.shape)
         self.assertEqual(49.91, df.iloc[0, 0])
         self.assertEqual(0.95, df.iloc[0, 1])
+
+
+class Test_FilterBy(TestCase):
+
+    def test_parse_and_build(self):
+        s = TPC._build_filter_by(['1d'], ['a/b', 'Max'], ['h'])
+        self.assertEqual('ids=a%2Fb/Max&resulttype=h&filter=1d', s)
+        self.assertEqual((['h', '1d'], ['a/b', 'max']), TPC._parse_filter_by(s))
+        self.assertEqual((['h', 'max'], None), TPC._parse_filter_by('h/Max'))
+
+    def test_id_named_as_data_type(self):
+        res = TPC('./tests/2016/EG14_001.tpc')
+        id_ = res.ids('h')[0]
+        res._load()
+        df = res.oned_objs
+        df.loc[df['id'] == id_, 'id'] = 'Flow'
+        ctx, _ = res._filter('ids=Flow&resulttype=h', ignore_excess_filters=True)
+        self.assertEqual({'Flow'}, set(ctx['id']))
+        self.assertEqual({'water level'}, set(ctx['data_type']))
+        self.assertEqual(['Flow'], res.ids('ids=flow&resulttype=h'))
