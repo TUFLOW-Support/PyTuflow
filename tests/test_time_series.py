@@ -1921,3 +1921,13 @@ class Test_FilterBy(TestCase):
         self.assertEqual({'Flow'}, set(ctx['id']))
         self.assertEqual({'water level'}, set(ctx['data_type']))
         self.assertEqual(['Flow'], res.ids('ids=flow&resulttype=h'))
+
+    def test_time_series_id_named_as_data_type(self):
+        res = TPC('./tests/2016/EG14_001.tpc')
+        res._load()
+        id_ = res.ids('h')[0]
+        df = res.oned_objs
+        df.loc[df['id'] == id_, 'id'] = 'gauge'
+        ctx, locations, _ = res._time_series_filter_by('gauge', 'water level')
+        self.assertEqual(['gauge'], locations)
+        self.assertEqual(['gauge'], ctx['id'].tolist())

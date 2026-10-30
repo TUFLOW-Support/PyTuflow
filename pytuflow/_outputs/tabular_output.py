@@ -94,15 +94,17 @@ class TabularOutput(Output):
         else:
             locations1 = []
             locations = [locations] if not isinstance(locations, list) else locations
+            known_ids = {x.lower() for x in self.ids()}
             for loc in locations:
-                if self._get_standard_data_type_name(loc) in valid_data_types:
+                if loc.lower() not in known_ids and self._get_standard_data_type_name(loc) in valid_data_types:
                     while loc in locations:
                         locations.remove(loc)
                     logger.warning(f'Location "{loc}" is a data type - removing.')
             # ids = {x.lower(): x for x in self.ids()}
             # locations_lower = [x.lower() for x in locations]
             for loc in locations:
-                ids = self.ids(loc)
+                # an exact ID match takes priority over any filter keyword (e.g. an ID called 'gauge')
+                ids = self.ids(self._build_filter_by(ids=[loc])) if loc.lower() in known_ids else self.ids(loc)
                 if not ids:
                     logger.warning(f'Location "{loc}" not found in the output or a valid location filter - removing.')
                 else:
