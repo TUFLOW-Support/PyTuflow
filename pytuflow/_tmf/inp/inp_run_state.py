@@ -8,6 +8,8 @@ from ..tmf_types import PathLike
 from ..parsers.command import Command
 from ..scope import ScopeList
 from ..context import Context
+from ..settings import from_config
+from ..file_reference import FileReference
 
 
 
@@ -72,6 +74,69 @@ class InputRunState(RunState, Input):
         return self._rs.files if self._rs else []
 
     @property
+    def file_references(self) -> tuple[FileReference, ...]:
+        """Immutable syntactic references; does not probe files or GIS layers."""
+        if not self._rs:
+            return ()
+        return self._rs.file_references
+
+    @property
+    def database_source_references(self) -> tuple[FileReference, ...]:
+        """Secondary input-file references from cached database rows.
+
+        Explicit access only. Database files are loaded at initial TCF parse,
+        not while building a deferred context or requesting file_references.
+        Unsupported database schemas raise so consumers must fail closed.
+        """
+        from ..deferred_database import database_source_references
+        kinds = {ref.database_kind for ref in self.file_references
+                 if ref.requires_database_scan}
+        if not kinds:
+            return ()
+        if len(kinds) != 1:
+            raise ValueError(f'Ambiguous deferred database kinds: {kinds}')
+        kind = next(iter(kinds))
+        primaries = [ref for ref in self.file_references
+                     if ref.requires_database_scan and ref.database_kind == kind]
+        if len(primaries) != 1:
+            raise ValueError(f'Cannot identify one primary {kind} database')
+        primary_path = primaries[0].path_pattern
+        source_base = None
+        if kind == 'ad_bc':
+            # TUFLOW AD specifies its BC Source paths relative to the
+            # AD Global Database, not the AD BC table (2026.3 §9.4.4.1).
+            owner = self.parent
+            if owner is None:
+                raise ValueError('Cannot resolve AD BC Source without an owning control file')
+            globals_ = owner.root_cf.find_input(
+                callback=lambda inp: inp.lhs.strip().casefold() == 'ad global database',
+            )
+            if len(globals_) != 1:
+                raise ValueError(
+                    f'AD BC Source requires one active AD Global Database; found {len(globals_)}'
+                )
+            primaries = [
+                ref for ref in globals_[0].file_references
+                if ref.database_kind == 'ad_global'
+            ]
+            if len(primaries) != 1 or primaries[0].requires_directory_scan or (
+                primaries[0].unresolved_variables
+            ):
+                raise ValueError('Cannot identify a resolved AD Global Database path')
+            source_base = primaries[0].path_pattern
+        source_config = self._command.config
+        if source_config.file_resolution != 'deferred':
+            # A source projection is syntax-only even for an eager context.
+            # Command.parts() must not glob or open GIS while classifying rows.
+            source_config = from_config(source_config)
+            source_config.file_resolution = 'deferred'
+            source_config.variables = self.ctx.translate
+        return database_source_references(
+            self.bs, self.ctx, kind, source_config,
+            source_base=source_base, primary_path=primary_path,
+        )
+
+    @property
     def has_missing_files(self) -> bool:
         return self._rs.has_missing_files if self._rs else False
 
@@ -98,9 +163,52 @@ class InputRunState(RunState, Input):
         """
         from .get_input_class import get_input_class
         cmd_txt = f'{self.bs.lhs} == {self.ctx.translate(self.bs.rhs)}' if self.bs.rhs else self.bs.lhs
-        self._command = self.bs.command().__class__(cmd_txt, self.config)
+        deferred = getattr(self.ctx, 'file_resolution', 'eager') == 'deferred'
+        run_config = from_config(self.config) if deferred else self.config
+        if deferred:
+            run_config.file_resolution = 'deferred'
+            run_config.variables = self.ctx.translate
+        source_command = self.bs.command()
+        from ..parsers.command import EventCommand
+        # Keep the source file, original command position and event metadata.
+        if isinstance(source_command, EventCommand):
+            self._command = EventCommand(
+                cmd_txt, run_config, source_command.parent, source_command.part_index,
+            )
+            self._command.event_name = source_command.event_name
+        else:
+            self._command = source_command.__class__(
+                cmd_txt, run_config, source_command.parent,
+                source_command.part_index, source_command.line_number,
+            )
+        self._command.define_blocks = source_command.define_blocks
+        # A plain Command expands its value in the constructor. On the
+        # opt-in deferred batch path, avoid repeating that work only when
+        # no event or DEFINE blocks can change the expansion.
+        if not (deferred and getattr(self.ctx, '_batch_active', False)
+                and type(source_command) is Command
+                and not source_command.define_blocks):
+            self._command.reload_value()
         self._command.config.variables = self.ctx.translate
         self._rs = get_input_class(self._command)(self.bs.parent, self._command, load_control_files=False)  # Input representing the RunState
         # check all variable names in file have been resolved
-        if [x for x in self.files if not self.ctx.is_resolved(x)]:
+        if deferred:
+            # Inspect the context-expanded command text, not the absolute
+            # reference path: a literal ancestor directory can legitimately
+            # contain text matching a TEF event wildcard (e.g. '_event_').
+            # Check only the contextual command expression. An absolute
+            # parent folder may contain a literal TEF token such as _event_
+            # and must never be mistaken for an unresolved command.
+            # Eager contexts do not require output/check/log directories to
+            # resolve as inputs. Preserve that boundary for syntax-only mode,
+            # including nested ECF destinations with late-bound output aliases.
+            command_resolved = self._command.is_value_a_folder() or self.ctx.is_resolved(
+                str(self.ctx.translate(self.bs.rhs))
+            )
+            unresolved = [ref for ref in self.file_references if ref.unresolved_variables]
+            if not command_resolved:
+                unresolved.append(str(self._command.value))
+        else:
+            unresolved = [x for x in self.files if not self.ctx.is_resolved(x)]
+        if unresolved:
             raise ResolveError('Input has not been completely resolved - {0}'.format(self.rhs))

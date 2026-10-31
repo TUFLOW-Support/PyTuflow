@@ -41,7 +41,13 @@ class TCFBase(ControlFile, ControlFileUniversalMixin):
 
     def bc_dbase(self, *args, **kwargs) -> T_ControlFile:
         # doc deferred to subclasses
-        return self._find_control_file('bc database', **kwargs)
+        return self._find_control_file(r'^bc database\Z', regex=True,
+                                       regex_flags=re.IGNORECASE, **kwargs)
+
+    def ad_bc_dbase(self, *args, **kwargs) -> T_ControlFile:
+        """Return the AD boundary database separately from hydraulic BC data."""
+        return self._find_control_file(r'^ad bc database\Z', regex=True,
+                                       regex_flags=re.IGNORECASE, **kwargs)
 
     def mat_file(self, *args, **kwargs) -> T_ControlFile:
         # doc deferred to subclasses

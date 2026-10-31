@@ -12,6 +12,7 @@ Examples
    * - :doc:`examples/working_with_boundary_data`
    * - :doc:`examples/extracting_material_and_soil_data`
    * - :doc:`examples/working_with_inputs`
+   * - :doc:`examples/validating_batch_inputs`
    * - :doc:`examples/working_with_read_files`
    * - :doc:`examples/working_with_fv`
    * - :doc:`examples/working_with_cross_sections`
@@ -26,6 +27,7 @@ Examples
    examples/working_with_boundary_data
    examples/extracting_material_and_soil_data
    examples/working_with_inputs
+   examples/validating_batch_inputs
    examples/working_with_read_files
    examples/working_with_fv
    examples/working_with_cross_sections

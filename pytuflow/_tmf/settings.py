@@ -6,6 +6,7 @@ import re
 import platform
 import logging
 
+from .options import CaseSensitivity, FileResolution, parse_case_sensitivity
 from .event import EventDatabase
 from .tfpathlib import TuflowPath
 from .gis import GisFormat
@@ -41,6 +42,15 @@ def set_prefer_gdal(value: bool):
 def get_cache_dir() -> str:
     """Return the cache directory for this package."""
     return str(Path.home() / '.tuflow_model_files')
+
+
+def _case_policy_file(value: str | Path, control_file: Path, case_sensitivity: CaseSensitivity) -> Path:
+    """Resolve a reference relative to the calling control file under TUFLOW -cs.
+
+    Missing inputs remain lexical. Linux directory components remain strict.
+    """
+    filename = TuflowPath.init_case_policy_path(value, control_file.parent, case_sensitivity)
+    return control_file.parent / filename
 
 
 @dataclasses.dataclass
@@ -81,9 +91,12 @@ class _ParseContext:
     time_format: str = 'HOURS'
     check_file_prefix_1d: str = ''
     check_file_prefix_2d: str = ''
+    file_resolution: FileResolution = FileResolution.EAGER
+    case_sensitivity: CaseSensitivity = CaseSensitivity.STRICT
 
-    def set_spatial_database(self, value: 'str | Path | None'):
-        """Mirror of :meth:`TCFConfig.set_spatial_database`, operating on *self*."""
+    def set_spatial_database(self, value: 'str | Path | None',
+                             control_file: Path | None = None):
+        """Resolve the spatial database relative to its owning input file."""
         value = str(value)
         if value.upper() == 'TCF':
             self.spatial_database = self.spatial_database_tcf
@@ -91,7 +104,8 @@ class _ParseContext:
             self.spatial_database = TuflowPath()
             self.spatial_database_tcf = TuflowPath()
         else:
-            self.spatial_database = self.control_file.parent / value
+            owner = control_file if control_file is not None else self.control_file
+            self.spatial_database = _case_policy_file(value, owner, self.case_sensitivity)
 
         if self.control_file.suffix.upper() == '.TCF':
             self.spatial_database_tcf = self.spatial_database
@@ -134,13 +148,21 @@ class TCFConfig:
     time_format: str = field(default='HOURS', repr=False)   
     check_file_prefix_1d: str = field(default='', repr=False)
     check_file_prefix_2d: str = field(default='', repr=False)
+    file_resolution: FileResolution = field(default=FileResolution.EAGER, repr=False)
+    case_sensitivity: CaseSensitivity = field(default=CaseSensitivity.STRICT, repr=False)
     init_from_tcf: bool = field(default=True, repr=False)
 
     def __post_init__(self):
+        self.case_sensitivity = parse_case_sensitivity(self.case_sensitivity)
+        try:
+            self.file_resolution = FileResolution(self.file_resolution)
+        except ValueError as exc:
+            raise ValueError('file_resolution must be eager or deferred') from exc
         if not self.wildcards:
             self.wildcards = [r'(<<.{1,}?>>)']
         self.tcf = TuflowPath(self.tcf) if self.tcf else TuflowPath()  # ensure tcf is a TuflowPath object
         if self.tcf != TuflowPath() and self.init_from_tcf:
+            self.tcf = TuflowPath.init_case_policy_path(self.tcf, Path.cwd(), self.case_sensitivity)
             self.model_name = self.get_model_name(self.tcf)
             self.read_tcf()
 
@@ -180,6 +202,7 @@ class TCFConfig:
             variables=dict(self.variables),
             wildcards=list(self.wildcards),
             model_name=self.model_name,
+            case_sensitivity=self.case_sensitivity,
         )
         ctx = self._run_tcf_passes(ctx)
         self._apply_context(ctx)
@@ -255,7 +278,7 @@ class TCFConfig:
         from .parsers.non_recursive_basic_parser import get_commands
         for command in get_commands(control_file, ctx):
             if command.is_read_file() and not command.in_scenario_block():
-                self.read_file_for_variables(ctx.control_file.parent / command.value, ctx)
+                self.read_file_for_variables(_case_policy_file(command.value, control_file, ctx.case_sensitivity), ctx)
             elif command.is_set_variable() and not command.in_scenario_block():
                 var_name, var_val = command.parse_variable()
                 ctx.variables[var_name] = var_val
@@ -280,14 +303,14 @@ class TCFConfig:
         event_name = ''
         for command in get_commands(control_file, ctx):
             if command.is_read_file() and not command.in_scenario_block():
-                child_et, child_en = self.read_file_for_event_db(ctx.control_file.parent / command.value, ctx)
+                child_et, child_en = self.read_file_for_event_db(_case_policy_file(command.value, control_file, ctx.case_sensitivity), ctx)
                 # last non-empty value wins, matching the original accumulation behaviour
                 if child_en:
                     event_name = child_en
                 if child_et:
                     event_text = child_et
             elif command.is_event_file():
-                event_file = ctx.control_file.parent / command.value
+                event_file = _case_policy_file(command.value, control_file, ctx.case_sensitivity)
                 ctx.event_db.update(TEF.parse_event_file(event_file, ctx))
             elif command.is_event_source():
                 event_command = EventCommand.from_command(command)
@@ -305,6 +328,7 @@ class TCFConfig:
         return event_text, event_name
 
     def set_spatial_database(self, value: str | Path | None):
+        """Apply a spatial database reference under the model filename policy."""
         value = str(value)
         if value.upper() == 'TCF':
             self.spatial_database = self.spatial_database_tcf
@@ -312,7 +336,7 @@ class TCFConfig:
             self.spatial_database = TuflowPath()
             self.spatial_database_tcf = TuflowPath()
         else:
-            self.spatial_database = self.control_file.parent / value
+            self.spatial_database = _case_policy_file(value, self.control_file, self.case_sensitivity)
 
         if self.control_file.suffix.upper() == '.TCF':
             self.spatial_database_tcf = self.spatial_database
@@ -352,7 +376,7 @@ class TCFConfig:
 
             # spatial database
             if command.is_spatial_database_command():
-                ctx.set_spatial_database(command.value)
+                ctx.set_spatial_database(command.value, control_file=control_file)
             # projection
             elif command.is_read_projection():
                 try:
@@ -389,7 +413,7 @@ class TCFConfig:
                 ctx.output_zones.extend(command.specified_output_zones())
             # read file / event file
             elif command.is_read_file() or command.is_event_file():
-                self.read_file_for_config(ctx.control_file.parent / command.value, ctx)
+                self.read_file_for_config(_case_policy_file(command.value, control_file, ctx.case_sensitivity), ctx)
 
 @dataclass
 class FVCConfig(TCFConfig):

@@ -93,3 +93,7 @@ class BlockControlInputRunState(InputRunState, BlockControlInputMixin):
             run_cf = cf.context(context=self.ctx, parent=self.parent)
             run_cf.parent_input = self
             self.cf.append(run_cf)
+
+
+# Stable built-in evaluator identity for optional fragment collection.
+_BLOCK_CONTROL_INPUT_CONTEXT = BlockControlInput.context

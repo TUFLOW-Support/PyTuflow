@@ -14,6 +14,7 @@ from ..parsers.command import Command
 from ..scope_writer import ScopeWriter
 from ..scope import Scope, ScopeList
 from ..context import Context
+from ..file_reference import FileReference, make_file_reference
 
 
 if TYPE_CHECKING:
@@ -140,6 +141,38 @@ class InputBuildState(BuildState, Input):
                 variable_name, _ = self._command.parse_variable()
                 self.parent.tcf.remove_variable(variable_name)
         BuildState.scope.fset(self, value)
+
+    @property
+    def file_references(self) -> tuple[FileReference, ...]:
+        """Describe required source inputs without testing the filesystem."""
+        cmd = self._command
+        name = (cmd.command or '').upper()
+        if (not cmd.value_orig or cmd.is_value_a_folder()
+                or name.startswith(('WRITE ', 'OUTPUT ', 'LOG ', 'CHECK '))
+                or name in ('SPATIAL DATABASE', 'BC EVENT SOURCE')
+                or name.startswith('SET VARIABLE ')):
+            return ()
+        # Parts must always be created with a deferred config. A build-state
+        # command may still have an eager config which probes the filesystem
+        # while expanding paths (case-insensitive search and GPKG >> all).
+        from ..settings import from_config
+        if cmd.config.file_resolution == 'deferred':
+            ref_command = cmd  # already context-expanded; avoid a second parse
+        else:
+            ref_config = from_config(cmd.config)
+            ref_config.file_resolution = 'deferred'
+            from ..parsers.command import EventCommand
+            if isinstance(cmd, EventCommand):
+                # EventCommand has no line-number constructor argument.
+                ref_command = EventCommand(cmd.original_text, ref_config, cmd.parent,
+                                           cmd.part_index)
+                ref_command.event_name = cmd.event_name
+            else:
+                ref_command = cmd.__class__(cmd.original_text, ref_config, cmd.parent,
+                                            cmd.part_index, cmd.line_number)
+            ref_command.define_blocks = cmd.define_blocks
+            ref_command.reload_value()
+        return tuple(make_file_reference(part) for part in ref_command.parts() if part.is_value_a_file())
 
     @property
     def files(self) -> list[Path]:
@@ -307,3 +340,8 @@ class InputBuildState(BuildState, Input):
         """
         for file in self._files:
             self._file_to_scope[str(file)] = Scope.from_string(str(self._file_to_original[file]), str(file))
+
+
+# Capture the built-in constructor before an extension can replace the method.
+_INPUT_BUILD_CONTEXT = InputBuildState.context
+_INPUT_BUILD_SCOPE = InputBuildState.__dict__['scope']
