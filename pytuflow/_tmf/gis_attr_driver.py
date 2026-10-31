@@ -139,6 +139,26 @@ class DBFAttributes(GISAttributes):
         self._db = None
 
 
+def mapinfo_companion_path(fpath: PathLike) -> Path:
+    """Find the MIF/MID companion under PyTUFLOW's existing naming rules.
+
+    Only the lowercase and uppercase extension forms are accepted, with the
+    original filename stem unchanged. This is a path check, not a second
+    parser; it is shared with explicit physical input validation.
+    """
+    path = TuflowPath(fpath).dbpath
+    suffix = path.suffix.lower()
+    if suffix not in ('.mif', '.mid'):
+        raise ValueError(f'Expected a MapInfo MIF or MID file: {path}')
+    wanted = '.mid' if suffix == '.mif' else '.mif'
+    for candidate in (path.with_suffix(wanted), path.with_suffix(wanted.upper())):
+        if candidate.exists():
+            return candidate
+    raise FileNotFoundError(
+        f'Accompanying {wanted[1:].upper()} file not found for: {path}'
+    )
+
+
 class MIDAttributes(GISAttributes):
     """Utility class for iterating over a MIF/MID file to obtain the attributes."""
 
@@ -148,19 +168,9 @@ class MIDAttributes(GISAttributes):
         self._col_names = []
         if fpath.suffix.lower() == '.mif':
             self._mif = fpath
-            if fpath.with_suffix('.mid').exists():
-                fpath = fpath.with_suffix('.mid')
-            elif fpath.with_suffix('.MID').exists():
-                fpath = fpath.with_suffix('.MID')
-            else:
-                raise FileNotFoundError(f'Accompanying MID file not found for: {fpath}')
+            fpath = mapinfo_companion_path(fpath)
         else:
-            if fpath.with_suffix('.mif').exists():
-                self._mif = fpath.with_suffix('.mif')
-            elif fpath.with_suffix('.MIF').exists():
-                self._mif = fpath.with_suffix('.MIF')
-            else:
-                raise FileNotFoundError(f'Accompanying MIF file not found for: {fpath}')
+            self._mif = mapinfo_companion_path(fpath)
         super().__init__(fpath)
 
     def __iter__(self) -> typing.Generator[OrderedDict, None, None]:

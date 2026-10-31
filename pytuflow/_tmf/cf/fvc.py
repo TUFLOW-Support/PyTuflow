@@ -133,3 +133,7 @@ class FVCRunState(ControlFileRunState, ModelRunMixin, FVCBase):
             if isinstance(err, bytes):
                 err = err.decode('utf-8')
             return out, err
+
+
+# Stable built-in evaluator identity for optional fragment collection.
+_FVC_CONTEXT = FVC.context

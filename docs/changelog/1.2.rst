@@ -1,6 +1,17 @@
 Changelog for 1.2
 =================
 
+1.2.8
+-----
+
+Release date: TBD
+
+- Added ``validate_batch_inputs()`` for checking required model inputs across explicitly selected scenario and event runs before executing TUFLOW, with findings attributed to each run and source command.
+- Added ``TCF.collect_file_dependencies()`` to collect file references from a parsed model without performing physical input validation.
+- Added read-only checks for selected GeoPackage layers, Shapefile and MapInfo companion files, supported boundary-condition CSV column references, and recognised files linked from GIS attributes. Inputs that cannot be safely resolved are reported.
+- Preserved eager model evaluation by default and the existing behaviour of direct NetCDF rainfall inputs.
+- Corrected scenario and event scope membership to include the ninth flag (``-s9``/``-e9``) in both eager and deferred evaluation.
+
 1.2.7
 -----
 

@@ -113,6 +113,10 @@ class DatabaseRunState(RunState, Database):
         return source_df
 
     def _resolve_scope_in_context(self):
+        # Context substitutions can place array-valued entries in cells whose
+        # source column pandas inferred as StringDtype (notably rainfall CSVs).
+        # Use object storage before assigning without changing parsed values.
+        self._df = self._df.astype(object)
         for index, row in self._df.iterrows():
             new_index = self.ctx.translate(index) if isinstance(index, str) else index
             new_row = [self.ctx.translate(x) for x in row]

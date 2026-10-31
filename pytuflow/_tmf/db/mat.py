@@ -181,6 +181,16 @@ class MatDatabase(DatabaseBuildState):
             return {'header': None, 'names': names}
         return {'header': idx}
 
+    def _load_from_df(self, df: pd.DataFrame):
+        """Discard empty and comment-only material rows before indexing IDs."""
+        # CSV separator rows and whole-line comments are not material records.
+        # Keep malformed nonempty rows so integer-ID validation still rejects them.
+        comments = [isinstance(key, str) and key.lstrip().startswith(('!', '#')) for key in df.index]
+        empty = df.isna().all(axis=1) & df.index.isna()
+        self._df = df.loc[~(empty | np.asarray(comments, dtype=bool))].copy()
+        self._df_wrapped = DataFrameWrapper(on_change=self.record_change, data=self._df.copy())
+        super()._load_from_df(self._df)
+
     def _load(self, fpath: Path):
         super()._load(fpath)
         if not self._df.empty and self._df.index.dtype not in [np.dtype('i4'), np.dtype('i8')]:

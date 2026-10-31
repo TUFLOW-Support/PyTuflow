@@ -67,3 +67,7 @@ class FVSed(ControlFileLoadMixin, FVControlFileBuildState, FVSedMixin):
 
 class FVSedRunState(ControlFileRunState, FVSedMixin):
     pass
+
+
+# Stable built-in evaluator identity for optional fragment collection.
+_FVSED_CONTEXT = FVSed.context
