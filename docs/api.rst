@@ -126,6 +126,19 @@ This page gives an overview of the public modules, classes, and functions within
    HPCProject
    FVProject
 
+.. rubric:: ARR
+
+.. autosummary::
+   :toctree: ./api
+   :nosignatures:
+   :template: custom-class-template.rst
+
+   ArrApiClient
+   ArrConfig
+   ArrEngine
+   arr.write_outputs
+   arr.write_working_data
+
 .. rubric:: Utilities
 
 .. autosummary::

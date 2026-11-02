@@ -1,0 +1,581 @@
+"""JSON config file handling for :mod:`pytuflow.arr`.
+
+See ``arr_config_schema.md`` in the repository root for the schema reference and the
+rationale behind each section.
+"""
+
+from __future__ import annotations
+
+import json
+import logging
+from dataclasses import dataclass, field, fields
+from pathlib import Path
+from typing import Any, Optional, Sequence, Union
+
+from .exceptions import ArrConfigError
+
+logger = logging.getLogger('pytuflow.arr')
+
+#: Burst initial loss lookup methods. ``"recommended"`` uses the Data Hub's newer burst
+#: initial loss table (``BurstLossesNew``); ``"probability_neutral"`` uses the legacy
+#: (NSW-only) probability-neutral burst initial loss table (``BurstIL``) - an error is
+#: raised if that layer isn't available for the queried location.
+LOSS_METHODS = ('recommended', 'probability_neutral')
+#: Short-duration (below the Data Hub's shortest provided duration) loss extrapolation
+#: methods, ported from the legacy script. ``"none"`` means do not extrapolate (an error
+#: is raised if a requested duration is shorter than the Data Hub's minimum).
+#: ``"interpolate"``/``"log_interpolate"`` extrapolate the burst initial loss directly
+#: (linear, or log-linear on a ``log10(duration)`` axis); ``"interpolate_preburst"``/
+#: ``"log_interpolate_preburst"`` instead extrapolate the implied preburst rainfall
+#: depth (requires the storm initial loss). ``"constant_preburst_ratio"`` (the default)
+#: holds the implied preburst ratio (rather than the loss value) constant below the
+#: Data Hub's shortest provided duration, and re-derives the burst initial loss from
+#: that ratio and each duration's own point design burst depth. These are independent
+#: of (not mutually exclusive with) ``losses.method`` above.
+EXTRAPOLATION_METHODS = (
+    'none', 'interpolate', 'log_interpolate', 'interpolate_preburst', 'log_interpolate_preburst',
+    'rahman', 'hill', 'static', 'constant', 'constant_preburst_ratio',
+)
+#: How the Data Hub's climate-change initial loss adjustment factor is applied to
+#: burst-loss (i.e. non complete-storm) events. ``"burst"`` (default, legacy-equivalent)
+#: scales the burst initial loss directly by the factor. ``"storm"`` instead scales the
+#: full (baseline) storm initial loss by the factor, then subtracts a climate-change
+#: preburst depth (the climate-change-adjusted point rainfall depth multiplied by the
+#: `preburst.percentile` preburst ratio) to derive the climate-change burst initial
+#: loss - i.e. the preburst reduction is computed under the climate-change rainfall
+#: rather than simply carried over from the baseline event. Only affects burst-loss
+#: events; complete storm events already scale the (unreduced) full storm initial loss
+#: directly, matching the ``"storm"`` approach.
+CC_LOSS_METHODS = ('burst', 'storm')
+
+#: Years for which the Data Hub provides climate change factors.
+CC_BASELINE_YEARS = tuple(range(2030, 2101, 10))
+OUTPUT_FORMATS = ('csv', 'ts1')
+OUTPUT_NOTATIONS = ('ari', 'aep')
+#: File extensions accepted for ``site.catchment_boundary`` (a catchment boundary
+#: polygon upload, as an alternative to a single ``site.latitude``/``site.longitude``
+#: point - see https://data-dev.arr-software.org/about). ``.shp`` uploads require their
+#: ``.shx``/``.dbf`` sibling components (``.prj`` is optional, but recommended if the
+#: shapefile isn't already in WGS84 lat/lon).
+CATCHMENT_BOUNDARY_EXTENSIONS = ('.geojson', '.json', '.kml', '.shp')
+#: Required sibling file extensions for a ``.shp`` catchment boundary upload.
+SHAPEFILE_REQUIRED_SIBLINGS = ('.shx', '.dbf')
+#: Optional sibling file extensions for a ``.shp`` catchment boundary upload - included
+#: in the upload if present, but not required.
+SHAPEFILE_OPTIONAL_SIBLINGS = ('.prj',)
+
+
+def _from_dict(cls, data: Optional[dict]) -> Any:
+    """Builds a dataclass instance ``cls`` from ``data``, ignoring unknown keys and
+    falling back to the dataclass defaults for missing keys."""
+    data = data or {}
+    known = {f.name for f in fields(cls)}
+    unknown = set(data) - known
+    if unknown:
+        raise ArrConfigError(f"Unknown key(s) for '{cls.__name__}': {sorted(unknown)}")
+    return cls(**{k: v for k, v in data.items() if k in known})
+
+
+@dataclass
+class SiteConfig:
+    name: str = ''
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    catchment_area: Optional[float] = 0
+    #: Path to a catchment boundary polygon file (GeoJSON/``.json``, KML, or Shapefile
+    #: ``.shp``) to upload to the ARR Data Hub instead of a single lat/lon point - see
+    #: https://data-dev.arr-software.org/about. Mutually exclusive with
+    #: ``latitude``/``longitude``. For a Shapefile, the ``.shx``/``.dbf`` sibling files
+    #: (and ``.prj``, if present) alongside the given ``.shp`` path are uploaded too.
+    catchment_boundary: Optional[str] = None
+    #: Optional catchment outlet location, used only for jurisdiction-sensitive layers
+    #: (Recommended IFD Depths, Storm Losses, Preburst, ARF Parameters) to determine
+    #: which jurisdiction's rules apply. If not given, the catchment centroid (i.e.
+    #: ``latitude``/``longitude``, or the uploaded boundary's centroid) is used instead.
+    #: Can be used with either ``latitude``/``longitude`` or ``catchment_boundary``.
+    outlet_latitude: Optional[float] = None
+    outlet_longitude: Optional[float] = None
+
+    def validate(self, require_coordinates: bool = True) -> list[str]:
+        errors = []
+        if not self.name:
+            errors.append("site.name is required")
+        if require_coordinates:
+            if self.catchment_boundary:
+                if self.latitude is not None or self.longitude is not None:
+                    errors.append(
+                        "site.catchment_boundary cannot be used together with "
+                        "site.latitude/site.longitude - use site.outlet_latitude/"
+                        "site.outlet_longitude instead if an outlet location is needed"
+                    )
+                errors.extend(self._validate_catchment_boundary())
+            else:
+                if self.latitude is None:
+                    errors.append("site.latitude is required")
+                if self.longitude is None:
+                    errors.append("site.longitude is required")
+        if (self.outlet_latitude is None) != (self.outlet_longitude is None):
+            errors.append("site.outlet_latitude and site.outlet_longitude must be given together")
+        return errors
+
+    def _validate_catchment_boundary(self) -> list[str]:
+        errors = []
+        path = Path(self.catchment_boundary)
+        if not path.is_file():
+            errors.append(f"site.catchment_boundary file not found: '{self.catchment_boundary}'")
+            return errors
+        suffix = path.suffix.lower()
+        if suffix not in CATCHMENT_BOUNDARY_EXTENSIONS:
+            errors.append(
+                f"site.catchment_boundary must be one of {CATCHMENT_BOUNDARY_EXTENSIONS}, "
+                f"got '{self.catchment_boundary}'"
+            )
+        elif suffix == '.shp':
+            for sibling_ext in SHAPEFILE_REQUIRED_SIBLINGS:
+                if not path.with_suffix(sibling_ext).is_file():
+                    errors.append(
+                        f"site.catchment_boundary shapefile is missing required "
+                        f"'{sibling_ext}' component: '{path.with_suffix(sibling_ext)}'"
+                    )
+        return errors
+
+
+
+@dataclass
+class IFDConfig:
+    #: IFD baseline year - ``1990`` (historical) or ``2030`` (current baseline,
+    #: default). Climate-change-adjusted depths for other baseline years/SSPs are
+    #: configured separately, under ``climate_change``.
+    baseline_year: int = 2030
+
+    def validate(self) -> list[str]:
+        errors = []
+        if self.baseline_year not in (1990, 2030):
+            errors.append(f"ifd.baseline_year must be one of (1990, 2030), got '{self.baseline_year}'")
+        return errors
+
+
+@dataclass
+class EventsConfig:
+    aep: list = field(default_factory=list)
+    duration: list = field(default_factory=list)
+    output_notation: str = 'aep'
+
+    def validate(self) -> list[str]:
+        errors = []
+        if isinstance(self.aep, str):
+            errors.append("events.aep must be a list of AEP/ARI/EY magnitudes, e.g. [\"1%\", \"1 in 200\"]")
+        elif not self.aep:
+            errors.append("events.aep is required (list of AEP/ARI/EY magnitudes)")
+        if isinstance(self.duration, str):
+            errors.append("events.duration must be a list of durations in minutes, e.g. [60, 1440]")
+        elif not self.duration:
+            errors.append("events.duration is required (list of durations in minutes)")
+        if self.output_notation not in OUTPUT_NOTATIONS:
+            errors.append(f"events.output_notation must be one of {OUTPUT_NOTATIONS}, got '{self.output_notation}'")
+        return errors
+
+
+@dataclass
+class TemporalPatternsConfig:
+    point_tp_csv: Optional[str] = None
+    areal_tp_csv: Optional[str] = None
+    additional_tp: list = field(default_factory=list)
+    all_point_tp: bool = False
+    add_areal_tp: int = 0
+
+    def validate(self) -> list[str]:
+        errors = []
+        if self.add_areal_tp < 0:
+            errors.append("temporal_patterns.add_areal_tp must be >= 0")
+        if self.point_tp_csv and not Path(self.point_tp_csv).is_file():
+            errors.append(f"temporal_patterns.point_tp_csv file not found: '{self.point_tp_csv}'")
+        if self.areal_tp_csv:
+            if not self.point_tp_csv:
+                errors.append("temporal_patterns.areal_tp_csv requires temporal_patterns.point_tp_csv to also be set")
+            if not Path(self.areal_tp_csv).is_file():
+                errors.append(f"temporal_patterns.areal_tp_csv file not found: '{self.areal_tp_csv}'")
+        if self.additional_tp:
+            from .temporal_patterns import TP_REGION_COORDS
+            valid = sorted(k.title() for k in TP_REGION_COORDS)
+            for region in self.additional_tp:
+                entry = str(region).strip()
+                if entry.lower() in TP_REGION_COORDS:
+                    continue
+                if entry.lower().endswith('.csv'):
+                    if not Path(entry).is_file():
+                        errors.append(f"temporal_patterns.additional_tp CSV file not found: '{entry}'")
+                    continue
+                errors.append(
+                    f"temporal_patterns.additional_tp entry '{region}' is not a recognised region name or an "
+                    f"existing .csv file path - regions must be one of {valid}"
+                )
+        return errors
+
+
+@dataclass
+class ClimateChangeScenario:
+    baseline_year: int = 2090
+    ssp: str = 'SSP2'
+
+
+@dataclass
+class ClimateChangeConfig:
+    enabled: bool = False
+    scenarios: list = field(default_factory=list)
+
+    def __post_init__(self):
+        self.scenarios = [
+            s if isinstance(s, ClimateChangeScenario) else ClimateChangeScenario(**s)
+            for s in self.scenarios
+        ]
+
+    def validate(self) -> list[str]:
+        errors = []
+        if self.enabled and not self.scenarios:
+            errors.append("climate_change.scenarios must not be empty when climate_change.enabled is true")
+        for s in self.scenarios:
+            if s.baseline_year not in CC_BASELINE_YEARS:
+                errors.append(f"climate_change scenario baseline_year must be one of {CC_BASELINE_YEARS}, got '{s.baseline_year}'")
+            if s.ssp not in ('SSP1', 'SSP2', 'SSP3', 'SSP5'):
+                errors.append(f"climate_change scenario ssp must be one of (SSP1, SSP2, SSP3, SSP5), got '{s.ssp}'")
+        return errors
+
+
+@dataclass
+class PreburstConfig:
+    percentile: str = 'recommended'
+    pattern_method: Optional[str] = None
+    #: Target preburst duration (hours, or a proportion of the storm duration if
+    #: ``duration_proportional``), used by the ``"constant"``/``"temporal_pattern"``
+    #: pattern methods, and as the fallback for the ``"recommended"`` method when the
+    #: Data Hub has no ``RecPreburstTP`` data at all for the requested event (see
+    #: :func:`pytuflow.arr.complete_storm.build_preburst`). Defaults to twice the storm
+    #: duration (``duration_proportional=True``).
+    pattern_duration: Optional[float] = 1.5
+    #: Existing point temporal pattern used to shape the preburst rainfall for the
+    #: ``"temporal_pattern"`` pattern method (and the ``"recommended"`` method's
+    #: no-``RecPreburstTP``-data fallback - see ``pattern_duration`` above). Defaults to
+    #: ``"TP01"``.
+    pattern_tp: Optional[str] = 'TP01'
+    duration_proportional: bool = True
+    #: Caps the computed preburst duration (hours) when ``duration_proportional`` is
+    #: ``True`` - without this, a proportional ``pattern_duration`` (e.g. the default
+    #: of 2x the storm duration) would produce an unrealistically long preburst period
+    #: for long storm durations (e.g. a 72 hour storm would otherwise get a 144 hour
+    #: preburst). Has no effect when ``duration_proportional`` is ``False`` (an
+    #: absolute ``pattern_duration`` is always used as given). Set to ``None`` to
+    #: disable capping entirely.
+    pattern_duration_max: Optional[float] = 24
+
+    def validate(self) -> list[str]:
+        errors = []
+        if self.percentile not in ('10%', '25%', '50%', '75%', '90%', 'recommended'):
+            errors.append(
+                f"preburst.percentile must be one of (10%, 25%, 50%, 75%, 90%, recommended), got '{self.percentile}'"
+            )
+        if self.pattern_method is not None and self.pattern_method.lower() not in (
+                'recommended', 'constant', 'temporal_pattern', 'none'):
+            errors.append(
+                f"preburst.pattern_method must be one of (recommended, constant, temporal_pattern, none), "
+                f"got '{self.pattern_method}'"
+            )
+        if self.pattern_duration_max is not None and self.pattern_duration_max <= 0:
+            errors.append(
+                f"preburst.pattern_duration_max must be a positive number of hours (or null to disable), "
+                f"got '{self.pattern_duration_max}'"
+            )
+        return errors
+
+
+@dataclass
+class LossesConfig:
+    method: str = 'recommended'
+    extrapolation_method: str = 'constant_preburst_ratio'
+    mar: Optional[float] = None
+    static_loss: Optional[float] = None
+    tuflow_loss_method: str = 'infiltration'
+    user_initial_loss: Optional[float] = None
+    user_continuing_loss: Optional[float] = None
+    urban_initial_loss: Optional[float] = None
+    urban_continuing_loss: Optional[float] = None
+    climate_change_method: str = 'storm'
+
+    def validate(self) -> list[str]:
+        errors = []
+        if self.method not in LOSS_METHODS:
+            errors.append(f"losses.method must be one of {LOSS_METHODS}, got '{self.method}'")
+        if self.extrapolation_method not in EXTRAPOLATION_METHODS:
+            errors.append(
+                f"losses.extrapolation_method must be one of {EXTRAPOLATION_METHODS}, got '{self.extrapolation_method}'"
+            )
+        if self.tuflow_loss_method not in ('infiltration', 'excess'):
+            errors.append(f"losses.tuflow_loss_method must be one of (infiltration, excess), got '{self.tuflow_loss_method}'")
+        if self.extrapolation_method == 'hill' and self.mar is None:
+            errors.append("losses.mar is required when losses.extrapolation_method == 'hill'")
+        if self.extrapolation_method == 'static' and self.static_loss is None:
+            errors.append("losses.static_loss is required when losses.extrapolation_method == 'static'")
+        if (self.urban_initial_loss is None) != (self.urban_continuing_loss is None):
+            errors.append(
+                "losses.urban_initial_loss and losses.urban_continuing_loss must be set together (both or neither)."
+            )
+        if self.urban_initial_loss is not None and self.tuflow_loss_method != 'infiltration':
+            errors.append(
+                "losses.urban_initial_loss/urban_continuing_loss requires losses.tuflow_loss_method == 'infiltration' "
+                "(no separate impervious-area loss entry is written for 'excess')."
+            )
+        if self.climate_change_method not in CC_LOSS_METHODS:
+            errors.append(
+                f"losses.climate_change_method must be one of {CC_LOSS_METHODS}, got '{self.climate_change_method}'"
+            )
+        return errors
+
+
+
+@dataclass
+class ArfConfig:
+    ignore_limits_for_frequent: bool = False
+    min_arf: float = 0
+    #: If set, this single ARF value is applied to all durations/AEPs instead of the calculated ARF.
+    arf_override: Optional[float] = None
+
+    def validate(self) -> list[str]:
+        errors = []
+        if self.arf_override is not None and not (0 < self.arf_override <= 1):
+            errors.append("arf.arf_override must be greater than 0 and less than or equal to 1")
+        if not (0 <= self.min_arf <= 1):
+            errors.append("arf.min_arf must be between 0 and 1")
+        return errors
+
+
+@dataclass
+class OutputConfig:
+    path: str = ''
+    format: str = 'csv'
+    verbose: bool = False
+
+    def validate(self) -> list[str]:
+        errors = []
+        if not self.path:
+            errors.append("output.path is required")
+        if self.format not in OUTPUT_FORMATS:
+            errors.append(f"output.format must be one of {OUTPUT_FORMATS}, got '{self.format}'")
+        return errors
+
+
+@dataclass
+class ArrConfig:
+    """Top-level, fully parsed and validated ARR config.
+
+    Parameters
+    ----------
+    site : SiteConfig, optional
+        Site name, location (latitude/longitude or catchment boundary) and catchment area.
+    ifd : IFDConfig, optional
+        Design rainfall (IFD) settings, e.g. the baseline year.
+    events : EventsConfig, optional
+        The AEPs and durations to assemble events for, and the output event notation.
+    temporal_patterns : TemporalPatternsConfig, optional
+        Temporal pattern settings, including local pattern files and additional regions.
+    climate_change : ClimateChangeConfig, optional
+        Whether climate change events are included, and the scenarios (baseline year and SSP) to use.
+    preburst : PreburstConfig, optional
+        Preburst percentile and pattern settings.
+    losses : LossesConfig, optional
+        Initial/continuing loss method and settings.
+    arf : ArfConfig, optional
+        Areal reduction factor settings.
+    complete_storm : bool, optional
+        If ``True``, every event is assembled as a complete storm (preburst prepended to the design burst).
+        Default is ``False``.
+    output : OutputConfig, optional
+        Output folder, rainfall file format and whether verbose working data is written.
+    response_json : str, optional
+        Path to a previously saved ARR Data Hub response JSON file to use instead of a live request.
+    max_retries : int, optional
+        Number of times a failed ARR Data Hub request is retried with exponential backoff. Set to 0 to
+        disable retries.
+    source_path : Path, optional
+        The path the config was loaded from, used for error messages.
+    """
+
+    site: SiteConfig = field(default_factory=SiteConfig)
+    ifd: IFDConfig = field(default_factory=IFDConfig)
+    events: EventsConfig = field(default_factory=EventsConfig)
+    temporal_patterns: TemporalPatternsConfig = field(default_factory=TemporalPatternsConfig)
+    climate_change: ClimateChangeConfig = field(default_factory=ClimateChangeConfig)
+    preburst: PreburstConfig = field(default_factory=PreburstConfig)
+    losses: LossesConfig = field(default_factory=LossesConfig)
+    arf: ArfConfig = field(default_factory=ArfConfig)
+    complete_storm: bool = False
+    output: OutputConfig = field(default_factory=OutputConfig)
+    #: Path to a previously-saved ARR Data Hub response JSON file (e.g. a prior run's
+    #: ``working_data/<site>_ARR_response.json`` output) to use instead of issuing a
+    #: live API request for this site. When set, ``site.latitude``/``site.longitude``
+    #: are not used to query the Data Hub (though they may still be required for other
+    #: purposes, e.g. logging) - see ``pytuflow.arr.__main__.run``.
+    response_json: Optional[str] = None
+    #: Number of times a failed (transient errors only: connection errors, timeouts, HTTP
+    #: 429/5xx) ARR Data Hub request is retried, with exponential backoff. 0 disables retries.
+    max_retries: int = 5
+
+    #: path this config was loaded from, if any (used for error messages / relative paths)
+    source_path: Optional[Path] = None
+
+    @classmethod
+    def from_dict(cls, data: dict, source_path: Optional[Path] = None) -> 'ArrConfig':
+        """Builds and validates a config from a dictionary (the parsed contents of a JSON config file).
+
+        Parameters
+        ----------
+        data : dict
+            The config settings, keyed by top-level section name.
+        source_path : Path, optional
+            The path the config was loaded from, used in error messages.
+
+        Returns
+        -------
+        ArrConfig
+            The validated config.
+
+        Raises
+        ------
+        ArrConfigError
+            If ``data`` contains unknown top-level keys or fails validation.
+        """
+        known = {f.name for f in fields(cls)} - {'source_path'}
+        unknown = set(data) - known
+        if unknown:
+            raise ArrConfigError(f"Unknown top-level config key(s): {sorted(unknown)}")
+        config = cls(
+            site=_from_dict(SiteConfig, data.get('site')),
+            ifd=_from_dict(IFDConfig, data.get('ifd')),
+            events=_from_dict(EventsConfig, data.get('events')),
+            temporal_patterns=_from_dict(TemporalPatternsConfig, data.get('temporal_patterns')),
+            climate_change=_from_dict(ClimateChangeConfig, data.get('climate_change')),
+            preburst=_from_dict(PreburstConfig, data.get('preburst')),
+            losses=_from_dict(LossesConfig, data.get('losses')),
+            arf=_from_dict(ArfConfig, data.get('arf')),
+            complete_storm=data.get('complete_storm', False),
+            output=_from_dict(OutputConfig, data.get('output')),
+            response_json=data.get('response_json'),
+            max_retries=data.get('max_retries', 3),
+            source_path=source_path,
+        )
+        errors = config.validate()
+        if errors:
+            prefix = f"Invalid config '{source_path}':\n" if source_path else "Invalid config:\n"
+            raise ArrConfigError(prefix + '\n'.join(f'  - {e}' for e in errors))
+        return config
+
+    @classmethod
+    def from_file(cls, path: Union[str, Path]) -> 'ArrConfig':
+        """Loads and validates a config from a JSON file.
+
+        Parameters
+        ----------
+        path : PathLike
+            Path to the JSON config file.
+
+        Returns
+        -------
+        ArrConfig
+            The validated config.
+
+        Raises
+        ------
+        ArrConfigError
+            If the file does not exist, is not valid JSON, or fails validation.
+        """
+        data = cls._read_json_file(path)
+        return cls.from_dict(data, source_path=Path(path))
+
+    @staticmethod
+    def _read_json_file(path: Union[str, Path]) -> dict:
+        path = Path(path)
+        if not path.exists():
+            raise ArrConfigError(f"Config file not found: {path}")
+        try:
+            with open(path, encoding='utf-8') as f:
+                return json.load(f)
+        except json.JSONDecodeError as e:
+            raise ArrConfigError(f"Invalid JSON in config file '{path}': {e}") from e
+
+    @classmethod
+    def from_files(cls, paths: Sequence[Union[str, Path]]) -> list['ArrConfig']:
+        """Loads a batch of JSON config files where only ``site`` may differ between
+        files - every other setting is taken from the *first* config file (the
+        "primary"/base config) regardless of what any later file contains, matching
+        the legacy script's multi-catchment (``catch_no``) batching: one shared set of
+        run options (events, losses, climate change, temporal patterns, output, etc),
+        applied across multiple catchments/sites.
+
+        Every file after the first must still contain a ``site`` section, but any
+        other top-level key it contains is ignored (with a warning) rather than being
+        merged in or validated against the base config - this keeps the override rule
+        simple and unambiguous (silently-differing settings between "batched" sites
+        would otherwise be easy to miss).
+
+        Parameters
+        ----------
+        paths : Sequence[PathLike]
+            Paths to the JSON config files. The first file is the primary config.
+
+        Returns
+        -------
+        list[ArrConfig]
+            One config per file, in the same order as ``paths``.
+
+        Raises
+        ------
+        ArrConfigError
+            If no paths are given, a file is missing or invalid, or a later file has no ``site`` section.
+        """
+        if not paths:
+            raise ArrConfigError("At least one config file must be given.")
+        paths = [Path(p) for p in paths]
+        base_data = cls._read_json_file(paths[0])
+        configs = [cls.from_dict(base_data, source_path=paths[0])]
+        for path in paths[1:]:
+            raw = cls._read_json_file(path)
+            if 'site' not in raw:
+                raise ArrConfigError(
+                    f"Config '{path}' must specify a 'site' section - when multiple config files are given, "
+                    f"only 'site' may differ between them (see the first config file, '{paths[0]}', for every "
+                    f"other setting)."
+                )
+            extra_keys = sorted(set(raw) - {'site'})
+            if extra_keys:
+                logger.warning(
+                    "Config '%s' specifies %s in addition to 'site' - only 'site' can differ between multiple "
+                    "config files, so these will be ignored and the first config file's ('%s') values used "
+                    "instead.", path, extra_keys, paths[0],
+                )
+            merged = {**base_data, 'site': raw['site']}
+            configs.append(cls.from_dict(merged, source_path=path))
+        return configs
+
+    def validate(self) -> list[str]:
+        """Checks the config for errors.
+
+        Returns
+        -------
+        list[str]
+            A description of each problem found. The list is empty if the config is valid.
+        """
+        errors = []
+        errors.extend(self.site.validate(require_coordinates=self.response_json is None))
+        for section in (self.ifd, self.events, self.temporal_patterns,
+                         self.climate_change, self.preburst, self.losses, self.arf, self.output):
+            errors.extend(section.validate())
+        if isinstance(self.max_retries, bool) or not isinstance(self.max_retries, int) or self.max_retries < 0:
+            errors.append("max_retries must be an integer greater than or equal to 0")
+        if self.response_json and not Path(self.response_json).is_file():
+            errors.append(f"response_json file not found: '{self.response_json}'")
+        if (self.preburst.pattern_method or '').lower() == 'none' and self.complete_storm:
+            errors.append(
+                "preburst.pattern_method == 'none' cannot be used with complete_storm == true - 'none' "
+                "disables preburst pattern assembly entirely (burst initial loss is set to 0 instead), which "
+                "is incompatible with forcing every event to be assembled as a complete storm."
+            )
+        return errors

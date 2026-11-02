@@ -1,0 +1,802 @@
+.. _pytuflow-arr:
+
+pytuflow-arr
+============
+
+The ``pytuflow-arr`` tool converts `Australian Rainfall and Runoff <http://arr.ga.gov.au/home>`_ rainfall and loss data from the `ARR Data Hub <https://data.arr-software.org/about>`_ into TUFLOW model input files (``Event_File.tef``, ``bc_dbase.csv``, ``rf_inflow/*.csv``,
+``soils.tsoilf`` / ``*.trd``).
+
+This tool is a clean rewrite of the ``ARR to TUFLOW`` script from the QGIS TUFLOW plugin for the **2026 v1** ARR data hub major update. Consequently, it does not support legacy versions of the data hub. It provides many options for backward compatibility, however not every legacy option is supported and many of the defaults are new for the 2026 v1 ARR data hub update.
+
+Key Differences to the Legacy QGIS Plugin Tool
+----------------------------------------------
+
+.. note::
+
+  The TUFLOW output format from the tool remains consistent with the legacy QGIS plugin tool. For an example on how to use the outputs in a TUFLOW model setup, please refer to the following TUFLOW wiki page: `wiki.tuflow.com/QGIS_ARR_to_TUFLOW_Example <https://wiki.tuflow.com/QGIS_ARR_to_TUFLOW_Example#TUFLOW_Setup>`_
+
+For a full list of differences to the legacy QGIS tool, visit the QGIS TUFLOW Plugin documentation: `docs.tuflow.com/qgis-tuflow-plugin/2026.2/arr/legacy-tool-differences/ <https://docs.tuflow.com/qgis-tuflow-plugin/2026.2/arr/legacy-tool-differences/>`_
+
+Usage
+-----
+
+.. code-block:: bash
+
+    pytuflow-arr config1.json [config2.json ...]
+
+Each JSON config file describes a single site/catchment. When multiple config files are
+given, they are processed in order and their TUFLOW outputs are **appended** into a
+single set of output files (one ``Event_File.tef``, ``bc_dbase.csv``, etc, covering all
+sites) rather than overwritten by each subsequent config - equivalent to the legacy
+script's multi-catchment batching.
+
+Only the ``site`` section may differ between the config files - every other setting
+(``events``, ``losses``, ``climate_change``, ``temporal_patterns``, ``output``, etc) is taken from
+the *first* config file regardless of what any later file contains. Every file after the
+first must still include a `site` section, but any other top-level key it contains is
+ignored (with a warning) rather than being merged in or validated against the first
+file's settings - this keeps the override rule simple and unambiguous. The site name for each config should be unique, otherwise subsequent configs will overwrite previous config's outputs.
+
+Add ``-v`` / ``--verbose`` for debug-level logging.
+
+Code
+^^^^
+
+For convenience, the equivalent code used in the CLI script for a single site is given as an example below. The CLI is generally recommended unless there's
+a specific reason to write a custom script.
+
+.. code-block:: python
+
+    from pytuflow import ArrConfig, ArrApiClient, ArrEngine
+    from pytuflow.arr import write_outputs, write_working_data
+
+    config = ArrConfig.from_file('/path/to/config.json')
+    client = ArrApiClient()
+    response = client.fetch(config)
+    engine = ArrEngine(config, response)
+    results = engine.run()
+    write_outputs(config, results, append=False)
+    write_working_data(config, response, engine)
+
+Examples
+--------
+
+Example 1 - Basic Usage
+^^^^^^^^^^^^^^^^^^^^^^^
+
+This example demonstrates a configuration file using a catchment shapefile and extracting common duration/AEP event combinations. The catchment shapefile is not required to have any specific attributes, and only the geometry is used. Note, catchment area is not derived from the geometry and is required to be input by the user.
+
+.. note::
+
+  The catchment shapefile can be in lon/lat or in a projected coordinate system. The .prj must be available so that re-projection can take place if needed. Any re-projecting is handled by the data hub and not by PyTUFLOW.
+
+.. code-block:: text
+  :caption: bash/cmd prompt to run tool for "SEQ_cathcmentA_config.json"
+
+  pytuflow-arr SEQ_cathcmentA_config.json
+
+.. code-block:: json
+  :caption: SEQ_catchmentA_config.json
+  :linenos:
+
+  {
+    "site": {
+      "name": "SEQ_CatchmentA",
+      "catchment_boundary": "./gis/SEQ_catchmentA_boundary.shp",
+      "catchment_area": 31.39
+    },
+    "events": {
+      "aep": [1, 2, 5, 10, 20],
+      "duration": [30, 60, 90, 120, 180, 360, 540, 720]
+    },
+    "output": {
+      "path": "./output",
+      "verbose": true
+    }
+  }
+
+.. image:: ../assets/images/pytuflow-arr-example-1-catchment-boundary.png
+   :width: 100%
+   :alt: CatchmentA catchment boundary
+
+Outputs
+"""""""
+
+.. note::
+
+  It is important to check for any warnings printed to the console.
+
+.. note::
+
+  The TUFLOW output format from the tool remains consistent with the legacy QGIS plugin tool. For an example on how to use the outputs in a TUFLOW model setup, please refer to the following TUFLOW wiki page: `wiki.tuflow.com/QGIS_ARR_to_TUFLOW_Example <https://wiki.tuflow.com/QGIS_ARR_to_TUFLOW_Example#TUFLOW_Setup>`_
+
+.. rubric:: Rainfall output
+
+Most of the outputs for the TUFLOW model can be found in the root output directory with the exception of the rainfall input files which are located in the ``rf_inflow`` subdirectory. 
+
+The below plot is the 1% AEP / 60 min storm event that was output from the above example. The rainfall is output in depth (mm) for TUFLOW but has been converted to mm/hr for the plot.
+
+.. raw:: html
+
+   <iframe
+     src="../../_static/interactive_plots/pytuflow-arr-example-1-rf-inflow-1p60min-interactive-plot.html"
+     width="100%"
+     height="500"
+     style="border:none;">
+   </iframe>
+
+.. rubric:: Complete storm / initial loss table
+
+The above storm event (1%/60 min) is a design burst, however other requested storms have switched automatically to using a complete storm approach due to the high preburst rainfall depth. This is done by prepending a preburst temporal pattern to the design burst.
+
+The ``working_data/<..>_burst_initial_loss.csv`` will list the calculated burst losses. Where the burst initial loss is calculated to be less than zero (i.e. preburst depth > storm initial loss), the table will use ``"Use PB TP"``. This indicates that a preburst temporal pattern has been used (i.e. a complete storm has been created for those events). Some regions (i.e. NSW) have this information provided in the data hub response, otherwise it is calculated by the tool (and the same convention, ``"Use PB TP"``, is used).
+
+.. note::
+  
+  The ``output`` ``verbose`` option needs to be set to ``true`` to get the burst initial loss table to be written.
+
+.. csv-table:: SEQ_CatchmentA_burst_initial_loss.csv
+    :file: ../assets/tables/SEQ_CatchmentA_burst_initial_loss.csv
+    :header-rows: 1
+
+The default method for generating a preburst temporal pattern is to use the pattern explicitly referenced in the data hub response. Unforunately, this is only supported in some regions (i.e. NSW) and the tool will fallback to using the following defaults (see :ref:`complete_storm_assembly` for more information):
+
+- The tool will use an existing point temporal pattern downloaded as part of the request.
+- The tool will use a temporal pattern duration that is 1.5x the event duration (up to 24 hrs). For example, for the 2 hr event a preburst duration of 3 hrs will be used (or rounded to the nearest closest available temporal pattern).
+- The chosen rarity band will be matched to the design burst event rarity.
+- From the available temporal patterns, TP01 will be used.
+
+The below plot shows the 1% AEP / 120 min event which contains a 3 hr preburst then a 2 hr design burst.
+
+.. raw:: html
+
+   <iframe
+     src="../../_static/interactive_plots/pytuflow-arr-example-1-rf-inflow-1p120min-interactive-plot.html"
+     width="100%"
+     height="500"
+     style="border:none;">
+   </iframe>
+
+Example 2 - Climate change
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The following example follows on from example 1 and adds climate change to the configuration. Two design horizons have been chosen: ``2050`` and ``2090``, both using ``SSP2``. The additional climate change section is highlighted in the config file below for convenience.
+
+.. code-block:: text
+  :caption: bash/cmd prompt to run tool for "SEQ_cathcmentA_CC_config.json"
+
+  pytuflow-arr SEQ_cathcmentA_CC_config.json
+
+.. code-block:: json
+  :caption: SEQ_catchmentA_CC_config.json
+  :linenos:
+  :emphasize-lines: 11,12,13,14,15,16,17
+
+  {
+    "site": {
+      "name": "SEQ_CatchmentA",
+      "catchment_boundary": "./gis/SEQ_catchmentA_boundary.shp",
+      "catchment_area": 31.39
+    },
+    "events": {
+      "aep": [1, 2, 5, 10, 20],
+      "duration": [30, 60, 90, 120, 180, 360, 540, 720]
+    },
+    "climate_change": {
+      "enabled": true,
+      "scenarios" : [
+        {"baseline_year": 2050, "ssp": "SSP2"},
+        {"baseline_year": 2090, "ssp": "SSP2"}
+      ]
+    },
+    "output": {
+      "path": "./output",
+      "verbose": true
+    }
+  }
+
+Outputs
+"""""""
+
+Additional outputs are written for each climate change scenario.
+
+- Additional working data IFD and burst loss tables are written
+- The climate change rainfall is included in the base rainfall CSV files (appended as new columns).
+- A climate change ``bc_dbase_CC.csv`` is written.
+- The rainfall loss read file (``.trd``) has additional logic to account for the climate change scenarios.
+
+As an example, the 1% / 60 min is compared below for temporal pattern 1 (``TP01``) between the base case and the climate change scenarios.
+
+.. note::
+
+  The climate change scenarios have both triggered complete storm events. For complete storm events, the climate change IL is calculated by :math:`IL_{CC\_storm} = IL_{storm} * IL_{CC\_factor}`.
+  
+  Although not used in this example, the climate change burst initial loss, by default, is calculated by: :math:`IL_{CC\_burst} = IL_{storm} \times IL_{CC\_factor} - PB_{ratio} \times RF_{CC}`.
+
+.. raw:: html
+
+   <iframe
+     src="../../_static/interactive_plots/pytuflow-arr-example-2-rf-inflow-1p60min-CC-interactive-plot.html"
+     width="100%"
+     height="500"
+     style="border:none;">
+   </iframe>
+
+Example 3 - Rerunning data hub files from a previous run
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+It's possible to run the tool with the response json and temporal pattern CSVs that were downloaded/saved during a previous tool run. Not all the below files are required, although to run without the tool touching the data hub again, then at least these files are required. Additional files would be required if additional temporal pattern zones were previously requested.
+
+- ``<site_name>_response.json``
+- ``<site_name>_PointTP_Increments.csv``
+- ``<site_name>_ArealTP_Increments.csv``
+
+The example config below shows how to run the second example again, but using the previously downloaded response and temporal pattern data. The added lines are highlighted in the config file below for convenience.
+
+.. note::
+
+  It is recommended to run with the same settings as the previous run that generated the input files. Some setings, like climate change, affect
+  what is requested from the data hub and the contents of the ``response.json``. This means that adding climate change settings is not possible if
+  using a ``response.json`` from a previous tool run that did not include climate change.
+
+.. note::
+
+  It is strictly not required to include the ``catchment_boundary`` parameter, although it doesn't affect the output if it is kept in the configuration file. It is
+  generally recommended to keep it as it is good practice to keep the boundary for posterity and context.
+
+.. code-block:: text
+  :caption: bash/cmd prompt to run tool for "SEQ_cathcmentA_CC_config.json"
+
+  pytuflow-arr SEQ_cathcmentA_CC_config.json
+
+.. code-block:: json
+  :caption: SEQ_catchmentA_CC_config.json
+  :linenos:
+  :emphasize-lines: 7,8,9,10,11
+
+  {
+    "site": {
+      "name": "SEQ_CatchmentA",
+      "catchment_boundary": "./gis/SEQ_catchmentA_boundary.shp",
+      "catchment_area": 31.39
+    },
+    "response_json": "./output/working_data/SEQ_CatchmentA_ARR_response.json",
+    "temporal_patterns": {
+      "point_tp_csv": "./output/working_data/SEQ_CatchmentA_PointTP_Increments.csv",
+      "areal_tp_csv": "./output/working_data/SEQ_CatchmentA_ArealTP_Increments.csv"
+    },
+    "events": {
+      "aep": [1, 2, 5, 10, 20],
+      "duration": [30, 60, 90, 120, 180, 360, 540, 720]
+    },
+    "climate_change": {
+      "enabled": true,
+      "scenarios" : [
+        {"baseline_year": 2050, "ssp": "SSP2"},
+        {"baseline_year": 2090, "ssp": "SSP2"}
+      ]
+    },
+    "output": {
+      "path": "./output",
+      "verbose": true
+    }
+  }
+
+Example 4 - Running multiple catchments
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The below example shows how to run multiple catchments in a single tool run. This is different from running the tool multiple times, as the outputs are combined together into a single set of TUFLOW files (e.g. the catchments are all referenced in a single ``bc_dbase.csv``).
+
+To keep this simple, the below example shows running the tool for two neighbouring catchments: ``CatchmentA`` and ``CatchmentB``. The second configuration file does not change the bulk of the settings, and the tool only uses the ``site`` data (location, name, area etc.). This example follows on from example 2.
+
+.. code-block:: text
+  :caption: bash/cmd prompt to run tool for "SEQ_cathcmentA_CC_config.json"
+
+  pytuflow-arr SEQ_cathcmentA_CC_config.json SEQ_cathcmentB_CC_config.json
+
+.. code-block:: json
+  :caption: SEQ_catchmentA_CC_config.json
+  :linenos:
+
+  {
+    "site": {
+      "name": "SEQ_CatchmentA",
+      "catchment_boundary": "./gis/SEQ_catchmentA_boundary.shp",
+      "catchment_area": 31.39
+    },
+    "events": {
+      "aep": [1, 2, 5, 10, 20],
+      "duration": [30, 60, 90, 120, 180, 360, 540, 720]
+    },
+    "climate_change": {
+      "enabled": true,
+      "scenarios" : [
+        {"baseline_year": 2050, "ssp": "SSP2"},
+        {"baseline_year": 2090, "ssp": "SSP2"}
+      ]
+    },
+    "output": {
+      "path": "./output",
+      "verbose": true
+    }
+  }
+
+.. code-block:: json
+  :caption: SEQ_catchmentB_CC_config.json
+  :linenos:
+
+  {
+    "site": {
+      "name": "SEQ_CatchmentB",
+      "catchment_boundary": "./gis/SEQ_catchmentB_boundary.shp",
+      "catchment_area": 310
+    }
+  }
+
+.. image:: ../assets/images/pytuflow-arr-example-4-catchment-boundary.png
+   :width: 100%
+   :alt: CatchmentA catchment boundary
+
+JSON Config File
+----------------
+
+The below section describes in more detail each available parameter in the configuration file.
+
+Every section below is optional unless stated otherwise - omitted sections use the
+documented defaults. Unknown keys (at any level) raise a validation error rather than
+being silently ignored, to catch typos early.
+
+The json example below shows all the available keys and is not necessarily valid or the default (e.g. long/lat and catchment boundary keys are mutually exclusive).
+
+.. code-block:: json
+
+    {
+        "site": {
+            "name": "Site1",
+            "latitude": -33.9347,
+            "longitude": 150.8372,
+            "catchment_boundary": "path/to/geojson",
+            "catchment_area": 11.4,
+            "outlet_latitude": -33.9347,
+            "outlet_longitude": "150.8372"
+        },
+        "max_retries": 5,
+        "response_json": "path/to/previously/saved/datahub.json",
+        "ifd": {
+            "baseline_year": 2030
+        },
+        "events": {
+            "aep": ["50%", "20%", "10%", "5%", "2%", "1%"],
+            "duration": [60, 120, 180, 360, 720, 1440],
+            "output_notation": "aep"
+        },
+        "temporal_patterns": {
+            "point_tp_csv": "path/to/previously/saved/point_tp_inc.csv",
+            "areal_tp_csv": "path/to/previously/saved/areal_tp_inc.csv",
+            "additional_tp": [],
+            "all_point_tp": false,
+            "add_areal_tp": 0
+        },
+        "climate_change": {
+            "enabled": false,
+            "scenarios": [
+                {"baseline_year": 2050, "ssp": "SSP3"},
+                {"baseline_year": 2090, "ssp": "SSP3"}
+            ]
+        },
+        "preburst": {
+            "percentile": "recommended",
+            "pattern_method": "recommended",
+            "pattern_duration": 2,
+            "pattern_tp": "TP01",
+            "duration_proportional": true,
+            "pattern_duration_max": 6
+        },
+        "losses": {
+            "method": "recommended",
+            "extrapolation_method": "constant_preburst_ratio",
+            "mar": 600,
+            "static_loss": 10,
+            "tuflow_loss_method": "infiltration",
+            "user_initial_loss": 10,
+            "user_continuing_loss": 2.5,
+            "urban_initial_loss": 0,
+            "urban_continuing_loss": 1,
+            "climate_change_method": "storm"
+        },
+        "arf": {
+            "ignore_limits_for_frequent": true,
+            "min_arf": 0.2,
+            "arf_override": 1.0
+        },
+        "complete_storm": false,
+        "output": {
+            "path": "C:\\path\\to\\output",
+            "format": "csv",
+            "verbose": false
+        }
+    }
+
+Parameter descriptions
+^^^^^^^^^^^^^^^^^^^^^^
+
+**site (required)**
+
+.. list-table::
+   :widths: 15 10 10 65
+   :header-rows: 1
+
+   * - Key
+     - Type
+     - Default
+     - Description
+   * - name
+     - ``string``
+     - ``-``
+     - Site/catchment identifier - used as a prefix for output file names (e.g. <name>_RF_...) and as the TUFLOW IL_<name>/CL_<name> loss variable suffix. **Required**.
+   * - latitude / longitude
+     - ``number``
+     - ``-``
+     - Site (catchment centroid) coordinates, decimal degrees. **Required**, unless catchment_boundary is set (mutually exclusive with it), or unless the top-level response_json key is set (see below), in which case they are not used and may be omitted.
+   * - catchment_boundary
+     - ``string``
+     - ``-``
+     - Path to a catchment boundary polygon file to upload to the ARR Data Hub instead of a single lat/lon point - GeoJSON (.geojson/.json), KML (.kml), or Shapefile (.shp - its .shx/.dbf/.prj sibling files alongside it are also uploaded automatically). Mutually exclusive with latitude/longitude. **Required**, unless a lat/lon is provided (this takes precedence), or the top-level response_json key is set (see below), in which case this is not used and may be ommitted.
+   * - outlet_latitude / outlet_longitude
+     - ``number``
+     - ``-``
+     - Optional catchment outlet coordinates, decimal degrees. Used by the ARR data hub for jurisdiction guidance.
+   * - catchment_area
+     - ``number``
+     - ``-``
+     - Catchment area in km\ :sup:`2`. Catchment area is not extracted from the polygon geometry and it must be provided if it is to be considered.
+
+**events (required)**
+
+.. list-table::
+   :widths: 15 10 10 65 
+   :header-rows: 1
+
+   * - Key
+     - Type
+     - Default
+     - Description
+   * - aep
+     - ``list[string | number]``
+     - ``[]``
+     - AEP/ARI magnitude labels to assemble events for. For example, "1%" or "1 in 100". If a number is provided, it is assumed to be "% AEP". **Requried**.
+   * - duration
+     - ``list[number]``
+     - ``[]``
+     - Storm durations in minutes. E.g. ``[60, 120, 360]``. **Required**.
+   * - output_notation
+     - ``string``
+     - ``"aep"``
+     - "aep" (default) or "ari" - controls the name of the events in the output.
+
+**output (required)**
+
+.. list-table::
+   :widths: 15 10 10 65 
+   :header-rows: 1
+
+   * - Key
+     - Type
+     - Default
+     - Description
+   * - path
+     - ``string``
+     - ``-``
+     - Output directory for the tool. **Required**.
+   * - format
+     - ``string``
+     - ``"csv"``
+     - Rainfall hyetograph file format: "csv" or "ts1" (TUFLOW's native ts1 format).
+   * - verbose
+     - ``bool``
+     - ``false``
+     - If true, also writes intermediate "working data" files (areal design IFD table, ARF table, burst initial loss table, and extrapolated short-duration losses CSV) to a working_data subfolder - see :ref:`working_data` section below.
+
+**max_retries (top-level, optional)**
+
+.. list-table::
+   :widths: 15 10 10 65 
+   :header-rows: 1
+
+   * - Key
+     - Type
+     - Default
+     - Description
+   * - max_retries
+     - ``int``
+     - ``5``
+     - The maximum number of retries when fetching data from the data hub. The retry loop will exponentially back off, starting at 1 second and up to a maximum of 30 seconds. Retries occur for connection errors, timeouts, HTTP 429, and any 5xx response. Other 4xx errors fail straight away (bypassing the retry loop). Setting ``max_retries`` to zero will disable retries.
+
+**response_json (top-level, optional)**
+
+.. list-table::
+   :widths: 15 10 10 65 
+   :header-rows: 1
+
+   * - Key
+     - Type
+     - Default
+     - Description
+   * - response_json
+     - ``string``
+     - ``-``
+     - Path to a previously saved ARR data hub response json file (e.g. a prior run's ``working_data/<site>_ARR_response.json`` output). Useful if needing to re-run the tool again on a previous response (this ensures the same processing output if the data hub has had subsequent updates - as long as the pytuflow version is the same as run previously).
+
+**ifd (optional)**
+
+.. list-table::
+   :widths: 15 10 10 65 
+   :header-rows: 1
+
+   * - Key
+     - Type
+     - Default
+     - Description
+   * - baseline_year
+     - ``int``
+     - ``2030``
+     - The IFD baseline year to use. For example, ``1990`` will provide similar rainfall IFD curves as the previous tool when extracting data from the BOM (with the exception of catchments that might use other datasets like LIMB rainfall data). The options will depend on the catchment.
+
+**temporal_patterns (optional)**
+
+.. list-table::
+   :widths: 15 10 10 65 
+   :header-rows: 1
+
+   * - Key
+     - Type
+     - Default
+     - Description
+   * - point_tp_csv
+     - ``string``
+     - ``-``
+     - Path to a previously saved or downloaded point temporal pattern CSV to use instead of downloading the data from the data hub. The file must be in the same format as the ``*_Increments.csv`` file from the data hub.
+   * - areal_tp_csv
+     - ``string``
+     - ``-``
+     - Same as the ``point_tp_csv`` above but for areal temporal patterns.
+   * - additional_tp
+     - ``list[str]``
+     - ``[]``
+     - Names of ARR temporal pattern regions to include. Regions listed here are in addition to the automatically determined region from catchment location. The list can also be paths to previously saved temporal pattern increments (both point and areal should be provided). Regions include: ``rangelands``, ``rangelands west``, ``wet tropics``, ``monsoonal north``, ``central slopes``, ``murray basin``, ``east coast north``, ``east coast south``, ``southern slopes mainland``, ``southern slopes tasmania``, ``east flatlands``, ``west flatlands``.
+   * - all_point_tp
+     - ``bool``
+     - ``false``
+     - If set to ``true``, all point temporal pattern rarity bands will be included (i.e. this will result in 30 temporal patterns rather than the usual 10). For example, if a 1% AEP event is selected, usually this would output 10 "rare" point temporal patterns. If this option is set to ``true``, the "frequent" and "intermediate" temporal patterns will also be included. This only affects outputs where the catchment and events use point temporal patterns and have not triggered the use of areal temporal patterns.
+   * - add_areal_tp
+     - ``int``
+     - ``0``
+     - This option adds additional temporal patterns from the next closest area band. For example, if the catchment is 100 km\ :sup:`2`, this would output the standard Area 100 areal temporal patterns. If ``add_areal_tp`` is set to ``1``, then the output will also include the Area 200 areal temporal patterns (this is in addition, resulting in 20 temporal patterns in total). If ``add_areal_tp`` is to to ``2`` then both the Area 200 and Area 500 temporal patterns will be added (resulting in 30 temporal patterns in total). This only affects outputs where the catchment and event trigger areal temporal patterns.
+
+**climate_change (optional)**
+
+.. list-table::
+   :widths: 15 10 10 65 
+   :header-rows: 1
+
+   * - Key
+     - Type
+     - Default
+     - Description
+   * - enabled
+     - ``bool``
+     - ``false``
+     - If ``true``, an additional event is assembled for each scenario in scenarios, alongside the base (no climate-change) event. The tool uses the climate change factors provided by the data hub, and not the pre-calculated IFD tables. This allows the baseline rainfall to be factored, which could be BOM, or another source like LIMB/QRA (pre-calculated tables appear to always use BOM rainfall). It also allows all climate change years to be used, whereas only several years are provided in the pre-calculated tables.
+   * - scenarios
+     - ``list[object]``
+     - ``[]``
+     - List of {"baseline_year": ..., "ssp": ...} objects. Required (non-empty) if enabled is ``true``.
+
+Each scenario object:
+
+.. list-table::
+   :widths: 15 10 10 65 
+   :header-rows: 1
+
+   * - Key
+     - Type
+     - Default
+     - Description
+   * - baseline_year
+     - ``int``
+     - ``-``
+     - Allowed values: ``2030`` - ``2100`` (10-year increments)
+   * - ssp
+     - ``int``
+     - ``-``
+     - Allowed values: ``SSP1``, ``SSP2``, ``SSP3``, ``SSP5``
+
+**preburst (optional)**
+
+.. list-table::
+   :widths: 15 10 10 65 
+   :header-rows: 1
+
+   * - Key
+     - Type
+     - Default
+     - Description
+   * - percentile
+     - ``string``
+     - ``"recommended"``
+     - Preburst ratio percentile to use to derive the preburst depth: one of "10%", "25%", "50%", "75%", "90%", or "recommended". The "recommended" value falls back to "50%" for regions that don't explicitly have a data hub recommended table.
+   * - pattern_method
+     - ``string``
+     - ``"recommended"``
+     - Preburst pattern method: "recommended", "constant", "temporal_pattern", or "none" (see :ref:`complete_storm_assembly` below).
+   * - pattern_duration
+     - ``number``
+     - ``1.5``
+     - Preburst duration in hours (or a proportion of the storm duration, if ``duration_proportional`` is true). Used by the "constant"/"temporal_pattern" pattern methods directly, and as the fallback method for the "recommended" option (see :ref:`complete_storm_assembly` below).
+   * - pattern_tp
+     - ``string``
+     - ``"TP01"``
+     - Which existing point temporal pattern to shape the preburst rainfall with. ``"design_burst"`` will match preburst pattern to the same number as the design burst e.g. TP01 design burst will use TP01 for preburst, TP03 will use TP03 etc. Used when the pattern_method is set to "temporal_pattern" (or the "recommended" option fallsback to "temporal_pattern").
+   * - duration_proportional
+     - ``bool``
+     - ``true``
+     - If ``true``, pattern_duration is treated as a proportion of the storm duration rather than an absolute number of hours.
+   * - pattern_duration_max
+     - ``number`` | ``null``
+     - ``24``
+     - Caps the computed preburst duration (hours) when duration_proportional is true - without this, a proportional pattern_duration (e.g. the default of 1.5x the storm duration) would produce an unrealistically long preburst period for long storm durations (e.g. a 72 hour storm would otherwise get a 96 hour preburst and a total storm time of 10 days). Has no effect when duration_proportional is false (an absolute pattern_duration is always used as given, uncapped). Set to ``null`` to disable capping entirely.
+
+**losses (optional)**
+
+.. list-table::
+   :widths: 15 10 10 65 
+   :header-rows: 1
+
+   * - Key
+     - Type
+     - Default
+     - Description
+   * - method
+     - ``string``
+     - ``"recommended"``
+     - Options are: ``recommended`` or ``probability_neutral``. The ``recommended`` method uses the new AEP dependent losses table for NSW catchments, otherwise uses the standard storm losses. ``probability_neutral`` is provided as a legacy method and only available as for NSW catchments. The methods differ on how they handle missing data. The ``recommended`` approach derives losses from the preburst ratio. For interior missing duration values it interpolates preburst ratios in log-linear space. For missing exterior values, it extrapolates values using the extrapolation_method. The ``probability_neutral`` losses are not preburst derived, so interior missing duration cells are derived using a plain linear interpolation. Exterior missing values hold the nearest edge column value constant.
+   * - extrapolation_method
+     - ``string``
+     - ``"constant_preburst_ratio"``
+     - How to extrapolate the burst initial loss for durations shorter than the data hub's shortest provided duration. The options are: ``constant_preburst_ratio``, ``interpolate``, ``log_interpolate``, ``interpolate_preburst``, ``log_interpolate_preburst``, ``rahman``, ``hill``, ``constant``, ``static``. See :ref:`loss_extrapolation` section below.
+   * - mar
+     - ``number``
+     - ``-``
+     - Mean annual rainfall (mm). Required when using the ``hill`` extrapolation_method.
+   * - static_loss
+     - ``number``
+     - ``-``
+     - User defined burst initial loss value for durations shorter than provided by the data hub. Required for the ``static`` extrapolation_method.
+   * - tuflow_loss_method
+     - ``string``
+     - ``"infiltration"``
+     - The options are ``infiltration`` and ``excess``. "infiltration" writes a ``soils.tsoilf`` with a ILCL entry; "excess" writes a ``materials.csv`` file.
+   * - user_initial_loss
+     - ``number``
+     - ``-``
+     - Overrides the storm initial loss value with a value provided by the user. If the user is also using probability neutral losses, the burst initial loss is calculated as ``burst_il = user_initial_loss * pn_burst_il / datahub_storm_initial_loss`` (where the data hub storm initial loss is the old flat storm loss).
+   * - user_continuing_loss
+     - ``number``
+     - ``-``
+     - Overrides the storm continuing loss value with a value provided by the user.
+   * - urban_initial_loss / urban_continuing_loss
+     - ``number``
+     - ``-``
+     - Adds a fixed loss value for urban areas to the output TUFLOW files.
+   * - climate_change_method
+     - ``string``
+     - ``"storm"``
+     - How the data hub's initial loss climate change factor is applied to the initial loss. The options are ``storm`` and ``burst``. The ``storm`` method scales the storm initial loss and subtracts the climate change adjusted preburst rainfall (by using climate change rainfall the and the preburst ratio). The ``burst`` option scales the burst initial loss.
+
+**arf (optional)**
+
+.. list-table::
+   :widths: 15 10 10 65 
+   :header-rows: 1
+
+   * - Key
+     - Type
+     - Default
+     - Description
+   * - ignore_limits_for_frequent
+     - ``bool``
+     - ``false``
+     - If ``true``, applies the Areal Reduction Factor equations even to frequent events outside ARR's recommended range.
+   * - min_arf
+     - ``number``
+     - ``0``
+     - Minimum allowed ARF value (0-1); calculated ARF values are clamped to this floor.
+   * - arf_override
+     - ``number``
+     - ``null``
+     - If set (greater than 0, up to 1), this single ARF value is applied to all durations and AEPs instead of the calculated ARF. The calculated ARF is still written to the working data folder when output verbose is on, with a comment at the top of the file noting that it was not applied.
+
+**complete_storm (top-level, optional)**
+
+.. list-table::
+   :widths: 15 10 10 65 
+   :header-rows: 1
+
+   * - Key
+     - Type
+     - Default
+     - Description
+   * - complete_storm
+     - ``bool``
+     - ``false``
+     - If true, every requested event is assembled as a complete storm (preburst period prepended ahead of the design burst), using the preburst section's settings.
+
+.. _loss_extrapolation:
+
+Loss extrapolation
+------------------
+
+The available loss extrapolation methods are detailed below. The default method is new to this tool, the other methods are provided as legacy methods. Extrapolation beyond the AEP range is always done using ``constant_preburst_ratio`` and the legacy methods only effect duration extrapolation (for short durations).
+
+- ``constant_preburst_ratio`` - holds the preburst ratio constant from the nearest table row/column edge.
+- ``interpolate`` - interpolates the losses using the assumption that at zero minute duration, the initial loss is zero.
+- ``log_interpolate`` - same as the ``interpolate`` option but uses a log scale for duration (uses a boundary value of zero for zero minutes).
+- ``interpolate_preburst`` - interpolates the preburst depths using the assumption that at zero minute duration, the preburst depth is zero.
+- ``log_interpolate_preburst`` - same as ``interpolate_preburst`` option but uses a log scale for duration (uses a boudary value of zero for zero minutes).
+- ``rahman`` - uses an equation determined by a study conducted by Rahman et al 2002.
+- ``hill`` - uses an equation dtermined by a study conducted by Hill et al 1996:1998. This requires the user to provide a mean anuual rainfall value (the ``mar`` parameter value).
+- ``constant`` - holds the burst initial loss constant from the nearest table row edge. This matches the method named "Use 60 min loss" in the legacy QGIS tool.
+- ``static`` - user defined value that will be used for all the extrapolated values. The method requires setting the ``static_loss`` parameter.
+
+.. _complete_storm_assembly:
+
+Complete storm assembly
+-----------------------
+
+A "complete storm" prepends a preburst rainfall period ahead of the ARR design burst, so the full storm initial loss can be used rather than a burst initial loss.
+
+The tool will automatically switch to using a complete storm for events where the burst initial loss is calculated to be less than zero. For some regions, the data hub provides a table of burst initial loss and explicitly recommends using a preburst temporal pattern (i.e. a complete storm), in these cases the tool will also automatically switch to using a complete storm for those events. The exception to this is if the preburst ``pattern_method`` parameter is set to ``"none"``. The complete storm can be turned on for every event by setting the ``complete_storm`` parameter to ``true``.
+
+The available preburst ``pattern_methods`` are described below:
+
+- ``"recommended"`` - Uses the recommended preburst temporal pattern referenced for the catchment on the data hub. A recommended temporal pattern is not always provided (currently only available for NSW catchments), in these instances the ``recommended`` approach falls back to the ``temporal_pattern`` method.
+- ``"temporal_pattern"`` - Uses an existing point temporal pattern from the same catchment. The chosen temporal pattern is based on the settings within the ``preburst`` settings. For example, the default is to use ``"TP01"`` for a duration that is 2x the burst duration (capped to 6 hrs i.e.. durations longer than 6 hrs will use the 6 hr temporal pattern). The chosen temporal pattern rarity band for the preburst temporal pattern will use the same as the design AEP rarity band.
+- ``"constant"`` - Uses a constant rainfall intensity over the preburst duration. The preburst duration is determined by the other settings with the ``preburst`` settings.
+- ``"none"`` - Disables the complete storm assembly (set to ``"none"`` to turn off the automatic switching to complete storms).
+
+**Negligible preburst assumption:** if the resulting preburst depth turns out to be less than 1% of the point design burst depth (implied preburst ratio < 0.01), the preburst period is dropped entirely and the event falls back to a standard burst-only event (using the ordinary burst initial loss, or - for "Use PB TP" placeholder cells with no fixed burst initial loss available - the full storm initial loss as a proxy, since the preburst contribution is negligible either way).
+
+**Requested durations between a "Use PB TP" cell and a fixed-value cell:** if a requested duration falls between two rows of the burst initial loss table where one is numeric and the other is the "Use PB TP" placeholder (for the same AEP), a straight linear interpolation between them wouldn't make sense (a placeholder isn't a loss value). Instead, the tool derives an implied burst initial loss for that cell from the (interpolated) preburst depth and the storm initial loss: storm initial loss - preburst depth, where the preburst depth is preburst.percentile ratio × point design burst depth at that duration. If the result is positive, it's used directly (no complete storm needed); if it would be negative (the preburst rainfall alone exceeds the storm initial loss), the cell is itself treated as "Use PB TP", automatically triggering complete storm assembly for that specific AEP/duration. A duration bracketed by two "Use PB TP" cells is likewise treated as "Use PB TP" (no numeric neighbour exists to derive anything from).
+
+.. _working_data:
+
+Working data
+------------
+
+Alongside the standard TUFLOW output files, a working_data subdirectory is used to save data useful for reviewing/QA'ing what the tool requested and calculated. The standard output working data is listed below:
+
+- ``<site>_ARR_response.json`` - the raw JSON response from the ARR Data Hub, exactly as received. Always saved, so a run can always be fully reproduced/inspected later without needing to re-query the data hub.
+- ``<site>_ARR_response_<region>.json`` - one per additional temporal pattern region configured (if any) - the raw JSON response from the separate ARR data hub request made for that region's representative coordinates. Always saved, same as the site's own response, for the same reason. <region> is the region name with spaces removed (e.g. ``WetTropics``).
+- ``<site>_PointTP_Increments.csv`` / ``<site>_ArealTP_Increments.csv`` - the raw temporal
+  pattern increment CSVs downloaded from the Data Hub (before selection/filtering to the
+  specific patterns used for each event). Always saved.
+- ``<site>_PointTP_Increments_<region>.csv`` / ``<site>_ArealTP_Increments_<region>.csv`` - one per additional temporal pattern
+  region configured (if any) - that region's own raw point temporal pattern increments
+  CSV, downloaded from its own separate ARR Data Hub request. ``<region>`` is the region
+  name with spaces removed (e.g. ``WetTropics``), matching the ``_<region>`` suffix used in
+  ``rf_inflow`` column labels.
+
+The following are only saved when the ``output`` "verbose" parameter is true, since they are purely for debugging/QA and are otherwise redundant with the always-written rf_inflow/loss control files:
+
+- ``<site>_IFD_after_ARF[_<cc_scenario>].csv`` - the areal (post-ARF) design rainfall
+  depth (mm) for every requested duration x AEP, one file per climate change scenario
+  (if enabled).
+- ``<site>_ARF.csv`` - the Areal Reduction Factor applied for every
+  requested duration x AEP.
+- ``<site>_burst_initial_loss[_<cc_scenario>].csv`` - the burst initial loss (mm) table
+  used, for every duration x AEP, one file per
+  climate change scenario (if enabled) - climate change scenario files have the data hub's climate-change initial loss adjustment factor applied.
+- ``<site>_extrapolated_losses[_<cc_scenario>].csv`` - the extrapolated burst initial
+  loss (mm) values, in the same duration (index) x AEP% (columns) table format as
+  ``<site>_burst_initial_loss...csv``, but containing **only** the cells that were
+  actually extrapolated.

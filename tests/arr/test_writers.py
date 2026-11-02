@@ -1,0 +1,416 @@
+"""Tests for :mod:`pytuflow.arr.writers`."""
+
+from __future__ import annotations
+
+import pytest
+
+from pytuflow.arr import temporal_patterns as tp_module
+from pytuflow.arr.config import ArrConfig
+from pytuflow.arr.engine import ArrEngine, EventResult
+from pytuflow.arr.temporal_patterns import TemporalPattern
+from pytuflow.arr.writers import (
+    format_aep,
+    format_duration,
+    write_outputs,
+)
+
+
+@pytest.fixture(autouse=True)
+def mock_tp_downloads(monkeypatch, point_tp_csv, areal_tp_csv):
+    def fake_download(url: str) -> str:
+        if 'Areal' in url:
+            return areal_tp_csv
+        return point_tp_csv
+    monkeypatch.setattr(tp_module, '_download_increments_csv', fake_download)
+
+
+@pytest.mark.parametrize('aep_name, expected', [
+    ('1%', '01p'), ('0.5%', '0.50p'), ('50%', '50p'), ('0.5EY', '0.5e'), ('1 in 200', '200y'),
+])
+def test_format_aep(aep_name, expected):
+    assert format_aep(aep_name, 'ari') == expected
+
+
+def test_format_aep_unrecognised_raises():
+    from pytuflow.arr.exceptions import ArrError
+    with pytest.raises(ArrError):
+        format_aep('not an aep', 'ari')
+
+
+@pytest.mark.parametrize('duration, expected', [(60, '60m'), (1440, '1440m'), (0.5, '0.5m')])
+def test_format_duration(duration, expected):
+    assert format_duration(duration) == expected
+
+
+def make_config(tmp_path, **overrides):
+    data = {
+        'site': {'name': '1', 'latitude': -33.9347, 'longitude': 150.8372, 'catchment_area': 11.4},
+        'ifd': {'baseline_year': 1990},
+        'output': {'path': str(tmp_path), 'format': 'csv'},
+    }
+    data.update(overrides)
+    return ArrConfig.from_dict(data)
+
+
+def test_write_outputs_creates_expected_files(tmp_path, api_response_1990):
+    config = make_config(
+        tmp_path,
+        events={'aep': ['50%'], 'duration': [60, 1440], 'output_notation': 'ari'},
+        losses={'extrapolation_method': 'interpolate'},
+    )
+    engine = ArrEngine(config, api_response_1990)
+    results = engine.run()
+    write_outputs(config, results)
+
+    assert (tmp_path / 'Event_File.tef').exists()
+    assert (tmp_path / 'bc_dbase.csv').exists()
+    assert (tmp_path / 'soils.tsoilf').exists()
+    assert (tmp_path / 'soil_infiltration.trd').exists()
+    assert (tmp_path / 'rf_inflow' / '1_RF_50p60m.csv').exists()
+    assert (tmp_path / 'rf_inflow' / '1_RF_50p1440m.csv').exists()
+
+
+def test_tef_contains_expected_event_definitions(tmp_path, api_response_1990):
+    config = make_config(
+        tmp_path,
+        events={'aep': ['50%'], 'duration': [1440], 'output_notation': 'ari'},
+        losses={'extrapolation_method': 'interpolate'},
+    )
+    engine = ArrEngine(config, api_response_1990)
+    results = engine.run()
+    write_outputs(config, results)
+
+    tef = (tmp_path / 'Event_File.tef').read_text()
+    assert 'Define Event == 50p' in tef
+    assert 'BC Event Source == ~ARI~ | 50p' in tef
+    assert 'Define Event == 1440m' in tef
+    assert 'Define Event == tp01' in tef
+    assert 'Define Event == tp10' in tef
+
+
+def test_rf_inflow_csv_structure(tmp_path, api_response_1990):
+    config = make_config(
+        tmp_path,
+        events={'aep': ['50%'], 'duration': [1440], 'output_notation': 'ari'},
+        losses={'extrapolation_method': 'interpolate'},
+    )
+    engine = ArrEngine(config, api_response_1990)
+    results = engine.run()
+    write_outputs(config, results)
+
+    lines = (tmp_path / 'rf_inflow' / '1_RF_50p1440m.csv').read_text().splitlines()
+    assert lines[0].startswith('!')
+    assert lines[1].startswith('Event ID,')
+    assert lines[2].startswith('Time (hour),TP01')
+    assert lines[3] == '0,0,0,0,0,0,0,0,0,0,0'
+    # second last data row's time should equal duration/60 hours
+    last_row = lines[-2].split(',')
+    assert float(last_row[0]) == pytest.approx(1440 / 60)
+    # last data row's time should be one extra step
+    last_row = lines[-1].split(',')
+    assert float(last_row[0]) == pytest.approx((1440 + 60) / 60)
+
+
+def test_rf_inflow_all_point_tp_includes_all_bands(tmp_path, api_response_1990):
+    config = make_config(
+        tmp_path,
+        events={'aep': ['50%'], 'duration': [1440], 'output_notation': 'ari'},
+        losses={'extrapolation_method': 'interpolate'},
+        temporal_patterns={'all_point_tp': True},
+    )
+    engine = ArrEngine(config, api_response_1990)
+    results = engine.run()
+    assert len(results[0].patterns) == 30
+    write_outputs(config, results)
+
+    lines = (tmp_path / 'rf_inflow' / '1_RF_50p1440m.csv').read_text().splitlines()
+    header = lines[2].split(',')[1:]
+    assert len(header) == 30
+    assert header[0] == 'TP01_frequent'
+    assert any(label.endswith('_intermediate') for label in header)
+    assert any(label.endswith('_rare') for label in header)
+
+    tef = (tmp_path / 'Event_File.tef').read_text()
+    assert 'Define Event == tp01\n    BC Event Source == ~TP~ | TP01_frequent' in tef
+    assert 'Define Event == tp30\n    BC Event Source == ~TP~ | ' in tef
+
+
+def test_rf_inflow_additional_tp_native_region_sorted_first(tmp_path, api_response_1990, monkeypatch):
+    from pytuflow.arr import api_client as api_client_module
+
+    def fake_fetch_point_tp_for_coords(self, lat, lon):
+        return {'url': 'https://example.invalid/murray_basin_point_tp.zip'}, None, {'title': 'fake murray basin response'}
+    monkeypatch.setattr(api_client_module.ArrApiClient, 'fetch_point_tp_for_coords', fake_fetch_point_tp_for_coords)
+
+    config = make_config(
+        tmp_path,
+        events={'aep': ['50%'], 'duration': [1440], 'output_notation': 'ari'},
+        losses={'extrapolation_method': 'interpolate'},
+        temporal_patterns={'additional_tp': ['Murray Basin']},
+    )
+    engine = ArrEngine(config, api_response_1990)
+    results = engine.run()
+    assert len(results[0].patterns) == 20
+    write_outputs(config, results)
+
+    lines = (tmp_path / 'rf_inflow' / '1_RF_50p1440m.csv').read_text().splitlines()
+    header = lines[2].split(',')[1:]
+    assert len(header) == 20
+    # native (site's own region) patterns must come first, additional region after
+    assert 'MurrayBasin' not in header[0]
+    assert 'MurrayBasin' not in header[9]
+    assert header[10] == 'TP01_MurrayBasin'
+    assert header[19] == 'TP10_MurrayBasin'
+
+    tef = (tmp_path / 'Event_File.tef').read_text()
+    assert f'Define Event == tp01\n    BC Event Source == ~TP~ | {header[0]}\n' in tef
+    assert 'Define Event == tp11\n    BC Event Source == ~TP~ | TP01_MurrayBasin' in tef
+
+
+def test_rf_inflow_complete_storm_prepends_preburst(tmp_path, api_response_1990):
+    # 20%/1440min is a 'Use PB TP' placeholder cell that auto-triggers complete storm.
+    config = make_config(
+        tmp_path,
+        events={'aep': ['20%'], 'duration': [1440], 'output_notation': 'ari'},
+    )
+    engine = ArrEngine(config, api_response_1990)
+    results = engine.run()
+    assert results[0].preburst is not None
+    write_outputs(config, results)
+
+    lines = (tmp_path / 'rf_inflow' / '1_RF_20p1440m.csv').read_text().splitlines()
+    pb = results[0].preburst
+    data_rows = lines[4:]  # skip header rows + the initial "time=0" row
+    # total number of data rows == preburst steps + design burst steps
+    assert len(data_rows) == len(pb.increments) + len(results[0].patterns[0].increments) + 1
+    # first preburst row's rainfall matches preburst depth * first increment / 100
+    first_row = data_rows[0].split(',')
+    expected = pb.increments[0] * pb.depth / 100.0
+    assert float(first_row[1]) == pytest.approx(expected)
+
+
+def test_rf_inflow_complete_storm_design_burst_preburst_differs_per_tp(tmp_path, api_response_1990):
+    # 20%/1440min is a 'Use PB TP' placeholder cell that auto-triggers complete storm.
+    # With pattern_method 'temporal_pattern'/pattern_tp 'design_burst', each design
+    # burst TP column should get its own distinct preburst shape (same tp_number).
+    config = make_config(
+        tmp_path,
+        events={'aep': ['20%'], 'duration': [1440], 'output_notation': 'ari'},
+        complete_storm=True,
+        preburst={'percentile': '50%', 'pattern_method': 'temporal_pattern', 'pattern_duration': 1.0,
+                  'pattern_tp': 'design_burst'},
+    )
+    engine = ArrEngine(config, api_response_1990)
+    results = engine.run()
+    pb = results[0].preburst
+    assert pb.per_tp_increments is not None
+    write_outputs(config, results)
+
+    lines = (tmp_path / 'rf_inflow' / '1_RF_20p1440m.csv').read_text().splitlines()
+    data_rows = lines[4:]
+    first_row = [float(v) for v in data_rows[0].split(',')]
+    patterns = results[0].patterns
+    expected_values = [
+        pb.per_tp_increments[p.tp_number][0] * pb.depth / 100.0 for p in patterns
+    ]
+    assert first_row[1:] == pytest.approx(expected_values)
+    # sanity check the columns are not all identical (i.e. genuinely per-TP)
+    assert len(set(round(v, 6) for v in expected_values)) > 1
+
+
+def test_trd_sets_expected_variables(tmp_path, api_response_1990):
+    config = make_config(
+        tmp_path,
+        events={'aep': ['50%'], 'duration': [1440], 'output_notation': 'ari'},
+        losses={'extrapolation_method': 'interpolate'},
+    )
+    engine = ArrEngine(config, api_response_1990)
+    results = engine.run()
+    write_outputs(config, results)
+
+    trd = (tmp_path / 'soil_infiltration.trd').read_text()
+    assert 'If Event == 50p' in trd
+    assert 'If Event == 1440m' in trd
+    assert f'Set Variable IL_1 == {results[0].initial_loss:.1f}' in trd
+    assert f'Set Variable CL_1 == {results[0].continuing_loss:.1f}' in trd
+
+
+def test_write_outputs_append_mode_multi_site(tmp_path, api_response_1990):
+    config_a = make_config(
+        tmp_path, events={'aep': ['50%'], 'duration': [1440], 'output_notation': 'ari'},
+        losses={'extrapolation_method': 'interpolate'})
+    config_a.site.name = 'A'
+    config_b = make_config(
+        tmp_path, events={'aep': ['50%'], 'duration': [1440], 'output_notation': 'ari'},
+        losses={'extrapolation_method': 'interpolate'})
+    config_b.site.name = 'B'
+
+    write_outputs(config_a, ArrEngine(config_a, api_response_1990).run(), append=False)
+    write_outputs(config_b, ArrEngine(config_b, api_response_1990).run(), append=True)
+
+    bc_dbase = (tmp_path / 'bc_dbase.csv').read_text()
+    assert bc_dbase.count('\n') == 3  # header + 2 site rows (+ trailing newline)
+    assert 'A,' in bc_dbase and 'B,' in bc_dbase
+
+    tsoilf = (tmp_path / 'soils.tsoilf').read_text()
+    assert '1, ILCL, <<IL_A>>' in tsoilf
+    assert '2, ILCL, <<IL_B>>' in tsoilf
+
+
+def test_losses_trd_appended_into_existing_if_logic(tmp_path, api_response_1990):
+    events = {'aep': ['50%', '10%'], 'duration': [720, 1440], 'output_notation': 'ari'}
+    results = {}
+    for name, append in (('A', False), ('B', True)):
+        config = make_config(
+            tmp_path, events=events, losses={'extrapolation_method': 'interpolate', 'tuflow_loss_method': 'infiltration'})
+        config.site.name = name
+        results[name] = ArrEngine(config, api_response_1990).run()
+        write_outputs(config, results[name], append=append)
+
+    trd = (tmp_path / 'soil_infiltration.trd').read_text()
+    # the If logic is only written once
+    assert trd.count('\nElse\n') == 1
+    assert trd.count('End If') == 1 + 2
+    assert trd.count('Set Variable IL_A') == 4
+    assert trd.count('Set Variable IL_B') == 4
+    # B's lines directly follow A's within each branch
+    lines = [ln.strip() for ln in trd.splitlines()]
+    for i, ln in enumerate(lines):
+        if ln.startswith('Set Variable IL_A'):
+            assert lines[i + 1].startswith('Set Variable CL_A')
+            assert lines[i + 2].startswith('Set Variable IL_B')
+            assert lines[i + 3].startswith('Set Variable CL_B')
+
+
+def test_losses_trd_appended_with_climate_change(tmp_path, api_response_1990):
+    cols = ['<1 hour', '1.5 Hours', '2 Hours', '3 Hours', '4.5 Hours', '6 Hours', '9 Hours', '12 Hours',
+            '18 Hours', '>24 Hours']
+    api_response_1990.layers['ClimateChange'] = {
+        'rainfall_factors': {'SSP2-4.5': {'columns': cols, 'index': [2090], 'data': [[1.1] * len(cols)]}},
+        'loss_factors': {
+            'Initial_Loss': {'columns': ['Losses SSP2-4.5'], 'index': [2090], 'data': [[1.05]]},
+            'Continuing_Loss': {'columns': ['Losses SSP2-4.5'], 'index': [2090], 'data': [[1.09]]},
+        },
+    }
+    for name, append in (('A', False), ('B', True)):
+        config = make_config(
+            tmp_path, events={'aep': ['50%'], 'duration': [1440], 'output_notation': 'ari'},
+            losses={'extrapolation_method': 'interpolate'},
+            climate_change={'enabled': True, 'scenarios': [{'baseline_year': 2090, 'ssp': 'SSP2'}]})
+        config.site.name = name
+        write_outputs(config, ArrEngine(config, api_response_1990).run(), append=append)
+
+    trd = (tmp_path / 'soil_infiltration.trd').read_text()
+    assert trd.count('Else  ! no climate change') == 1
+    assert trd.count('If Event == 2090_SSP2') == 1
+    lines = trd.splitlines()
+    i = next(i for i, ln in enumerate(lines) if 'If Event == 2090_SSP2' in ln)
+    assert [ln.strip().split(' == ')[0] for ln in lines[i + 1:i + 5]] == [
+        'Set Variable IL_A', 'Set Variable CL_A', 'Set Variable IL_B', 'Set Variable CL_B']
+    j = next(i for i, ln in enumerate(lines) if 'no climate change' in ln)
+    assert [ln.strip().split(' == ')[0] for ln in lines[j + 1:j + 5]] == [
+        'Set Variable IL_A', 'Set Variable CL_A', 'Set Variable IL_B', 'Set Variable CL_B']
+
+
+def test_rf_inflow_preburst_and_design_burst_use_their_own_distinct_timesteps(tmp_path):
+    # regression test: the preburst pattern's own timestep may be much finer (or
+    # coarser) than the design burst's timestep (e.g. a short preburst prepended to a
+    # very long design burst duration) - the total written time axis must account for
+    # each period's own timestep separately, rather than assuming a single shared
+    # timestep for the whole file.
+    from pytuflow.arr.complete_storm import PreburstPattern
+    config = make_config(
+        tmp_path,
+        events={'aep': ['1%'], 'duration': [4320], 'output_notation': 'ari'},
+    )
+    patterns = [
+        TemporalPattern(event_id=1, tp_number=1, timestep=180.0, increments=[50.0, 50.0], source='point'),
+    ]
+    preburst = PreburstPattern(depth=10.0, timestep=15.0, increments=[25.0, 25.0, 25.0, 25.0], method='temporal_pattern')
+    result = EventResult(
+        aep_name='1%', duration=4320.0, depth_point=240.0, arf=0.9, depth_areal=216.0,
+        initial_loss=14.0, continuing_loss=2.1, aep_band='rare', patterns=patterns,
+        cc_scenario=None, preburst=preburst,
+    )
+    write_outputs(config, [result])
+
+    lines = (tmp_path / 'rf_inflow' / '1_RF_01p4320m.csv').read_text().splitlines()
+    data_rows = lines[4:]
+    times = [float(row.split(',')[0]) for row in data_rows]
+    # 4 preburst steps @ 15 min + 2 design burst steps @ 180 min + trailing row @ 180 min
+    expected_times = [15 / 60, 30 / 60, 45 / 60, 60 / 60, 60 / 60 + 3.0, 60 / 60 + 6.0, 60 / 60 + 9.0]
+    assert times == pytest.approx(expected_times)
+
+
+def test_rf_inflow_merges_climate_change_scenarios_into_one_file(tmp_path):
+    config = make_config(
+        tmp_path,
+        events={'aep': ['50%'], 'duration': [1440], 'output_notation': 'ari'},
+        climate_change={'enabled': True, 'scenarios': [{'baseline_year': 2090, 'ssp': 'SSP2'}]},
+        losses={'extrapolation_method': 'interpolate'},
+    )
+
+    def make_patterns(depth_scale=1.0):
+        return [
+            TemporalPattern(event_id=1, tp_number=1, timestep=60.0, increments=[50.0, 50.0], source='point'),
+            TemporalPattern(event_id=2, tp_number=2, timestep=60.0, increments=[40.0, 60.0], source='point'),
+        ]
+
+    base = EventResult(
+        aep_name='50%', duration=1440.0, depth_point=100.0, arf=0.95, depth_areal=95.0,
+        initial_loss=10.0, continuing_loss=2.5, aep_band='intermediate', patterns=make_patterns(),
+        cc_scenario=None,
+    )
+    cc = EventResult(
+        aep_name='50%', duration=1440.0, depth_point=120.0, arf=0.95, depth_areal=114.0,
+        initial_loss=10.0, continuing_loss=2.5, aep_band='intermediate', patterns=make_patterns(),
+        cc_scenario='2090_SSP2',
+    )
+    write_outputs(config, [base, cc])
+
+    rf_files = list((tmp_path / 'rf_inflow').glob('*.csv'))
+    assert len(rf_files) == 1  # single merged file, not one per scenario
+    lines = rf_files[0].read_text().splitlines()
+    header = lines[2]  # 'Time (hour), TP01, TP02, TP01_2090_SSP2, TP02_2090_SSP2'
+    assert 'TP01,TP02,TP01_2090_SSP2,TP02_2090_SSP2' in header.replace(' ', '')
+
+    bc_dbase = (tmp_path / 'bc_dbase.csv').read_text()
+    assert '~TP~_~CC~' not in bc_dbase
+    assert ', ~TP~\n' in bc_dbase
+
+    bc_dbase_cc = (tmp_path / 'bc_dbase_CC.csv').read_text()
+    assert '~TP~_~CC~' in bc_dbase_cc
+
+
+def test_urban_losses_written_once_ahead_of_design_losses(tmp_path, api_response_1990):
+    config = make_config(
+        tmp_path,
+        events={'aep': ['50%'], 'duration': [1440], 'output_notation': 'ari'},
+        losses={'extrapolation_method': 'interpolate', 'urban_initial_loss': 1.5, 'urban_continuing_loss': 0.0},
+    )
+    engine = ArrEngine(config, api_response_1990)
+    results = engine.run()
+    write_outputs(config, results)
+
+    tsoilf = (tmp_path / 'soils.tsoilf').read_text()
+    assert '1, ILCL, 1.5, 0.0' in tsoilf
+    assert '2, ILCL, <<IL_1>>, <<CL_1>>' in tsoilf
+
+
+def test_urban_losses_written_once_across_appended_configs(tmp_path, api_response_1990):
+    config_a = make_config(
+        tmp_path, events={'aep': ['50%'], 'duration': [1440], 'output_notation': 'ari'},
+        losses={'extrapolation_method': 'interpolate', 'urban_initial_loss': 1.5, 'urban_continuing_loss': 0.0})
+    config_a.site.name = 'A'
+    config_b = make_config(
+        tmp_path, events={'aep': ['50%'], 'duration': [1440], 'output_notation': 'ari'},
+        losses={'extrapolation_method': 'interpolate'})
+    config_b.site.name = 'B'
+
+    write_outputs(config_a, ArrEngine(config_a, api_response_1990).run(), append=False)
+    write_outputs(config_b, ArrEngine(config_b, api_response_1990).run(), append=True)
+
+    tsoilf = (tmp_path / 'soils.tsoilf').read_text()
+    assert tsoilf.count('ILCL, 1.5, 0.0') == 1
+    assert '2, ILCL, <<IL_A>>, <<CL_A>>' in tsoilf
+    assert '3, ILCL, <<IL_B>>, <<CL_B>>' in tsoilf
