@@ -320,8 +320,6 @@ class INFO(TimeSeries):
             invalid_section_geom = ['node', 'point']
         elif self._section_geom == 'node':
             invalid_section_geom = ['channel', 'line']
-        elif self._section_geom == 'polygon':
-            invalid_section_geom = ['line', 'channel', 'node', 'point']
         else:
             invalid_section_geom = []
         if filter_by and 'section' in filter_by:
