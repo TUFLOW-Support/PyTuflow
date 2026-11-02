@@ -115,10 +115,12 @@ class INFO(TimeSeries):
                      'lbus_obvert', 'rbus_obvert', 'lbds_obvert', 'rbds_obvert']
         )
 
-        #: pd.DataFrame: Polygon information. Column headers are :code:`[id, type, source, rain_gage, outlet, area, pctimperv, width, pctslope, curblen, snowpack]`
         self._polygon_info = pd.DataFrame(
             index=['id'],
-            columns=['type', 'source', 'rain_gage', 'outlet', 'area', 'pctimperv', 'width', 'pctslope', 'curblen', 'snowpack']
+            columns=['type', 'source', 'rain_gage', 'outlet', 'area', 'total_runon',
+                     'total_evap', 'total_infil', 'peak_runoff', 'rainfall', 'snow_depth', 
+                     'evaporation_loss', 'infiltration_loss', 'runoff_rate', 'groundwater_outflow', 
+                     'groundwater_table_elevation', 'soil_moisture']
         )
 
         #: pd.DataFrame: Information on all 1D output objects. Column headers are :code:`[id, data_type, geometry, start, end, dt]`
