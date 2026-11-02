@@ -39,3 +39,18 @@ The example below shows the equivalent code used in the CLI script for a single 
     results = engine.run()
     write_outputs(config, results)
     write_working_data(config, response, engine)
+
+
+TUFLOW-SWMM GPKG Time series support for polygon data
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Starting with TUFLOW 2027.0, TUFLOW-SWMM writes time series data for polygon features (catchments) in GPKG format. This allows users to plot the results from SWMM catchments within the TUFLOW-SWMM model.
+
+**Code Example**
+
+.. code-block:: python
+
+    from pytuflow import TPC
+
+    res = TPC('/path/to/tpc_filename')
+    df = res.time_series('subcatchment_name', 'dataset_name')
