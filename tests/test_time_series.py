@@ -803,7 +803,22 @@ class Test_TPC_GPKG(TestCase):
         res = TPC(p)
         df = res.time_series('SPit2', 'Rainfall')
         self.assertEqual((181, 1), df.shape)
+        self.assertEqual(['polygon/rainfall/SPit2'], df.columns.tolist())
 
+    def test_tpc_gpkg_swmm_maximums_polygon_filter(self):
+        p = './tests/swmm_subcatchment/TS03_5m_001.tpc'
+        res = TPC(p)
+        df = res.maximum('polygon', 'Rainfall')
+        self.assertEqual((14, 2), df.shape)
+        self.assertEqual(['polygon/rainfall/max', 'polygon/rainfall/tmax'], df.columns.tolist())
+        self.assertIn('SPit2', df.index)
+
+    def test_tpc_gpkg_swmm_time_series_polygon_filter(self):
+        p = './tests/swmm_subcatchment/TS03_5m_001.tpc'
+        res = TPC(p)
+        df = res.time_series('polygon', 'Rainfall')
+        self.assertEqual((181, 14), df.shape)
+        self.assertTrue(all(c.startswith('polygon/rainfall/') for c in df.columns))
     def test_tpc_gpkg_swmm_section(self):
         p = './tests/tpc_gpkg/basin_HPC-2m_SWMM_____2016_8_12.tpc'
         res = TPC(p)
