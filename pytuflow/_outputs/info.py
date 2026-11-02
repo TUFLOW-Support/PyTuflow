@@ -79,7 +79,7 @@ class INFO(TimeSeries):
     """
 
     DOMAIN_TYPES = {'1d': ['1d']}
-    GEOMETRY_TYPES = {'point': ['node', 'point'], 'line': ['channel', 'line', 'link'], 'polygon':['polygon', 'subcatchment']}
+    GEOMETRY_TYPES = {'point': ['node', 'point'], 'line': ['channel', 'line', 'link'], 'polygon': ['polygon', 'subcatchment']}
     ATTRIBUTE_TYPES = {}
     ID_COLUMNS = ['id']
 

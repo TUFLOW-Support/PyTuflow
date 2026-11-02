@@ -590,7 +590,7 @@ class GPKG1D(GPKGBase, INFO):
             # Only SWMM has region information for now
             self._polygon_info = pd.DataFrame([], columns=columns)
             return
-        
+
         try:
             cur.execute(
                 'SELECT '

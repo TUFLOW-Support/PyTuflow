@@ -803,7 +803,6 @@ class Test_TPC_GPKG(TestCase):
         res = TPC(p)
         df = res.time_series('SPit2', 'Rainfall')
         self.assertEqual((181, 1), df.shape)
-    
 
     def test_tpc_gpkg_swmm_section(self):
         p = './tests/tpc_gpkg/basin_HPC-2m_SWMM_____2016_8_12.tpc'
@@ -816,6 +815,7 @@ class Test_TPC_GPKG(TestCase):
         res = TPC(p)
         df = res.section('Underdrain', ['Bed Level', 'water level', 'pits'], 1)
         self.assertEqual((6, 7), df.shape)
+
 
 class Test_TPC_Frankenmodel(TestCase):
 
