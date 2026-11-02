@@ -17,7 +17,7 @@ babel==2.18.0
 beautifulsoup4==4.14.3
 bleach==6.3.0
 build==1.4.3
-certifi==2026.4.22
+certifi==2026.10.18
 cffi==2.0.0
 cftime==1.6.5
 charset-normalizer==3.4.7
