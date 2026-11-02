@@ -1,0 +1,44 @@
+Format Version == 2
+Units == METRIC
+Simulation ID == TS03_5m_001
+Time Series Output Format == CSV 
+
+GIS Plot Layer Points == NONE
+GIS Plot Layer Lines == NONE
+GIS Plot Layer Regions == NONE
+GIS Plot Objects == NONE
+
+NetCDF Time Series == NONE
+
+GPKG Time Series == ./TS03_5m_001_swmm_ts.gpkg
+
+Number 1D Nodes == 0
+Number 1D Channels == 0
+
+1D Node Info == NONE
+1D Channel Info == NONE
+
+1D Node Maximums == NONE
+1D Water Levels == NONE
+1D Node Volumes == NONE
+1D Flow Integrals == NONE
+1D Energy Levels == NONE
+1D Mass Balance Errors == NONE
+1D Node Regime == NONE
+
+1D Channel Maximums == NONE
+1D Flows == NONE
+1D Velocities == NONE
+1D Flow Areas == NONE
+1D Channel Losses == NONE
+1D Channel Regime == NONE
+
+Number Reporting Location Points == 0
+
+Number Reporting Location Lines == 0
+
+Number Reporting Location Regions == 0
+
+2D Line Flow [1] == NONE
+2D Point Water Level [1] == NONE
+2D Point Velocity [1] == NONE

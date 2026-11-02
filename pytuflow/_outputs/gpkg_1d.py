@@ -1,5 +1,6 @@
 import re
 from datetime import timezone
+import sqlite3
 from typing import Union, TYPE_CHECKING
 from collections import OrderedDict
 from packaging.version import Version
@@ -89,6 +90,7 @@ class GPKG1D(GPKGBase, INFO):
         # private properties
         self._gis_layer_p_name = None
         self._gis_layer_l_name = None
+        self._gis_layer_r_name = None
         self._is_swmm = False
 
         super().__init__(fpath)
@@ -126,6 +128,7 @@ class GPKG1D(GPKGBase, INFO):
         * :code:`1d`
         * :code:`node`: returns only node times
         * :code:`channel`: returns only channel times
+        * :code:`polygon`: returns only polygon times
         * :code:`[id]`: returns only data types for the given ID.
         * :code:`[data_type]`: returns only times for the given data type.
 
@@ -161,6 +164,7 @@ class GPKG1D(GPKGBase, INFO):
         * :code:`1d`: same as :code:`None` as class only contains 1D data
         * :code:`node`
         * :code:`channel`
+        * :code:`polygon`
         * :code:`timeseries`: returns only IDs that have time series data.
         * :code:`section`: returns only IDs that have section data (i.e. long plot data).
         * :code:`[data_type]`: returns only IDs for the given data type. Shorthand data type names can be used.
@@ -206,6 +210,7 @@ class GPKG1D(GPKGBase, INFO):
         * :code:`1d`: same as :code:`None` as class only contains 1D data
         * :code:`node`
         * :code:`channel`
+        * :code:`polygon`
         * :code:`timeseries`: returns only IDs that have time series data.
         * :code:`section`: returns only IDs that have section data (i.e. long plot data).
         * :code:`[id]`: returns only data types for the given ID.
@@ -260,6 +265,7 @@ class GPKG1D(GPKGBase, INFO):
         * :code:`1d`: returns all maximum values (same as passing in None for locations)
         * :code:`node`
         * :code:`channel`
+        * :code:`polygon`
 
         The returned DataFrame will have an index column corresponding to the location IDs, and the columns
         will be in the format :code:`obj/data_type/[max|tmax]`,
@@ -321,6 +327,7 @@ class GPKG1D(GPKGBase, INFO):
         * :code:`1d`: returns all locations (same as passing in None for locations)
         * :code:`node`
         * :code:`channel`
+        * :code:`polygon`
 
         The returned column names will be in the format :code:`obj/data_type/location`
         e.g. :code:`channel/flow/FC01.1_R`. The :code:`data_type` name in the column heading will be identical to the
@@ -398,6 +405,7 @@ class GPKG1D(GPKGBase, INFO):
           starts at zero for the first branch, and increments by one for each additional branch.
         * :code:`channel`: The channel ID.
         * :code:`node`: The node ID.
+        * :code:`polygon`: The polygon ID.
         * :code:`offset`: The offset along the long plot
         * :code:`[data_types]`: The data types requested.
 
@@ -488,6 +496,9 @@ class GPKG1D(GPKGBase, INFO):
                 if re.findall('_P$', table_name):
                     self.node_count = count
                     self._gis_layer_p_name = table_name
+                elif re.findall('_R$', table_name):
+                    self._gis_layer_r_name = table_name
+                    self.poly_count = count
                 else:
                     self.channel_count = count
                     self._gis_layer_l_name = table_name
@@ -500,6 +511,8 @@ class GPKG1D(GPKGBase, INFO):
 
             self.gis_layer_p_fpath = TuflowPath(self.fpath.parent) / f'{self.fpath.name} >> {self._gis_layer_p_name}'
             self.gis_layer_l_fpath = TuflowPath(self.fpath.parent) / f'{self.fpath.name} >> {self._gis_layer_l_name}'
+            if self._gis_layer_r_name is not None:
+                self.gis_layer_r_fpath = TuflowPath(self.fpath.parent) / f'{self.fpath.name} >> {self._gis_layer_r_name}'
 
     def _load(self):
         if self._loaded:
@@ -507,6 +520,7 @@ class GPKG1D(GPKGBase, INFO):
 
         with self.connect(self.fpath) as conn:
             cur = conn.cursor()
+            self._load_region_info(cur)
             self._load_channel_info(cur)
             self._load_node_info(cur)
             self._load_time_series(cur)
@@ -542,6 +556,19 @@ class GPKG1D(GPKGBase, INFO):
             dtype1 = 'channel flow regime' if dtype == 'Flow Regime' else self._get_standard_data_type_name(dtype)
             self._time_series_data[dtype1] = self._gpkg_time_series_extractor(cur, dtype, self._gis_layer_l_name)
 
+        # polygons
+        if self._gis_layer_r_name is not None:
+            cur.execute(
+                'SELECT Column_name FROM Timeseries_info WHERE Table_name = ?;',
+                (self._gis_layer_r_name,)
+            )
+            data_types = [x[0] for x in cur.fetchall()]
+            self._read_gpkg_table_to_memory(cur, data_types, self._gis_layer_r_name)
+            for dtype in data_types:
+                dtype1 = 'channel flow regime' if dtype == 'Flow Regime' else self._get_standard_data_type_name(dtype)
+                self._poly_res_types.append(dtype1)
+                self._time_series_data[dtype1] = self._gpkg_time_series_extractor(cur, dtype, self._gis_layer_r_name)
+
     @staticmethod
     def _sqlite_return_to_df(ret: list[tuple], columns: list[str], type_map: list[type]) -> pd.DataFrame:
         d = OrderedDict({x: [] for x in columns})
@@ -554,6 +581,44 @@ class GPKG1D(GPKGBase, INFO):
         df = pd.DataFrame(d)
         df.set_index('id', inplace=True)
         return df
+
+    def _load_region_info(self, cur: 'Cursor'):
+        columns = ['id', 'type', 'source', 'rain_gage', 'outlet', 'area', 'total_precip',
+                   'total_runon', 'total_evap', 'total_infil', 'total_runoff', 'peak_runoff']
+        type_map = [str, str, str, str, str, float, float, float, float, float, float, float]
+        if not self._is_swmm:
+            # Only SWMM has region information for now
+            self._polygon_info = pd.DataFrame([], columns=columns)
+            return
+        
+        try:
+            cur.execute(
+                'SELECT '
+                'ID as id, '
+                'geom as geom, '
+                'Type as type, '
+                'Source as "source", '
+                'Rain_Gage as "rain_gage", '
+                'Outlet as "outlet", '
+                'Area as "area", '
+                'Total_Precip as "total_precip", '
+                'Total_Runon as "total_runon", '
+                'Total_Evap as "total_evap", '
+                'Total_Infil as "total_infil", '
+                'Total_Runoff as "total_runoff", '
+                'Peak_Runoff as "peak_runoff" '
+                'FROM Polygons_R;'
+            )
+        # If there is an error executing the SQL query, it means there were no subcatchments to write
+        except sqlite3.Error:
+            self._polygon_info = pd.DataFrame([], columns=columns)
+            return
+
+        ret = cur.fetchall()
+        if ret:
+            self._polygon_info = self._sqlite_return_to_df(ret, columns, type_map)
+        else:
+            self._polygon_info = pd.DataFrame([], columns=columns)
 
     def _load_channel_info(self, cur: 'Cursor'):
         columns = ['id', 'flags', 'length', 'us_node', 'ds_node', 'us_invert', 'ds_invert',
