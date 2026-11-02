@@ -197,4 +197,4 @@ wheel==0.46.3
 widgetsnbextension==4.0.15
 wrapt==2.1.2
 wslink==2.5.7
-yarl==1.23.0
+yarl==1.25.1
