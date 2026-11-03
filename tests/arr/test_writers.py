@@ -386,31 +386,32 @@ def test_urban_losses_written_once_ahead_of_design_losses(tmp_path, api_response
     config = make_config(
         tmp_path,
         events={'aep': ['50%'], 'duration': [1440], 'output_notation': 'ari'},
-        losses={'extrapolation_method': 'interpolate', 'urban_initial_loss': 1.5, 'urban_continuing_loss': 0.0},
+        losses={'extrapolation_method': 'interpolate', 'urban_initial_loss': 1.5, 'urban_continuing_loss': 0.0, 'tuflow_loss_method': 'excess'},
     )
     engine = ArrEngine(config, api_response_1990)
     results = engine.run()
     write_outputs(config, results)
 
-    tsoilf = (tmp_path / 'soils.tsoilf').read_text()
-    assert '1, ILCL, 1.5, 0.0' in tsoilf
-    assert '2, ILCL, <<IL_1>>, <<CL_1>>' in tsoilf
+    materials = (tmp_path / 'materials.csv').read_text()
+    assert '1,,"1.5, 0.0"' in materials
+    assert '2,,"<<IL_1>>, <<CL_1>>"' in materials
+    assert not (tmp_path / 'soils.tsoilf').exists()
 
 
 def test_urban_losses_written_once_across_appended_configs(tmp_path, api_response_1990):
     config_a = make_config(
         tmp_path, events={'aep': ['50%'], 'duration': [1440], 'output_notation': 'ari'},
-        losses={'extrapolation_method': 'interpolate', 'urban_initial_loss': 1.5, 'urban_continuing_loss': 0.0})
+        losses={'extrapolation_method': 'interpolate', 'urban_initial_loss': 1.5, 'urban_continuing_loss': 0.0, 'tuflow_loss_method': 'excess'})
     config_a.site.name = 'A'
     config_b = make_config(
         tmp_path, events={'aep': ['50%'], 'duration': [1440], 'output_notation': 'ari'},
-        losses={'extrapolation_method': 'interpolate'})
+        losses={'extrapolation_method': 'interpolate', 'tuflow_loss_method': 'excess'})
     config_b.site.name = 'B'
 
     write_outputs(config_a, ArrEngine(config_a, api_response_1990).run(), append=False)
     write_outputs(config_b, ArrEngine(config_b, api_response_1990).run(), append=True)
 
-    tsoilf = (tmp_path / 'soils.tsoilf').read_text()
-    assert tsoilf.count('ILCL, 1.5, 0.0') == 1
-    assert '2, ILCL, <<IL_A>>, <<CL_A>>' in tsoilf
-    assert '3, ILCL, <<IL_B>>, <<CL_B>>' in tsoilf
+    materials = (tmp_path / 'materials.csv').read_text()
+    assert materials.count('"1.5, 0.0"') == 1
+    assert '2,,"<<IL_A>>, <<CL_A>>"' in materials
+    assert '3,,"<<IL_B>>, <<CL_B>>"' in materials

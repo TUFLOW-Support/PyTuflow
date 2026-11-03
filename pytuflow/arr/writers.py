@@ -9,7 +9,7 @@ Writes the standard TUFLOW ARR input files from a list of
 * ``rf_inflow/<site>_RF_<aep><dur>.<csv|ts1>`` - one rainfall hyetograph file per
   AEP x duration (x climate change scenario) combination, with one column per selected
   temporal pattern.
-* ``soils.tsoilf`` / ``rainfall_losses.trd`` - initial/continuing loss control files
+* ``soils.tsoilf`` (infiltration) or ``materials.csv`` (excess) / ``rainfall_losses.trd`` - initial/continuing loss control files
   (``tsoilf`` when ``losses.tuflow_loss_method == 'infiltration'``, a TUFLOW ``.trd`` read
   file of ``Set Variable`` statements otherwise), driven by ``<<IL_name>>``/``<<CL_name>>``
   scalars defined per AEP/duration (/CC scenario) combination.
@@ -358,8 +358,9 @@ def _append_losses_to_trd(trd_path: Path, site: str, by_aep_dur: dict, out_notat
 def write_losses(path: Path, config: ArrConfig, results: list, append: bool = False) -> None:
     """Writes (or appends to) the loss control file: ``soils.tsoilf`` (an ``ILCL``
     scalar entry referencing ``<<IL_name>>``/``<<CL_name>>``, when
-    ``losses.tuflow_loss_method == 'infiltration'``, plus an additional fixed-value
-    ``ILCL`` entry ahead of it for impervious/urban losses if
+    ``losses.tuflow_loss_method == 'infiltration'``) or ``materials.csv`` (the same
+    scalars as a material rainfall-loss entry, when ``'excess'``, plus an additional
+    fixed-value entry ahead of it for impervious/urban losses if
     ``losses.urban_initial_loss``/``urban_continuing_loss`` are set) alongside a
     companion ``.trd`` read file (always written) that sets those
     ``IL_name``/``CL_name`` scalars per AEP/duration(/CC scenario) event combination.
@@ -377,16 +378,26 @@ def write_losses(path: Path, config: ArrConfig, results: list, append: bool = Fa
         with open(tsoilf_path, mode, encoding='utf-8') as f:
             if mode == 'w':
                 f.write('! Soil ID, Method, IL, CL\n')
-                # only written once per model (matching the legacy script) - a shared
-                # impervious/urban soil ID reserved ahead of every catchment's own
-                # design ARR losses entry, if configured for the first config in a
-                # multi-config (append) run.
-                if losses_cfg.urban_initial_loss is not None:
-                    f.write(
-                        f'{soil_id}, ILCL, {losses_cfg.urban_initial_loss:.1f}, {losses_cfg.urban_continuing_loss:.1f}  '
-                        f'! Impervious/Urban Area Rainfall Losses\n')
-                    soil_id += 1
             f.write(f'{soil_id}, ILCL, <<IL_{site}>>, <<CL_{site}>>  ! Design ARR Losses For Catchment {site}\n')
+    else:
+        materials_path = path.parent / 'materials.csv'
+        mode = 'a' if append and materials_path.exists() else 'w'
+        material_id = 1
+        if mode == 'a':
+            with open(materials_path, encoding='utf-8') as existing:
+                material_id = sum(1 for line in existing if line.strip() and not line.startswith('Material ID')) + 1
+        with open(materials_path, mode, encoding='utf-8') as f:
+            if mode == 'w':
+                f.write("Material ID,Manning's n,Rainfall Loss Parameters,Land Use Hazard ID,"
+                        "Storage Reduction Factor,Fraction Impervious,! Description\n")
+                # only written once per model (matching the legacy script) - a shared
+                # impervious/urban material ID reserved ahead of every catchment's own
+                # design ARR losses entry.
+                if losses_cfg.urban_initial_loss is not None:
+                    f.write(f'{material_id},,"{losses_cfg.urban_initial_loss:.1f}, {losses_cfg.urban_continuing_loss:.1f}",,,,'
+                            f'! Impervious/Urban Area Rainfall Losses\n')
+                    material_id += 1
+            f.write(f'{material_id},,"<<IL_{site}>>, <<CL_{site}>>",,,,! Design ARR Losses For Catchment {site}\n')
 
     out_notation = config.events.output_notation
     cc_scenarios = sorted({r.cc_scenario for r in results if r.cc_scenario is not None})

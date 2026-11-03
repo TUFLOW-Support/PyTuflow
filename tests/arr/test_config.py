@@ -235,16 +235,16 @@ def test_urban_losses_must_be_set_together():
         ArrConfig.from_dict(bad)
 
 
-def test_urban_losses_requires_infiltration_method():
+def test_urban_losses_requires_excess_method():
     bad = json.loads(json.dumps(VALID_CONFIG))
-    bad['losses'] = {'urban_initial_loss': 10.0, 'urban_continuing_loss': 2.5, 'tuflow_loss_method': 'excess'}
+    bad['losses'] = {'urban_initial_loss': 10.0, 'urban_continuing_loss': 2.5, 'tuflow_loss_method': 'infiltration'}
     with pytest.raises(ArrConfigError, match='urban_initial_loss'):
         ArrConfig.from_dict(bad)
 
 
-def test_urban_losses_valid_when_set_together_with_infiltration():
+def test_urban_losses_valid_when_set_together_with_excess():
     data = json.loads(json.dumps(VALID_CONFIG))
-    data['losses'] = {'urban_initial_loss': 10.0, 'urban_continuing_loss': 2.5}
+    data['losses'] = {'urban_initial_loss': 10.0, 'urban_continuing_loss': 2.5, 'tuflow_loss_method': 'excess'}
     config = ArrConfig.from_dict(data)
     assert config.losses.urban_initial_loss == 10.0
     assert config.losses.urban_continuing_loss == 2.5

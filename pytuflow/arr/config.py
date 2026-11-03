@@ -319,10 +319,10 @@ class LossesConfig:
             errors.append(
                 "losses.urban_initial_loss and losses.urban_continuing_loss must be set together (both or neither)."
             )
-        if self.urban_initial_loss is not None and self.tuflow_loss_method != 'infiltration':
+        if self.urban_initial_loss is not None and self.tuflow_loss_method != 'excess':
             errors.append(
-                "losses.urban_initial_loss/urban_continuing_loss requires losses.tuflow_loss_method == 'infiltration' "
-                "(no separate impervious-area loss entry is written for 'excess')."
+                "losses.urban_initial_loss/urban_continuing_loss requires losses.tuflow_loss_method == 'excess' "
+                "(impervious areas are a material property, not a soil property)."
             )
         if self.climate_change_method not in CC_LOSS_METHODS:
             errors.append(
