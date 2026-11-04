@@ -396,16 +396,17 @@ class ArrEngine:
     def _tp_set_for_config(self) -> TemporalPatternSet:
         if self._tp_set is None:
             tp_cfg = self.config.temporal_patterns
-            if tp_cfg.point_tp_csv:
-                tp_set = TemporalPatternSet.from_files(
-                    tp_cfg.point_tp_csv, tp_cfg.areal_tp_csv, catchment_area=self.config.site.catchment_area)
-            else:
-                point_tp = self.response.layer('PointTP', required=True)
+            # point and areal patterns are each taken from their local CSV if configured,
+            # otherwise from the Data Hub's own layers (only requested when needed).
+            point_url = areal_url = None
+            if not tp_cfg.point_tp_csv:
+                point_url = self.response.layer('PointTP', required=True)['url']
+            if not tp_cfg.areal_tp_csv:
                 areal_tp = self.response.layer('ArealTP')
-                point_url = point_tp['url']
                 areal_url = areal_tp['url'] if areal_tp else None
-                tp_set = TemporalPatternSet.from_api_response(
-                    point_url, areal_url, catchment_area=self.config.site.catchment_area)
+            tp_set = TemporalPatternSet.from_sources(
+                tp_cfg.point_tp_csv, tp_cfg.areal_tp_csv, point_url, areal_url,
+                catchment_area=self.config.site.catchment_area)
             from .temporal_patterns import (
                 TP_REGION_COORDS, fetch_additional_region_point_tp, load_additional_region_point_tp_csv,
             )

@@ -262,13 +262,12 @@ def test_point_tp_csv_missing_file_raises():
         ArrConfig.from_dict(bad)
 
 
-def test_areal_tp_csv_requires_point_tp_csv(tmp_path):
+def test_areal_tp_csv_valid_without_point_tp_csv(tmp_path):
     areal = tmp_path / 'areal.csv'
     areal.write_text('data', encoding='utf-8')
-    bad = json.loads(json.dumps(VALID_CONFIG))
-    bad['temporal_patterns'] = {'areal_tp_csv': str(areal)}
-    with pytest.raises(ArrConfigError, match='areal_tp_csv requires'):
-        ArrConfig.from_dict(bad)
+    data = json.loads(json.dumps(VALID_CONFIG))
+    data['temporal_patterns'] = {'areal_tp_csv': str(areal)}
+    assert ArrConfig.from_dict(data).temporal_patterns.areal_tp_csv == str(areal)
 
 
 def test_point_tp_csv_valid_file_accepted(tmp_path):

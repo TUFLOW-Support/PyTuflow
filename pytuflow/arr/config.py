@@ -191,8 +191,6 @@ class TemporalPatternsConfig:
         if self.point_tp_csv and not Path(self.point_tp_csv).is_file():
             errors.append(f"temporal_patterns.point_tp_csv file not found: '{self.point_tp_csv}'")
         if self.areal_tp_csv:
-            if not self.point_tp_csv:
-                errors.append("temporal_patterns.areal_tp_csv requires temporal_patterns.point_tp_csv to also be set")
             if not Path(self.areal_tp_csv).is_file():
                 errors.append(f"temporal_patterns.areal_tp_csv file not found: '{self.areal_tp_csv}'")
         if self.additional_tp:

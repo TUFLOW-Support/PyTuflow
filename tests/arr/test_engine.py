@@ -977,6 +977,20 @@ def test_engine_uses_local_point_and_areal_tp_csv(tmp_path, api_response_1990, p
     assert tp_set.areal_tp_csv == areal_tp_csv.replace('\r\n', '\n')
 
 
+def test_engine_uses_local_areal_tp_csv_with_downloaded_point_tp(tmp_path, api_response_1990, areal_tp_csv):
+    areal_path = tmp_path / 'areal.csv'
+    areal_path.write_text(areal_tp_csv, encoding='utf-8', newline='')
+    config = make_config(
+        events={'aep': ['50%'], 'duration': [1440], 'output_notation': 'ari'},
+        temporal_patterns={'areal_tp_csv': str(areal_path)},
+    )
+    engine = ArrEngine(config, api_response_1990)
+    assert len(engine.run()) == 1
+    tp_set = engine._tp_set_for_config()
+    assert tp_set.areal_tp_csv == areal_tp_csv.replace('\r\n', '\n')
+    assert not tp_set.point_tp.empty
+
+
 def test_engine_additional_tp_accepts_local_csv_file(tmp_path, api_response_1990, point_tp_csv):
     prior_output = tmp_path / 'previous_PointTP_Increments.csv'
     prior_output.write_text(point_tp_csv, encoding='utf-8', newline='')

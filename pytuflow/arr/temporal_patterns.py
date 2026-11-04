@@ -360,14 +360,7 @@ class TemporalPatternSet:
                            catchment_area: Optional[float] = None) -> 'TemporalPatternSet':
         """Downloads and parses point (and optionally areal) temporal patterns directly
         from the Data Hub API's supplied download URLs."""
-        point_csv = _download_increments_csv(point_tp_url)
-        point_tp = parse_point_tp_csv(point_csv)
-        areal_csv = None
-        areal_tp = None
-        if areal_tp_url:
-            areal_csv = _download_increments_csv(areal_tp_url)
-            areal_tp = parse_areal_tp_csv(areal_csv)
-        return cls(point_tp, areal_tp, catchment_area, point_tp_csv=point_csv, areal_tp_csv=areal_csv)
+        return cls.from_sources(None, None, point_tp_url, areal_tp_url, catchment_area)
 
     @classmethod
     def from_files(cls, point_tp_path: str, areal_tp_path: Optional[str] = None,
@@ -376,10 +369,23 @@ class TemporalPatternSet:
         CSV files (``temporal_patterns.point_tp_csv``/``areal_tp_csv``) - in the same
         format as the Data Hub's own ``*_Increments.csv`` files (e.g. a previous run's
         ``working_data`` output) - instead of downloading them from the Data Hub API."""
-        point_path = Path(point_tp_path)
-        if not point_path.is_file():
-            raise ArrError(f"temporal_patterns.point_tp_csv file not found: '{point_tp_path}'")
-        point_csv = point_path.read_text(encoding='utf-8')
+        return cls.from_sources(point_tp_path, areal_tp_path, None, None, catchment_area)
+
+    @classmethod
+    def from_sources(cls, point_tp_path: Optional[str], areal_tp_path: Optional[str],
+                     point_tp_url: Optional[str], areal_tp_url: Optional[str],
+                     catchment_area: Optional[float] = None) -> 'TemporalPatternSet':
+        """Builds a set where the point and areal patterns are each sourced independently:
+        from a local CSV if its path is given, otherwise downloaded from its Data Hub URL
+        (the areal URL is optional - not every location has ``ArealTP`` data)."""
+        if point_tp_path:
+            point_path = Path(point_tp_path)
+            if not point_path.is_file():
+                raise ArrError(f"temporal_patterns.point_tp_csv file not found: '{point_tp_path}'")
+            point_csv = point_path.read_text(encoding='utf-8')
+            logger.info("Loaded point temporal patterns from local file '%s'.", point_tp_path)
+        else:
+            point_csv = _download_increments_csv(point_tp_url)
         point_tp = parse_point_tp_csv(point_csv)
         areal_csv = None
         areal_tp = None
@@ -388,9 +394,11 @@ class TemporalPatternSet:
             if not areal_path.is_file():
                 raise ArrError(f"temporal_patterns.areal_tp_csv file not found: '{areal_tp_path}'")
             areal_csv = areal_path.read_text(encoding='utf-8')
+            logger.info("Loaded areal temporal patterns from local file '%s'.", areal_tp_path)
+        elif areal_tp_url:
+            areal_csv = _download_increments_csv(areal_tp_url)
+        if areal_csv is not None:
             areal_tp = parse_areal_tp_csv(areal_csv)
-        logger.info("Loaded point temporal patterns from local file '%s'%s.", point_tp_path,
-                    f" and areal temporal patterns from '{areal_tp_path}'" if areal_tp_path else "")
         return cls(point_tp, areal_tp, catchment_area, point_tp_csv=point_csv, areal_tp_csv=areal_csv)
 
     def add_region_patterns(self, region_point_tp: pd.DataFrame, region_areal_tp: Optional[pd.DataFrame] = None) -> None:
