@@ -85,9 +85,8 @@ def _short_arf(area, durations, aep_pcts, arf_frequent, min_arf):
     else:
         if area > 1000:
             logger.warning(
-                '%,.0fkm2 out of range of generalised equations for short duration ARF factors. Applying '
-                'method for 1000km2, however this may not be applicable for the catchment. Please consult ARR.',
-                area
+                f'{area:.0f}km2 out of range of generalised equations for short duration ARF factors. Applying '
+                'method for 1000km2, however this may not be applicable for the catchment. Please consult ARR.'
             )
         fn = lambda a, d, p: arf_eqn241(area, d, p)
     return np.array([[_arf_cell(area, d, p, min_arf, arf_frequent, fn) for p in aep_pcts] for d in durations])
@@ -108,9 +107,8 @@ def _medium_arf(area, durations, aep_pcts, params, arf_frequent, min_arf):
     else:
         if area > 30000:
             logger.warning(
-                '%,.0fkm2 out of range of generalised equations for medium duration ARF factors. Applying '
-                'method for 30,000km2, however this may not be applicable for the catchment. Please consult ARR.',
-                area
+                f'{area:.0f}km2 out of range of generalised equations for medium duration ARF factors. Applying '
+                'method for 30,000km2, however this may not be applicable for the catchment. Please consult ARR.'
             )
         wrapped = fn
     return np.array([[_arf_cell(area, d, p, min_arf, arf_frequent, wrapped) for p in aep_pcts] for d in durations])
@@ -129,9 +127,8 @@ def _long_arf(area, durations, aep_pcts, params, arf_frequent, min_arf):
     else:
         if area > 30000:
             logger.warning(
-                '%,.0fkm2 out of range of generalised equations for long duration ARF factors. Applying '
-                'method for 30,000km2, however this may not be applicable for the catchment. Please consult ARR.',
-                area
+                f'{area:.0f}km2 out of range of generalised equations for long duration ARF factors. Applying '
+                'method for 30,000km2, however this may not be applicable for the catchment. Please consult ARR.'
             )
         wrapped = fn
     return np.array([[_arf_cell(area, d, p, min_arf, arf_frequent, wrapped) for p in aep_pcts] for d in durations])
