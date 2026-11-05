@@ -33,6 +33,7 @@ Check out the :doc:`usage` section for further information, including how to :re
    :header-rows: 1
 
    * - Changelogs
+   * - :doc:`changelog/1.3`
    * - :doc:`changelog/1.2`
    * - :doc:`changelog/1.1`
    * - :doc:`changelog/1.0`
