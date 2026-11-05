@@ -6,7 +6,7 @@ pytuflow-arr
 The ``pytuflow-arr`` tool converts `Australian Rainfall and Runoff <http://arr.ga.gov.au/home>`_ rainfall and loss data from the `ARR Data Hub <https://data.arr-software.org/about>`_ into TUFLOW model input files (``Event_File.tef``, ``bc_dbase.csv``, ``rf_inflow/*.csv``,
 ``soils.tsoilf`` / ``*.trd``).
 
-This tool is a clean rewrite of the ``ARR to TUFLOW`` script from the QGIS TUFLOW plugin for the **2026 v1** ARR data hub major update. Consequently, it does not support legacy versions of the data hub. It provides many options for backward compatibility, however not every legacy option is supported and many of the defaults are new for the 2026 v1 ARR data hub update.
+This tool is a clean rewrite of the ``ARR to TUFLOW`` script from the QGIS TUFLOW plugin for the **2026 v1** ARR Data Hub major update. Consequently, it does not support legacy versions of the data hub. It provides many options for backward compatibility, however not every legacy option is supported and many of the defaults are new for the 2026 v1 ARR Data Hub update.
 
 Key Differences to the Legacy QGIS Plugin Tool
 ----------------------------------------------
@@ -33,7 +33,7 @@ script's multi-catchment batching.
 Only the ``site`` section may differ between the config files - every other setting
 (``events``, ``losses``, ``climate_change``, ``temporal_patterns``, ``output``, etc) is taken from
 the *first* config file regardless of what any later file contains. Every file after the
-first must still include a `site` section, but any other top-level key it contains is
+first must still include a ``site`` section, but any other top-level key it contains is
 ignored (with a warning) rather than being merged in or validated against the first
 file's settings - this keeps the override rule simple and unambiguous. The site name for each config should be unique, otherwise subsequent configs will overwrite previous config's outputs.
 
@@ -209,7 +209,7 @@ As an example, the 1% / 60 min is compared below for temporal pattern 1 (``TP01`
 
 .. note::
 
-  The climate change scenarios have both triggered complete storm events. For complete storm events, the climate change IL is calculated by :math:`IL_{CC\_storm} = IL_{storm} * IL_{CC\_factor}`.
+  The climate change scenarios have both triggered complete storm events. For complete storm events, the climate change IL is calculated by :math:`IL_{CC\_storm} = IL_{storm} \times IL_{CC\_factor}`.
   
   Although not used in this example, the climate change burst initial loss, by default, is calculated by: :math:`IL_{CC\_burst} = IL_{storm} \times IL_{CC\_factor} - PB_{ratio} \times RF_{CC}`.
 
@@ -687,7 +687,7 @@ Each scenario object:
    * - urban_initial_loss / urban_continuing_loss
      - ``number``
      - ``-``
-     - Adds a fixed loss value for urban areas to the output TUFLOW files.
+     - Adds a fixed loss value for urban areas to the output TUFLOW files. Only applicable when the ``tuflow_loss_method`` is set to ``"excess"``.
    * - climate_change_method
      - ``string``
      - ``"storm"``
@@ -742,7 +742,7 @@ The available loss extrapolation methods are detailed below. The default method 
 - ``interpolate`` - interpolates the losses using the assumption that at zero minute duration, the initial loss is zero.
 - ``log_interpolate`` - same as the ``interpolate`` option but uses a log scale for duration (uses a boundary value of zero for zero minutes).
 - ``interpolate_preburst`` - interpolates the preburst depths using the assumption that at zero minute duration, the preburst depth is zero.
-- ``log_interpolate_preburst`` - same as ``interpolate_preburst`` option but uses a log scale for duration (uses a boudary value of zero for zero minutes).
+- ``log_interpolate_preburst`` - same as ``interpolate_preburst`` option but uses a log scale for duration (uses a boundary value of zero for zero minutes).
 - ``rahman`` - uses an equation determined by a study conducted by Rahman et al 2002.
 - ``hill`` - uses an equation dtermined by a study conducted by Hill et al 1996:1998. This requires the user to provide a mean anuual rainfall value (the ``mar`` parameter value).
 - ``constant`` - holds the burst initial loss constant from the nearest table row edge. This matches the method named "Use 60 min loss" in the legacy QGIS tool.
