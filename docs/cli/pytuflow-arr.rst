@@ -3,6 +3,11 @@
 pytuflow-arr
 ============
 
+.. note::
+
+  This tool is labelled experimental. Outputs should be checked carefully. The CLI is not considered final 
+  and can change in future versions without provision for backward compatibility.
+
 The ``pytuflow-arr`` tool converts `Australian Rainfall and Runoff <http://arr.ga.gov.au/home>`_ rainfall and loss data from the `ARR Data Hub <https://data.arr-software.org/about>`_ into TUFLOW model input files (``Event_File.tef``, ``bc_dbase.csv``, ``rf_inflow/*.csv``,
 ``soils.tsoilf`` / ``*.trd``).
 
