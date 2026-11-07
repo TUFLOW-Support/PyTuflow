@@ -304,9 +304,21 @@ class Command(TuflowLine):
         """Returns whether command is referencing the bc_dbase.csv."""
         return self.command == 'BC DATABASE' or self.command == 'AD BC DATABASE'
 
+    def is_ad_bc_dbase_file(self):
+        """Distinguish advection-dispersion BC databases."""
+        return self.command == 'AD BC DATABASE'
+
+    def is_ad_global_database_file(self):
+        """Recognise constituent-property databases with linked inputs."""
+        return self.command == 'AD GLOBAL DATABASE'
+
     def is_pit_inlet_dbase_file(self):
         """Returns whether command is referecing the pit_inlet_dbase.csv"""
         return self.command and ('PIT INLET DATABASE' in self.command or 'DEPTH DISCHARGE DATABASE' in self.command)
+
+    def is_depth_discharge_dbase_file(self):
+        """Distinguish depth-discharge curves from pit inlet databases."""
+        return self.command == 'DEPTH DISCHARGE DATABASE'
 
     def is_rainfall_grid(self):
         """Returns whether command is referencing READ GRID RF"""
@@ -586,7 +598,7 @@ class Command(TuflowLine):
 
     def is_read_database(self):
         """Returns whether command is a database command."""
-        return self.is_mat_dbase() or self.is_bc_dbase_file() or self.is_rainfall_grid() \
+        return self.is_mat_dbase() or self.is_bc_dbase_file() or self.is_ad_global_database_file() or self.is_rainfall_grid() \
             or self.is_pit_inlet_dbase_file() or self.is_soil_dbase() or self.is_xs_dbase()
 
     def is_mat_dbase(self):

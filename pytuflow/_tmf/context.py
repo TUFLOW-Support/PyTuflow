@@ -1,3 +1,4 @@
+from .options import FileResolution
 import logging
 import re
 import typing
@@ -52,6 +53,7 @@ class Context:
             self.load_context_from_args(context.split())
         #: bool: Whether user defined variables have been loaded into the context object
         self.var_loaded = False
+        self.file_resolution = FileResolution.EAGER
         if not self.events_loaded:
             self.load_events(self.config.event_db)
 
@@ -402,10 +404,15 @@ class Context:
         """
 
         if not hasattr(self, identifier):
-            list_ = [getattr(self, '{0}{1}'.format(identifier, i)) for i in range(9) if
+            list_ = [getattr(self, '{0}{1}'.format(identifier, i)) for i in range(1, 10) if
                       hasattr(self, '{0}{1}'.format(identifier, i)) and getattr(self, '{0}{1}'.format(identifier, i))]
         else:
             list_ = getattr(self, identifier)
         return list_
 
 
+
+
+# Capture the original context evaluator for safe fragment reuse checks.
+_CONTEXT_APPEND_ATTRIBUTES = tuple(Context.__dict__.items())
+_CONTEXT_APPEND_MRO = Context.__mro__
