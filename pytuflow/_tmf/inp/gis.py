@@ -86,7 +86,8 @@ class GisInputRunState(InputRunState):
         #: GisInput: the BuildState object that the RunState object is based on.
         self.bs = build_state
         #: int: index of the attribute column to use for the GIS input.
-        self.attr_idx = build_state.attr_idx
+        self.attr_idx = (0 if getattr(context, 'file_resolution', 'eager') == 'deferred'
+                         else build_state.attr_idx)
 
         self._geoms = []
 
@@ -103,6 +104,9 @@ class GisInputRunState(InputRunState):
 
     def _resolve_scope_in_context(self):
         super()._resolve_scope_in_context()
+        if getattr(self.ctx, 'file_resolution', 'eager') == 'deferred':
+            self.attr_idx = self._rs.attr_idx
+            return  # GIS attribute/geometry inspection belongs to materialisation.
         self._geoms = self._rs.geoms if has_gdal or has_geopandas else []
         for cf in self.bs.cf:
             if cf.fpath.resolve() == self.value.resolve():
@@ -205,6 +209,10 @@ class GisInput(GisInputBase):
         if not self._command.is_table_link():
             self._cf_loaded = True
             return
+        # The cross-section database driver detects the GIS provider and
+        # creates the supported cached table-link view during initial parse.
+        # Deferred contexts skip additional GIS reads, but cannot discard
+        # this eager API or its already-parsed build-state database.
         for file in self._rhs_files:
             try:
                 db = xs.CrossSectionDatabase(file, self.config, self.parent, self.scope)
@@ -303,3 +311,7 @@ class GisInput(GisInputBase):
                 gis_lyr.close()
 
         return geoms, attr_files
+
+
+# Capture the built-in constructor before an extension can replace the method.
+_GIS_INPUT_CONTEXT = GisInput.context

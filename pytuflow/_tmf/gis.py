@@ -170,6 +170,36 @@ def ogr_iter_geom(fpath: str | Path) -> typing.Generator[int, None, None]:
             yield f.lyr.GetGeomType()
 
 
+def network_attribute_file_sources(attrs: typing.Sequence[typing.Any]) -> tuple[str, ...]:
+    """File-valued 1d_nwk Inlet_Type entries using positional TUFLOW fields.
+
+    Type is field 2, Ignore field 3 and Inlet_Type field 11 (zero-based
+    indexes 1, 2, 10). Normal Q/P fields are *curve identifiers* and
+    operational-control IDs are not filenames. No GIS I/O is performed.
+    """
+    if len(attrs) <= 10:
+        return ()
+    ignored = str(attrs[2] or '').strip().casefold()
+    if ignored in ('y', 't'):
+        return ()
+    channel_type = str(attrs[1] or '').strip().upper()
+    value = str(attrs[10] or '').strip()
+    if not value:
+        return ()
+    if channel_type == 'M':
+        return tuple(part.strip() for part in value.split('|') if part.strip())
+    if channel_type == 'QO':
+        pieces = value.split('|', 1)
+        if len(pieces) == 2 and pieces[1].strip():
+            return (pieces[1].strip(),)
+        # An incomplete QO expression must not produce a fictitious
+        # missing-file issue for a control identifier.
+        raise ValueError(f'Invalid QO operational matrix expression: {value}')
+    # Q/P curves reference pit/depth-discharge database keys; PO and
+    # other operated types use control IDs. None are direct paths.
+    return ()
+
+
 def tuflow_type_requires_feature_iter(layername):
     """
     Returns the indexes of fields that could require a file copy e.g. for 1d_xs.
