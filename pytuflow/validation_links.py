@@ -60,6 +60,15 @@ def _linked_reference(parent: BatchInputReference, path: Path) -> BatchInputRefe
     """Attribute a GIS-linked source to its original command."""
     expression = str(path)
     source = parent.reference
+    # These paths come from recognised file-valued GIS attributes, without a
+    # Command instance to classify their type. Only known raster suffixes can
+    # receive a raster role here; unknown/extensionless linked grids remain
+    # ordinary physical-file checks, not unverified Rasterio successes.
+    linked_raster = path.suffix.casefold() in {
+        ".tif", ".tiff", ".asc", ".flt", ".img", ".vrt", ".nc", ".nc4", ".cdf",
+    }
+    from ._crs_validation import is_vector_source
+
     file = FileReference(
         base_directory=path.parent,
         expanded_value=expression,
@@ -70,6 +79,8 @@ def _linked_reference(parent: BatchInputReference, path: Path) -> BatchInputRefe
         requires_layer_scan=False,
         requires_attribute_scan=False,
         requires_database_scan=False,
+        requires_raster_metadata_scan=linked_raster,
+        requires_vector_crs_scan=(not linked_raster and is_vector_source(path)),
         unresolved_variables=tuple(re.findall(r"<<[^<>]+>>", expression)),
     )
     return BatchInputReference(
@@ -95,6 +106,10 @@ def _gis_read_role(command_name: str) -> str | None:
         or words[1] not in {"gis", "mi", "mid", "rowcol"}
     ):
         return None
+    # RF triangulation uses geometry only: TUFLOW ignores every attribute.
+    # Keep file/layer/companion checks, but never select BC Names from triangles.
+    if words[2:] == ["rf", "triangle"]:
+        return "geometry"
     return "bc" if len(words) > 2 and words[2] in {"bc", "sa", "rf"} else "gis"
 
 
@@ -264,11 +279,12 @@ def extend_gis_dependencies(
         for link in run.input_references:
             original = link.reference
             layer_name = str(original.layer_pattern or original.path_pattern.stem)
-            bc_command = (
-                _gis_read_role(commands.get(link.command_index, "")) == "bc"
-            )
+            role = _gis_read_role(commands.get(link.command_index, ""))
+            if role == "geometry":
+                continue
+            bc_command = role == "bc"
             known_bc_layer = bool(
-                re.match(r"^2d_(bc|sa|rf)_", layer_name, flags=re.IGNORECASE)
+                re.match(r"^(?:[12]d_bc|2d_(?:sa|rf))_", layer_name, flags=re.IGNORECASE)
             )
             flexible_bc_layer = (
                 original.layer_pattern is not None

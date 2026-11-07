@@ -8,6 +8,7 @@ Unsupported sources/schemas remain unresolved rather than silently passing.
 from __future__ import annotations
 
 import fnmatch
+import math
 import os
 import re
 import sqlite3
@@ -56,12 +57,42 @@ def _file_field_index(layer: str) -> int | None:
 
 
 def _bc_name_field_index(layer: str) -> int | None:
-    """TUFLOW 2026 §8.4: Name is field three in 2d_bc, first in 2d_sa/rf."""
-    if re.match(r"^2d_bc_", layer, re.IGNORECASE):
+    """TUFLOW §§8.3–8.4: Name is third in 1d/2d_bc, first in 2d_sa/rf."""
+    if re.match(r"^[12]d_bc_", layer, re.IGNORECASE):
         return 2
     if re.match(r"^2d_(sa|rf)_", layer, re.IGNORECASE):
         return 0
     return None
+
+
+def _one_d_bc_identifiers(rows: Iterable[Sequence[object]], layer: str) -> tuple[str, ...]:
+    """Read Type/Flags/Name without treating automatic HQ slopes as database keys.
+
+    This deliberately supports named HT/HQ/QT/QH boundaries. Other 1D types
+    remain unresolved until their own dependency semantics are implemented.
+    """
+    names: set[str] = set()
+    for attrs in rows:
+        # Legacy 1d_bc T flag ignores the feature, including any Name value.
+        if "T" in str(attrs[1] or "").upper():
+            continue
+        bc_type = str(attrs[0] or "").strip().upper()
+        if bc_type not in {"HT", "HQ", "QT", "QH"}:
+            raise ValueError(f"Unrecognised or unsupported 1d_bc Type {bc_type!r}: {layer}")
+        value = attrs[2]
+        if not isinstance(value, str) or not value.strip() or "<<" in value or ">>" in value:
+            raise ValueError(f"Missing or unexpanded BC Name in {layer}: {value!r}")
+        value = value.strip()
+        if bc_type == "HQ" and re.match(r"^slope\s*=", value, re.IGNORECASE):
+            try:
+                slope = float(value.split("=", 1)[1].strip())
+            except ValueError as exc:
+                raise ValueError(f"Invalid automatic 1d_bc HQ slope in {layer}: {value!r}") from exc
+            if not math.isfinite(slope) or slope <= 0:
+                raise ValueError(f"Invalid automatic 1d_bc HQ slope in {layer}: {value!r}")
+            continue
+        names.add(value)
+    return tuple(sorted(names, key=str.casefold))
 
 
 def _bc_identifiers_from_rows(
@@ -72,6 +103,8 @@ def _bc_identifiers_from_rows(
     2d_bc link/ignore/code geometries never reference BC Name values.
     For HQ, a positive b value generates the curve internally.
     """
+    if re.match(r"^1d_bc_", layer, re.IGNORECASE):
+        return _one_d_bc_identifiers(rows, layer)
     names: set[str] = set()
     two_d_bc = bool(re.match(r"^2d_bc_", layer, re.IGNORECASE))
     source_types = {"HS", "HT", "HQ", "QT", "RF", "SD", "SH", "ST", "VG", "WT", "GT"}
@@ -221,6 +254,10 @@ def _attribute_column_indexes(layer: str, field_count: int) -> tuple[int, ...]:
     """
     bc_index = _bc_name_field_index(layer)
     if bc_index is not None:
+        if re.match(r"^1d_bc_", layer, re.IGNORECASE):
+            if field_count <= bc_index:
+                raise ValueError(f"Missing required 1d_bc Type/Flags/Name columns in {layer}")
+            return (0, 1, 2)
         if field_count <= bc_index or (bc_index == 2 and field_count <= 7):
             raise ValueError(f"Missing required BC Name/Type/b columns in {layer}")
         return (0, 2, 7) if bc_index == 2 else (bc_index,)

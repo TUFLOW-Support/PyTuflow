@@ -241,64 +241,47 @@ class Context:
         return name_
 
     def translate_result_name(self, tcf_name: str) -> str:
-        """Translates the TCF file name into a string replacing all variables with their values.
+        """Resolve result-name placeholders independently of input flag order.
 
-        Parameters
-        ----------
-        tcf_name : str
-            The TCF file name that will be translated.
-
-        Returns
-        -------
-        str
-            The translated TCF file name.
+        The bare E/S aliases name the first E1/S1 slot. Record consumed
+        arguments by their original positions, never by deleting indices
+        from the original or a partially shortened argument list.
         """
-        a = [x.strip('-') for x in self.context_args]
-        a_upper = [x.upper() for x in a]
-        a_used = []
-        name_ = TuflowPath(tcf_name).stem
-        for match in re.findall(r'~[SsEe]\d?~', tcf_name):
-            var = match.upper()[1:-1]
-            i = 0
-            if var in a_upper:
-                i = a_upper.index(var)
-            elif var == 'E' and 'E1' in a_upper:
-                i = a_upper.index('E1')
-            elif var == 'E1' and 'E' in a_upper:
-                i = a_upper.index('E')
-            elif var == 'S' and 'S1' in a_upper:
-                i = a_upper.index('S1')
-            elif var == 'S1' and 'S' in a_upper:
-                i = a_upper.index('S')
-            else:
+        arguments = [
+            (str(key).lstrip('-').upper(), str(value))
+            for key, value in zip(self.context_args[::2], self.context_args[1::2])
+        ]
+        locations = {}
+        for index, (key, _) in enumerate(arguments):
+            locations.setdefault(key, index)
+        used: set[int] = set()
+
+        def substitute(match: re.Match[str]) -> str:
+            key = match.group(0)[1:-1].upper()
+            index = locations.get(key)
+            if index is None:
+                alias = {'E': 'E1', 'E1': 'E', 'S': 'S1', 'S1': 'S'}.get(key)
+                index = locations.get(alias) if alias is not None else None
+            if index is None:
+                return match.group(0)
+            used.add(index)
+            return arguments[index][1]
+
+        name = re.sub(r'~[SsEe]\d?~', substitute, TuflowPath(tcf_name).stem)
+        events: list[str] = []
+        scenarios: list[str] = []
+        for index, (key, value) in enumerate(arguments):
+            if index in used:
                 continue
-            val = self.context_args[i + 1]
-            name_ = name_.replace(match, val)
-            if var not in a_used:
-                a_used.append(var)
-        for var in reversed(a_used):
-            i = a_upper.index(var)
-            a.pop(i + 1)
-            a.pop(i)
-        e_list = []
-        s_list = []
-        for i, var in enumerate(a[::2]):
-            val = a[i * 2 + 1]
-            if var.upper()[0] == 'E':
-                e_list.append(val)
-            elif var.upper()[0] == 'S':
-                s_list.append(val)
-        for i, val in enumerate(e_list):
-            if i == 0:
-                name_ = f'{name_}_{val}'
-            else:
-                name_ = f'{name_}+{val}'
-        for i, val in enumerate(s_list):
-            if i == 0:
-                name_ = f'{name_}_{val}'
-            else:
-                name_ = f'{name_}+{val}'
-        return name_
+            if key.startswith('E'):
+                events.append(value)
+            elif key.startswith('S'):
+                scenarios.append(value)
+        if events:
+            name += '_' + '+'.join(events)
+        if scenarios:
+            name += '_' + '+'.join(scenarios)
+        return name
 
     def is_resolved(self, item: typing.Any) -> bool:
         """Checks whether item has been resolved (to the best of its ability). Event variable names are custom and

@@ -362,6 +362,7 @@ class TCFRunState(ControlFileRunState, TuflowControlFileMixin, ModelRunMixin, TC
                 requires_layer_scan=source.requires_layer_scan,
                 requires_directory_scan=source.requires_directory_scan,
                 requires_raster_metadata_scan=source.requires_raster_metadata_scan,
+                requires_vector_crs_scan=source.requires_vector_crs_scan,
                 input_uuid=str(inp.uuid),
                 csv_columns=source.csv_columns,
             ))
@@ -526,7 +527,7 @@ class TCFRunState(ControlFileRunState, TuflowControlFileMixin, ModelRunMixin, TC
         >>> tcf.context().tpc_path()
         WindowsPath('../results/EG15/plot/EG15_001.tpc')
         """
-        return (self.output_folder_2d() / 'plot' / self.output_name()).with_suffix('.tpc')
+        return self.output_folder_2d() / 'plot' / f'{self.output_name()}.tpc'
 
     def tlf_path(self) -> Path:
         """Returns the path to the expected tlf file. Does not check it exists.
@@ -542,7 +543,7 @@ class TCFRunState(ControlFileRunState, TuflowControlFileMixin, ModelRunMixin, TC
         >>> tcf.context().tlf_path()
         WindowsPath('./log/EG15_001.tlf')
         """
-        return (self.log_folder_path() / self.output_name()).with_suffix('.tlf')
+        return self.log_folder_path() / f'{self.output_name()}.tlf'
 
     def run(self, tuflow_bin: PathLike, prec: str = 'sp', add_cli_args: list[str] = (), *args, **kwargs):
         """Run the control file in context using the specified TUFLOW binary.

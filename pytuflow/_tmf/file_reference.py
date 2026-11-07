@@ -69,6 +69,7 @@ class FileReference:
     database_kind: str | None = None
     requires_table_link_scan: bool = False
     requires_raster_metadata_scan: bool = False
+    requires_vector_crs_scan: bool = False
     # Resolved time/value names for ordinary BC CSVs; empty means unsupported.
     csv_columns: tuple[str, ...] | None = None
 
@@ -112,6 +113,7 @@ class DeferredDatabaseSource:
     requires_layer_scan: bool = False
     requires_directory_scan: bool = False
     requires_raster_metadata_scan: bool = False
+    requires_vector_crs_scan: bool = False
     # Resolved time/value names for ordinary BC CSVs; empty means unsupported.
     csv_columns: tuple[str, ...] | None = None
     input_uuid: str = ''
@@ -202,5 +204,6 @@ def make_file_reference(command: Command) -> FileReference:
         requires_database_scan=(command.is_read_database() and not command.is_rainfall_grid_nc()),
         unresolved_variables=unresolved, database_kind=kind,
         requires_table_link_scan=command.is_table_link(),
-        requires_raster_metadata_scan=(command.is_read_grid() or command.is_rainfall_grid_nc()),
+        requires_raster_metadata_scan=(command.is_raster_file() or command.is_rainfall_grid_nc()),
+        requires_vector_crs_scan=bool(command.is_vector_file()),
     )

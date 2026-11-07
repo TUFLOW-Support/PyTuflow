@@ -103,3 +103,46 @@ def test_core_reader_rejects_active_rollback_journal(tmp_path: Path) -> None:
     finally:
         editor.rollback()
         editor.close()
+
+
+def test_missing_scanned_smb_file_identity_accepts_unchanged_metadata(tmp_path: Path) -> None:
+    """A mapped-drive DirEntry may return identity (0, 0) for a valid file."""
+    from types import SimpleNamespace
+
+    path = tmp_path / "stable.gpkg"
+    with sqlite3.connect(path) as connection:
+        connection.execute("CREATE TABLE gpkg_contents (table_name TEXT)")
+        connection.execute("INSERT INTO gpkg_contents VALUES ('grid')")
+    before = path.read_bytes()
+    actual = path.stat()
+    scanned = SimpleNamespace(
+        st_dev=0, st_ino=0, st_size=actual.st_size,
+        st_mtime_ns=actual.st_mtime_ns, st_ctime_ns=actual.st_ctime_ns,
+    )
+    check_gpkg_safety(path, expected_stat=scanned)
+    assert read_gpkg_layer_names(path) == (("grid",), "")
+    assert path.read_bytes() == before
+    assert {p.name for p in tmp_path.iterdir()} == {"stable.gpkg"}
+
+
+def test_missing_scanned_smb_identity_still_rejects_changed_metadata(tmp_path: Path) -> None:
+    """Missing identity cannot bypass changes or known contradictory identities."""
+    from types import SimpleNamespace
+
+    path = tmp_path / "stable.gpkg"
+    with sqlite3.connect(path) as connection:
+        connection.execute("CREATE TABLE gpkg_contents (table_name TEXT)")
+    actual = path.stat()
+    for changed in (
+        {"st_size": actual.st_size + 1},
+        {"st_mtime_ns": actual.st_mtime_ns + 1},
+        {"st_ctime_ns": actual.st_ctime_ns + 1},
+        {"st_dev": actual.st_dev, "st_ino": actual.st_ino + 1},
+    ):
+        fields = dict(
+            st_dev=0, st_ino=0, st_size=actual.st_size,
+            st_mtime_ns=actual.st_mtime_ns, st_ctime_ns=actual.st_ctime_ns,
+        )
+        fields.update(changed)
+        with pytest.raises(GeoPackageSafetyError, match="changed target or identity"):
+            check_gpkg_safety(path, expected_stat=SimpleNamespace(**fields))

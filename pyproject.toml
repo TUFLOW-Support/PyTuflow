@@ -42,6 +42,8 @@ classifiers = [
 
 [tool.hatch.build.targets.wheel]
 packages = ["pytuflow"]
+# PEP 561: include the marker in built wheels even with explicit file selection.
+artifacts = ["pytuflow/py.typed"]
 include = [
   "pytuflow/_tmf/tmf/data/*.json",
   "pytuflow/_fm_to_estry/data/*.json",
@@ -51,6 +53,10 @@ include = [
   "pytuflow/project/data/modules/**/*.json",
   "pytuflow/project/data/empties/**/*.json",
 ]
+
+[tool.hatch.build.targets.sdist]
+# Preserve the marker when a wheel is rebuilt from the source distribution.
+artifacts = ["pytuflow/py.typed"]
 
 [tool.pytest.ini_options]
 filterwarnings = [

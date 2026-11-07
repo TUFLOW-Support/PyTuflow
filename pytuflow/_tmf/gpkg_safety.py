@@ -76,6 +76,23 @@ def _gpkg_journal_error(path: Path, target: Path) -> str | None:
     return None
 
 
+def _expected_gpkg_stat_matches(expected: os.stat_result, actual: os.stat_result) -> bool:
+    """Compare a directory snapshot when SMB omits device and inode.
+
+    A missing DirEntry identity is not proof the alias changed. Fall back
+    to size and timestamps, retaining fresh path/target identity checks
+    and final read-only/journal verification.
+    """
+    device, inode = gpkg_source_identity(expected)
+    if device != 0 and inode != 0:
+        return (device, inode) == gpkg_source_identity(actual)
+    return (
+        expected.st_size == actual.st_size
+        and expected.st_mtime_ns == actual.st_mtime_ns
+        and expected.st_ctime_ns == actual.st_ctime_ns
+    )
+
+
 def _pin_gpkg(
     path: Path, expected_stat: os.stat_result | None = None
 ) -> tuple[Path, os.stat_result, os.stat_result]:
@@ -87,7 +104,7 @@ def _pin_gpkg(
     if (
         gpkg_source_identity(requested) != gpkg_source_identity(source)
         or (expected_stat is not None
-            and gpkg_source_identity(expected_stat) != gpkg_source_identity(source))
+            and not _expected_gpkg_stat_matches(expected_stat, source))
     ):
         raise GeoPackageSafetyError(_GPKG_SOURCE_CHANGED_ERROR)
     message = _gpkg_journal_error(path, target)

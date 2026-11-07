@@ -361,6 +361,7 @@ class FragmentBatchResult:
 _DEFAULT_CONTROL_FILE_TYPES = frozenset(
     {
         ("pytuflow._tmf.cf.adcf", "ADCF"),
+        ("pytuflow._tmf.cf.cf_build_state", "ControlFileBuildState"),
         ("pytuflow._tmf.cf.fvptm", "FVPTM"),
         ("pytuflow._tmf.cf.qcf", "QCF"),
         ("pytuflow._tmf.cf.tbc", "TBC"),
@@ -424,6 +425,7 @@ class _Plan:
         compiled_started = perf_counter()
         self.use_scopes = use_scopes
         self.use_manifests = use_manifests
+        from .cf.tcf_build_state import _OverrideInput
         from .inp.cf import ControlFileInput
         from .inp.comment import CommentInput
         from .inp.db import DatabaseInput
@@ -476,6 +478,7 @@ class _Plan:
         self.children: dict[int, tuple[Any, ...]] = {}
         self.allowed = {
             ControlFileInput,
+            _OverrideInput,
             DatabaseInput,
             FileInput,
             FolderInput,
@@ -515,6 +518,7 @@ class _Plan:
 
     def _compile(self, inp: Any, ancestors: set[int]) -> None:
         """Compile one input and its nested descendants into dependency fragments."""
+        from .cf.tcf_build_state import _OverrideInput
         from .inp.cf import ControlFileInput
         from .inp.db import DatabaseInput
 
@@ -538,7 +542,10 @@ class _Plan:
         )
 
         methods: Any = _batch_append_context_methods()
-        method = methods.get(type(inp))
+        # Only the built-in implicit override subclass inherits this exact evaluator.
+        # All other custom subclasses and replaced context hooks remain unsafe.
+        method_type = ControlFileInput if type(inp) is _OverrideInput else type(inp)
+        method = methods.get(method_type)
         if getattr(inp.context, "__func__", None) is not method:
             raise NotImplementedError("Custom input context hook")
         inline = getattr(inp, "trd_input", None)
@@ -553,7 +560,9 @@ class _Plan:
         expressions = [str(inp.rhs or "")]
         scopes = [inp.scope]
         children: tuple[Any, ...] = (
-            tuple(cast(Any, inp).cf) if type(inp) is ControlFileInput else ()
+            tuple(cast(Any, inp).cf)
+            if type(inp) in (ControlFileInput, _OverrideInput)
+            else ()
         )
         self.children[id(inp)] = children
         for child in children:
@@ -642,10 +651,11 @@ class _Plan:
         signature = self._manifest_signature(self.manifests[id(inp)], ctx)
         if signature is None:
             return self._full_key(inp, ctx)
+        from .cf.tcf_build_state import _OverrideInput
         from .inp.cf import ControlFileInput
 
         selected: tuple[object, ...] = ()
-        if type(inp) is ControlFileInput:
+        if type(inp) in (ControlFileInput, _OverrideInput):
             projection, children = self._include_selection(inp, ctx)
             # Preserve resolved path spelling and ordered parsed source identity.
             # A missing/unparsed/ambiguous source fails in the original selector
@@ -815,6 +825,7 @@ class _Plan:
 
     def evaluate(self, inp: Any, ctx: Any) -> DependencyFragment:
         """Resolve the expression using safe compiled substitutions."""
+        from .cf.tcf_build_state import _OverrideInput
         from .inp.cf import ControlFileInput
 
         # Inactive inputs cannot contribute commands or dependencies. Avoid
@@ -837,7 +848,7 @@ class _Plan:
             raise ValueError(f"Pause command encountered: {inp.rhs}")
         # Includes are projected without constructing their mutable child
         # tree. Leaves use their existing evaluator once per signature.
-        if type(inp) is ControlFileInput:
+        if type(inp) in (ControlFileInput, _OverrideInput):
             if self.use_manifests:
                 result, children = self._include_selection(inp, ctx)
             else:

@@ -10,7 +10,7 @@ from .line import TuflowLine
 
 
 CONTROL_FILES = [
-    'GEOMETRY CONTROL FILE', 'BC CONTROL FILE', 'ESTRY CONTROL FILE', 'EVENT FILE', 'READ FILE',
+    'GEOMETRY CONTROL FILE', 'BC CONTROL FILE', 'ESTRY CONTROL FILE', 'EVENT FILE', 'BC EVENT FILE', 'READ FILE',
     'RAINFALL CONTROL FILE', 'EXTERNAL STRESS FILE', 'QUADTREE CONTROL FILE', 'AD CONTROL FILE',
     'ESTRY CONTROL FILE AUTO', 'SWMM CONTROL FILE'
     ]
@@ -289,8 +289,8 @@ class Command(TuflowLine):
         return cmd in CONTROL_FILES and self.value is not None and TuflowPath(self.value).suffix.upper() != '.CSV'
 
     def is_event_file(self):
-        """Return whether command is referencing the TUFLOW EVENT FILE."""
-        return self.command == 'EVENT FILE'
+        """Recognise both TUFLOW Event File and BC Event File declarations."""
+        return self.command in ('EVENT FILE', 'BC EVENT FILE')
 
     def is_quadtree_control_file(self):
         """Return whether command is referencing QUADTREE CONTROL FILE."""
