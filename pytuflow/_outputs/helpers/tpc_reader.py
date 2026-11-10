@@ -96,8 +96,8 @@ class TPCReader:
             if '\\' in prop or '/' in prop:
                 return prop
             # check if value is datetime
-            if re.match(r'^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$', prop):
-                return pd.to_datetime(prop)
+            if re.match(r'^\d{4}-\d{2}-\d{2}[T ]?\d{2}:\d{2}:\d{2}Z?$', prop):
+                return pd.to_datetime(prop, utc=True)
             # check if value is an int
             if re.match(r'^[+-]?\d+$', prop):
                 try:

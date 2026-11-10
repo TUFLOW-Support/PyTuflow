@@ -11,6 +11,7 @@ Release date: XX November 2026
 - :ref:`pytuflow-arr` - The output AEP notation is now kept consistent for events > 1% AEP. For example, previously the 0.1% AEP event would incorrectly use the name 1000yr.
 - :ref:`pytuflow-arr` - The output AEP and durations will now use consistent padding. For example, the 10 minute event will be ``0010m`` if the ``1440m`` (24 hr) event is
   included so that the name length is the same. 
+- Fixed a bug in the :class:`~pytuflow.TPC` class when a reference time was set in the TPC. The reference time string was not being converted into a datetime object with a reference time.
 
 1.3.0
 -----
