@@ -272,8 +272,8 @@ The example config below shows how to run the second example again, but using th
     "climate_change": {
       "enabled": true,
       "scenarios" : [
-        {"baseline_year": 2050, "ssp": "SSP2"},
-        {"baseline_year": 2090, "ssp": "SSP2"}
+        {"name": "2050", "baseline_year": 2050, "ssp": "SSP2"},
+        {"name": "2090", "baseline_year": 2090, "ssp": "SSP2"}
       ]
     },
     "output": {
@@ -602,6 +602,10 @@ Each scenario object:
      - Type
      - Default
      - Description
+   * - name
+     - ``string``
+     - ``-``
+     - Optional parameter that allows the user to supply a name for the scenario to be used in the output naming.
    * - baseline_year
      - ``int``
      - ``-``
