@@ -11,6 +11,7 @@ from pytuflow.arr.temporal_patterns import TemporalPattern
 from pytuflow.arr.writers import (
     format_aep,
     format_duration,
+    event_widths,
     write_outputs,
 )
 
@@ -29,6 +30,19 @@ def mock_tp_downloads(monkeypatch, point_tp_csv, areal_tp_csv):
 ])
 def test_format_aep(aep_name, expected):
     assert format_aep(aep_name, 'ari') == expected
+
+
+@pytest.mark.parametrize('aep_name, expected', [
+    ('1%', '01.0p'), ('0.5%', '00.5p'), ('1 in 200', '00.5p'), ('50%', '50.0p'), ('0.5EY', '0.5e'),
+])
+def test_format_aep_notation_aep(aep_name, expected):
+    int_width, decimals, _ = event_widths(['50%', '1%', '0.5%'], [10])
+    assert format_aep(aep_name, 'aep', int_width, decimals) == expected
+
+
+def test_format_duration_padded():
+    assert event_widths(['1%'], [10, 1440])[2] == 4
+    assert format_duration(10, 4) == '0010m'
 
 
 def test_format_aep_unrecognised_raises():

@@ -37,16 +37,38 @@ from .exceptions import ArrError
 logger = logging.getLogger('pytuflow.arr')
 
 
-def format_aep(aep_name: str, output_notation: str) -> str:
-    """Formats an AEP/ARI/EY magnitude label into a TUFLOW event-name-safe token, e.g.
-    ``'1%'`` -> ``'01p'``, ``'0.5EY'`` -> ``'0.5e'``, ``'1 in 200'`` -> ``'200y'``.
-
-    This is a simpler, fixed-width-free scheme than the legacy script's elaborate
-    per-run padding-width tables (which varied formatting based on which other AEPs were
-    present in the same run) - deliberately simplified since file/event names no longer
-    need to match the legacy naming convention exactly.
-    """
+def _aep_pct_or_none(aep_name: str) -> Optional[float]:
+    """Returns the AEP % for ``'x%'`` and ``'1 in N'`` labels, or ``None`` for EY labels."""
     aep_name = str(aep_name).strip()
+    if aep_name.endswith('EY'):
+        return None
+    try:
+        if aep_name.endswith('%'):
+            return float(aep_name[:-1])
+        if aep_name.lower().startswith('1 in'):
+            return 100.0 / float(aep_name[4:].strip())
+    except (ValueError, ZeroDivisionError):
+        pass
+    raise ArrError(f"Unrecognised AEP/ARI/EY magnitude: '{aep_name}'")
+
+
+def _pct_decimals(value: float) -> int:
+    text = f'{value:.4f}'.rstrip('0')
+    return len(text.split('.')[1]) if '.' in text else 0
+
+
+def event_widths(aep_names: list, durations: list) -> tuple:
+    """Returns ``(aep_int_width, aep_decimals, duration_width)`` so that every event token
+    in a run uses the same padding, derived from the selected events."""
+    pcts = [v for v in (_aep_pct_or_none(a) for a in aep_names) if v is not None]
+    int_width = max((len(str(int(v))) for v in pcts), default=1)
+    decimals = max((_pct_decimals(v) for v in pcts), default=0)
+    dur_width = max((len(str(int(float(d)))) for d in durations), default=1)
+    return max(int_width, 2) if pcts else 1, decimals, dur_width
+
+
+def _format_aep_legacy(aep_name: str) -> str:
+    """Unpadded notation used for ``ari`` output: ``'1%'`` -> ``'01p'``, ``'1 in 200'`` -> ``'200y'``."""
     if aep_name.endswith('EY'):
         return f'{aep_name[:-2]}e'
     if aep_name.endswith('%'):
@@ -59,13 +81,49 @@ def format_aep(aep_name: str, output_notation: str) -> str:
     raise ArrError(f"Unrecognised AEP/ARI/EY magnitude: '{aep_name}'")
 
 
-def format_duration(duration: float) -> str:
+def format_aep(aep_name: str, output_notation: str, int_width: int = 2, decimals: Optional[int] = None) -> str:
+    """Formats an AEP/ARI/EY magnitude label into a TUFLOW event-name-safe token, e.g.
+    ``'1%'`` -> ``'01p'``, ``'0.5EY'`` -> ``'0.5e'``, ``'1 in 200'`` -> ``'0.5p'`` (``aep`` output notation only; ``ari`` keeps the legacy tokens).
+
+    ``'1 in N'`` labels are converted to % AEP so all non-EY events share one notation.
+    ``int_width`` and ``decimals`` (see :func:`event_widths`) give a consistent padding
+    across the selected events; when ``decimals`` is ``None`` it is derived from the value.
+    """
+    aep_name = str(aep_name).strip()
+    if output_notation != 'aep':
+        return _format_aep_legacy(aep_name)
+    value = _aep_pct_or_none(aep_name)
+    if value is None:
+        return f'{aep_name[:-2]}e'
+    if decimals is None:
+        decimals = _pct_decimals(value)
+    width = int_width + (decimals + 1 if decimals else 0)
+    return f'{value:0{width}.{decimals}f}p'
+
+
+def format_duration(duration: float, width: int = 0) -> str:
     """Formats a duration in minutes as a TUFLOW event-name-safe token, e.g. ``1440`` ->
-    ``'1440m'``."""
+    ``'1440m'``, zero padded to ``width`` digits."""
     duration = float(duration)
     if duration == int(duration):
-        return f'{int(duration)}m'
+        return f'{int(duration):0{width}d}m'
     return f'{duration:g}m'
+
+
+def _event_formatters(config: ArrConfig) -> tuple:
+    """Returns ``(aep_fmt, dur_fmt)`` callables that pad consistently across the selected events."""
+    aep_names = []
+    for a in config.events.aep:
+        try:
+            float(a)
+            aep_names.append(f'{a}%')
+        except (ValueError, TypeError):
+            aep_names.append(str(a))
+    int_width, decimals, dur_width = event_widths(aep_names, config.events.duration)
+    notation = config.events.output_notation
+    if notation != 'aep':
+        return (lambda a: format_aep(a, notation)), format_duration
+    return (lambda a: format_aep(a, notation, int_width, decimals)), (lambda d: format_duration(d, dur_width))
 
 
 def site_name_token(name: str) -> str:
@@ -84,6 +142,7 @@ def write_tef(path: Path, config: ArrConfig, results: list, append: bool = False
     tp_labels = [_tp_label(p, richest.patterns) for p in richest.patterns] if richest is not None else []
     cc_scenarios = sorted({r.cc_scenario for r in results if r.cc_scenario is not None})
     out_notation = config.events.output_notation
+    aep_fmt, dur_fmt = _event_formatters(config)
 
     mode = 'a' if append and path.exists() else 'w'
     with open(path, mode, encoding='utf-8') as f:
@@ -91,14 +150,14 @@ def write_tef(path: Path, config: ArrConfig, results: list, append: bool = False
             f.write('!EVENT MAGNITUDES\n')
             var = '~ARI~' if out_notation == 'ari' else '~AEP~'
             for aep in aep_names:
-                token = format_aep(aep, out_notation)
+                token = aep_fmt(aep)
                 f.write(f'Define Event == {token}\n')
                 f.write(f'    BC Event Source == {var} | {token}\n')
                 f.write('End Define\n\n')
 
             f.write('!EVENT DURATIONS\n')
             for dur in durations:
-                token = format_duration(dur)
+                token = dur_fmt(dur)
                 f.write(f'Define Event == {token}\n')
                 f.write(f'    BC Event Source == ~DUR~ | {token}\n')
                 f.write('End Define\n\n')
@@ -214,8 +273,9 @@ def write_rf_inflow(folder: Path, config: ArrConfig, results: list) -> Path:
     # base (no-CC) result first, then CC scenarios in a stable order
     results = sorted(results, key=lambda r: (r.cc_scenario is not None, r.cc_scenario or ''))
     base = results[0]
-    aep_token = format_aep(base.aep_name, config.events.output_notation)
-    dur_token = format_duration(base.duration)
+    aep_fmt, dur_fmt = _event_formatters(config)
+    aep_token = aep_fmt(base.aep_name)
+    dur_token = dur_fmt(base.duration)
     fname = f'{site}_RF_{aep_token}{dur_token}.{out_form}'
     fpath = folder / fname
 
@@ -400,10 +460,11 @@ def write_losses(path: Path, config: ArrConfig, results: list, append: bool = Fa
             f.write(f'{material_id},,"<<IL_{site}>>, <<CL_{site}>>",,,,! Design ARR Losses For Catchment {site}\n')
 
     out_notation = config.events.output_notation
+    aep_fmt, dur_fmt = _event_formatters(config)
     cc_scenarios = sorted({r.cc_scenario for r in results if r.cc_scenario is not None})
     by_aep_dur: dict = {}
     for r in results:
-        key = (format_aep(r.aep_name, out_notation), format_duration(r.duration))
+        key = (aep_fmt(r.aep_name), dur_fmt(r.duration))
         by_aep_dur.setdefault(key, {})[r.cc_scenario] = r
 
     trd_path = path.parent / ('soil_infiltration.trd' if losses_cfg.tuflow_loss_method == 'infiltration' else 'rainfall_losses.trd')
