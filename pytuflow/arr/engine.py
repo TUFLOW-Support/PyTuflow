@@ -966,7 +966,7 @@ class ArrEngine:
         scenarios: list = [(None, self.config.ifd.baseline_year, None)]
         if self.config.climate_change.enabled:
             for s in self.config.climate_change.scenarios:
-                scenarios.append((f'{s.baseline_year}_{s.ssp}', s.baseline_year, s.ssp))
+                scenarios.append((s.label, s.baseline_year, s.ssp))
 
         self.arf_tables = {}
         self.depth_areal_tables = {}
