@@ -215,6 +215,11 @@ class TemporalPatternsConfig:
 class ClimateChangeScenario:
     baseline_year: int = 2090
     ssp: str = 'SSP2'
+    name: Optional[str] = None
+
+    @property
+    def label(self) -> str:
+        return self.name if self.name else f'{self.baseline_year}_{self.ssp}'
 
 
 @dataclass
@@ -232,7 +237,16 @@ class ClimateChangeConfig:
         errors = []
         if self.enabled and not self.scenarios:
             errors.append("climate_change.scenarios must not be empty when climate_change.enabled is true")
+        seen = set()
         for s in self.scenarios:
+            if s.name is not None:
+                if not isinstance(s.name, str) or not s.name.strip():
+                    errors.append(f"climate_change scenario name must be a non-empty string, got '{s.name}'")
+                elif s.name in seen:
+                    errors.append(f"climate_change scenario name '{s.name}' is not unique")
+            if s.label in seen and s.name is None:
+                errors.append(f"climate_change scenario '{s.label}' is duplicated - supply a unique name")
+            seen.add(s.label)
             if s.baseline_year not in CC_BASELINE_YEARS:
                 errors.append(f"climate_change scenario baseline_year must be one of {CC_BASELINE_YEARS}, got '{s.baseline_year}'")
             if s.ssp not in ('SSP1', 'SSP2', 'SSP3', 'SSP5'):

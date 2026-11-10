@@ -138,6 +138,18 @@ def test_bad_losses_method_raises():
         ArrConfig.from_dict(bad)
 
 
+def test_climate_change_scenario_names():
+    cfg = json.loads(json.dumps(VALID_CONFIG))
+    cfg['climate_change'] = {'enabled': True, 'scenarios': [
+        {'name': 'A', 'baseline_year': 2090, 'ssp': 'SSP2'}, {'name': 'B', 'baseline_year': 2090, 'ssp': 'SSP2'}]}
+    config = ArrConfig.from_dict(cfg)
+    assert [s.label for s in config.climate_change.scenarios] == ['A', 'B']
+
+    cfg['climate_change']['scenarios'][1]['name'] = 'A'
+    with pytest.raises(ArrConfigError, match='not unique'):
+        ArrConfig.from_dict(cfg)
+
+
 def test_climate_change_scenario_validation():
     bad = json.loads(json.dumps(VALID_CONFIG))
     bad['climate_change'] = {'enabled': True, 'scenarios': [{'baseline_year': 2090, 'ssp': 'SSP2'}]}
