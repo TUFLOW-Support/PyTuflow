@@ -72,7 +72,7 @@ def _download_with_retry(url: str, max_retries: int, **kwargs) -> Downloader:
         if downloader.ok() or not _is_retryable(downloader) or attempt >= max_retries:
             return downloader
         delay = min(RETRY_BASE_DELAY * 2 ** attempt, RETRY_MAX_DELAY)
-        delay *= random.uniform(0.5, 1.0)
+        delay *= random.uniform(0.5, 1.0)  # nosec B311
         attempt += 1
         logger.warning("ARR Data Hub request failed (HTTP %s: %s) - retrying in %.1fs (retry %d of %d)",
                        downloader.ret_code, downloader.error_string, delay, attempt, max_retries)
