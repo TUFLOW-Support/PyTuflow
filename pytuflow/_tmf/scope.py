@@ -708,3 +708,14 @@ class VariableScope(Scope):
     def resolvable(self) -> bool:
         # docstring inherited
         return True
+
+
+# Snapshot built-in scope definitions to guard optional fragment optimisation.
+_SCOPE_APPEND_TYPES = (
+    GlobalScope, ScenarioScope, EventScope, EventDefineScope,
+    OneDimScope, OutputZoneScope, ControlScope, VariableScope,
+)
+_SCOPE_APPEND_DEFINITIONS = tuple(
+    (cls, cls.__mro__, tuple(cls.__dict__.items()))
+    for cls in (ScopeList, Scope, *_SCOPE_APPEND_TYPES)
+)

@@ -1,4 +1,5 @@
 import logging
+from pathlib import Path
 import typing
 
 from .file import FileInput
@@ -8,6 +9,7 @@ from ..context import Context
 from .. import const
 
 from .. db import bc_dbase, mat, soil, pit_inlet, rf, xs
+from ..db.db_build_state import DatabaseBuildState
 
 
 if typing.TYPE_CHECKING:
@@ -36,20 +38,27 @@ class DatabaseInput(FileInput):
 
     def _load(self, load_control_files: bool):
         super()._load(load_control_files)
-        self._load_files()
         if load_control_files:
+            self._load_files()
             self._load_database_files()
-        self._file_scopes()
+            self._file_scopes()
 
     def _load_files(self):
         super()._load_files()
         self._files_loaded = True
 
     def _load_database_files(self):
+        # Retain initial lexical paths before database constructors canonicalise
+        # fpath. Context selection can then match cached candidates without I/O.
+        self._database_loaded_paths = []
         for file in self._rhs_files:
             try:
                 if self._command.is_bc_dbase_file():
                     cf = bc_dbase.BCDatabase(file, self._command.config, self.parent, self.scope)
+                elif self._command.is_ad_global_database_file():
+                    # Constituent properties live in a CSV and can contain
+                    # GIS paths in Initial Condition / Minimum Dispersion.
+                    cf = DatabaseBuildState(file, self._command.config, self.parent, self.scope)
                 elif self._command.is_mat_dbase():
                     cf = mat.get_material_database_class(file)(file, self._command.config, self.parent, self.scope)
                 elif self._command.is_soil_dbase():
@@ -57,9 +66,11 @@ class DatabaseInput(FileInput):
                 elif self._command.is_pit_inlet_dbase_file():
                     cf = pit_inlet.PitInletDatabase(file, self._command.config, self.parent, self.scope)
                 elif self._command.is_rainfall_grid():
-                    if file.suffix == '.nc':
-                        logger.warning('Rainfall grid files in NetCDF format (.nc) are not supported yet.')
-                        cf = rf.RainfallDatabase(None)  # .nc not yet supported
+                    if file.suffix.casefold() == '.nc':
+                        # A direct NetCDF is a raster, not a CSV rainfall index.
+                        # Keep the existing empty RainfallDatabase public API;
+                        # its fpath is None and no CSV is opened or parsed.
+                        cf = rf.RainfallDatabase(None)
                     else:
                         cf = rf.RainfallDatabase(file, self._command.config, self.parent, self.scope)
                 elif self._command.is_table_link():
@@ -70,6 +81,7 @@ class DatabaseInput(FileInput):
                     logger.error(f'Unknown database type for {file}')
                     raise ValueError(f'Unknown database type for {file}')
                 self.cf.append(cf)
+                self._database_loaded_paths.append(Path(file))
             except Exception as e:
                 logger.error(f'Error loading database {file}. Command: {self._command}. Error: {e}')
 
@@ -80,3 +92,7 @@ class DatabaseInput(FileInput):
         # docstring inherited
         ctx = context if context else Context(run_context, config=self.config)
         return ControlFileInputRunState(self, ctx, parent)
+
+
+# Retain the original constructor before an extension can replace the method.
+_DATABASE_INPUT_CONTEXT = DatabaseInput.context
