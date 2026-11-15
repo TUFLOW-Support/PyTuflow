@@ -22,6 +22,17 @@ if typing.TYPE_CHECKING:
 logger = logging.getLogger('pytuflow')
 
 
+def bc_database_entry_name(item: str | int) -> str | int:
+    """Return the parser's database key for ordinary or TS1 group syntax.
+
+    A GIS Name such as 'N1|Group' selects the database row 'Group' while
+    'N1' selects the column in the TS1 source. Do not interpret the whole
+    GIS Name as an independent database row.
+    """
+    text = str(item)
+    return item if "|" not in text else text.split("|", 1)[1].strip()
+
+
 class BCDatabase(DatabaseBuildState):
     """Database class for boundary conditions.
 
@@ -51,7 +62,7 @@ class BCDatabase(DatabaseBuildState):
 
     def value(self, item: str | int) -> typing.Any:
         # docstring inherited - override method to handle group syntax ("N1|Group")
-        group = item if '|' not in item else item.split('|')[1].strip()
+        group = bc_database_entry_name(item)
         if group not in self:
             logger.error(f'Item {group} not found in database')
             raise KeyError(f'Item {group} not found in database')

@@ -12,7 +12,7 @@ except ImportError:
 from .. import const
 from ..db.drivers.driver import DatabaseDriver
 from .drivers.get_database_driver_class import get_database_driver_class
-from ..scope import ScopeList
+from ..scope import Scope, ScopeList
 from ..tmf_types import PathLike
 from ..abc.bld_state import BuildState
 from ..abc.db import Database
@@ -98,7 +98,15 @@ class DatabaseBuildState(BuildState, Database):
                 self.loaded = True
                 logger.info('Database file loaded at: {}'.format(fpath))
             except FileNotFoundError:
-                logger.warning('Database file could not be found at: {}'.format(fpath))
+                # Model loading inventories conditional alternatives before a
+                # selected run is known. Report missing scoped alternatives at
+                # debug level; selected-run validation still checks active paths.
+                level = (
+                    logging.DEBUG if self._scope is not None
+                    and Scope('GLOBAL') not in self._scope
+                    else logging.WARNING
+                )
+                logger.log(level, 'Database file could not be found at: %s', fpath)
 
     def __repr__(self):
         if self.fpath:

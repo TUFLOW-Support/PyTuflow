@@ -31,7 +31,9 @@ def get_commands(control_file: Path, settings: 'TCFConfig | _ParseContext') -> t
 
     state = _ParseState()
 
-    with control_file.open(errors='surrogateescape') as f:
+    # Explicit UTF-8 prevents locale-dependent command decoding on Windows;
+    # utf-8-sig also strips an optional BOM before command recognition.
+    with control_file.open(encoding='utf-8-sig', errors='surrogateescape') as f:
         for i, line in enumerate(f):
             command = Command(line, settings, line_number=i + 1)
             if state.was_end_define and state.define_blocks:

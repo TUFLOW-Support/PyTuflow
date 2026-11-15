@@ -22,16 +22,39 @@ class MatDatabaseInput(DatabaseInput):
         super().__init__(parent, command, load_control_files)
 
     def _load(self, load_control_files: bool):
+        if not load_control_files:
+            # Run-state construction must not enumerate files; numerical
+            # multipliers remain available without any filesystem work.
+            for cmd in self._command.parts():
+                if cmd.is_value_a_file():
+                    self._rhs.append(Path(cmd.value_expanded_path or cmd.value))
+                elif cmd.is_value_a_number_3():
+                    self._rhs.append(cmd.return_number())
+                    self.multiplier = cmd.return_number()
+                else:
+                    raise ValueError(f'Unexpected command part: {cmd} in {self._command}')
+            return
+        self._load_files()
+        self._load_database_files()
+
+    def _load_files(self):
+        """Materialise each file part individually when explicitly requested."""
+        if self._files_loaded:
+            return
+        self._rhs = []
         for cmd in self._command.parts():
             if cmd.is_value_a_file():
-                self._rhs.append(Path(cmd.value_expanded_path))
+                self._rhs.append(Path(cmd.value_expanded_path or cmd.value))
+                found = False
                 for file in cmd.iter_files():
+                    found = True
                     file = Path(file)
                     self._files.append(file)
                     self._file_to_original[file] = cmd.value_expanded_path
-                if not self._files:
+                if not found:
                     self._has_missing_files = True
-                    file = Path(cmd.value_expanded_path) if cmd.config.control_file != Path() else Path(cmd.value)
+                    file = (Path(cmd.value_expanded_path) if cmd.config.control_file != Path()
+                            else Path(cmd.value))
                     self._files.append(file)
                     self._file_to_original[file] = file
             elif cmd.is_value_a_number_3():
@@ -42,6 +65,5 @@ class MatDatabaseInput(DatabaseInput):
                 raise ValueError(f'Unexpected command part: {cmd} in {self._command}')
 
         self._rhs_files = self._files.copy()
-        if load_control_files:
-            self._load_database_files()
         self._file_scopes()
+        self._files_loaded = True

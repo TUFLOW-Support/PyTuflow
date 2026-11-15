@@ -41,7 +41,13 @@ class TCFBase(ControlFile, ControlFileUniversalMixin):
 
     def bc_dbase(self, *args, **kwargs) -> T_ControlFile:
         # doc deferred to subclasses
-        return self._find_control_file('bc database', **kwargs)
+        return self._find_control_file(r'^bc database\Z', regex=True,
+                                       regex_flags=re.IGNORECASE, **kwargs)
+
+    def ad_bc_dbase(self, *args, **kwargs) -> T_ControlFile:
+        """Return the AD boundary database separately from hydraulic BC data."""
+        return self._find_control_file(r'^ad bc database\Z', regex=True,
+                                       regex_flags=re.IGNORECASE, **kwargs)
 
     def mat_file(self, *args, **kwargs) -> T_ControlFile:
         # doc deferred to subclasses
@@ -186,7 +192,7 @@ class TCFBase(ControlFile, ControlFileUniversalMixin):
         """
         log_folders = []
         inputs = self.find_input(lhs='log folder', recursive=True)
-        if len(inputs) > 1 and [x for x in inputs if Scope('GLOBAL') not in x.scope]:
+        if len(inputs) > 1 and [x for x in inputs if x.scope and Scope('GLOBAL') not in x.scope]:
             if not context:
                 logger.error('{0} requires context to resolve'.format('Log Folder'))
                 raise ValueError('{0} requires context to resolve'.format('Log Folder'))
@@ -208,7 +214,7 @@ class TCFBase(ControlFile, ControlFileUniversalMixin):
     @staticmethod
     def _resolve_multiple_output_folders(output_folders: list[T_Input], context: Context) -> list[T_Input]:
         """Helper method to resolve multiple output folders based on the provided context."""
-        if len(output_folders) > 1 and [x for x in output_folders if Scope('GLOBAL') not in x.scope]:
+        if len(output_folders) > 1 and [x for x in output_folders if x.scope and Scope('GLOBAL') not in x.scope]:
             if not context:
                 raise ValueError('{0} requires context to resolve'.format('Output Folder'))
             else:  # context has been provided, can try and resolve

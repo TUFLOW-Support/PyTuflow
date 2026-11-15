@@ -188,6 +188,27 @@ def test_mat_database():
     assert val.shape == (2, 1)
 
 
+
+@pytest.mark.parametrize(
+    "preamble",
+    ["", "\n", "! Materials information\n\n", "# Notes\n\n", "\ufeff"],
+)
+def test_mat_csv_header_after_blank_or_comment_preamble(
+    tmp_path: Path, preamble: str,
+) -> None:
+    source = tmp_path / "Materials_01.csv"
+    source.write_text(
+        preamble + "Material ID,Manning's n\n1,0.03\n2,0.04\n",
+        encoding="utf-8",
+    )
+    materials = get_material_database_class(source)(source)
+    assert materials.loaded
+    assert materials.df.index.tolist() == [1, 2]
+    assert materials.df.index.name == "Material ID"
+    assert materials.value(1) == pytest.approx(0.03)
+    assert materials.value(2) == pytest.approx(0.04)
+
+
 def test_mat_tmf_with_header():
     p = './tests/tmf/test_datasets/with_header.tmf'
     db = get_material_database_class(Path(p))(p)

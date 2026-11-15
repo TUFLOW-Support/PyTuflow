@@ -217,3 +217,7 @@ class FVWQ(ControlFileLoadMixin, FVControlFileBuildState, FVWQMixin):
 
 class FVWQRunState(ControlFileRunState, FVWQMixin):
     pass
+
+
+# Stable built-in evaluator identity for optional fragment collection.
+_FVWQ_CONTEXT = FVWQ.context

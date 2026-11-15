@@ -1,6 +1,7 @@
 import logging
 import re
 import typing
+from functools import cache
 
 from ..inp.inputs import Inputs
 from ..inp.inp_run_state import InputRunState
@@ -14,6 +15,67 @@ if typing.TYPE_CHECKING:
     from .cf_build_state import ControlFileBuildState
 
 logger = logging.getLogger('pytuflow')
+
+
+@cache
+def _batch_append_context_methods() -> dict[type, object]:
+    """Identify original built-in input evaluators for conservative fragment reuse.
+
+    Require known function identities so an extension cannot bypass its evaluator.
+    """
+    from ..inp import block, cf, comment, db, file, folder, gis, grid
+    from ..inp import inp_build_state, mat, setting, time_inp, tin, trd
+
+    plain_input_types = (
+        inp_build_state.InputBuildState, setting.SettingInput,
+        comment.CommentInput, file.FileInput, folder.FolderInput,
+        grid.GridInput, time_inp.TimeInput, tin.TinInput, trd.TuflowReadFileInput,
+    )
+    return {
+        **{input_type: inp_build_state._INPUT_BUILD_CONTEXT for input_type in plain_input_types},
+        cf.ControlFileInput: cf._CONTROL_FILE_INPUT_CONTEXT,
+        db.DatabaseInput: db._DATABASE_INPUT_CONTEXT,
+        mat.MatDatabaseInput: db._DATABASE_INPUT_CONTEXT,
+        gis.GisInput: gis._GIS_INPUT_CONTEXT,
+        block.BlockControlInput: block._BLOCK_CONTROL_INPUT_CONTEXT,
+        block.BCBlockControlInput: block._BLOCK_CONTROL_INPUT_CONTEXT,
+        block.GridDefinitionFileBlockInput: block._BLOCK_CONTROL_INPUT_CONTEXT,
+    }
+
+
+def prepare_run_context(build_state: typing.Any, context: typing.Any) -> None:
+    """Apply the existing model defaults and scoped variables once per context."""
+    # if context is empty, look for model events / scenario commands in file
+    if context.is_empty():
+        d = {}
+        model_scenarios = build_state.root_cf.find_input(lhs='model scenario')
+        for s in reversed(model_scenarios):
+            d.update({'s{0}'.format(i+1): v for i, v in enumerate(re.split(r'[\t\s|,]+', s.rhs))})
+            break
+        model_events = build_state.root_cf.find_input(lhs='model event')
+        for e in reversed(model_events):
+            d.update({'e{0}'.format(i+1): v for i, v in enumerate(re.split(r'[\t\s|,]+', e.rhs))})
+            break
+        context.load_context_from_dict(d)
+
+    # try and resolve variables
+    if not context.var_loaded:
+        # Batch dependency collection precomputes the immutable list of
+        # variable declarations once per parsed TCF. Each run still
+        # independently evaluates scopes and the active variable values.
+        compiled_assignments = getattr(context, '_batch_variable_assignments', None)
+        var_map = {}
+        if compiled_assignments is not None:
+            for var_input, (var_name, var_val) in compiled_assignments:
+                if context.in_context_by_scope(var_input.scope):
+                    var_map[var_name] = var_val
+        else:
+            for var_input in build_state.find_input(lhs='set variable', recursive=True):
+                if context.in_context_by_scope(var_input.scope):
+                    var_name, var_val = var_input.command().parse_variable()
+                    var_map[var_name] = var_val
+        context.load_variables(var_map)
+
 
 
 class ControlFileRunState(RunState, ControlFile):
@@ -68,30 +130,14 @@ class ControlFileRunState(RunState, ControlFile):
         pass
 
     def _resolve_scope_in_context(self) -> None:
-        # if context is empty, look for model events / scenario commands in file
-        if self.ctx.is_empty():
-            d = {}
-            model_scenarios = self.bs.root_cf.find_input(lhs='model scenario')
-            for s in reversed(model_scenarios):
-                d.update({'s{0}'.format(i+1): v for i, v in enumerate(re.split(r'[\t\s|,]+', s.rhs))})
-                break
-            model_events = self.bs.root_cf.find_input(lhs='model event')
-            for e in reversed(model_events):
-                d.update({'e{0}'.format(i+1): v for i, v in enumerate(re.split(r'[\t\s|,]+', e.rhs))})
-                break
-            self.ctx.load_context_from_dict(d)
+        prepare_run_context(self.bs, self.ctx)
 
-        # try and resolve variables
-        if not self.ctx.var_loaded:
-            var_inputs = self.bs.find_input(lhs='set variable', recursive=True)
-            var_map = {}
-            for var_input in var_inputs:
-                if self.ctx.in_context_by_scope(var_input.scope):
-                    var_name, var_val = var_input.command().parse_variable()
-                    var_map[var_name] = var_val
-            self.ctx.load_variables(var_map)
-
-        for inp in self._inputs:
+        source_inputs = (
+            self.bs._dependency_inputs()
+            if getattr(self.ctx, "file_resolution", "eager") == "deferred"
+            else self._inputs
+        )
+        for inp in source_inputs:
             if not self.ctx.in_context_by_scope(inp.scope):
                 continue
 
