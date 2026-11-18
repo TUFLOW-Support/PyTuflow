@@ -104,3 +104,7 @@ class ECF(ControlFileLoadMixin, TuflowControlFileMixin, ControlFileBuildState):
         # docstring inherited
         ctx = context if context else Context(run_context, config=self.config)
         return ECFRunState(self, ctx, parent)
+
+
+# Stable built-in evaluator identity for optional fragment collection.
+_ECF_CONTEXT = ECF.context

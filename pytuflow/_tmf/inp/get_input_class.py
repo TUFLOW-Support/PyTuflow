@@ -27,6 +27,10 @@ def get_input_class(cmd: Command) -> type[inp_build_state.InputBuildState]:
         return block.GridDefinitionFileBlockInput
     elif isinstance(cmd, FVCommand) and cmd.is_fv_block():
         return block.BlockControlInput
+    elif cmd.is_set_variable():
+        # A Set Variable assignment is never a physical input, even if its
+        # value contains path separators or a filename-like suffix.
+        return setting.SettingInput
     elif cmd.is_value_a_file():
         return file.FileInput
     elif cmd.is_folder(cmd.value, cmd.part_count, cmd.part_index):

@@ -1,5 +1,6 @@
 import typing
 
+from ..options import CaseSensitivity, FileResolution
 from .cf_load_factory import ControlFileLoadMixin
 from .. import const
 from .tcf_build_state import TCFBuildState
@@ -19,6 +20,7 @@ if typing.TYPE_CHECKING:
     from ..db.soil import SoilDatabase
     from ..db.rf import RainfallDatabase
     from ..db.mat import MatDatabase
+    from ..fragment_dependencies import FragmentBatchResult
 
 
 class TCF(ControlFileLoadMixin, TuflowControlFileMixin, TCFBuildState):
@@ -61,7 +63,43 @@ class TCF(ControlFileLoadMixin, TuflowControlFileMixin, TCFBuildState):
     """
     TUFLOW_TYPE = const.CONTROLFILE.TCF
 
-    def __init__(self, fpath: PathLike | None = None, **kwargs):
+    def __init__(self, fpath: PathLike | None = None, *,
+                 case_sensitivity: CaseSensitivity | None = None, **kwargs):
+        """Load a model using a TUFLOW Linux filename-case policy.
+
+        The optional ``CaseSensitivity`` enum identifies TUFLOW's -cs0
+        (strict), -cs1 (extension only) and -cs2 (whole filename) modes.
+        An omitted mode uses the configured value, defaulting to -cs0 on
+        Linux. Windows retains ordinary filesystem filename matching.
+        """
+        if case_sensitivity is not None and kwargs.get('config') is not None:
+            raise ValueError('Pass case_sensitivity or config, not both')
+        if case_sensitivity is not None or kwargs.get('config') is not None:
+            from pathlib import Path
+            from ..settings import TCFConfig
+            from ..tfpathlib import TuflowPath
+            mode = (case_sensitivity if case_sensitivity is not None
+                    else kwargs['config'].case_sensitivity)
+            if fpath is not None:
+                fpath = TuflowPath.init_case_policy_path(fpath, Path.cwd(), mode)
+            if case_sensitivity is not None:
+                existing = fpath if fpath is not None and Path(fpath).is_file() else None
+                kwargs['config'] = TCFConfig(tcf=existing, case_sensitivity=mode)
+        # ControlFileBuildState replaces a falsey configuration with the
+        # default config when loading. Initialise a supplied empty config here
+        # instead, preserving its selected -cs mode, variables and settings.
+        # Do not mutate the caller's configuration object.
+        if fpath is not None and kwargs.get('config') is not None:
+            supplied = kwargs['config']
+            from pathlib import Path
+            if not supplied and Path(fpath).is_file():
+                from ..settings import from_config
+                from ..tfpathlib import TuflowPath
+                config = from_config(supplied)
+                config.tcf = TuflowPath(fpath)
+                config.model_name = config.get_model_name(config.tcf)
+                config.read_tcf()
+                kwargs['config'] = config
         super(TCF, self).__init__(fpath, **kwargs)
 
     def tgc(self, context: Context = None) -> 'TGC':
@@ -355,8 +393,36 @@ class TCF(ControlFileLoadMixin, TuflowControlFileMixin, TCFBuildState):
     def context(self,
                 run_context: str | dict[str, str] = '',
                 context: Context | None = None,
-                parent: ControlFileRunState | None = None) -> 'TCFRunState':
-        # docstring inherited
+                parent: ControlFileRunState | None = None,
+                *, file_resolution: FileResolution | None = None) -> 'TCFRunState':
+        """Create a run context with explicit file-resolution behaviour.
+
+        ``FileResolution.EAGER`` is the default and keeps PyTuflow's
+        original file and GIS inspection behaviour. ``DEFERRED`` records
+        file references for an explicit later inspection. It avoids
+        repeated physical enumeration across many selected runs; parsing
+        the original TCF may still read control files and databases.
+        """
         from .tcf_run_state import TCFRunState
         ctx = context if context else Context(run_context, config=self.config)
+        if file_resolution is not None:
+            try:
+                ctx.file_resolution = FileResolution(file_resolution)
+            except ValueError as exc:
+                raise ValueError("file_resolution must be eager or deferred") from exc
         return TCFRunState(self, ctx, parent)
+
+    def collect_file_dependencies(
+        self,
+        run_flags: typing.Iterable[str | dict[str, str]],
+    ) -> 'FragmentBatchResult':
+        """Collect immutable, ordered file references for the specified runs.
+
+        No physical file or GIS inspection occurs during dependency collection.
+        """
+        from ..fragment_dependencies import collect_file_dependencies
+        return collect_file_dependencies(self, run_flags)
+
+
+# Preserve the original context method for safe fragment eligibility checks.
+_TCF_CONTEXT = TCF.context

@@ -1,4 +1,5 @@
 # control files
+from .options import CaseSensitivity, FileResolution
 from .abc.cf import ControlFile
 from .cf.tcf import TCF
 from .cf.tgc import TGC

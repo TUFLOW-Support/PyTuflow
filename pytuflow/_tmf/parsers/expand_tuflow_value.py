@@ -17,10 +17,13 @@ class TuflowValueExpander:
     such as expanding GPKG layers, inserting variables, and handling relative paths.
     """
 
-    def __init__(self, variables: dict[str, str] | typing.Callable[[str], str], database: Path | None):
+    def __init__(self, variables: dict[str, str] | typing.Callable[[str], str], database: Path | None,
+                 deferred: bool = False, case_sensitivity: int = 0):
         self.value = None
         self.variables = variables
         self.database = database
+        self.deferred = deferred
+        self.case_sensitivity = case_sensitivity
         self._expanded_value = None
 
     def expand(self, value: str) -> str:
@@ -72,16 +75,23 @@ class TuflowValueExpander:
             else:
                 if cmd.should_add_mif_extension(p.strip(), cnt, i):
                     p = f'{p.strip()}.mif'
+                # -cs1/-cs2 relax the final *filename* only, never the
+                # name of an output/input directory supplied as a folder.
+                is_folder = self.case_sensitivity != 0 and cmd.is_folder(p.strip(), cnt, i)
                 if cf == Path():
-                    yield str(TuflowPath.init_case_insensitive_path(p.strip()))
+                    yield str(TuflowPath(p.strip()) if self.deferred or is_folder else
+                              TuflowPath.init_case_policy_path(p.strip(), case_sensitivity=self.case_sensitivity))
                 else:
-                    yield str(TuflowPath(cf).parent // p.strip())
+                    base = TuflowPath(cf).parent
+                    yield str(base / p.strip() if self.deferred or is_folder else
+                              base / TuflowPath.init_case_policy_path(
+                                  p.strip(), base, self.case_sensitivity))
 
     def _expand_line_gpkg(self, part: str) -> typing.Generator[str, None, None]:
         from .. import gis
         db, lyr = self._split_lyr(part)
         if lyr.strip().lower() == 'all':
-            if not Path(db).exists():
+            if self.deferred or not Path(db).exists():
                 yield f'{db} >> {lyr}'
                 return
             for table in gis.get_all_layers_in_gpkg(db):
@@ -95,7 +105,9 @@ class TuflowValueExpander:
     def _expand_path_gpkg(self, part: str, cf: TuflowPath) -> str:
         db, lyr = self._split_lyr(part)
         if cf != Path():
-            db = TuflowPath(cf).parent // db
+            base = TuflowPath(cf).parent
+            db = base / db if self.deferred else base / TuflowPath.init_case_policy_path(
+                db, base, self.case_sensitivity)
         return f'{db} >> {lyr}'
 
     def _split_lyr(self, part: str) -> tuple[str, str]:

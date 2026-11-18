@@ -19,6 +19,7 @@ class Inputs(list[T_Input], typing.Generic[T_Input]):
         list.extend(self, [x for x in inputs if x])
         self._indexes = []
         self._iter_idx = 0
+        self._position_changed = None
 
     def __repr__(self):
         return '{0}({1})'.format(self.__class__.__name__, [str(x) for x in self])
@@ -77,6 +78,7 @@ class Inputs(list[T_Input], typing.Generic[T_Input]):
         raise ValueError('No previous input found')
 
     def amend(self, old_inp, new_inp) -> None:
+        position = self.index(old_inp) if old_inp else sum(bool(x) for x in self._inputs[:self._inputs.index(old_inp)])
         ind = self._inputs.index(old_inp)
         i, j = self._indexes[ind]
         if i > -1:
@@ -95,6 +97,9 @@ class Inputs(list[T_Input], typing.Generic[T_Input]):
             self._inputs.remove(old_inp)
             self._inputs.insert(j, new_inp)
             list.insert(self, i, new_inp)
+        delta = int(bool(new_inp)) - int(bool(old_inp))
+        if delta and self._position_changed is not None:
+            self._position_changed(position, delta)
 
     def append(self, inp) -> None:
         if inp.is_start_block() or inp.is_end_block():
@@ -139,6 +144,8 @@ class Inputs(list[T_Input], typing.Generic[T_Input]):
             if inp:
                 list.insert(self, ind, inp)
             self._inputs.insert(i, inp)
+        if inp and self._position_changed is not None:
+            self._position_changed(self.index(inp), 1)
 
     def extend(self, items) -> None:
         self._inputs.extend(items)
@@ -147,9 +154,12 @@ class Inputs(list[T_Input], typing.Generic[T_Input]):
                 list.append(self, inp)
 
     def remove(self, value):
+        index = self.index(value) if value else -1
         self._inputs.remove(value)
         if value:
             list.remove(self, value)
+            if self._position_changed is not None:
+                self._position_changed(index, -1)
 
     def resolve_scopes(self) -> None:
         scopes = self._known_scopes()

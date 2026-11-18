@@ -2,6 +2,7 @@ import os
 import typing
 from pathlib import Path
 
+from ..options import FileResolution
 from ..settings import from_config
 from .expand_tuflow_value import TuflowValueExpander
 from ..tfpathlib import TuflowPath
@@ -22,7 +23,11 @@ class TuflowLine:
         self.part_index = -1
         self.value = self.original_text.strip()
         self.value_expanded_path = self.value  # This will be expanded later
-        self._expander = TuflowValueExpander(self.config.variables, self.config.spatial_database)
+        self._expander = TuflowValueExpander(
+            self.config.variables, self.config.spatial_database,
+            deferred=self.config.file_resolution == FileResolution.DEFERRED,
+            case_sensitivity=self.config.case_sensitivity,
+        )
 
     def __repr__(self):
         return self.original_text
@@ -85,8 +90,20 @@ class TuflowLine:
         else:
             rel_path = TuflowPath(self.value)
         rel_path = globify(rel_path, self.config.wildcards)
+        if self.config.file_resolution == FileResolution.DEFERRED:
+            # A deferred reference deliberately preserves '>> all'. Only when
+            # .files is explicitly requested should it expand to every layer.
+            db, layer = TuflowPath(rel_path)._split_db_and_lyr()
+            if layer is not None and layer.casefold() == 'all':
+                rel_path = f'{db} >> *'
         try:
-            for file in TuflowPath(parent).glob(rel_path):
+            for file in TuflowPath(parent).glob(
+                rel_path,
+                case_sensitivity=(
+                    0 if self.is_folder(self.value, self.part_count, self.part_index)
+                    else self.config.case_sensitivity
+                ),
+            ):
                 yield file
         except Exception as e:
             # allow exception to propogate, but add additional context

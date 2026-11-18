@@ -1,3 +1,4 @@
+import csv
 import logging
 import typing
 from pathlib import Path
@@ -162,24 +163,66 @@ class MatDatabase(DatabaseBuildState):
         return super().is_plottable(item) or entry.is_list()
 
     def _find_header_row_end(self, fpath: Path) -> dict:
-        idx = -1
-        names = None
-        inames = -1
-        with fpath.open() as f:
+        """Locate the materials table header despite blank/comment preambles.
+
+        pandas counts header rows after skipping blank lines, whereas source
+        line numbers include those lines. Use skiprows for physical preambles.
+        """
+        header_line = None
+        commented_names = None
+        with fpath.open(encoding='utf-8-sig') as f:
             for i, line in enumerate(f):
-                data = line.split(',')
-                try:
-                    int(data[0])
-                    idx = i - 1
-                    break
-                except (ValueError, TypeError):
-                    if line.strip().startswith('!') or line.strip().startswith('#'):
-                        names = [x.strip(' #!"\'\n\t')for x in line.split(',')]
-                        inames = i
+                if not line.strip():
                     continue
-        if idx == inames and names:
-            return {'header': None, 'names': names}
-        return {'header': idx}
+                fields = line.split(',')
+                first = fields[0].strip()
+                if first.startswith(('!', '#')):
+                    if first.lstrip('!# ').casefold() == 'material id':
+                        commented_names = [
+                            field.strip(' #!').strip('"').strip("'").strip()
+                            for field in fields
+                        ]
+                    continue
+                try:
+                    int(first)
+                except (ValueError, TypeError):
+                    header_line = i
+                    commented_names = None
+                    continue
+                if header_line is not None:
+                    return self._csv_header_options(fpath, header_line)
+                if commented_names is not None:
+                    return {'skiprows': i, 'header': None, 'names': commented_names}
+                return {'skiprows': i, 'header': None, 'skipinitialspace': True}
+        if header_line is not None:
+            return self._csv_header_options(fpath, header_line)
+        return {'header': 0}
+
+    @staticmethod
+    def _csv_header_options(fpath: Path, header_line: int) -> dict:
+        # TUFLOW permits spaces before quoted fields and free-form trailing
+        # comments. Commas in a declared comment column must not send the CSV
+        # driver into its headerless, quote-unaware fallback parser.
+        with fpath.open(encoding='utf-8-sig') as stream:
+            for _ in range(header_line):
+                next(stream)
+            fields = next(csv.reader(stream, skipinitialspace=True))
+        options = {'skiprows': header_line, 'header': 0, 'skipinitialspace': True}
+        for index, field in enumerate(fields):
+            if field.lstrip().startswith('!'):
+                options['usecols'] = list(range(index + 1))
+                break
+        return options
+
+    def _load_from_df(self, df: pd.DataFrame):
+        """Discard empty and comment-only material rows before indexing IDs."""
+        # CSV separator rows and whole-line comments are not material records.
+        # Keep malformed nonempty rows so integer-ID validation still rejects them.
+        comments = [isinstance(key, str) and key.lstrip().startswith(('!', '#')) for key in df.index]
+        empty = df.isna().all(axis=1) & df.index.isna()
+        self._df = df.loc[~(empty | np.asarray(comments, dtype=bool))].copy()
+        self._df_wrapped = DataFrameWrapper(on_change=self.record_change, data=self._df.copy())
+        super()._load_from_df(self._df)
 
     def _load(self, fpath: Path):
         super()._load(fpath)
