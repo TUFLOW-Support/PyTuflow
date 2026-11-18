@@ -1,3 +1,4 @@
+import csv
 import logging
 import typing
 from pathlib import Path
@@ -189,13 +190,29 @@ class MatDatabase(DatabaseBuildState):
                     commented_names = None
                     continue
                 if header_line is not None:
-                    return {'skiprows': header_line, 'header': 0}
+                    return self._csv_header_options(fpath, header_line)
                 if commented_names is not None:
                     return {'skiprows': i, 'header': None, 'names': commented_names}
-                return {'skiprows': i, 'header': None}
+                return {'skiprows': i, 'header': None, 'skipinitialspace': True}
         if header_line is not None:
-            return {'skiprows': header_line, 'header': 0}
+            return self._csv_header_options(fpath, header_line)
         return {'header': 0}
+
+    @staticmethod
+    def _csv_header_options(fpath: Path, header_line: int) -> dict:
+        # TUFLOW permits spaces before quoted fields and free-form trailing
+        # comments. Commas in a declared comment column must not send the CSV
+        # driver into its headerless, quote-unaware fallback parser.
+        with fpath.open(encoding='utf-8-sig') as stream:
+            for _ in range(header_line):
+                next(stream)
+            fields = next(csv.reader(stream, skipinitialspace=True))
+        options = {'skiprows': header_line, 'header': 0, 'skipinitialspace': True}
+        for index, field in enumerate(fields):
+            if field.lstrip().startswith('!'):
+                options['usecols'] = list(range(index + 1))
+                break
+        return options
 
     def _load_from_df(self, df: pd.DataFrame):
         """Discard empty and comment-only material rows before indexing IDs."""

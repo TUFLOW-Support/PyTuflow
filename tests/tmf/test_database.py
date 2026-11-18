@@ -335,3 +335,63 @@ def test_csv_driver_rainfall_bc_with_comment_above_header_row():
     header_labels = ['Time (hours)', 'TP10']
     df = CsvDatabaseDriver().load(p, header_kwargs={'header': header_labels}, index_col=False)
     assert len(df.columns) == 11 and df.columns[0] == 'Time (hours)'
+
+
+@pytest.mark.parametrize("preamble", ["", "\n! Notes\n\n", "\ufeff"])
+def test_mat_csv_spaced_quotes_and_commas_in_trailing_comments(tmp_path, preamble):
+    source = tmp_path / "materials.csv"
+    source.write_text(
+        preamble + "Material ID, Manning's n, Rainfall Loss Parameters, Land Use Hazard ID, ! Description\n"
+        '5, 0.001, "<<IL_Mat>>, <<CL_Mat>>", , ! Pond\n'
+        '103, "0.1, 0.1, 0.2, 0.04", "<<IL_Mat>>, <<CL_Mat>>", , ! Vegetation, extra, commas\n',
+        encoding="utf-8",
+    )
+    materials = get_material_database_class(source)(source)
+    assert materials.loaded
+    assert materials.df.index.tolist() == [5, 103]
+    assert float(materials.df.loc[5].iloc[0]) == pytest.approx(0.001)
+    assert materials.df.loc[103].iloc[0] == "0.1, 0.1, 0.2, 0.04"
+    assert materials.df.loc[103].iloc[1] == "<<IL_Mat>>, <<CL_Mat>>"
+    assert materials.entries[103].is_list()
+    context = Context()
+    context.load_variables({"IL_Mat": "0", "CL_Mat": "0"})
+    values = materials.context(context=context).value(103)
+    assert values.index.tolist() == [0.1, 0.2]
+    assert values.iloc[:, 0].tolist() == [0.1, 0.04]
+    from pytuflow import TCF
+
+    control = tmp_path / "model.tcf"
+    control.write_text(
+        "Set Variable IL_Mat == 0\nSet Variable CL_Mat == 0\n"
+        "Read Materials File == materials.csv\n", encoding="utf-8",
+    )
+    model = TCF(control)
+    for mode in ("eager", "deferred"):
+        run = model.context("-s1 Base", file_resolution=mode)
+        assert all(not item.database_source_references for item in run.find_input())
+    assert model.collect_file_dependencies(("-s1 Base",)).passed
+
+
+def test_mat_csv_malformed_id_after_valid_row_is_not_skipped(tmp_path):
+    source = tmp_path / "materials.csv"
+    source.write_text(
+        "Material ID, Manning's n, ! Description\n"
+        "1, 0.03, ! Valid\n"
+        "broken, 0.04, ! Invalid, trailing comment\n",
+        encoding="utf-8",
+    )
+    with pytest.raises(ValueError, match="broken"):
+        get_material_database_class(source)(source)
+
+
+def test_mat_csv_headerless_keeps_quoted_values(tmp_path):
+    source = tmp_path / "materials.csv"
+    source.write_text(
+        '1, "0.1, 0.03, 0.2, 0.04", "0, 0"\n'
+        '2, 0.001, "0, 0"\n', encoding="utf-8",
+    )
+    materials = get_material_database_class(source)(source)
+    assert materials.loaded
+    assert materials.df.index.tolist() == [1, 2]
+    assert materials.df.loc[1].iloc[0] == "0.1, 0.03, 0.2, 0.04"
+    assert materials.df.loc[1].iloc[1] == "0, 0"
