@@ -34,6 +34,7 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
     def __init__(self, *args, **kwargs):
         self._init_soft_load()
         self.cache = Cache()
+        self._progress = None
         self.name = ''
         self.geom: PyMeshGeometry | QgisMeshGeometry = PyMeshGeometry('')
         self.extractors: list[PyDataExtractor] = [PyDataExtractor()]
@@ -1031,6 +1032,9 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
             data = self.cache.get('loaded_in_memory', data_type)
             return data[index]
         extractor = self._get_extractor(data_type)
+        if self._progress is not None:
+            return self._progress.read(extractor.data, extractor.data_shape(data_type), data_type, index,
+                                       lambda shape: np.zeros(shape, dtype=np.float32))
         return extractor.data(data_type, index)
 
     def wd_flag(self, data_type: str, index: PyDataExtractor.SliceType | PyDataExtractor.MultiSliceType) -> np.ndarray:
@@ -1042,6 +1046,9 @@ class PyMesh(VertexDataMixin, CellDataMixin, PointMixin, LineStringMixin, SoftLo
             wd_flag = self.cache.get(*args)
             return wd_flag[index]
         extractor = self._get_extractor(data_type)
+        if self._progress is not None:
+            return self._progress.read(extractor.wd_flag, extractor.wd_flag_shape(data_type), data_type, index,
+                                       lambda shape: np.ones(shape, dtype=bool))
         return extractor.wd_flag(data_type, index)
 
     def _preload(self, extractor: PyDataExtractor):

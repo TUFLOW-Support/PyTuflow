@@ -188,6 +188,48 @@ class TestXMDF(unittest.TestCase):
         is_close = np.isclose(df.iloc[:,0], df_r.iloc[:,0] * -1)
         self.assertTrue(is_close.all())
 
+    def _assert_progress(self, func, *args, **kwargs):
+        calls = []
+        df = func(*args, callback=lambda done, total: calls.append((done, total)), **kwargs)
+        df_ref = func(*args, **kwargs)
+        pd.testing.assert_frame_equal(df, df_ref)
+        total = calls[0][1]
+        self.assertGreater(total, 0)
+        self.assertEqual((0, total), calls[0])
+        self.assertEqual((total, total), calls[-1])
+        self.assertTrue(all(x[1] == total for x in calls))
+        self.assertTrue(all(a[0] <= b[0] for a, b in zip(calls, calls[1:])))
+        return calls
+
+    def test_progress_callback(self):
+        res = XMDF('./tests/xmdf/EG00_001.xmdf')
+        self._assert_progress(res.time_series, (293250, 6178030), ['h', 'v'])
+        res = XMDF('./tests/xmdf/EG00_001.xmdf')  # fresh cache so planned reads are not served from cache
+        self._assert_progress(res.section, './tests/xmdf/xmdf_flux_line.shp', ['h', 'v'], 0.5)
+        self._assert_progress(res.flux, './tests/xmdf/xmdf_flux_line.shp', '')
+        self._assert_progress(res.flux, './tests/xmdf/xmdf_flux_line.shp', '', use_unit_flow=False)
+
+    def test_progress_callback_chunked(self):
+        from pytuflow._outputs.pymesh.progress import ProgressTracker
+        res = XMDF('./tests/xmdf/EG00_001.xmdf')
+        old = ProgressTracker.CHUNK_VALUES
+        ProgressTracker.CHUNK_VALUES = 4
+        try:
+            calls = self._assert_progress(res.flux, './tests/xmdf/xmdf_flux_line.shp', '', use_unit_flow=False)
+        finally:
+            ProgressTracker.CHUNK_VALUES = old
+        self.assertGreater(len(calls), 3)
+
+    def test_progress_callback_exception(self):
+        res = XMDF('./tests/xmdf/EG00_001.xmdf')
+
+        def cb(done, total):
+            if done:
+                raise RuntimeError('cancel')
+
+        with self.assertRaises(RuntimeError):
+            res.flux('./tests/xmdf/xmdf_flux_line.shp', '', callback=cb)
+
     def test_flux_tracer(self):
         p = './tests/xmdf/EG17_001.xmdf'
         res = XMDF(p)

@@ -125,6 +125,12 @@ class PyNCMeshDataExtractor(PyDataExtractor):
     def wd_flag(self, data_type: str, index: PyDataExtractor.SliceType | PyDataExtractor.MultiSliceType) -> np.ndarray:
         return self.engine.data('stat', index).astype(bool)
 
+    def data_shape(self, data_type: str) -> tuple[int, ...]:
+        return tuple(self.engine.data_shape(data_type))
+
+    def wd_flag_shape(self, data_type: str) -> tuple[int, ...]:
+        return tuple(self.engine.data_shape('stat'))
+
     def dimension_names(self, variable_name: str) -> tuple[str, ...]:
         return self.engine.dimension_names(variable_name)
 

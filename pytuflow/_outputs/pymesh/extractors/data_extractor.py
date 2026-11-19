@@ -184,6 +184,15 @@ class PyDataExtractor:
         """
         raise NotImplementedError
 
+    def data_shape(self, data_type: str) -> tuple[int, ...] | None:
+        """Returns the full shape of the data array for the given data type, or None if it cannot be determined
+        without reading the data."""
+        return None
+
+    def wd_flag_shape(self, data_type: str) -> tuple[int, ...] | None:
+        """Returns the full shape of the wet/dry flag array for the given data type, or None if unknown."""
+        return None
+
     def on_vertex(self, data_type: str) -> bool:
         return True
     

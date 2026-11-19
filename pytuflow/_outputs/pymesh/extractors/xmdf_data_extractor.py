@@ -95,6 +95,12 @@ class PyXMDFDataExtractor(PyDataExtractor):
     def data(self, data_type: str, index: PyDataExtractor.SliceType | PyDataExtractor.MultiSliceType) -> np.ndarray:
         return self.engine.data(self._create_path(data_type, 'Values'), index)
     
+    def data_shape(self, data_type: str) -> tuple[int, ...]:
+        return tuple(self.engine.data_shape(self._create_path(data_type, 'Values')))
+
+    def wd_flag_shape(self, data_type: str) -> tuple[int, ...]:
+        return tuple(self.engine.data_shape(self._create_path(data_type, 'Active')))
+
     def cell_count(self) -> int:
         for dtype in self.data_types():
             path = self._create_path(dtype, 'Active')

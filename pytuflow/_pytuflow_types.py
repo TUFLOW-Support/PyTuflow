@@ -1,6 +1,6 @@
 from datetime import datetime
 from pathlib import Path
-from typing import Union, Iterable, Any, Dict
+from typing import Union, Iterable, Any, Dict, Callable
 # noinspection PyUnusedImports
 from ._tmf import TuflowPath, AppendDict, CaseInsDict
 
@@ -10,6 +10,9 @@ PathLike = Union[Path, str]
 
 #: :code:`float | datetime`: Type hint for an object that represents a time value (relative or absolute).
 TimeLike = Union[float, datetime]
+
+#: :code:`Callable[[int, int], None]`: Type hint for a progress callback. Called with ``(done, total)`` units of work.
+ProgressCallback = Callable[[int, int], None]
 
 #: :code:`str | Iterable[str]`: Type hint for a context like object that can be passed into the Context class to initialise it
 ContextLike = Union[list[str], tuple[str, ...], dict[str, str]]

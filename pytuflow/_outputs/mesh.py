@@ -13,8 +13,9 @@ except ImportError:
 from .helpers.mesh_driver_qgis import QgisMeshDriver
 from .helpers.mesh_driver_nc import NCMeshDriver
 from .map_output import MapOutput, PointLocation, LineStringLocation
-from .._pytuflow_types import PathLike, TimeLike
+from .._pytuflow_types import PathLike, TimeLike, ProgressCallback
 from .pymesh import Bbox2D, PyMesh
+from .pymesh.progress import ProgressTracker
 from .pymesh.mesh3d import FormatConvention
 
 try:
@@ -589,7 +590,8 @@ class Mesh(MapOutput):
         return df
 
     def time_series(self, locations: PointLocation, data_types: str | list[str] | None,
-                    time_fmt: str = 'relative', averaging_method: str = None) -> pd.DataFrame:
+                    time_fmt: str = 'relative', averaging_method: str = None,
+                    callback: ProgressCallback = None) -> pd.DataFrame:
         """Extracts time-series data for the given locations and data types.
 
         The ``locations`` can be a single point in the form of a tuple ``(x, y)`` or in the Well Known Text (WKT)
@@ -648,6 +650,11 @@ class Mesh(MapOutput):
             e.g. ``'singlelevel?dir=top&1'`` uses the single level averaging method and takes the first vertical layer
             from the top. Or ``'sigma&0.1&0.9'`` uses the sigma averaging method and averages values located between
             the 10th and 90th water column depth.
+        callback : Callable[[int, int], None], optional
+            A function called as ``callback(done, total)`` to report progress. The units are the number of
+            values read from the result file (time steps x vertices or cells x result types). The first call is
+            ``(0, total)`` and the last is ``(total, total)``. An exception raised by the callback aborts the
+            extraction. Not supported by the v1.0 driver.
 
         Returns
         -------
@@ -703,10 +710,14 @@ class Mesh(MapOutput):
         df = pd.DataFrame()
         pnts = self._translate_point_location(locations)
         data_types = self._figure_out_data_types(data_types, 'temporal')
+        tracker = self._plan_progress(callback, [
+            lambda p=pnt, d=dtype: self._driver.time_series(p, d, averaging_method)
+            for pnt in pnts.values() for dtype in data_types
+        ])
         for name, pnt in pnts.items():
             for dtype in data_types:
                 if self._driver.DRIVER_SOURCE == 'python':
-                    a = self._driver.time_series(pnt, dtype, averaging_method)
+                    a = self._track(tracker, lambda: self._driver.time_series(pnt, dtype, averaging_method))
                     if a.size:
                         a = a.reshape(a.shape[0], -1)
                         if a.shape[1] > 2:
@@ -732,7 +743,7 @@ class Mesh(MapOutput):
         return df
 
     def section(self, locations: LineStringLocation, data_types: Union[str, list[str]],
-                time: TimeLike, averaging_method: str = None) -> pd.DataFrame:
+                time: TimeLike, averaging_method: str = None, callback: ProgressCallback = None) -> pd.DataFrame:
         """Extracts section data for the given locations and data types.
 
         The ``locations`` can be a list of ``x, y`` tuple points, or a Well Known Text (WKT) line string. It can also
@@ -793,6 +804,11 @@ class Mesh(MapOutput):
             e.g. ``'singlelevel?dir=top&1'`` uses the single level averaging method and takes the first vertical layer
             from the top. Or ``'sigma&0.1&0.9'`` uses the sigma averaging method and averages values located between
             the 10th and 90th water column depth.
+        callback : Callable[[int, int], None], optional
+            A function called as ``callback(done, total)`` to report progress. The units are the number of
+            values read from the result file (time steps x vertices or cells x result types). The first call is
+            ``(0, total)`` and the last is ``(total, total)``. An exception raised by the callback aborts the
+            extraction. Not supported by the v1.0 driver.
 
         Returns
         -------
@@ -848,11 +864,15 @@ class Mesh(MapOutput):
         df = pd.DataFrame()
         lines = self._translate_line_string_location(locations)
         data_types = self._figure_out_data_types(data_types, None)
+        tracker = self._plan_progress(callback, [
+            lambda l=line, d=dtype: self._driver.section(l, d, time, averaging_method)
+            for line in lines.values() for dtype in data_types
+        ])
         for name, line in lines.items():
             df1 = pd.DataFrame()
             for dtype in data_types:
                 if self._driver.DRIVER_SOURCE == 'python':
-                    a = self._driver.section(line, dtype, time, averaging_method)
+                    a = self._track(tracker, lambda: self._driver.section(line, dtype, time, averaging_method))
                     a = a.reshape(a.shape[0], -1)
                     if a.shape[1] > 2:
                         a = np.append(a[:, [0]], np.linalg.norm(a[:, 1:], axis=1).reshape(-1, 1), axis=1)
@@ -868,7 +888,7 @@ class Mesh(MapOutput):
         return df
 
     def curtain(self, locations: LineStringLocation, data_types: Union[str, list[str]],
-                time: TimeLike) -> pd.DataFrame:
+                time: TimeLike, callback: ProgressCallback = None) -> pd.DataFrame:
         """Extracts curtain data for the given locations and data types.
 
         The ``locations`` can be a list of ``x, y`` tuple points, or a Well Known Text (WKT) line string. It can also
@@ -908,6 +928,11 @@ class Mesh(MapOutput):
             The data types to extract the section data for.
         time : TimeLike
             The time to extract the section data for.
+        callback : Callable[[int, int], None], optional
+            A function called as ``callback(done, total)`` to report progress. The units are the number of
+            values read from the result file (time steps x vertices or cells x result types). The first call is
+            ``(0, total)`` and the last is ``(total, total)``. An exception raised by the callback aborts the
+            extraction. Not supported by the v1.0 driver.
 
         Returns
         -------
@@ -938,11 +963,15 @@ class Mesh(MapOutput):
         df = pd.DataFrame()
         lines = self._translate_line_string_location(locations)
         data_types = self._figure_out_data_types(data_types, None)
+        tracker = self._plan_progress(callback, [
+            lambda l=line, d=dtype: self._driver.curtain(l, d, time)
+            for line in lines.values() for dtype in data_types
+        ])
         for name, line in lines.items():
             df1 = pd.DataFrame()
             for dtype in data_types:
                 if self._driver.DRIVER_SOURCE == 'python':
-                    a = self._driver.curtain(line, dtype, time)
+                    a = self._track(tracker, lambda: self._driver.curtain(line, dtype, time))
                     if a.size == 0:
                         continue
                     if a.shape[1] == 3:
@@ -962,7 +991,7 @@ class Mesh(MapOutput):
         return df
 
     def profile(self, locations: PointLocation, data_types: Union[str, list[str]],
-                time: TimeLike, interpolation: str = 'stepped') -> pd.DataFrame:
+                time: TimeLike, interpolation: str = 'stepped', callback: ProgressCallback = None) -> pd.DataFrame:
         """Extracts vertical profile data for the given locations and data types.
 
         The ``locations`` can be a single point in the form of a tuple ``(x, y)`` or in the Well Known Text (WKT)
@@ -997,6 +1026,11 @@ class Mesh(MapOutput):
         interpolation : str, optional
             The interpolation method to use. Options are 'stepped' or 'linear'. Linear interpolation
             should not be used for 2D results.
+        callback : Callable[[int, int], None], optional
+            A function called as ``callback(done, total)`` to report progress. The units are the number of
+            values read from the result file (time steps x vertices or cells x result types). The first call is
+            ``(0, total)`` and the last is ``(total, total)``. An exception raised by the callback aborts the
+            extraction. Not supported by the v1.0 driver.
 
         Returns
         -------
@@ -1020,11 +1054,15 @@ class Mesh(MapOutput):
         df = pd.DataFrame()
         pnts = self._translate_point_location(locations)
         data_types = self._figure_out_data_types(data_types, None)
+        tracker = self._plan_progress(callback, [
+            lambda p=pnt, d=dtype: self._driver.profile(p, d, time)
+            for pnt in pnts.values() for dtype in data_types
+        ])
         for name, pnt in pnts.items():
             df1 = pd.DataFrame()
             for dtype in data_types:
                 if self._driver.DRIVER_SOURCE == 'python':
-                    a = self._driver.profile(pnt, dtype, time)
+                    a = self._track(tracker, lambda: self._driver.profile(pnt, dtype, time))
                     if a.size:
                         a = a.reshape(a.shape[0], -1)
                         if a.shape[1] > 2:
@@ -1057,7 +1095,8 @@ class Mesh(MapOutput):
         return df
 
     def flux(self, locations: LineStringLocation, data_types: str | list[str] = '',
-             time_fmt: str = 'relative', use_unit_flow: bool = True) -> pd.DataFrame:
+             time_fmt: str = 'relative', use_unit_flow: bool = True,
+             callback: ProgressCallback = None) -> pd.DataFrame:
         # doc-string inherited
         if self._driver.DRIVER_SOURCE != 'python':
             raise NotImplementedError('v1.0 driver does not support flux extraction.')
@@ -1073,10 +1112,14 @@ class Mesh(MapOutput):
         if use_unit_flow and 'unit flow' not in self.data_types():
             use_unit_flow = False
 
+        tracker = self._plan_progress(callback, [
+            lambda l=line, d=dtype: self._driver.flux(l, d, use_unit_flow)
+            for line in lines.values() for dtype in data_types
+        ])
         for name, line in lines.items():
             df1 = pd.DataFrame()
             for dtype in data_types:
-                a = self._driver.flux(line, dtype, use_unit_flow)
+                a = self._track(tracker, lambda: self._driver.flux(line, dtype, use_unit_flow))
                 if a.size:
                     label = 'flux' if not dtype else f'flux {dtype}'
                     label = f'{label} (q)' if use_unit_flow else f'{label} (d.v)'
@@ -1097,6 +1140,20 @@ class Mesh(MapOutput):
 
         return df
     
+    def _plan_progress(self, callback: ProgressCallback | None, calls: list) -> ProgressTracker | None:
+        """Runs the planning pass for a progress callback. Returns None if there is no callback."""
+        if callback is None:
+            return None
+        if self._driver.DRIVER_SOURCE != 'python':
+            raise NotImplementedError('Progress callbacks are not supported by the v1.0 driver.')
+        tracker = ProgressTracker(callback, self._driver)
+        tracker.plan(calls)
+        return tracker
+
+    @staticmethod
+    def _track(tracker: ProgressTracker | None, call):
+        return tracker.run(call) if tracker is not None else call()
+
     def mesh_dataset(self, 
                      mesh_geometry: str = '', 
                      time: TimeLike = -1, 
