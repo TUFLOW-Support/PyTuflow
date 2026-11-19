@@ -1,0 +1,54 @@
+Changelog for 1.4
+=================
+
+Release date: XX December 2026
+
+Progress Callback
+-----------------
+
+.. note::
+
+    This feature is considered experimental.
+
+Mesh result types have a new, experimental, optional argument in some of their data extraction methods that reports
+the progress. A callback routine, taking two integer arguments, can be passed in so that the calling program or routine
+can implement a progress bar if desired.
+
+The supported routines are:
+
+- :meth:`~pytuflow.XMDF.time_series`
+- :meth:`~pytuflow.XMDF.section`
+- :meth:`~pytuflow.XMDF.profile`
+- :meth:`~pytuflow.XMDF.curtain`
+- :meth:`~pytuflow.XMDF.flux`
+
+.. note::
+
+    The progress reported is not very granular. This is to keep the methods as optimised as possible. The tool vectorizes
+    where possible and minimises IO calls. Adding more granular progress reporting would require breaking vectorisations
+    or making smaller (and more) IO calls.
+
+As an example:
+
+.. code:: python
+
+    from pytuflow import XMDF
+
+
+    def progress_callback(done: int, total: int):
+        percent = done / total * 100
+        print(f'{percent:.0f}%', end='')
+        if done >= total:
+            print(' Done!')
+        else:
+            print('...', end='')
+
+    
+    res = XMDF('result.xmdf')
+    df = res.flux('line.shp', callback=progress_callback)
+
+Script output:
+
+.. code:: bash
+
+    0%...57%...86%...100% Done!
