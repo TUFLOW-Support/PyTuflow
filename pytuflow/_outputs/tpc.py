@@ -948,6 +948,8 @@ class TPC(INFO, ITimeSeries2D):
                 start = df1.index[0]
                 end = df1.index[-1]
                 for col in df1.columns:
+                    if '(duplicate id)' in col:
+                        continue
                     filtered_rows = plot_objs.loc[[col], ['data_types', 'geom']] if 'data_types' in plot_objs.columns else plot_objs.loc[[col], ['geom']]
                     used_geoms = []
                     for idx, row in filtered_rows.iterrows():

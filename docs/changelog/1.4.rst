@@ -52,3 +52,12 @@ Script output:
 .. code:: bash
 
     0%...57%...86%...100% Done!
+
+Other
+-----
+
+- Better logging has been added when duplicate IDs are encountered for a given result type and domain in the
+  :class:`~pytuflow.TPC` class. E.g. when there is a PO line "H" and PO point "H" with the same ID. Previously,
+  this would cause a Python error when loading, now it produces a warning and finishes loading. Although, extracting
+  results from a location with duplicate IDs is problematic since there is no differentiation between results, the wrong
+  result may be returned.

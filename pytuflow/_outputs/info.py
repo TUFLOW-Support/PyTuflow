@@ -777,11 +777,20 @@ class INFO(TimeSeries):
         """Load the time-series data from the CSV file into a DataFrame."""
         dtype = str if fpath.stem.endswith('_1d_CF') or fpath.stem.endswith('_1d_NF') else np.float32
         df = pd.read_csv(fpath, na_values='**********', index_col=1, dtype=dtype, encoding_errors='ignore')
+        dups = df.columns.str.endswith('.1')
+        if dups.any():
+            type_ = re.findall(r'_(?:[12]d|RL[PLR])_.*\.csv$', fpath.name) or fpath.name
+            if isinstance(type_, list):
+                type_ = type_[0]
+            logger.warning(f'Duplicate IDs found in {type_} result file. IDs should be unique as duplicate IDs will cause issues later when extracting data.')
         df.index.name = 'Time (h)'
         df.drop(df.columns[0], axis=1, inplace=True)
         df.rename(columns={x: self._csv_col_name_corr(x) for x in df.columns}, inplace=True)
         if dtype is str:
             df.index = df.index.astype(np.float32)
+        if dups.any():
+            dups = dups[1:]
+            df.rename(columns={x: f'{x} (duplicate id)' for x in df.columns[dups]}, inplace=True)
         return df
 
     @staticmethod
@@ -789,7 +798,7 @@ class INFO(TimeSeries):
         """Correct the column name in the CSV file to be just the id."""
         if not re.findall(r'(Entry|Additional|Exit) LC', name):
             name = ' '.join(name.split(' ')[1:])
-        name = re.sub(r'\[.*]', '', name).strip()
+        name = re.sub(r'\s*\[.*]', '', name).strip()
         return name
 
     def _load_maximums(self) -> None:
