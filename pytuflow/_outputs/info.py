@@ -782,7 +782,10 @@ class INFO(TimeSeries):
             type_ = re.findall(r'_(?:[12]d|RL[PLR])_.*\.csv$', fpath.name) or fpath.name
             if isinstance(type_, list):
                 type_ = type_[0]
-            logger.warning(f'Duplicate IDs found in {type_} result file. IDs should be unique as duplicate IDs will cause issues later when extracting data.')
+            dup_ids = [self._csv_col_name_corr(x) for x in df.columns[dups].str.slice(stop=-2)]
+            dup_ids = ', '.join(dup_ids) if len(dup_ids) <= 3 else '{0}, ...'.format(', '.join(dup_ids[:3]))
+            logger.warning(f'Duplicate IDs found in {type_} result file [IDs: {dup_ids}].' 
+                           ' IDs should be unique as duplicate IDs will cause issues later when extracting data.')
         df.index.name = 'Time (h)'
         df.drop(df.columns[0], axis=1, inplace=True)
         df.rename(columns={x: self._csv_col_name_corr(x) for x in df.columns}, inplace=True)
