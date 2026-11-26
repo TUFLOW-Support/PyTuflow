@@ -1440,3 +1440,17 @@ def test_engine_climate_change_burst_method_factors_1990_burst_loss(api_response
     assert base_il[2030] != pytest.approx(base_il[1990])
     assert cc_il[1990] == pytest.approx(base_il[1990] * 1.05)
     assert cc_il[2030] == pytest.approx(base_il[1990] * 1.05)
+
+
+def test_engine_warns_when_initial_loss_exceeds_rainfall_depth(api_response_1990, caplog):
+    def run(user_il):
+        config = make_config(events={'aep': ['50%'], 'duration': [60], 'output_notation': 'ari'},
+                             losses={'user_initial_loss': user_il})
+        with caplog.at_level('WARNING', logger='pytuflow.arr'):
+            return ArrEngine(config, api_response_1990).run()
+
+    run(1.0)
+    assert not any('exceeds the rainfall depth' in r.message for r in caplog.records)
+    results = run(500.0)
+    assert any('exceeds the rainfall depth' in r.message and '50%/60.0min' in r.message for r in caplog.records)
+    assert results[0].initial_loss > results[0].depth_areal

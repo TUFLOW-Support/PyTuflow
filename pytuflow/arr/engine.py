@@ -1188,6 +1188,14 @@ class ArrEngine:
                             'initial_loss': il if preburst is None else 'Use PB TP',
                         })
 
+                    total_depth = depth_areal + (preburst.depth if preburst is not None else 0.0)
+                    if il > total_depth:
+                        logger.warning(
+                            "%s/%smin%s: initial loss (%.2f mm) exceeds the rainfall depth (%.2f mm), so the "
+                            "event will produce no runoff.",
+                            aep_name, duration, f' ({scenario_label})' if scenario_label else '', il, total_depth,
+                        )
+
                     results.append(EventResult(
                         aep_name=aep_name, duration=duration, depth_point=depth_point,
                         arf=arf_value, depth_areal=depth_areal, initial_loss=il,
