@@ -275,3 +275,39 @@ def test_fetch_does_not_retry_client_errors_and_respects_max_retries(monkeypatch
     with pytest.raises(ArrApiError):
         ArrApiClient().fetch(_retry_config(2))
     assert len(calls) == 3
+
+
+def _all_bom_ifd_layer(index) -> dict:
+    columns = [99.999, 99.752, 98.168, 95.021, 86.466, 63.2, 50.0]
+    return {'BoM IFD Depths (All Durations and AEPs)': {
+        'index': [1] + list(index), 'columns': columns,
+        'data': [[float(i + 1)] * len(columns) for i in range(len(index) + 1)],
+    }}
+
+
+def test_build_params_requests_all_bom_ifd_only_for_frequent_events():
+    frequent = ArrConfig.from_dict({**SITE_CONFIG, 'events': {'aep': ['1%', '12EY'], 'duration': [60]}})
+    assert ArrApiClient().build_params(frequent)['AllBoMIFD'] == 1
+    assert 'AllBoMIFD' not in ArrApiClient().build_params(ArrConfig.from_dict(SITE_CONFIG))
+
+
+def test_frequent_events_require_v1_1(api_response_1990):
+    assert not api_response_1990.is_v1_1_or_later
+    with pytest.raises(ArrApiError, match='v1.1'):
+        api_response_1990.require_frequent_event_support(['1%', '12EY'])
+    api_response_1990.require_frequent_event_support(['1%', '1EY'])  # not a frequent event
+    v1_1 = ArrApiResponse({**api_response_1990.raw, 'datahub_version': '2026v1.1'})
+    assert v1_1.is_v1_1_or_later
+    v1_1.require_frequent_event_support(['12EY', '6EY', '4EY', '3EY', '2EY'])
+
+
+def test_ifd_table_merges_frequent_event_columns(api_response_1990):
+    table = api_response_1990.ifd_table(1990)
+    data = {**api_response_1990.raw, 'layers': {**api_response_1990.layers,
+                                               'AllBoMIFD': _all_bom_ifd_layer(table['index'])}}
+    merged = ArrApiResponse(data).ifd_table(1990)
+    assert merged['columns'] == list(table['columns']) + [99.85, 99.75, 98.17, 95.02, 86.47]
+    assert len(merged['data']) == len(table['data'])
+    assert merged['data'][0][:len(table['columns'])] == table['data'][0]
+    assert len(merged['data'][0]) == len(merged['columns'])
+    assert api_response_1990.ifd_table(1990)['columns'] == list(table['columns'])  # unchanged without the layer

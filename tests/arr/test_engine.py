@@ -10,7 +10,7 @@ from pytuflow.arr import temporal_patterns as tp_module
 from pytuflow.arr.arf import aep_name_to_pct
 from pytuflow.arr.config import ArrConfig
 from pytuflow.arr.engine import ArrEngine
-from pytuflow.arr.exceptions import ArrError
+from pytuflow.arr.exceptions import ArrApiError as ApiError, ArrError
 
 SITE_CONFIG = {
     'site': {'name': '1', 'latitude': -33.9347, 'longitude': 150.8372, 'catchment_area': 11.4},
@@ -1343,3 +1343,43 @@ def test_calculated_cc_ifd_matches_precalculated_bom_ifd(baseline_year, ssp):
     rel_diff = (calculated / precalculated - 1).abs()
     assert rel_diff.max().max() < 0.025
     assert rel_diff.mean().mean() < 0.01
+
+
+def test_engine_raises_for_frequent_events_on_v1(api_response_1990):
+    engine = ArrEngine(make_config(events={'aep': ['12EY'], 'duration': [60]}), api_response_1990)
+    with pytest.raises(ApiError, match='v1.1'):
+        engine.run()
+
+
+@pytest.mark.parametrize('layer,baseline,expected_il,expected_cl', [
+    ('nsw', 1990, 30.0, 1.0),
+    ('nsw', 2030, 30.72, 1.05),
+    ('nonnsw', 1990, 14.5, 2.15),
+    ('nonnsw', 2030, 14.8, 2.25),
+])
+def test_engine_losses_follow_baseline_year(api_response_1990, layer, baseline, expected_il, expected_cl):
+    if layer == 'nsw':
+        api_response_1990.layers['NewStormLosses'] = {
+            'losses': [{'AEP': '1%', 'Storm Initial Loss (mm)': 30.72, 'Continuing Loss (mm/h)': 1.05}],
+            'native_losses': [{'AEP': '1%', 'Storm Initial Loss (mm)': 30.0, 'Continuing Loss (mm/h)': 1.0}],
+        }
+    else:
+        api_response_1990.layers.pop('NewStormLosses', None)
+        api_response_1990.layers['StormLossesNonNSW'] = {
+            'Storm Initial Losses (mm)': 14.8, 'Storm Continuing Losses (mm/h)': 2.25,
+            'native_losses': {'Storm Initial Losses (mm)': 14.5, 'Storm Continuing Losses (mm/h)': 2.15},
+        }
+    config = make_config(ifd={'baseline_year': baseline}, events={'aep': ['1%'], 'duration': [1440]})
+    engine = ArrEngine(config, api_response_1990)
+    assert engine._storm_initial_loss('1%') == pytest.approx(expected_il)
+    assert engine._storm_continuing_loss('1%') == pytest.approx(expected_cl)
+
+
+def test_engine_losses_without_native_losses_unchanged_for_v1(api_response_1990):
+    engine = ArrEngine(make_config(ifd={'baseline_year': 1990}, events={'aep': ['1%'], 'duration': [1440]}),
+                       api_response_1990)
+    expected = engine._storm_initial_loss('1%')
+    assert 'native_losses' not in (api_response_1990.layer('NewStormLosses') or {})
+    assert expected == pytest.approx(
+        next(r['Storm Initial Loss (mm)'] for r in api_response_1990.layer('NewStormLosses')['losses']
+             if r['AEP'] == '1%'))

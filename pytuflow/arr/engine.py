@@ -367,6 +367,19 @@ class ArrEngine:
                     result.loc[dur, col] = recalculated
         return result
 
+    def _loss_layer(self, name: str) -> Optional[dict]:
+        """Returns a Data Hub storm loss layer for the configured ``ifd.baseline_year``. Data Hub
+        v1.1+ losses are for the current (2030) baseline, with the native (1961-1990) baseline
+        losses under ``native_losses`` - used for ``ifd.baseline_year == 1990``. Data Hub v1 (no
+        ``native_losses``) always returns the layer as-is."""
+        layer = self.response.layer(name)
+        if not layer or self.config.ifd.baseline_year != 1990 or 'native_losses' not in layer:
+            return layer
+        native = layer['native_losses']
+        if isinstance(native, dict):
+            return {**layer, **native}
+        return {**layer, 'losses': native}
+
     def _storm_continuing_loss(self, aep_name: str) -> float:
         """Looks up the storm continuing loss (mm/h) for the given AEP from the
         ``NewStormLosses`` layer (not duration-dependent), unless
@@ -375,7 +388,7 @@ class ArrEngine:
         ``applyUserContinuingLoss``."""
         if self.config.losses.user_continuing_loss is not None:
             return float(self.config.losses.user_continuing_loss)
-        new_losses = self.response.layer('NewStormLosses')
+        new_losses = self._loss_layer('NewStormLosses')
         if new_losses and 'losses' in new_losses:
             aep_pct = aep_name_to_pct(aep_name)
             for row in new_losses['losses']:
@@ -383,11 +396,11 @@ class ArrEngine:
                     return float(row['Continuing Loss (mm/h)'])
         # 'NewStormLosses' is NSW-only - non-NSW locations instead have a flat (not
         # AEP-dependent) 'StormLossesNonNSW' summary value.
-        non_nsw_losses = self.response.layer('StormLossesNonNSW')
+        non_nsw_losses = self._loss_layer('StormLossesNonNSW')
         if non_nsw_losses and 'Storm Continuing Losses (mm/h)' in non_nsw_losses:
             return float(non_nsw_losses['Storm Continuing Losses (mm/h)'])
         # fall back to the legacy single 'StormLosses' summary value (not AEP-dependent)
-        storm_losses = self.response.layer('StormLosses')
+        storm_losses = self._loss_layer('StormLosses')
         if storm_losses and 'Storm Continuing Losses (mm/h)' in storm_losses:
             return float(storm_losses['Storm Continuing Losses (mm/h)'])
         raise ArrError("ARR Data Hub response is missing continuing loss data "
@@ -460,7 +473,7 @@ class ArrEngine:
         which aren't NSW's per-AEP storm initial loss dataset.
         """
         
-        new_losses = self.response.layer('NewStormLosses')
+        new_losses = self._loss_layer('NewStormLosses')
         if new_losses and 'losses' in new_losses:
             rows = new_losses['losses']
             for row in rows:
@@ -474,10 +487,10 @@ class ArrEngine:
         # AEP-dependent) 'StormLossesNonNSW' summary value. Also used as a last-resort
         # fallback for an NSW AEP that falls strictly *within* NewStormLosses' own AEP
         # range but isn't itself one of its rows (an interior gap, not an edge).
-        non_nsw_losses = self.response.layer('StormLossesNonNSW')
+        non_nsw_losses = self._loss_layer('StormLossesNonNSW')
         if non_nsw_losses and 'Storm Initial Losses (mm)' in non_nsw_losses:
             return float(non_nsw_losses['Storm Initial Losses (mm)'])
-        storm_losses = self.response.layer('StormLosses')
+        storm_losses = self._loss_layer('StormLosses')
         if storm_losses and 'Storm Initial Losses (mm)' in storm_losses:
             return float(storm_losses['Storm Initial Losses (mm)'])
         raise ArrError("ARR Data Hub response is missing storm initial loss data "
@@ -958,6 +971,7 @@ class ArrEngine:
         """
         durations = self._durations()
         aep_names = self._aep_names()
+        self.response.require_frequent_event_support(aep_names)
         aep_pcts = [aep_name_to_pct(a) for a in aep_names]
         arf_params = self.response.layer('ARFParams', required=True)
         tp_set = self._tp_set_for_config()

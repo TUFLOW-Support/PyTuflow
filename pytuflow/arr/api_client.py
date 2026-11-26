@@ -45,6 +45,33 @@ _BASE_LAYERS = (
     'OtherPreburst',
 )
 
+#: Frequent event (exceedances per year) magnitudes, mapped to the AEP (%) used to label their
+#: columns once merged into the IFD table (matches :func:`pytuflow.arr.arf.aep_name_to_pct`), and to
+#: the AEP (%) column label used by the Data Hub's ``AllBoMIFD`` layer. Frequent events need Data Hub v1.1+.
+FREQUENT_EY_AEP_PCT = {12: 99.85, 6: 99.75, 4: 98.17, 3: 95.02, 2: 86.47}
+_FREQUENT_EY_HUB_AEP = {12: 99.999, 6: 99.752, 4: 98.168, 3: 95.021, 2: 86.466}
+
+
+def is_frequent_ey(aep_name) -> bool:
+    """True if the AEP/ARI/EY label is one of the frequent events (12EY, 6EY, 4EY, 3EY, 2EY)."""
+    name = str(aep_name).strip().upper()
+    if not name.endswith('EY'):
+        return False
+    try:
+        return float(name[:-2]) in FREQUENT_EY_AEP_PCT
+    except ValueError:
+        return False
+
+
+def _parse_version(version) -> tuple:
+    """Parses a Data Hub version string such as ``'2026v1.1'`` into ``(1, 1)``. Returns
+    ``(1, 0)`` if missing/unrecognised (i.e. treated as v1)."""
+    match = re.search(r'v(\d+)(?:\.(\d+))?', str(version or ''), re.IGNORECASE)
+    if not match:
+        return 1, 0
+    return int(match.group(1)), int(match.group(2) or 0)
+
+
 #: Initial delay (seconds) before the first retry; doubles on each subsequent retry.
 RETRY_BASE_DELAY = 1.0
 #: Upper limit (seconds) on the delay between retries.
@@ -94,6 +121,23 @@ class ArrApiResponse:
         self.title = data.get('title')
         self.input_data = data.get('input_data', {})
         self.layers = data.get('layers', {})
+        self.datahub_version = data.get('datahub_version')
+
+    @property
+    def is_v1_1_or_later(self) -> bool:
+        """True if the response is from ARR Data Hub v1.1 or later (frequent event IFD depths,
+        and baseline/native losses are only available from v1.1)."""
+        return _parse_version(self.datahub_version) >= (1, 1)
+
+    def require_frequent_event_support(self, aep_names) -> None:
+        """Raises :class:`ArrApiError` if any frequent event (12EY, 6EY, 4EY, 3EY, 2EY) is
+        requested but the response is from ARR Data Hub v1 rather than v1.1+."""
+        frequent = [a for a in aep_names if is_frequent_ey(a)]
+        if frequent and not self.is_v1_1_or_later:
+            raise ArrApiError(
+                f"Frequent events ({', '.join(str(a) for a in frequent)}) require ARR Data Hub v1.1 or later, "
+                f"but the response is from version '{self.datahub_version or '1'}'."
+            )
 
     def layer(self, name: str, required: bool = False) -> Optional[dict]:
         """Returns the raw (dict-of-tables or dict-of-values) data for the named layer."""
@@ -117,7 +161,41 @@ class ArrApiResponse:
                 f"ARR Data Hub response does not contain an IFD table for baseline year '{year}' "
                 f"(available: {list(rec_ifd)})"
             )
-        return rec_ifd[key]
+        return self._with_frequent_events(rec_ifd[key])
+
+    def _with_frequent_events(self, table: dict) -> dict:
+        """Merges the frequent event (12/6/4/3/2 EY) columns of the ``AllBoMIFD`` layer (v1.1+,
+        BoM IFD only) into an IFD table, relabelling them to the AEPs used by
+        :func:`pytuflow.arr.arf.aep_name_to_pct`. Returns ``table`` unchanged if the layer is absent."""
+        all_ifd = self.layer('AllBoMIFD')
+        if not all_ifd:
+            return table
+        bom = next((v for v in all_ifd.values() if isinstance(v, dict) and 'columns' in v), None)
+        if bom is None:
+            return table
+        bom_index = list(bom['index'])
+        bom_columns = [float(c) for c in bom['columns']]
+        new_cols, new_data = [], []
+        for ey, hub_aep in _FREQUENT_EY_HUB_AEP.items():
+            col = next((i for i, c in enumerate(bom_columns) if abs(c - hub_aep) < 1e-6), None)
+            if col is None or any(abs(float(c) - FREQUENT_EY_AEP_PCT[ey]) < 1e-6 for c in table['columns']):
+                continue
+            values = []
+            for dur in table['index']:
+                if dur not in bom_index:
+                    break
+                values.append(bom['data'][bom_index.index(dur)][col])
+            else:
+                new_cols.append(FREQUENT_EY_AEP_PCT[ey])
+                new_data.append(values)
+        if not new_cols:
+            return table
+        return {
+            'index': list(table['index']),
+            'columns': list(table['columns']) + new_cols,
+            'data': [list(row) + [col_values[i] for col_values in new_data]
+                     for i, row in enumerate(table['data'])],
+        }
 
     def climate_change_rainfall_factors(self, baseline_year: int, ssp: str) -> tuple:
         """Returns ``(durations_hours, factors)`` from the ``ClimateChange`` layer's
@@ -243,6 +321,8 @@ class ArrApiClient:
             params[layer] = 1
         if config.climate_change.enabled:
             params['ClimateChange'] = 1
+        if any(is_frequent_ey(a) for a in config.events.aep):
+            params['AllBoMIFD'] = 1  # frequent event (12-2EY) IFD depths, v1.1+ only
         return params
 
     @staticmethod
@@ -315,8 +395,9 @@ class ArrApiClient:
             data = json.loads(downloader.data)
         except json.JSONDecodeError as e:
             raise ArrApiError(f"ARR Data Hub response is not valid JSON: {e}") from e
-        return ArrApiResponse(data)
-
+        response = ArrApiResponse(data)
+        response.require_frequent_event_support(config.events.aep)
+        return response
 
     def fetch_point_tp_for_coords(self, lat: float, lon: float) -> tuple:
         """Requests the ``PointTP`` and ``ArealTP`` layers for arbitrary coordinates,
