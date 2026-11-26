@@ -33,15 +33,15 @@ def test_format_aep(aep_name, expected):
 
 
 @pytest.mark.parametrize('aep_name, expected', [
-    ('1%', '01.0p'), ('0.5%', '00.5p'), ('1 in 200', '00.5p'), ('50%', '50.0p'), ('0.5EY', '0.5e'),
+    ('1%', '01.0p'), ('0.5%', '00.5p'), ('1 in 200', '00.5p'), ('50%', '50.0p'), ('0.5EY', '00.5e'),
 ])
 def test_format_aep_notation_aep(aep_name, expected):
     int_width, decimals, _ = event_widths(['50%', '1%', '0.5%'], [10])
     assert format_aep(aep_name, 'aep', int_width, decimals) == expected
 
 
-@pytest.mark.parametrize('notation', ['ari', 'aep'])
-def test_format_aep_pads_ey_events_consistently(notation):
+def test_format_aep_pads_ey_events_consistently_ari():
+    notation = 'ari'
     from pytuflow.arr.writers import ey_widths
     ey_int_width, ey_decimals = ey_widths(['12EY', '2EY', '1%'])
     assert (ey_int_width, ey_decimals) == (2, 0)
@@ -50,6 +50,16 @@ def test_format_aep_pads_ey_events_consistently(notation):
     ey_int_width, ey_decimals = ey_widths(['12EY', '0.5EY'])
     assert format_aep('0.5EY', notation, ey_int_width=ey_int_width, ey_decimals=ey_decimals) == '00.5e'
     assert format_aep('12EY', notation, ey_int_width=ey_int_width, ey_decimals=ey_decimals) == '12.0e'
+
+
+@pytest.mark.parametrize('aep_names, expected', [
+    (['1%', '6EY'], ['1p', '6e']),
+    (['1%', '10%', '6EY'], ['01p', '10p', '06e']),
+    (['1%', '0.1%', '6EY'], ['1.0p', '0.1p', '6.0e']),
+])
+def test_format_aep_notation_aep_pads_to_longest_name(aep_names, expected):
+    int_width, decimals, _ = event_widths(aep_names, [60])
+    assert [format_aep(a, 'aep', int_width, decimals) for a in aep_names] == expected
 
 
 def test_format_duration_padded():

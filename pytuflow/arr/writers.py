@@ -59,12 +59,16 @@ def _pct_decimals(value: float) -> int:
 
 def event_widths(aep_names: list, durations: list) -> tuple:
     """Returns ``(aep_int_width, aep_decimals, duration_width)`` so that every event token
-    in a run uses the same padding, derived from the selected events."""
-    pcts = [v for v in (_aep_pct_or_none(a) for a in aep_names) if v is not None]
-    int_width = max((len(str(int(v))) for v in pcts), default=1)
-    decimals = max((_pct_decimals(v) for v in pcts), default=0)
+    in a run (AEP and EY events alike) uses the same padding, matching the longest name -
+    e.g. ``1%``/``6EY`` -> ``'1p'``/``'6e'``, ``10%``/``6EY`` -> ``'06e'``, ``0.1%``/``6EY`` -> ``'6.0e'``."""
+    values = []
+    for a in aep_names:
+        v = _aep_pct_or_none(a)
+        values.append(float(str(a).strip()[:-2]) if v is None else v)
+    int_width = max((len(str(int(v))) for v in values), default=1)
+    decimals = max((_pct_decimals(v) for v in values), default=0)
     dur_width = max((len(str(int(float(d)))) for d in durations), default=1)
-    return max(int_width, 2) if pcts else 1, decimals, dur_width
+    return int_width, decimals, dur_width
 
 
 def ey_widths(aep_names: list) -> tuple:
@@ -107,14 +111,15 @@ def format_aep(aep_name: str, output_notation: str, int_width: int = 2, decimals
     ``'1 in N'`` labels are converted to % AEP so all non-EY events share one notation.
     ``int_width`` and ``decimals`` (see :func:`event_widths`) give a consistent padding
     across the selected events; when ``decimals`` is ``None`` it is derived from the value.
-    ``ey_int_width`` and ``ey_decimals`` (see :func:`ey_widths`) do the same for EY events.
+    ``ey_int_width`` and ``ey_decimals`` (see :func:`ey_widths`) do the same for EY events in the
+    ``ari`` notation; in the ``aep`` notation EY events share ``int_width``/``decimals``.
     """
     aep_name = str(aep_name).strip()
     if output_notation != 'aep':
         return _format_aep_legacy(aep_name, ey_int_width, ey_decimals)
     value = _aep_pct_or_none(aep_name)
     if value is None:
-        return _format_ey(aep_name, ey_int_width, ey_decimals)
+        return _format_ey(aep_name, int_width, decimals)
     if decimals is None:
         decimals = _pct_decimals(value)
     width = int_width + (decimals + 1 if decimals else 0)
