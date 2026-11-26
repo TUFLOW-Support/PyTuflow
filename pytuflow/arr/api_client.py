@@ -30,7 +30,7 @@ logger = logging.getLogger('pytuflow.arr')
 #: ``site.longitude``) are simple GET requests; catchment-boundary queries
 #: (``site.catchment_boundary`` - GeoJSON/Shapefile/KML) are ``multipart/form-data`` POST
 #: requests instead - see https://data.arr-software.org/about.
-DEFAULT_BASE_URL = 'https://data.arr-software.org/'
+DEFAULT_BASE_URL = 'https://data-dev.arr-software.org/'
 
 #: Data layers requested for every query, matching the "Command Line Name" column in the
 #: ARR Data Hub "Advanced Use" API docs.
