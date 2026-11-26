@@ -67,10 +67,28 @@ def event_widths(aep_names: list, durations: list) -> tuple:
     return max(int_width, 2) if pcts else 1, decimals, dur_width
 
 
-def _format_aep_legacy(aep_name: str) -> str:
+def ey_widths(aep_names: list) -> tuple:
+    """Returns ``(ey_int_width, ey_decimals)`` so that every EY (exceedances per year) event
+    token in a run uses the same padding, e.g. ``12EY`` and ``2EY`` -> ``'12e'`` and ``'02e'``."""
+    values = [float(a.strip()[:-2]) for a in map(str, aep_names) if a.strip().endswith('EY')]
+    int_width = max((len(str(int(v))) for v in values), default=1)
+    decimals = max((_pct_decimals(v) for v in values), default=0)
+    return int_width, decimals
+
+
+def _format_ey(aep_name: str, int_width: int = 1, decimals: Optional[int] = None) -> str:
+    """Formats an ``'xEY'`` label, e.g. ``'2EY'`` -> ``'02e'`` (``int_width=2``)."""
+    value = float(aep_name[:-2])
+    if decimals is None:
+        decimals = _pct_decimals(value)
+    width = int_width + (decimals + 1 if decimals else 0)
+    return f'{value:0{width}.{decimals}f}e'
+
+
+def _format_aep_legacy(aep_name: str, ey_int_width: int = 1, ey_decimals: Optional[int] = None) -> str:
     """Unpadded notation used for ``ari`` output: ``'1%'`` -> ``'01p'``, ``'1 in 200'`` -> ``'200y'``."""
     if aep_name.endswith('EY'):
-        return f'{aep_name[:-2]}e'
+        return _format_ey(aep_name, ey_int_width, ey_decimals)
     if aep_name.endswith('%'):
         value = float(aep_name[:-1])
         if value == int(value):
@@ -81,20 +99,22 @@ def _format_aep_legacy(aep_name: str) -> str:
     raise ArrError(f"Unrecognised AEP/ARI/EY magnitude: '{aep_name}'")
 
 
-def format_aep(aep_name: str, output_notation: str, int_width: int = 2, decimals: Optional[int] = None) -> str:
+def format_aep(aep_name: str, output_notation: str, int_width: int = 2, decimals: Optional[int] = None,
+               ey_int_width: int = 1, ey_decimals: Optional[int] = None) -> str:
     """Formats an AEP/ARI/EY magnitude label into a TUFLOW event-name-safe token, e.g.
     ``'1%'`` -> ``'01p'``, ``'0.5EY'`` -> ``'0.5e'``, ``'1 in 200'`` -> ``'0.5p'`` (``aep`` output notation only; ``ari`` keeps the legacy tokens).
 
     ``'1 in N'`` labels are converted to % AEP so all non-EY events share one notation.
     ``int_width`` and ``decimals`` (see :func:`event_widths`) give a consistent padding
     across the selected events; when ``decimals`` is ``None`` it is derived from the value.
+    ``ey_int_width`` and ``ey_decimals`` (see :func:`ey_widths`) do the same for EY events.
     """
     aep_name = str(aep_name).strip()
     if output_notation != 'aep':
-        return _format_aep_legacy(aep_name)
+        return _format_aep_legacy(aep_name, ey_int_width, ey_decimals)
     value = _aep_pct_or_none(aep_name)
     if value is None:
-        return f'{aep_name[:-2]}e'
+        return _format_ey(aep_name, ey_int_width, ey_decimals)
     if decimals is None:
         decimals = _pct_decimals(value)
     width = int_width + (decimals + 1 if decimals else 0)
@@ -120,10 +140,13 @@ def _event_formatters(config: ArrConfig) -> tuple:
         except (ValueError, TypeError):
             aep_names.append(str(a))
     int_width, decimals, dur_width = event_widths(aep_names, config.events.duration)
+    ey_int_width, ey_decimals = ey_widths(aep_names)
     notation = config.events.output_notation
     if notation != 'aep':
-        return (lambda a: format_aep(a, notation)), format_duration
-    return (lambda a: format_aep(a, notation, int_width, decimals)), (lambda d: format_duration(d, dur_width))
+        return (lambda a: format_aep(a, notation, ey_int_width=ey_int_width, ey_decimals=ey_decimals)), \
+            format_duration
+    return (lambda a: format_aep(a, notation, int_width, decimals, ey_int_width, ey_decimals)), \
+        (lambda d: format_duration(d, dur_width))
 
 
 def site_name_token(name: str) -> str:

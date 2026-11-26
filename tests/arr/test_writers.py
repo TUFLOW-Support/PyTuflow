@@ -40,6 +40,18 @@ def test_format_aep_notation_aep(aep_name, expected):
     assert format_aep(aep_name, 'aep', int_width, decimals) == expected
 
 
+@pytest.mark.parametrize('notation', ['ari', 'aep'])
+def test_format_aep_pads_ey_events_consistently(notation):
+    from pytuflow.arr.writers import ey_widths
+    ey_int_width, ey_decimals = ey_widths(['12EY', '2EY', '1%'])
+    assert (ey_int_width, ey_decimals) == (2, 0)
+    assert format_aep('12EY', notation, ey_int_width=ey_int_width, ey_decimals=ey_decimals) == '12e'
+    assert format_aep('2EY', notation, ey_int_width=ey_int_width, ey_decimals=ey_decimals) == '02e'
+    ey_int_width, ey_decimals = ey_widths(['12EY', '0.5EY'])
+    assert format_aep('0.5EY', notation, ey_int_width=ey_int_width, ey_decimals=ey_decimals) == '00.5e'
+    assert format_aep('12EY', notation, ey_int_width=ey_int_width, ey_decimals=ey_decimals) == '12.0e'
+
+
 def test_format_duration_padded():
     assert event_widths(['1%'], [10, 1440])[2] == 4
     assert format_duration(10, 4) == '0010m'
