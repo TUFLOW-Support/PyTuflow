@@ -212,3 +212,22 @@ def test_verbose_writes_additional_tp_region_areal_increments_csv(
     csv_path = working / '1_ArealTP_Increments_WetTropics.csv'
     assert csv_path.exists()
     assert csv_path.read_text(encoding='utf-8').replace('\r\n', '\n') == areal_tp_csv.replace('\r\n', '\n')
+
+
+def test_verbose_tables_order_aeps_from_frequent_to_rare(tmp_path, api_response_1990):
+    config = make_config(
+        tmp_path, verbose=True,
+        events={'aep': ['1%', '50%', '10%', '20%'], 'duration': [60, 1440], 'output_notation': 'aep'},
+        losses={'extrapolation_method': 'interpolate'},
+    )
+    engine = ArrEngine(config, api_response_1990)
+    engine.run()
+    write_working_data(config, api_response_1990, engine)
+
+    working = tmp_path / 'working_data'
+    for name in ('1_ARF.csv', '1_IFD_after_ARF.csv'):
+        header = (working / name).read_text(encoding='utf-8').splitlines()[0].split(',')
+        assert header[1:] == ['50%', '20%', '10%', '1%']
+    burst_header = (working / '1_burst_initial_loss.csv').read_text(encoding='utf-8').splitlines()[0].split(',')
+    aeps = [float(c) for c in burst_header[1:]]
+    assert aeps == sorted(aeps, reverse=True)

@@ -17,7 +17,10 @@ import json
 import logging
 from pathlib import Path
 
+import pandas as pd
+
 from .api_client import ArrApiResponse
+from .arf import aep_name_to_pct
 from .config import ArrConfig
 from .engine import ArrEngine
 
@@ -25,6 +28,16 @@ logger = logging.getLogger('pytuflow.arr')
 
 #: Subfolder (under ``output.path``) that working data files are written to.
 WORKING_DATA_FOLDER = 'working_data'
+
+
+def _frequent_to_rare(table: pd.DataFrame) -> pd.DataFrame:
+    """Returns the table with its AEP columns ordered from most frequent to rarest."""
+    def aep_pct(col) -> float:
+        try:
+            return float(col)
+        except (TypeError, ValueError):
+            return aep_name_to_pct(col)
+    return table[sorted(table.columns, key=aep_pct, reverse=True)]
 
 
 def write_working_data(config: ArrConfig, response: ArrApiResponse, engine: ArrEngine) -> None:
@@ -101,7 +114,7 @@ def write_working_data(config: ArrConfig, response: ArrApiResponse, engine: ArrE
     for scenario_label, table in engine.depth_areal_tables.items():
         suffix = f'_{scenario_label}' if scenario_label else ''
         path = out_path / f'{site}_IFD_after_ARF{suffix}.csv'
-        table.to_csv(path, index_label='Duration (min)')
+        _frequent_to_rare(table).to_csv(path, index_label='Duration (min)')
         logger.info("Wrote areal design IFD table to '%s'", path)
 
     for scenario_label, table in engine.arf_tables.items():
@@ -112,7 +125,7 @@ def write_working_data(config: ArrConfig, response: ArrApiResponse, engine: ArrE
             if override is not None:
                 f.write(f"# NOTE: These calculated ARF values were NOT applied. "
                         f"The arf_override value of {override} was used for all durations and AEPs instead.\n")
-            table.to_csv(f, index_label='Duration (min)')
+            _frequent_to_rare(table).to_csv(f, index_label='Duration (min)')
         logger.info("Wrote ARF table to '%s'", path)
 
     for scenario_label, table in engine.burst_loss_table.items():
@@ -120,7 +133,7 @@ def write_working_data(config: ArrConfig, response: ArrApiResponse, engine: ArrE
             continue
         suffix = f'_{scenario_label}' if scenario_label else ''
         path = out_path / f'{site}_burst_initial_loss{suffix}.csv'
-        table.to_csv(path, index_label='Duration (min)')
+        _frequent_to_rare(table).to_csv(path, index_label='Duration (min)')
         logger.info("Wrote burst initial loss table to '%s'", path)
 
     if engine.extrapolated_loss_table:
@@ -129,5 +142,5 @@ def write_working_data(config: ArrConfig, response: ArrApiResponse, engine: ArrE
                 continue
             suffix = f'_{scenario_label}' if scenario_label else ''
             path = out_path / f'{site}_extrapolated_losses{suffix}.csv'
-            table.to_csv(path, index_label='Duration (min)')
+            _frequent_to_rare(table).to_csv(path, index_label='Duration (min)')
             logger.info("Wrote extrapolated short-duration losses table to '%s'", path)
