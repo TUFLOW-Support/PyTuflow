@@ -173,6 +173,10 @@ class ArrEngine:
     config: ArrConfig
     response: ArrApiResponse
     _tp_set: Optional[TemporalPatternSet] = field(default=None, init=False, repr=False)
+    #: Overrides ``ifd.baseline_year`` for losses/burst loss derivation - set to 1990 while
+    #: assembling climate change scenarios when native (1961-1990) losses are available, since
+    #: climate change factors scale the native baseline (as for rainfall).
+    _baseline_year_override: Optional[int] = field(default=None, init=False, repr=False)
 
     #: Working data captured during :meth:`run`, for optional verbose output (see
     #: :mod:`pytuflow.arr.working_data`). Populated by ``run()``; empty beforehand.
@@ -238,7 +242,7 @@ class ArrEngine:
         reference (``threshold``) duration plus every requested ``durations`` value,
         for the same AEP columns as the burst initial loss table (aligned to those
         exact column values/dtype so they can be indexed together)."""
-        baseline_ifd = self._ifd_frame(self.config.ifd.baseline_year, None)
+        baseline_ifd = self._ifd_frame(self._baseline_year, None)
         needed_durations = sorted({float(d) for d in durations} | ({threshold} if threshold is not None else set()))
         aep_pcts = [float(c) for c in burst_loss_columns]
         point_depths = _interp_table(baseline_ifd, needed_durations, aep_pcts)
@@ -334,7 +338,7 @@ class ArrEngine:
         ``preburst.percentile`` just like any other cell.
         """
         from .complete_storm import _preburst_ratio
-        baseline_ifd = self._ifd_frame(self.config.ifd.baseline_year, None)
+        baseline_ifd = self._ifd_frame(self._baseline_year, None)
         percentile = self.config.preburst.percentile
         # cast to object dtype upfront - a recalculated cell may need to become the
         # "Use PB TP" placeholder string, which a purely-numeric (float64) column
@@ -360,20 +364,32 @@ class ArrEngine:
                         "Duration %s min, AEP %s%%: recalculated burst initial loss for ifd.baseline_year=%s (storm "
                         "initial loss %.3f mm - preburst depth %.3f mm = %.3f mm) is negative - treating this "
                         "cell as 'Use PB TP' (complete storm assembly required).", dur, aep_pct,
-                        self.config.ifd.baseline_year, storm_il, ratio * point_depth, recalculated,
+                        self._baseline_year, storm_il, ratio * point_depth, recalculated,
                     )
                     result.loc[dur, col] = 'Use PB TP'
                 else:
                     result.loc[dur, col] = recalculated
         return result
 
+    @property
+    def _baseline_year(self) -> int:
+        """The baseline year used for losses/burst loss derivation (see ``_baseline_year_override``)."""
+        return self._baseline_year_override or self.config.ifd.baseline_year
+
+    def _native_losses_available(self) -> bool:
+        """True if the Data Hub response (v1.1+) provides native (1961-1990) baseline losses."""
+        return any(
+            isinstance(self.response.layer(name), dict) and 'native_losses' in self.response.layer(name)
+            for name in ('NewStormLosses', 'StormLossesNonNSW', 'StormLosses')
+        )
+
     def _loss_layer(self, name: str) -> Optional[dict]:
-        """Returns a Data Hub storm loss layer for the configured ``ifd.baseline_year``. Data Hub
+        """Returns a Data Hub storm loss layer for the current baseline year. Data Hub
         v1.1+ losses are for the current (2030) baseline, with the native (1961-1990) baseline
-        losses under ``native_losses`` - used for ``ifd.baseline_year == 1990``. Data Hub v1 (no
+        losses under ``native_losses`` - used for a 1990 baseline. Data Hub v1 (no
         ``native_losses``) always returns the layer as-is."""
         layer = self.response.layer(name)
-        if not layer or self.config.ifd.baseline_year != 1990 or 'native_losses' not in layer:
+        if not layer or self._baseline_year != 1990 or 'native_losses' not in layer:
             return layer
         native = layer['native_losses']
         if isinstance(native, dict):
@@ -624,7 +640,7 @@ class ArrEngine:
         ``losses.user_initial_loss`` directly if set), so a user-supplied storm initial
         loss can correctly flip whether a cell needs complete storm assembly."""
         from .complete_storm import _preburst_ratio
-        baseline_ifd = self._ifd_frame(self.config.ifd.baseline_year, None)
+        baseline_ifd = self._ifd_frame(self._baseline_year, None)
         percentile = self.config.preburst.percentile
         point_depth = float(_interp_table(baseline_ifd, [duration], [aep_pct]).iloc[0, 0])
         ratio = _preburst_ratio(self.response, percentile, duration, aep_pct)
@@ -745,7 +761,7 @@ class ArrEngine:
         from .complete_storm import _preburst_ratio
         percentile = self.config.preburst.percentile
         ratio = _preburst_ratio(self.response, percentile, duration, aep_pct)
-        baseline_ifd = self._ifd_frame(self.config.ifd.baseline_year, None)
+        baseline_ifd = self._ifd_frame(self._baseline_year, None)
         point_depth = float(_interp_table(baseline_ifd, [duration], [aep_pct]).iloc[0, 0])
         storm_il = self._storm_initial_loss_pct(aep_pct)
         return storm_il - ratio * point_depth
@@ -955,6 +971,22 @@ class ArrEngine:
 
     # -- assembly ------------------------------------------------------------------
 
+    def _base_burst_loss(self) -> Optional[pd.DataFrame]:
+        """The base burst initial loss table for the current baseline year, or ``None`` if
+        unavailable."""
+        try:
+            base_burst_loss = self._burst_loss_frame()
+            if self.config.losses.user_initial_loss is not None and self.config.losses.method == 'probability_neutral':
+                # 'recommended' (BurstLossesNew) already directly substitutes
+                # losses.user_initial_loss wherever `_burst_loss_frame()` recomputes
+                # cells - see `_recompute_burst_losses_for_ifd_year` - so only
+                # 'probability_neutral' (BurstIL, not preburst-derived) still needs
+                # this separate proportional-scaling step.
+                base_burst_loss = self._scale_burst_losses_to_user_il(base_burst_loss)
+        except ArrError:
+            return None
+        return base_burst_loss
+
     def run(self) -> list:
         """Assembles every requested AEP x duration event (and climate change scenario,
         if enabled) and returns a list of :class:`EventResult`.
@@ -987,17 +1019,7 @@ class ArrEngine:
         self.burst_loss_table = {}
         self.extrapolated_loss_table = {}
         self._extrapolated_loss_records = []
-        try:
-            base_burst_loss = self._burst_loss_frame()
-            if self.config.losses.user_initial_loss is not None and self.config.losses.method == 'probability_neutral':
-                # 'recommended' (BurstLossesNew) already directly substitutes
-                # losses.user_initial_loss wherever `_burst_loss_frame()` recomputes
-                # cells - see `_recompute_burst_losses_for_ifd_year` - so only
-                # 'probability_neutral' (BurstIL, not preburst-derived) still needs
-                # this separate proportional-scaling step.
-                base_burst_loss = self._scale_burst_losses_to_user_il(base_burst_loss)
-        except ArrError:
-            base_burst_loss = None
+        base_burst_loss = self._base_burst_loss()
         self.burst_loss_table[None] = base_burst_loss
         # no Data Hub burst initial loss table for this location (e.g. 'BurstLossesNew'
         # is NSW-only) - every event's burst initial loss is calculated instead, so
@@ -1008,11 +1030,17 @@ class ArrEngine:
         calculated_burst_loss_records = []
 
         for scenario_label, baseline_year, ssp in scenarios:
-            if scenario_label is not None and base_burst_loss is not None:
+            # climate change factors scale the native (1990) losses when available, regardless of
+            # the configured baseline year (as for rainfall)
+            self._baseline_year_override = 1990 if ssp is not None and self._native_losses_available() else None
+            scenario_base_burst_loss = base_burst_loss
+            if self._baseline_year_override is not None and self.config.ifd.baseline_year != 1990:
+                scenario_base_burst_loss = self._base_burst_loss()
+            if scenario_label is not None and scenario_base_burst_loss is not None:
                 # burst_loss table may contain non-numeric "Use PB TP" placeholder cells
                 # (complete-storm-only cells) - only scale the numeric cells.
                 self.burst_loss_table[scenario_label] = self._cc_burst_loss_table(
-                    base_burst_loss, baseline_year, ssp)
+                    scenario_base_burst_loss, baseline_year, ssp)
             ifd = self._ifd_frame(baseline_year, ssp)
             depths = _interp_table(ifd, durations, aep_pcts)
             arf = arf_factors(
@@ -1188,6 +1216,7 @@ class ArrEngine:
                 table = pd.DataFrame(rows).pivot(index='duration', columns='aep_pct', values='initial_loss')
                 table.columns.name = None
                 self.burst_loss_table[scenario_label] = table.sort_index()
+        self._baseline_year_override = None
         return results
 
 

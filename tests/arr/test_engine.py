@@ -1383,3 +1383,60 @@ def test_engine_losses_without_native_losses_unchanged_for_v1(api_response_1990)
     assert expected == pytest.approx(
         next(r['Storm Initial Loss (mm)'] for r in api_response_1990.layer('NewStormLosses')['losses']
              if r['AEP'] == '1%'))
+
+
+@pytest.mark.parametrize('baseline', [1990, 2030])
+def test_engine_climate_change_scales_native_losses_regardless_of_baseline(api_response_1990, baseline):
+    api_response_1990.layers['NewStormLosses'] = {
+        'losses': [{'AEP': '50%', 'Storm Initial Loss (mm)': 30.72, 'Continuing Loss (mm/h)': 2.88}],
+        'native_losses': [{'AEP': '50%', 'Storm Initial Loss (mm)': 30.0, 'Continuing Loss (mm/h)': 2.75}],
+    }
+    api_response_1990.layers['ClimateChange'] = {
+        'rainfall_factors': _rainfall_factors(1.0),
+        'loss_factors': {
+            'Initial_Loss': {'columns': ['Losses SSP2-4.5'], 'index': [2090], 'data': [[1.05]]},
+            'Continuing_Loss': {'columns': ['Losses SSP2-4.5'], 'index': [2090], 'data': [[1.09]]},
+        },
+    }
+    config = make_config(
+        ifd={'baseline_year': baseline},
+        events={'aep': ['50%'], 'duration': [1440], 'output_notation': 'ari'},
+        climate_change={'enabled': True, 'scenarios': [{'baseline_year': 2090, 'ssp': 'SSP2'}]},
+        losses={'climate_change_method': 'storm'},
+        complete_storm=True,
+    )
+    results = ArrEngine(config, api_response_1990).run()
+    base = next(r for r in results if r.cc_scenario is None)
+    cc = next(r for r in results if r.cc_scenario == '2090_SSP2')
+    assert base.continuing_loss == pytest.approx(2.75 if baseline == 1990 else 2.88)
+    assert cc.continuing_loss == pytest.approx(2.75 * 1.09)
+    assert cc.initial_loss == pytest.approx(30.0 * 1.05)
+
+
+def test_engine_climate_change_burst_method_factors_1990_burst_loss(api_response_1990):
+    api_response_1990.layers['NewStormLosses'] = {
+        'losses': [{'AEP': '50%', 'Storm Initial Loss (mm)': 30.72, 'Continuing Loss (mm/h)': 2.88}],
+        'native_losses': [{'AEP': '50%', 'Storm Initial Loss (mm)': 30.0, 'Continuing Loss (mm/h)': 2.75}],
+    }
+    api_response_1990.layers['ClimateChange'] = {
+        'rainfall_factors': _rainfall_factors(1.0),
+        'loss_factors': {
+            'Initial_Loss': {'columns': ['Losses SSP2-4.5'], 'index': [2090], 'data': [[1.05]]},
+            'Continuing_Loss': {'columns': ['Losses SSP2-4.5'], 'index': [2090], 'data': [[1.09]]},
+        },
+    }
+    base_il, cc_il = {}, {}
+    for baseline in (1990, 2030):
+        config = make_config(
+            ifd={'baseline_year': baseline},
+            events={'aep': ['50%'], 'duration': [60], 'output_notation': 'ari'},
+            climate_change={'enabled': True, 'scenarios': [{'baseline_year': 2090, 'ssp': 'SSP2'}]},
+            losses={'climate_change_method': 'burst'},
+        )
+        results = ArrEngine(config, api_response_1990).run()
+        base_il[baseline] = next(r for r in results if r.cc_scenario is None).initial_loss
+        cc_il[baseline] = next(r for r in results if r.cc_scenario == '2090_SSP2').initial_loss
+    # the 2030 base burst loss differs from the 1990 one, but CC always factors the 1990 burst loss
+    assert base_il[2030] != pytest.approx(base_il[1990])
+    assert cc_il[1990] == pytest.approx(base_il[1990] * 1.05)
+    assert cc_il[2030] == pytest.approx(base_il[1990] * 1.05)
