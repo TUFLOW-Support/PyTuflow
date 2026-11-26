@@ -20,6 +20,8 @@ import time
 from pathlib import Path
 from typing import Optional
 
+import numpy as np
+
 from .config import ArrConfig, SHAPEFILE_OPTIONAL_SIBLINGS, SHAPEFILE_REQUIRED_SIBLINGS
 from .downloader import Downloader, FilePart
 from .exceptions import ArrApiError
@@ -161,12 +163,15 @@ class ArrApiResponse:
                 f"ARR Data Hub response does not contain an IFD table for baseline year '{year}' "
                 f"(available: {list(rec_ifd)})"
             )
-        return self._with_frequent_events(rec_ifd[key])
+        return self._with_frequent_events(rec_ifd[key], year)
 
-    def _with_frequent_events(self, table: dict) -> dict:
+    def _with_frequent_events(self, table: dict, year: int) -> dict:
         """Merges the frequent event (12/6/4/3/2 EY) columns of the ``AllBoMIFD`` layer (v1.1+,
         BoM IFD only) into an IFD table, relabelling them to the AEPs used by
-        :func:`pytuflow.arr.arf.aep_name_to_pct`. Returns ``table`` unchanged if the layer is absent."""
+        :func:`pytuflow.arr.arf.aep_name_to_pct`. Returns ``table`` unchanged if the layer is absent.
+
+        The Data Hub only provides these depths for the 1990 baseline. For ``year == 2030`` they are
+        scaled by the SSP2 2030 climate change rainfall factor (from the ``ClimateChange`` layer)."""
         all_ifd = self.layer('AllBoMIFD')
         if not all_ifd:
             return table
@@ -190,6 +195,13 @@ class ArrApiResponse:
                 new_data.append(values)
         if not new_cols:
             return table
+        if year == 2030:
+            hours, factors = self.climate_change_rainfall_factors(2030, 'SSP2')
+            order = np.argsort(hours)
+            factor_by_dur = np.interp(
+                np.log10(np.array(table['index'], dtype=float) / 60.0),
+                np.log10(np.array(hours)[order]), np.array(factors)[order])
+            new_data = [[v * f for v, f in zip(col_values, factor_by_dur)] for col_values in new_data]
         return {
             'index': list(table['index']),
             'columns': list(table['columns']) + new_cols,
@@ -319,9 +331,10 @@ class ArrApiClient:
             params['outlet_lon_coord'] = config.site.outlet_longitude
         for layer in _BASE_LAYERS:
             params[layer] = 1
-        if config.climate_change.enabled:
-            params['ClimateChange'] = 1
-        if any(is_frequent_ey(a) for a in config.events.aep):
+        frequent = any(is_frequent_ey(a) for a in config.events.aep)
+        if config.climate_change.enabled or (frequent and config.ifd.baseline_year == 2030):
+            params['ClimateChange'] = 1  # also needed to derive 2030 frequent event depths
+        if frequent:
             params['AllBoMIFD'] = 1  # frequent event (12-2EY) IFD depths, v1.1+ only
         return params
 

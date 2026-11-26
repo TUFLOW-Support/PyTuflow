@@ -288,6 +288,10 @@ def _all_bom_ifd_layer(index) -> dict:
 def test_build_params_requests_all_bom_ifd_only_for_frequent_events():
     frequent = ArrConfig.from_dict({**SITE_CONFIG, 'events': {'aep': ['1%', '12EY'], 'duration': [60]}})
     assert ArrApiClient().build_params(frequent)['AllBoMIFD'] == 1
+    assert 'ClimateChange' not in ArrApiClient().build_params(frequent)  # 1990 baseline
+    frequent_2030 = ArrConfig.from_dict({**SITE_CONFIG, 'ifd': {'baseline_year': 2030},
+                                         'events': {'aep': ['12EY'], 'duration': [60]}})
+    assert ArrApiClient().build_params(frequent_2030)['ClimateChange'] == 1
     assert 'AllBoMIFD' not in ArrApiClient().build_params(ArrConfig.from_dict(SITE_CONFIG))
 
 
@@ -311,3 +315,22 @@ def test_ifd_table_merges_frequent_event_columns(api_response_1990):
     assert merged['data'][0][:len(table['columns'])] == table['data'][0]
     assert len(merged['data'][0]) == len(merged['columns'])
     assert api_response_1990.ifd_table(1990)['columns'] == list(table['columns'])  # unchanged without the layer
+
+
+def test_ifd_table_frequent_events_2030_scaled_by_ssp2_2030_factor(api_response_1990):
+    table = api_response_1990.ifd_table(1990)
+    columns = ['<1 hour', '>24 Hours']
+    layers = {
+        **api_response_1990.layers,
+        'AllBoMIFD': _all_bom_ifd_layer(table['index']),
+        'ClimateChange': {'rainfall_factors': {
+            'SSP2-4.5': {'columns': columns, 'index': [2030, 2090], 'data': [[1.1, 1.1], [1.5, 1.5]]},
+        }},
+    }
+    response = ArrApiResponse({**api_response_1990.raw, 'layers': layers})
+    n = len(table['columns'])
+    base = response.ifd_table(1990)
+    scaled = response.ifd_table(2030)
+    assert scaled['columns'] == base['columns']
+    for base_row, scaled_row in zip(base['data'], scaled['data']):
+        assert scaled_row[n:] == pytest.approx([v * 1.1 for v in base_row[n:]])
