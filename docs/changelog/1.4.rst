@@ -7,7 +7,7 @@ ARR Data Hub v1.1 Update
 ------------------------
 
 The ``pytuflow-arr`` :ref:`CLI tool <pytuflow-arr>` has been updated for the `2026 v1.1 ARR Data Hub Update
-<https://data-dev.arr-software.org/changelog>`_.
+<https://data.arr-software.org/changelog>`_.
 
 The update includes:
 
