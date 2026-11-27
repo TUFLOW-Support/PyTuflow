@@ -20,7 +20,7 @@ Key Differences to the Legacy QGIS Plugin Tool
 
   The TUFLOW output format from the tool remains consistent with the legacy QGIS plugin tool. For an example on how to use the outputs in a TUFLOW model setup, please refer to the following TUFLOW wiki page: `wiki.tuflow.com/QGIS_ARR_to_TUFLOW_Example <https://wiki.tuflow.com/QGIS_ARR_to_TUFLOW_Example#TUFLOW_Setup>`_
 
-For a full list of differences to the legacy QGIS tool, visit the QGIS TUFLOW Plugin documentation: `docs.tuflow.com/qgis-tuflow-plugin/2026.2/arr/legacy-tool-differences/ <https://docs.tuflow.com/qgis-tuflow-plugin/2026.2/arr/legacy-tool-differences/>`_
+For a full list of differences to the legacy QGIS tool, visit the QGIS TUFLOW Plugin documentation: `docs.tuflow.com/qgis-tuflow-plugin/2027.0/arr/legacy-tool-differences/ <https://docs.tuflow.com/qgis-tuflow-plugin/2027.0/arr/legacy-tool-differences/>`_
 
 Usage
 -----
@@ -371,7 +371,7 @@ The json example below shows all the available keys and is not necessarily valid
             "baseline_year": 2030
         },
         "events": {
-            "aep": ["50%", "20%", "10%", "5%", "2%", "1%"],
+            "aep": ["2EY", "63.2%", "50%", "20%", "10%", "5%", "2%", "1%"],
             "duration": [60, 120, 180, 360, 720, 1440],
             "output_notation": "aep"
         },
@@ -469,7 +469,14 @@ Parameter descriptions
    * - aep
      - ``list[string | number]``
      - ``[]``
-     - AEP/ARI magnitude labels to assemble events for. For example, "1%" or "1 in 100". If a number is provided, it is assumed to be "% AEP". **Requried**.
+     - AEP/ARI magnitude labels to assemble events for. For example, "1%" or "1 in 100". If a number is provided, it is
+       assumed to be "% AEP".
+       
+       Since ARR Data Hub v1.1, frequents events are supported. The frequent events supported in the tool include:
+       ``12EY``, ``6EY``, ``4EY``, ``3EY``, and ``2EY``. The ``1EY`` event can also be used as an alias for the
+       ``63.2%`` AEP event.
+
+       **Requried**
    * - duration
      - ``list[number]``
      - ``[]``
@@ -545,7 +552,15 @@ Parameter descriptions
    * - baseline_year
      - ``int``
      - ``2030``
-     - The IFD baseline year to use. For example, ``1990`` will provide similar rainfall IFD curves as the previous tool when extracting data from the BOM (with the exception of catchments that might use other datasets like LIMB rainfall data). The options will depend on the catchment.
+     - The IFD baseline year to use. The options are ``1990`` or ``2030``. For example, ``1990`` will provide similar rainfall IFD curves as the previous tool
+       when extracting data from the BOM (with the exception of catchments that might use other datasets like LIMB
+       rainfall data). The options will depend on the catchment.
+
+       Since v1.1 of the ARR Data Hub, the rainfall losses will also depend on the IFD year. For example, if using a ``1990`` baseline year, the tool
+       will use ``1990`` rainfall losses.
+
+       Frequent IFD depths provided by the data hub are assumed to be for the ``1990`` baseline. ``2030`` frequent events are calculated by the tool
+       using the ``SSP2-2030`` climate change factors as they are not provided by the data hub.
 
 **temporal_patterns (optional)**
 
@@ -591,7 +606,13 @@ Parameter descriptions
    * - enabled
      - ``bool``
      - ``false``
-     - If ``true``, an additional event is assembled for each scenario in scenarios, alongside the base (no climate-change) event. The tool uses the climate change factors provided by the data hub, and not the pre-calculated IFD tables. This allows the baseline rainfall to be factored, which could be BOM, or another source like LIMB/QRA (pre-calculated tables appear to always use BOM rainfall). It also allows all climate change years to be used, whereas only several years are provided in the pre-calculated tables.
+     - If ``true``, an additional event is assembled for each scenario in scenarios, alongside the base (no
+       climate-change) event. The tool uses the climate change factors provided by the data hub, and not the
+       pre-calculated IFD tables. This allows the base rainfall to be factored, which could be BOM, or another
+       source like LIMB/QRA (pre-calculated tables appear to always use BOM rainfall).
+
+       The climate change rainfall is always calculated from the 1990 rainfall. Likewise with the rainfall losses,
+       they are always factored up from the 1990 losses.
    * - scenarios
      - ``list[object]``
      - ``[]``

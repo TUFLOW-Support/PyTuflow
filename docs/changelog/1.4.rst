@@ -3,6 +3,17 @@ Changelog for 1.4
 
 Release date: XX December 2026
 
+ARR Data Hub v1.1 Update
+------------------------
+
+The ``pytuflow-arr`` :ref:`CLI tool <pytuflow-arr>` has been updated for the `2026 v1.1 ARR Data Hub Update
+<https://data-dev.arr-software.org/changelog>`_.
+
+The update includes:
+
+- Support for frequent events: ``12EY``, ``6EY``, ``4EY``, ``3EY``, and ``2EY``
+- Support for 1990 baseline rainfall losses
+
 Progress Callback
 -----------------
 
@@ -52,6 +63,12 @@ Script output:
 .. code:: bash
 
     0%...57%...86%...100% Done!
+
+Bug Fixes
+---------
+
+- :ref:`pytuflow-arr` - Fixes the event name padding. There was a minimum padding of 2 digits, e.g. 1% AEP event would be output as ``01p``
+  when it wasn't required to be padded.
 
 Other
 -----
